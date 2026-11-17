@@ -36,14 +36,18 @@ final class FakeKeyboardEnvironment: KeyboardEnvironment, @unchecked Sendable {
     private var inputMethod = false
     private var app: FrontmostApp? = FrontmostApp(bundleId: "com.example.editor", processId: 100)
     private var asked = 0
+    private var matchChecksAsked = 0
 
     var secureInput: Bool { get { lock.withLock { secure } } set { lock.withLock { secure = newValue } } }
     var inputMethodActive: Bool { get { lock.withLock { inputMethod } } set { lock.withLock { inputMethod = newValue } } }
     var frontmost: FrontmostApp? { get { lock.withLock { app } } set { lock.withLock { app = newValue } } }
     var callCount: Int { lock.withLock { asked } }
+    /// Secure input and input method reads: the ones only a matched word may cause. `frontmostApp()` is also read once
+    /// at the start of each word (FR-005-11), so it is not counted here.
+    var matchCheckCount: Int { lock.withLock { matchChecksAsked } }
 
-    func isSecureEventInputEnabled() -> Bool { lock.withLock { asked += 1; return secure } }
-    func isInputMethodActive() -> Bool { lock.withLock { asked += 1; return inputMethod } }
+    func isSecureEventInputEnabled() -> Bool { lock.withLock { asked += 1; matchChecksAsked += 1; return secure } }
+    func isInputMethodActive() -> Bool { lock.withLock { asked += 1; matchChecksAsked += 1; return inputMethod } }
     func frontmostApp() -> FrontmostApp? { lock.withLock { asked += 1; return app } }
 }
 

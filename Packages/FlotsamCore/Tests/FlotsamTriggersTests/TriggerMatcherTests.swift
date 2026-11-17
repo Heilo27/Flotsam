@@ -285,9 +285,9 @@ import Testing
         _ = h.space()
         _ = h.down(TriggerKeys.backspace)
         _ = h.down(53)
-        #expect(h.environment.callCount == 0)
+        #expect(h.environment.matchCheckCount == 0)
         h.type(";sig")
         _ = h.space()
-        #expect(h.environment.callCount > 0)
+        #expect(h.environment.matchCheckCount > 0)
     }
 }

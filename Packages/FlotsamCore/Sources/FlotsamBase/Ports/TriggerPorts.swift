@@ -86,8 +86,9 @@ public protocol KeyEventSource: AnyObject, Sendable {
     func reenable() -> Bool
 }
 
-/// The three things the match decision asks the system (FR-005-13). Called only when a word has actually matched a
-/// trigger, so none of them is on the per-keystroke path.
+/// The three things the match decision asks the system (FR-005-13). The first two are called only when a word has
+/// actually matched a trigger. `frontmostApp()` is also read once per word, at its first character (FR-005-11), so it
+/// must be a cheap cache read; none of them is on every keystroke.
 public protocol KeyboardEnvironment: Sendable {
     func isSecureEventInputEnabled() -> Bool
     /// True when the current input source is an input method (Japanese, Chinese, Korean composition), not a layout.

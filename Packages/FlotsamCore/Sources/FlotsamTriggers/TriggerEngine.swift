@@ -209,6 +209,14 @@ public final class TriggerEngine {
         await watchdogTick()
     }
 
+    /// The frontmost application changed: clear the typed word (FR-005-11). The matcher also compares the application
+    /// a word started in with the one at the boundary key, which catches a change this call has not reached yet;
+    /// this call catches the one it cannot, a switch away and back mid-word. Call from `NSWorkspace`'s
+    /// `didActivateApplicationNotification`.
+    public func frontmostApplicationDidChange() {
+        resetSignal.request()
+    }
+
     // MARK: Watchdog (FR-005-19)
 
     private func watchdogLoop() async {
@@ -284,6 +292,7 @@ public final class TriggerEngine {
         case .success(let read):
             snapshot.replace(TriggerSnapshot(bindings: read), token: token)
         case .failure(let error):
+            snapshot.abandonRebuild(token: token)
             // The previous snapshot stays: stale triggers still expand, which beats no triggers at all.
             await reporter.report(error, origin: .background)
         }

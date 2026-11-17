@@ -100,15 +100,11 @@ final class HeldBindingSource: ItemBindingSource, @unchecked Sendable {
 
         // Settled: give any follow-up rebuild time to run, then read what the user would get.
         let installed = await eventually(timeout: .seconds(1)) { h.base.snapshot.policy.triggers.count == 2 }
-        withKnownIssue("DEFECT: a rebuild discarded by an unrelated inline delete is never re-queued (TriggerEngine.swift)") {
-            #expect(installed, "snapshot holds \(h.base.snapshot.policy.triggers.count) trigger(s), expected 2")
-        }
+        #expect(installed, "snapshot holds \(h.base.snapshot.policy.triggers.count) trigger(s), expected 2")
         // The saved trigger's expansion is what the user sees: ";new" Space must be swallowed.
         h.source.type(";new")
         let decision = h.source.press(TriggerKeys.space, " ")
-        withKnownIssue("DEFECT: same cause; ';new' never reaches the matcher") {
-            #expect(decision == .consume)
-        }
+        #expect(decision == .consume)
     }
 
     @Test func theSameSaveWithNoDeleteInTheWayInstallsTheNewTrigger() async {

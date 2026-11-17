@@ -56,12 +56,20 @@ public struct TriggerPolicy: Sendable, Equatable {
 
 /// The shared holder of `TriggerPolicy`. Writers (settings, item events) replace the value; the tap reads it.
 ///
-/// FR-005-22: `remove(itemIds:)` is synchronous so a deleted item stops expanding before the delete returns. `replace`
-/// is generation-guarded: a slow rebuild that started before a delete finished cannot bring the deleted trigger back.
+/// FR-005-22: `remove(itemIds:)` is synchronous so a deleted item stops expanding before the delete returns. A rebuild
+/// reads the database between `beginRebuild` and `replace`, so a delete can land while its read is out. The store
+/// remembers what was deleted in that window and leaves it out of the installed snapshot: the late read cannot bring a
+/// deleted trigger back, and it still installs everything else it read, such as a trigger saved a moment ago.
 public final class TriggerSnapshotStore: Sendable {
     private struct State: Sendable {
         var policy = TriggerPolicy()
+        /// The newest rebuild's token. Only that rebuild may install; an older one is superseded.
         var generation = 0
+        /// True from `beginRebuild` until the newest rebuild installs or is abandoned. Deletions are remembered only
+        /// then, so the set cannot grow while no rebuild is waiting for it.
+        var rebuilding = false
+        /// Items deleted since the newest rebuild began.
+        var removedDuringRebuild: Set<UUID> = []
     }
 
     private let state = LockedValue(State())
@@ -70,23 +78,42 @@ public final class TriggerSnapshotStore: Sendable {
 
     public var policy: TriggerPolicy { state.withLock { $0.policy } }
 
-    /// Starts a rebuild: pair the returned token with the bindings read afterwards.
-    public func beginRebuild() -> Int { state.withLock { $0.generation += 1; return $0.generation } }
+    /// Starts a rebuild: pair the returned token with the bindings read afterwards. Supersedes any rebuild in flight.
+    public func beginRebuild() -> Int {
+        state.withLock {
+            $0.generation += 1
+            $0.rebuilding = true
+            $0.removedDuringRebuild = []
+            return $0.generation
+        }
+    }
 
-    /// Installs `triggers` unless another change landed since `beginRebuild` returned `token`. True when installed.
+    /// Installs `triggers`, less any item deleted since `beginRebuild` returned `token`, unless a newer rebuild began.
+    /// True when installed.
     @discardableResult
     public func replace(_ triggers: TriggerSnapshot, token: Int) -> Bool {
         state.withLock {
             guard $0.generation == token else { return false }
-            $0.policy.triggers = triggers
+            $0.policy.triggers = triggers.removing($0.removedDuringRebuild)
+            $0.rebuilding = false
+            $0.removedDuringRebuild = []
             return true
+        }
+    }
+
+    /// The rebuild `token` ended without a result (its read failed): stop remembering deletions for it.
+    public func abandonRebuild(token: Int) {
+        state.withLock {
+            guard $0.generation == token else { return }
+            $0.rebuilding = false
+            $0.removedDuringRebuild = []
         }
     }
 
     public func remove(itemIds: [UUID]) {
         let ids = Set(itemIds)
         state.withLock {
-            $0.generation += 1  // any rebuild already reading the database is now stale
+            if $0.rebuilding { $0.removedDuringRebuild.formUnion(ids) }
             $0.policy.triggers = $0.policy.triggers.removing(ids)
         }
     }

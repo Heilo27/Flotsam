@@ -99,9 +99,7 @@ import Testing
         h.type(";sig")
         h.environment.frontmost = FrontmostApp(bundleId: "com.example.notes", processId: 200)
 
-        withKnownIssue("DEFECT: no frontmost-application-change reset exists in the engine or matcher (FR-005-11)") {
-            #expect(h.space() == .pass)
-        }
+        #expect(h.space() == .pass)
     }
 
     @Test func theSameApplicationStayingFrontmostDoesNotResetTheWord() {
