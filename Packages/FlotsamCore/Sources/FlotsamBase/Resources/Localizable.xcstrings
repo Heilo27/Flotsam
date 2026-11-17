@@ -1,20 +1,176 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "error.CAP-IO-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't save a copy. The disk may be full or its data folder unreadable." } } }
+    },
+    "error.CAP-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy was too large to save (over %@). It is still on your clipboard." } } }
+    },
+    "error.CAP-LIM-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy of %lld files was trimmed to the first 500." } } }
+    },
+    "error.CAP-OS-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't read the clipboard just now. It will keep trying." } } }
+    },
+    "error.CAP-PRM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings." } } }
+    },
+    "error.LIB-DAT-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The original file or folder has moved or been deleted." } } }
+    },
+    "error.LIB-IO-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This item's data is missing, so it was removed." } } }
+    },
+    "error.LIB-OS-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't paste into that app. The item is on your clipboard; press ⌘V." } } }
+    },
+    "error.ORG-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "An item can have up to 10 tags." } } }
+    },
+    "error.ORG-LIM-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "You can have up to 100 tags." } } }
+    },
+    "error.ORG-LIM-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That text is over the %@ limit. Shorten it and try again." } } }
+    },
+    "error.ORG-VAL-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Tag names must be 1 to 32 characters and unique." } } }
+    },
+    "error.ORG-VAL-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Notes can be up to 2,000 characters." } } }
+    },
+    "error.ORG-VAL-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Only text items can be edited, and they can't be empty." } } }
+    },
+    "error.ORG-VAL-004" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select at least two files, folders or images to group." } } }
+    },
+    "error.ORG-VAL-005" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Names must be 1 to 80 characters." } } }
+    },
+    "error.SET-DAT-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A setting had an invalid value and was reset to its default." } } }
+    },
+    "error.SET-OS-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't change Launch at Login. Check System Settings › General › Login Items." } } }
+    },
+    "error.SET-PRM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V." } } }
+    },
+    "error.SET-PRM-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security." } } }
+    },
+    "error.SET-VAL-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That folder can't be used for screenshots. Choose a folder you can read." } } }
+    },
+    "error.SET-VAL-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That isn't an app Flotsam can add. Choose an application." } } }
+    },
+    "error.SHF-IO-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A dropped file couldn't be read and was skipped." } } }
+    },
+    "error.SHF-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A dropped item was too large to save (over %@)." } } }
+    },
+    "error.SHF-OS-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't drag that item out. Try again or paste it from the Library." } } }
+    },
+    "error.SHF-VAL-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't store that kind of content." } } }
+    },
+    "error.SSP-IO-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your screenshot folder isn't available, so Flotsam is watching the Desktop instead." } } }
+    },
+    "error.SSP-IO-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your chosen screenshot folder is missing. Screenshot pickup is paused." } } }
+    },
+    "error.SSP-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A screenshot was too large to import (over %@)." } } }
+    },
+    "error.SSP-OS-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Live screenshot watching isn't working. Flotsam is checking every 5 seconds instead." } } }
+    },
+    "error.SSP-PRM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't read your screenshot folder. Allow access in System Settings › Privacy & Security › Files and Folders." } } }
+    },
+    "error.STO-DB-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't save your history. Free up disk space and try again." } } }
+    },
+    "error.STO-DB-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your history database was damaged. A fresh one was created and the old file was kept in the data folder." } } }
+    },
     "error.STO-DB-003" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder." } } }
+    },
+    "error.STO-DB-004" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't read your history. Try again." } } }
+    },
+    "error.STO-IO-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't write to its data folder. Check free disk space." } } }
     },
     "error.STO-IO-002" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't create its data folder, so it can't run." } } }
     },
+    "error.STO-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned and shortcut items alone exceed your image budget." } } }
+    },
+    "error.STO-LIM-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Disk space is low, so Flotsam isn't saving images." } } }
+    },
     "error.SYS-INT-001" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings › About." } } }
+    },
+    "error.TRG-OS-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "macOS wouldn't let Flotsam use that shortcut. Try a different one." } } }
+    },
+    "error.TRG-OS-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't expand that trigger. Your typed text was left as it was." } } }
+    },
+    "error.TRG-OS-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Typed triggers were paused by macOS and have been restarted." } } }
+    },
+    "error.TRG-VAL-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Triggers start with a symbol (like ;), have 2 to 24 characters and contain no spaces." } } }
+    },
+    "error.TRG-VAL-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That trigger is already used by another item." } } }
+    },
+    "error.TRG-VAL-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcuts need ⌘ or ⌃ plus a key, and can't be a reserved system shortcut." } } }
+    },
+    "error.TRG-VAL-004" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That shortcut is already used in Flotsam." } } }
+    },
+    "error.TRG-VAL-005" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "An unknown variable was left as plain text." } } }
+    },
+    "ui.fatal.quit" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } } }
+    },
+    "ui.fatal.revealDataFolder" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reveal Data Folder" } } }
+    },
+    "ui.menu.quit" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Flotsam" } } }
     },
     "ui.menu.status" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam is running" } } }
     },
-    "ui.menu.quit" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Flotsam" } } }
+    "ui.menu.title" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam" } } }
+    },
+    "ui.permission.accessibility" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } } }
+    },
+    "ui.permission.inputMonitoring" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Input Monitoring" } } }
+    },
+    "ui.permission.pasteboard" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste from Other Apps" } } }
+    },
+    "ui.permission.screenshotFolder" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot folder access" } } }
     }
   },
   "version" : "1.0"
