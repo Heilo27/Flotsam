@@ -1531,7 +1531,7 @@
       "must_verify": true
     },
     {
-      "id": "OC-7150",
+      "id": "OC-7153",
       "requirement": "FR-007-11",
       "given": "A store with deletable text items whose unique content markers fill many pages, freelist empty",
       "when": "Clear History (All time) completes",
