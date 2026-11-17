@@ -8,6 +8,14 @@ public enum IngestLimits {
     public static let maxImageBytes = 100 * 1024 * 1024
     public static let maxBundleMembers = 500
     public static let maxNoteCharacters = 2000
+
+    /// The note counter appears from here (FR-004-06): 90% of the ceiling.
+    public static let noteCounterThreshold = maxNoteCharacters / 10 * 9
+
+    /// A note's length in the unit the ceiling is stated in: Unicode scalars, which is what the schema's own
+    /// `CHECK (length(note) <= 2000)` counts. The one counting rule: `setNote` and the note counter both call this, so
+    /// the counter can never show a note as fine that save rejects (a ZWJ emoji is one Character but several scalars).
+    public static func noteLength(_ note: String) -> Int { note.unicodeScalars.count }
 }
 
 /// What FR-007-06 leaves of a candidate once the ceilings are applied.

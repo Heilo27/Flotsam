@@ -12,7 +12,7 @@ extension FlotsamDatabase {
     /// Returns false when the item no longer exists.
     public func setNote(_ note: String?, for id: UUID) async -> FlotsamResult<Bool> {
         let stored: String? = (note?.isEmpty ?? true) ? nil : note
-        if let stored, stored.unicodeScalars.count > IngestLimits.maxNoteCharacters {
+        if let stored, IngestLimits.noteLength(stored) > IngestLimits.maxNoteCharacters {
             return .failure(FlotsamError(
                 .orgVal002, "Note is over the character ceiling", context: [.count: .int(IngestLimits.maxNoteCharacters)]))
         }

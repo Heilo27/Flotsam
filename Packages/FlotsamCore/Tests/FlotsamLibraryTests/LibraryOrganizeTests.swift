@@ -180,6 +180,27 @@ final class FakeOrganizeStore: LibraryOrganizeStore, @unchecked Sendable {
         #expect(r.model.cursorID == rows[3].id)
     }
 
+    // MARK: Context-menu Pin label (FR-004-01)
+
+    @Test func pinMenuLabelFollowsWhatTheActionWillDo() async {
+        let rows = [makeRow(1, pinned: true), makeRow(2, pinned: false), makeRow(3, pinned: true)]
+        let harness = Harness(rows: rows, counts: nil, accessibility: true)
+        await harness.model.open(target: FrontmostApp(bundleId: "com.apple.TextEdit", processId: 4242))
+        let model = harness.model
+        let visible = model.visibleRows
+        guard let pinned = visible.first(where: \.isPinned), let unpinned = visible.first(where: { !$0.isPinned }),
+              let first = visible.first, let last = visible.last else { Issue.record("fixture rows missing"); return }
+        // A row outside the selection: the action covers just that row, so the label reads that row.
+        model.select(id: unpinned.id)
+        #expect(model.pinActionUnpins(menuRowID: pinned.id, isPinned: true))
+        #expect(!model.pinActionUnpins(menuRowID: unpinned.id, isPinned: false))
+        // Mixed multi-selection: the action pins all, so the label says Pin even on a pinned clicked row.
+        model.select(id: first.id)
+        model.extend(to: last.id)
+        #expect(model.selection.count == 3)
+        #expect(!model.pinActionUnpins(menuRowID: pinned.id, isPinned: true))
+    }
+
     // MARK: Commands refresh the list
 
     @Test func everyOrganizeCommandRefreshesOnSuccess() async {
