@@ -219,3 +219,13 @@ Rebased onto `main` d7d11d9; part 1 is now a8c525e.
 - Still open from before: the 500-file backfill takes ~125 s and needs a spec ruling.
 
 ### C2 FRD-006 Shelf on `s2/frd006`: started from origin/main f190da8 (in progress)
+- **C1 follow-up @ 578c5d0:** S1 ruled on the FR-002-12 backfill (see below). Live pickup was NOT already winning: the import queue was strict FIFO, so a fresh screenshot sat behind every queued backfill file.
+  - Fix: live jobs now go ahead of queued backfill jobs. Each class stays FIFO.
+  - FR-002-12 updated in the same commit.
+  - New test "FR-002-12: live pickup goes ahead of a running backfill" fails 3/3 with the fix removed. A first unmutated-vs-mutant run passed spuriously, probably a stale build; reruns were consistent.
+  - Results: the full `swift test` run is green (287 swift-testing tests, 8 known issues; 56 screenshot tests); check-architecture passes.
+  - Ready for S1 review/merge.
+- **C2 FRD-006:** the first agent hit its context cap after reconnaissance only, with nothing written. Restarted as C2a (package layer: model, reveal machine, layout, drop/drag logic, catalogue keys, LogEvent); C2b (App layer) follows. Spec drift so far:
+  - `shelf.empty` should be `ui.shelf.empty`.
+  - FR-006-18 needs a `LogEvent.shelf` extension.
+  - The delete-confirm text is FRD-004's and has no key.
