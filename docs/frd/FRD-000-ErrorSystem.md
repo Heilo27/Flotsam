@@ -39,7 +39,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 - **FR-000-07** The §7 table is the specification of the catalogue. A unit test enumerates every `ErrorCode` and fails if any code lacks a catalogue key (Warning/Error/Fatal), has a duplicate raw value, has a catalogue key with no code, or has a message over 140 characters.
 
 **Surfaces**
-- **FR-000-08** Surfacing rule. (a) User-initiated action fails (paste, hotkey, edit, drop, expansion): show a HUD — a small non-activating floating label, top-centre of the screen with the pointer, 2.5 s, no focus change. (b) Background failure (capture, screenshot pickup, retention): add a dot badge to the menu-bar icon and append to the Notices list (menu bar › Notices, newest 10 kept in memory, cleared on "Dismiss all" or quit). (c) Fatal: modal alert (FR-000-04). Throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall; throttled occurrences are still logged.
+- **FR-000-08** Surfacing rule. (a) User-initiated action fails (paste, hotkey, edit, drop, expansion): show a HUD — a small non-activating floating label, top-centre of the screen with the pointer, 2.5 s, no focus change. (b) Background failure (capture, screenshot pickup, retention): add a dot badge to the menu-bar icon and append to the Notices list (menu bar › Notices, newest 10 kept in memory, cleared on "Dismiss all" or quit). (c) Fatal: modal alert (FR-000-04). Throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall; throttled occurrences are still logged. A surfacing exactly 60 s old has expired, so the same code may surface again at T+60.
 
 **Logging**
 - **FR-000-09** Logging uses `os.Logger`, subsystem = the app bundle identifier, one category per module (`core`, `capture`, `screenshots`, `library`, `organize`, `triggers`, `shelf`, `storage`, `settings`). Level mapping: Info → `.info`, Warning → `.notice`, Error → `.error`, Fatal → `.fault`. Verbose traces use `.debug` and are wrapped in `#if DEBUG` so they are compiled out of release builds. `print`, `NSLog` and `dump` are forbidden in app sources (lint-enforced).
@@ -208,4 +208,5 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
 
 ## 11. Change Log
+- 2026-11-16: FR-000-08 states the throttle boundary: a surfacing exactly 60 s old has expired, so the same code may surface again at T+60.
 - 2026-11-16: STO-DB-003 copy cut from three sentences to two (the 1-2 sentence rule): "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder."
