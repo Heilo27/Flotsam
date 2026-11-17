@@ -23,6 +23,8 @@ targets:
     sources:
       - App/Flotsam
       - App/Platform
+      - path: LICENSE
+        buildPhase: resources
     dependencies:
       - package: FlotsamCore
         product: FlotsamBase

@@ -1,0 +1,34 @@
+import ApplicationServices
+import AppKit
+import CoreGraphics
+import FlotsamBase
+
+/// Accessibility and Input Monitoring behind the `PermissionProbe` port (FR-008-13). Every read asks the system again.
+struct SystemPermissionProbe: PermissionProbe {
+    func isGranted(_ kind: PermissionKind) -> Bool {
+        switch kind {
+        case .accessibility: AXIsProcessTrusted()
+        case .inputMonitoring: CGPreflightListenEventAccess()
+        }
+    }
+
+    func request(_ kind: PermissionKind) {
+        switch kind {
+        case .accessibility:
+            // The literal is the value of kAXTrustedCheckOptionPrompt, which Swift 6 cannot read as a global.
+            _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        case .inputMonitoring:
+            _ = CGRequestListenEventAccess()
+        }
+    }
+
+    func openSystemSettings(_ kind: PermissionKind) {
+        let anchor: String
+        switch kind {
+        case .accessibility: anchor = "Privacy_Accessibility"
+        case .inputMonitoring: anchor = "Privacy_ListenEvent"
+        }
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)") else { return }
+        NSWorkspace.shared.open(url)
+    }
+}

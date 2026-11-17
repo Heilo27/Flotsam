@@ -13,6 +13,8 @@ struct FlotsamApp: App {
             Divider()
             noticesMenu
             Divider()
+            Button(SettingsString.window.text) { container.settings.openSettings() }
+                .keyboardShortcut(",")
             Button(FlotsamStrings.text(forKey: "ui.menu.quit") ?? "") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         } label: {

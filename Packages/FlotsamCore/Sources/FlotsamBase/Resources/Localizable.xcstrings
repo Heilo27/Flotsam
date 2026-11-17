@@ -403,6 +403,9 @@
     "ui.settings.permissionGranted" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Granted" } } }
     },
+    "ui.settings.permissionUnknown" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } } }
+    },
     "ui.settings.permissionNotGranted" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Not granted" } } }
     },
@@ -585,6 +588,9 @@
     },
     "ui.settings.clearDeleting" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Deleting…" } } }
+    },
+    "ui.settings.clearDone" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld items deleted" } } }
     },
     "ui.settings.cancel" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } } }

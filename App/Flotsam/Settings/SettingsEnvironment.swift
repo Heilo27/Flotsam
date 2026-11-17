@@ -14,39 +14,31 @@ struct SettingsStorage: Sendable {
     var clear: @Sendable (ClearRange, Bool) async -> FlotsamResult<ClearOutcome>
     var sweep: @Sendable (RetentionPreset, ImageBudget) async -> FlotsamResult<SweepOutcome>
 
-    init(database: FlotsamDatabase) {
-        usage = { await database.storageUsage() }
-        retentionPreview = { await database.retentionPreview($0) }
-        budgetPreview = { await database.imageBudgetEvictionPreview($0) }
-        clearPreview = { await database.clearHistoryPreview(range: $0, includeExempt: $1) }
-        clear = { await database.clearHistory(range: $0, includeExempt: $1) }
-        sweep = { await database.runRetentionSweep(preset: $0, budget: $1) }
-    }
-
-    /// The database is not open (the Fatal path already told the user). Every call fails with `STO-DB-004`, which the
-    /// window reports like any other read failure.
-    static let unavailable: SettingsStorage = {
-        let failure = FlotsamError(.stoDb004, "Settings storage is not available")
-        return SettingsStorage(
-            usage: { .failure(failure) }, retentionPreview: { _ in .failure(failure) },
-            budgetPreview: { _ in .failure(failure) }, clearPreview: { _, _ in .failure(failure) },
-            clear: { _, _ in .failure(failure) }, sweep: { _, _ in .failure(failure) })
-    }()
-
-    private init(
-        usage: @escaping @Sendable () async -> FlotsamResult<StorageUsage>,
-        retentionPreview: @escaping @Sendable (RetentionPreset) async -> FlotsamResult<DeletionPreview>,
-        budgetPreview: @escaping @Sendable (ImageBudget) async -> FlotsamResult<DeletionPreview>,
-        clearPreview: @escaping @Sendable (ClearRange, Bool) async -> FlotsamResult<DeletionPreview>,
-        clear: @escaping @Sendable (ClearRange, Bool) async -> FlotsamResult<ClearOutcome>,
-        sweep: @escaping @Sendable (RetentionPreset, ImageBudget) async -> FlotsamResult<SweepOutcome>
-    ) {
-        self.usage = usage
-        self.retentionPreview = retentionPreview
-        self.budgetPreview = budgetPreview
-        self.clearPreview = clearPreview
-        self.clear = clear
-        self.sweep = sweep
+    /// `database` is asked on every call, because the database opens after launch and may not be open yet when the
+    /// window is built; while it is nil every call fails with `STO-DB-004`.
+    init(database: @escaping @MainActor @Sendable () -> FlotsamDatabase?) {
+        let missing = FlotsamError(.stoDb004, "Settings storage is not available")
+        usage = { guard let db = await database() else { return .failure(missing) }; return await db.storageUsage() }
+        retentionPreview = { preset in
+            guard let db = await database() else { return .failure(missing) }
+            return await db.retentionPreview(preset)
+        }
+        budgetPreview = { budget in
+            guard let db = await database() else { return .failure(missing) }
+            return await db.imageBudgetEvictionPreview(budget)
+        }
+        clearPreview = { range, exempt in
+            guard let db = await database() else { return .failure(missing) }
+            return await db.clearHistoryPreview(range: range, includeExempt: exempt)
+        }
+        clear = { range, exempt in
+            guard let db = await database() else { return .failure(missing) }
+            return await db.clearHistory(range: range, includeExempt: exempt)
+        }
+        sweep = { preset, budget in
+            guard let db = await database() else { return .failure(missing) }
+            return await db.runRetentionSweep(preset: preset, budget: budget)
+        }
     }
 }
 
@@ -59,12 +51,22 @@ struct SettingsEnvironment: Sendable {
     let permissions: any PermissionProbe
     let storage: SettingsStorage
     let dataFolder: URL
+    /// Opens the data folder in Finder (the Fatal alert reveals the same folder).
+    let revealDataFolder: @MainActor @Sendable () -> Void
     /// Everything reported from Settings is a result of something the user just did, so the caller reports it as
     /// `ErrorOrigin.userInitiated` (a HUD).
     let report: @MainActor @Sendable (FlotsamError) -> Void
+    /// The one-line HUD for a result that is not an error ("Diagnostics copied", "{n} items deleted").
+    let hud: @MainActor @Sendable (String) -> Void
+    /// TODO(FRD-008 menu/onboarding builder): reopens onboarding (FR-008-12). Seam until that window exists.
     let showSetupGuide: @MainActor @Sendable () -> Void
     /// Builds the diagnostics report and puts it on the pasteboard (FR-000-10); the result is the byte count copied.
     let copyDiagnostics: @Sendable () async -> FlotsamResult<Int>
+}
+
+extension SettingsEnvironment {
+    /// The project page, opened only when the user clicks "Project Page" (FR-008-09). Never fetched.
+    static let projectPageURL = URL(string: "https://github.com/Heilo27/Flotsam") ?? URL(fileURLWithPath: "/")
 }
 
 /// What the pane views share: the environment, and a revision that moves whenever any setting changes, so a view that
