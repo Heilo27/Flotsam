@@ -39,6 +39,9 @@ public enum LibraryText {
         count == 1 ? string("ui.library.footerOneItem") : format("ui.library.footerItems", count)
     }
 
+    /// "and 3 more": the file members past the preview's limit.
+    public static func previewMore(_ count: Int) -> String { format("ui.library.previewMore", count) }
+
     public static func selectedCount(_ count: Int) -> String { format("ui.library.footerSelected", count) }
 
     /// "Files", "Rich Text": the plural type names of the sidebar (distinct from `KindLabel`, which is the singular used

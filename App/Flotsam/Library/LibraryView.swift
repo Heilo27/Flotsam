@@ -1,0 +1,174 @@
+import AppKit
+import FlotsamBase
+import FlotsamLibrary
+import SwiftUI
+
+/// The Library panel's content (FR-003-05): search field on top, sidebar on the left, list or grid in the middle, the
+/// preview pane on the right when open, the footer at the bottom. All state and behaviour live in `LibraryViewModel`.
+struct LibraryView: View {
+    let model: LibraryViewModel
+    @FocusState private var searchFocused: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            searchField
+            Divider()
+            HStack(spacing: 0) {
+                LibrarySidebar(model: model)
+                    .frame(width: 170)
+                Divider()
+                content
+                if model.isPreviewOpen {
+                    Divider()
+                    LibraryPreviewView(model: model)
+                        .frame(minWidth: 200, idealWidth: 280, maxWidth: 360)
+                }
+            }
+            Divider()
+            LibraryFooterView(model: model)
+        }
+        .onAppear { searchFocused = true }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            searchFocused = true
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+            TextField(
+                LibraryText.string(LibraryText.searchPlaceholder),
+                text: Binding(get: { model.searchText }, set: { model.setSearchText($0) })
+            )
+            .textFieldStyle(.plain)
+            .font(.title3)
+            .focused($searchFocused)
+            .accessibilityLabel(LibraryText.string(LibraryText.searchPlaceholder))
+            Button {
+                model.toggleViewMode()
+            } label: {
+                Image(systemName: model.viewMode == .list ? "square.grid.2x2" : "list.bullet")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(LibraryText.string(model.viewMode == .list ? "ui.library.viewGrid" : "ui.library.viewList"))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch model.loadState {
+        case .loading:
+            ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .failed(let error):
+            LibraryStateView(
+                title: LibraryText.string(LibraryText.errorTitle), body: FlotsamStrings.message(for: error),
+                buttonTitle: LibraryText.string(LibraryText.retryButton)
+            ) { Task { await model.retry() } }
+        case .loaded:
+            if model.isHistoryEmpty {
+                LibraryStateView(
+                    title: LibraryText.string(LibraryText.emptyTitle), body: LibraryText.string(LibraryText.emptyBody),
+                    buttonTitle: nil, action: {})
+            } else if model.isNoResults {
+                LibraryStateView(
+                    title: LibraryText.noResultsTitle(query: model.searchText),
+                    body: LibraryText.string(LibraryText.noResultsBody),
+                    buttonTitle: model.searchText.isEmpty ? nil : LibraryText.string(LibraryText.clearSearchButton)
+                ) { model.setSearchText(String()) }
+            } else {
+                LibraryItemsView(model: model)
+            }
+        }
+    }
+}
+
+/// Empty history, no results and load failure share one shape: a title, a line, an optional button (FR-003-17).
+struct LibraryStateView: View {
+    let title: String
+    let body: String
+    let buttonTitle: String?
+    let action: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(verbatim: title).font(.headline)
+            Text(verbatim: body).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            if let buttonTitle {
+                Button(buttonTitle, action: action).padding(.top, 4)
+            }
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct LibrarySidebar: View {
+    let model: LibraryViewModel
+
+    var body: some View {
+        let entries = model.sidebarEntries
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 2) {
+                section(.top, title: nil, entries)
+                section(.types, title: LibraryText.string(LibraryText.sectionTypes), entries)
+                section(.tags, title: LibraryText.string(LibraryText.sectionTags), entries)
+                section(.apps, title: LibraryText.string(LibraryText.sectionApps), entries)
+            }
+            .padding(8)
+        }
+    }
+
+    @ViewBuilder
+    private func section(_ section: SidebarEntry.Section, title: String?, _ entries: [SidebarEntry]) -> some View {
+        let inSection = entries.filter { $0.section == section }
+        if !inSection.isEmpty {
+            if let title {
+                Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.top, 8).padding(.horizontal, 6)
+            }
+            ForEach(inSection) { entry in
+                Button { model.select(filter: entry.filter) } label: {
+                    HStack {
+                        Text(verbatim: entry.title).lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(verbatim: entry.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
+                    }
+                    .opacity(entry.isDimmed ? 0.5 : 1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(model.filter == entry.filter ? Color.accentColor.opacity(0.25) : .clear, in: RoundedRectangle(cornerRadius: 5))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(model.filter == entry.filter ? .isSelected : [])
+            }
+        }
+    }
+}
+
+struct LibraryFooterView: View {
+    let model: LibraryViewModel
+
+    var body: some View {
+        let footer = model.footer()
+        HStack(spacing: 14) {
+            ForEach(footer.hints, id: \.key) { hint in
+                HStack(spacing: 4) {
+                    Text(verbatim: hint.key).font(.caption.monospaced())
+                        .padding(.horizontal, 4)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 3))
+                    Text(verbatim: hint.label).font(.caption)
+                }
+            }
+            if let notice = footer.notice {
+                Text(verbatim: notice).font(.caption).foregroundStyle(.orange)
+            }
+            Spacer()
+            Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+    }
+}

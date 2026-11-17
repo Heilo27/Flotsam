@@ -358,6 +358,12 @@
     "ui.library.menuReveal" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reveal in Finder" } } }
     },
+    "ui.library.viewGrid" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Grid view" } } }
+    },
+    "ui.library.viewList" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "List view" } } }
+    },
     "ui.menu.openLibrary" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Library" } } }
     },

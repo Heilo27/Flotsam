@@ -182,7 +182,7 @@ Empty (images 02, 05), no results (02), inline error with Retry (02, STO-DB-004)
 | ⇧Return | copy only |
 | ⌘1 to ⌘9 | quick paste row n |
 | Space (empty search) or ⌘Y | preview |
-| Esc | cascade: close popover, clear selection, clear search, close panel |
+| Esc | first press that applies: clear search if non-empty; else close preview if open; else, with several rows selected, reduce to one row; else close panel |
 | ⌥↑ ⌥↓ | previous / next sidebar filter |
 | ⌘G | toggle list and grid |
 | ⌘R | reveal in Finder |
@@ -269,7 +269,7 @@ Each icon-only control carries an `accessibilityLabel` (below).
 
 ## 10. Copy
 
-Limits: buttons 15, alert titles 40, alert messages 150, notifications and HUD 100. Counts are characters including spaces; `{x}` placeholders are counted as written and the longest expected value is checked. Active voice; no jargon. Each string is one entry in the String Catalog (no concatenation; plurals use catalogue variations).
+Limits: buttons 15, alert titles 40, alert messages 150, notifications and HUD 100. Counts are characters including spaces; `{x}` placeholders are counted as written and the longest expected value is checked. Active voice; no jargon. Each string is one entry in the String Catalog (no concatenation; plurals use catalogue variations). Catalogue keys carry the `ui.` prefix (`ui.btn.*`, `ui.library.*`); a key shown here without it is not in the catalogue yet.
 
 Deliberate deviations from FRD text: confirmation strings use curly quotes. `storage.confirm.clear` uses "can’t" for the FRD's "can't". `btn.deleteN` is replaced by "Delete Items" because "Delete 212 Items" is 16 characters.
 
@@ -278,9 +278,9 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | Key | String | Count |
 |---|---|---|
 | `btn.paste` | Paste | (5/15) |
-| `btn.retry` | Retry | (5/15) |
+| `ui.btn.retry` | Retry | (5/15) |
 | `btn.enablePasting` | Enable pasting | (14/15) |
-| `btn.clearSearch` | Clear Search | (12/15) |
+| `ui.btn.clearSearch` | Clear Search | (12/15) |
 | `btn.cancel` | Cancel | (6/15) |
 | `btn.save` | Save | (4/15) |
 | `btn.delete` | Delete | (6/15) |
@@ -310,33 +310,48 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 
 | Key | String | Count |
 |---|---|---|
-| `library.search.placeholder` | Search clipboard history | (24/40) |
-| `library.empty.title` | Nothing copied yet | (18/40) |
-| `library.empty.body` | Copy something and it appears here. Press ⌃⌘V any time to open this panel. | (74/150) |
-| `library.noResults.title` | No matches for “{query}” | (24/40) |
-| `library.noResults.body` | Check the spelling, or clear the search to see everything. | (58/150) |
-| `library.footer.copyOnly` | Press ⌘V to paste | (17/40) |
-| `library.footer.selected` | {n} selected | (12/40) |
-| `library.footer.hint.paste` | Paste | (5/15) |
-| `library.footer.hint.plain` | Plain text | (10/15) |
-| `library.footer.hint.copy` | Copy | (4/15) |
-| `library.footer.hint.preview` | Preview | (7/15) |
-| `library.footer.hint.close` | Close | (5/15) |
-| `library.footer.hint.clearSel` | Clear selection | (15/15) |
-| `library.error.title` | History unavailable | (19/40) |
-| `library.preview.showMore` | Show more | (9/15) |
+| `ui.library.panelTitle` | Flotsam Library | (15/40) |
+| `ui.library.searchPlaceholder` | Search clipboard history | (24/40) |
+| `ui.library.emptyTitle` | Nothing copied yet | (18/40) |
+| `ui.library.emptyBody` | Copy something and it appears here. Press ⌃⌘V any time to open this panel. | (74/150) |
+| `ui.library.noResultsTitle` | No matches for “%@” | (24/40) |
+| `ui.library.noResultsBody` | Check the spelling, or clear the search to see everything. | (58/150) |
+| `ui.library.errorTitle` | History unavailable | (19/40) |
+| `ui.library.footerCopyOnly` | Press ⌘V to paste | (17/40) |
+| `ui.library.footerMultiDisabled` | Select one item to paste | (24/40) |
+| `ui.library.footerItems` | %lld items | (9/40) |
+| `ui.library.footerOneItem` | 1 item | (6/40) |
+| `ui.library.footerSelected` | %lld selected | (12/40) |
+| `ui.library.hintPaste` | Paste | (5/15) |
+| `ui.library.hintPlain` | Plain text | (10/15) |
+| `ui.library.hintCopy` | Copy | (4/15) |
+| `ui.library.hintPreview` | Preview | (7/15) |
+| `ui.library.hintClose` | Close | (5/15) |
+| `ui.library.hintClearSelection` | Clear selection | (15/15) |
+| `ui.library.keyReturn`, `keyOptionReturn`, `keyShiftReturn`, `keySpace`, `keyEsc` | Return, ⌥Return, ⇧Return, Space, Esc | (footer key caps) |
+| `ui.library.sidebarAll`, `sidebarPinned` | All, Pinned | (3/15, 6/15) |
+| `ui.library.sectionTypes`, `sectionTags`, `sectionApps` | Types, Tags, Apps | (5/15, 4/15, 4/15) |
+| `ui.library.appAnotherDevice`, `appUnknown` | Another device, Unknown | (14/15, 7/15) |
+| `ui.library.typeText` to `typeScreenshot` | Text, Rich Text, Links, Colors, Phone Numbers, Emails, Images, Files, Folders, Bundles, Screenshots | (sidebar type names) |
+| `ui.library.tagOverflow` | +%lld | (row chips) |
+| `ui.library.fromApp`, `ui.library.pinned` | from %@, Pinned | (VoiceOver row label) |
+| `ui.library.previewShowMore` | Show more | (9/15) |
+| `ui.library.previewMore` | and %lld more | (13/40) |
+| `ui.library.previewUnavailable` | Preview unavailable | (19/40) |
+| `ui.library.previewKind` | Kind | (4/15) |
+| `ui.library.previewSource` | Source | (6/15) |
+| `ui.library.previewCopied` | Copied | (6/15) |
+| `ui.library.previewTimesPasted` | Times pasted | (12/15) |
+| `ui.library.previewSize` | Size | (4/15) |
+| `ui.library.previewPixelSize` | Pixel size | (10/15) |
+| `ui.library.menuPaste`, `menuPastePlain`, `menuCopy`, `menuPreview`, `menuReveal` | Paste, Paste as Plain Text, Copy, Preview, Reveal in Finder | (context menu, FR-003-22) |
+| `ui.library.viewGrid`, `viewList` | Grid view, List view | (view toggle VoiceOver label) |
 | `library.sort.recent` | Recent | (6/15) |
 | `library.sort.oldest` | Oldest | (6/15) |
 | `library.sort.mostUsed` | Most Used | (9/15) |
 | `library.sort.az` | A to Z | (6/15) |
-| `library.preview.kind` | Kind | (4/15) |
-| `library.preview.source` | Source | (6/15) |
-| `library.preview.copied` | Copied | (6/15) |
 | `library.preview.firstCopied` | First copied | (12/15) |
 | `library.preview.timesCopied` | Times copied | (12/15) |
-| `library.preview.timesPasted` | Times pasted | (12/15) |
-| `library.preview.size` | Size | (4/15) |
-| `library.preview.pixelSize` | Pixel size | (10/15) |
 
 ### Organize
 
