@@ -1,0 +1,130 @@
+# FRD-006 — Shelf
+
+**Status:** Draft · 2026-11-16 · Constitution: [TRUTHS.md](../TRUTHS.md) · PRD: [PRD.md](../PRD.md) (feature F6) · Errors: [FRD-000](FRD-000-ErrorSystem.md)
+**Owns:** the Shelf panel (reveal, hide, placement, contents), drag-out, drop-in.
+**Does not own:** item-to-pasteboard representations and the paste sequence ([FRD-003](FRD-003-Library.md) FR-003-15); classification, kinds and dedupe of what is dropped ([FRD-001](FRD-001-Capture.md)); storage, limits and the ingest pipeline ([FRD-007](FRD-007-RetentionStorage.md)); the toggle hotkey binding ([FRD-005](FRD-005-ShortcutsTriggers.md) FR-005-01, FR-005-07); the settings screen ([FRD-008](FRD-008-OnboardingSettings.md)); pin and delete ([FRD-004](FRD-004-Organize.md)).
+
+## Truth Test
+- Serves: S3 — drag is a first-class path: drag clips out to any app, drop files and text in.
+- Supports: P1 — for moments when the mouse is already in hand, a clip is one drag away without opening the Library.
+- Violates: none. The Shelf is not a screenshot tool (A3), not a sync surface (A1), and makes no network call (A4).
+- Verdict: KEEP. S3's own falsifier says "Shelf usage near zero after a month of dogfooding → demote to off-by-default". The PRD already ships it on in v1, so this FRD keeps it on by default and provides a way to measure use locally (FR-006-18) so the demotion decision is evidence-based. Sequencing note for Friday: build after F3 and F7, before F5 typed triggers; the Shelf can be cut or delayed without touching any other FRD.
+
+## 1. Purpose
+A small panel at a screen edge (or under the menu-bar icon) that shows pinned and recent clips as draggable cards, lets any card be dragged into any app, and lets files, text and images be dropped onto it to save them.
+
+## 2. User Stories
+- As a user writing a document, I drag the screenshot I took ten minutes ago straight from the Shelf into it.
+- As a user, I drag a file from Finder onto the Shelf to keep it handy and drag it back out into a mail message later.
+- As a user, I drag three files from the Shelf into a chat window and all three arrive.
+- As a user, I pin a clip and it is always in the Shelf's first section.
+- As a keyboard user, I open the Shelf with its hotkey, arrow to a clip and press Return to paste it.
+- As a user who finds the Shelf unnecessary, I turn it off and Flotsam behaves as if it was never there.
+
+## 3. Functional Requirements
+
+**Enable and settings**
+- **FR-006-01** Enablement and settings. `shelf.enabled` (default on) turns the Shelf on or off. `shelf.placement` is one of `rightEdge` (default), `leftEdge`, `bottomEdge`, `menuBar`. `shelf.revealOnEdgeHover` (default off): reveal when the pointer rests in the edge zone without a drag. Settings keys and their screen are in the FRD-008 registry; defaults and meanings are owned here. When `shelf.enabled` is off: no panel exists, no global event monitor is installed, the toggle hotkey is unregistered (FR-005-07), the menu bar "Toggle Shelf" item is hidden, and drops onto the menu-bar icon are not accepted.
+
+**Window behavior**
+- **FR-006-02** Window. The Shelf is a borderless, non-activating `NSPanel` (`nonactivatingPanel`, `becomesKeyOnlyIfNeeded`), window level `.floating`, joining all Spaces and permitted over full-screen apps (`canJoinAllSpaces`, `fullScreenAuxiliary`), with no Dock icon or app switcher entry, and excluded from window cycling. Revealing the Shelf never changes the frontmost application, never moves keyboard focus, and never changes the key window of the target app, except as stated in FR-006-08.
+- **FR-006-03** Reveal triggers. The Shelf reveals when: (a) a drag is in progress anywhere on the system (the drag pasteboard's `changeCount` changed while a mouse button is down, observed with a global monitor of `leftMouseDragged` events) and the pointer dwells in the edge zone for 300 ms (edge placements only); (b) `shelf.revealOnEdgeHover` is on, no mouse button is down, and the pointer dwells in the edge zone for 500 ms (edge placements only); (c) the Toggle Shelf hotkey or the menu bar "Toggle Shelf" item is used (all placements); (d) for `menuBar` placement, a drag hovers over the menu-bar icon for 300 ms. The edge zone is a 4 pt strip at the placement's screen edge covering the middle 60 % of that edge's length, on any connected screen. The global monitors needed for (a) and (b) exist only while the Shelf is enabled (the `mouseMoved` monitor only while (b) is on). No key events are ever monitored by the Shelf.
+- **FR-006-04** Hide rules. A Shelf revealed by (a), (b) or (d) is "transient": it hides 600 ms after the pointer leaves it (and, for a drag, 600 ms after the drag ends), immediately after a successful drop-out or paste, and on any click outside it. A Shelf revealed by (c) is "sticky": it stays until the hotkey or menu item is used again, its close button is clicked, Esc is pressed while it is key (FR-006-08), or the user pastes from it. Both modes hide when a different Space becomes active and when Flotsam's Library opens (only one Flotsam panel is open at a time).
+- **FR-006-05** Placement and geometry. Edge placements attach to the chosen edge of the screen that contains the edge zone that was triggered (for hotkey or menu reveal, the screen containing the pointer), inside that screen's `visibleFrame` so the Dock and menu bar are not covered. Left and right: 280 pt wide, height = content height capped to the visible height minus 40 pt, minimum 160 pt, vertically centred. Bottom: 140 pt tall, width = content width capped to 80 % of the visible width, horizontally centred. `menuBar`: 280 pt wide, anchored under the menu-bar icon (clamped to the screen), height as for left and right. The panel slides in over 150 ms from its edge and out over 120 ms; with Reduce Motion on it fades (100 ms) instead of sliding. The Shelf's size and position are not user-adjustable in v1.
+
+**Contents**
+- **FR-006-06** Contents and order. Two sections, in order: Pinned (all pinned items, up to 20, ordered by `lastCopiedAt` descending), then Recent (the 20 most recent unpinned items by `lastCopiedAt`, descending). A section with no items is hidden; with neither, the empty state shows the catalogue text `shelf.empty`. The Shelf ignores the Library's filter and sort. The list is read when the Shelf is about to show (FR-001-02 `captureNow` runs first) and refreshes live while visible within 200 ms of any capture, pin, edit or delete.
+- **FR-006-07** Cards. Each item is a card: for `image` and `screenshot` a thumbnail (FRD-007 FR-007-07, shared cache with the Library, FRD-003 FR-003-13); for `file`, `folder` and `bundle` the file icon (bundle: stacked icon with a member count); for text-bearing kinds the first three lines of text (up to 120 characters) with the kind icon; for `color` a swatch with the value; a pin badge on pinned items; the source app icon, small, in a corner. Vertical placements stack cards 64 pt tall; the bottom placement lays cards out as a horizontal strip 112 pt wide. Cards show no timestamps, notes or tags. Missing file members show the Missing badge as the Library does (FRD-003).
+
+**Interaction**
+- **FR-006-08** Selection and keyboard (sticky mode only). A sticky Shelf may become key (the app stays inactive; the target app stays frontmost, as for the Library, FRD-003 FR-003-01). While key: arrow keys move the selection through the cards, Return pastes the selected card into the recorded target app (the frontmost application when the Shelf was revealed) by the FRD-003 FR-003-15 sequence and hides the Shelf, ⌥Return pastes as plain text, ⇧Return copies only, ⌘C copies, Space is not used, Esc hides. A transient Shelf never becomes key. Accessibility denied: Return behaves as ⇧Return with `SET-PRM-001` (FRD-003 FR-003-17).
+- **FR-006-09** Mouse. A click selects a card (⌘-click toggles, ⇧-click extends the selection). Double-click pastes the card under the pointer (never the whole selection) into the recorded target app by the FR-003-15 sequence and hides the Shelf. The context menu (right-click) offers, in order: Paste, Paste as Plain Text, Copy, separator, Pin or Unpin (FRD-004 FR-004-01), separator, Delete (FRD-004 FR-004-09, with its confirmation rules). No other editing actions exist in the Shelf.
+
+**Drag out**
+- **FR-006-10** Drag out. Dragging a card (or the selection) starts a standard drag session after the system drag threshold. The drag provides the same representations the Library writes on paste (FRD-003 FR-003-15 step 2: stored text representations; image data through `NSImage`; file URLs for file, folder and bundle kinds) as drag-pasteboard items, lazily provided; a bundle contributes one pasteboard item per existing member; a multi-selection contributes the items in on-screen order. The allowed operation is copy only (`.copy`), never move or link, so an original file is never moved or renamed by a drop. The drag image is the card (several cards: a stacked image with a count badge). Variables are not expanded (FRD-005 FR-005-17). The drag never writes the general pasteboard and so is never captured as a clipboard change; nothing is marked own-write.
+- **FR-006-11** Drag-out accounting and failures. When the drag ends with an accepted operation, each dragged item's `pasteCount` is incremented and `lastUsedAt` set (FRD-007), and a transient Shelf hides. If a bundle or file item has missing members, they are skipped; when no member remains the drag does not start and `LIB-DAT-001` shows a HUD. If the drag session cannot be created or is aborted by the system, `SHF-OS-001` shows a HUD and nothing changes. A drag cancelled by the user (Esc, or dropped on nothing) changes nothing and shows nothing.
+
+**Drop in**
+- **FR-006-12** Drop targets and acceptance. The panel and (for `menuBar` placement) the menu-bar icon accept drops. While a drag hovers, the drag pasteboard is inspected for type identifiers only (no data read): if it holds at least one honoured type (FRD-001 FR-001-05) and no marker type from FRD-001 FR-001-04 gate 3 (`ConcealedType`, `TransientType`, `AutoGeneratedType`), the Shelf shows a highlighted drop zone and the cursor shows the copy badge; otherwise the drop is refused (no highlight, not-allowed cursor). Drags that originate in the Shelf itself are never accepted.
+- **FR-006-13** Drop processing. A drop is processed exactly as if its pasteboard content had been a pasteboard change: classification, kinds, typed-text detection, bundle semantics, `contentKey` and dedupe (FRD-001 FR-001-05 to -15) and then the ingest pipeline (FRD-007 FR-007-05). Differences, all deliberate: (a) it is an explicit user action, so the capture mode (gate 1) and the ignored-apps list (gate 4) do not apply, so a drop works in Paused and Curated modes; (b) the Concealed, Transient and AutoGenerated types still reject (gate 3), with `SHF-VAL-001`; (c) the source app is the frontmost application at drop time (the app the drag came from); (d) a dropped item that already exists bumps `copyCount` and `lastCopiedAt` (FRD-001 FR-001-15) and moves to the top of Recent. Several files dropped together become one bundle (FRD-001 FR-001-12); folders are stored as references; nothing dropped is copied or moved on disk except what the storage pipeline stores for text and images.
+- **FR-006-14** Drop errors. A file that cannot be read or no longer exists → skipped, `SHF-IO-001`, other files in the same drop continue; a dropped item over the ceilings in FRD-007 FR-007-06 → skipped, `SHF-LIM-001` with the limit; a drop with no honoured type or only ignored types (file promises, colours, PDFs, other `dyn.*`, FRD-001 FR-001-06) → refused, `SHF-VAL-001`. HUD throttling follows FR-000-08. A drop that has at least one stored result is a success and shows no error unless some part was skipped.
+- **FR-006-15** Drop feedback. A successful drop briefly highlights the new or bumped card (600 ms) and scrolls it into view at the top of Recent; the transient Shelf stays visible for 1.5 s after the drop, then follows FR-006-04. The drop never changes the frontmost application.
+
+**Cross-cutting**
+- **FR-006-16** Pasteboard interplay. Pastes from the Shelf (FR-006-08, FR-006-09) write the general pasteboard with own-write markers (FRD-001 FR-001-03) and so are never re-captured. Drag-out and drop-in use the drag pasteboard only.
+- **FR-006-17** Performance. From the trigger (dwell complete, hotkey, or menu item) to the panel fully visible with content: p95 ≤ 120 ms over 20 runs with 10,000 items (`shelf.reveal` signpost, FRD-000 FR-000-12). Drag start (past threshold) to drag image visible: p95 ≤ 100 ms. Drop of a 5 MiB image to the card visible in the Recent section: p95 ≤ 800 ms. With the Shelf enabled and idle, there are no timers and the only active observer is the `leftMouseDragged` global monitor, averaging under 0.5 % of one CPU core during continuous dragging. Thumbnails share the 64 MB cache from FRD-003 FR-003-13.
+- **FR-006-18** Local usage evidence for S3. Each reveal (by trigger type), drag-out (item count) and drop-in (outcome) writes one Info log line containing counts and the outcome code only (FR-000-11, FR-000-10). There is no persistence, counter or network call; the S3 falsifier review counts lines with `log show` during dogfooding. No file name, text or app name is logged.
+- **FR-006-19** Accessibility and display. Every card has a VoiceOver label in the Library's form (FRD-003 FR-003-21) with actions Paste, Copy, Pin; drag-out has the VoiceOver action "Drag" replaced by the Paste action (a drag has no equivalent). The panel respects Reduce Motion (FR-006-05), Reduce Transparency and Increase Contrast, and uses the system accent for the drop-zone highlight. The panel adopts light or dark appearance from the system. Text scales with the system's text-size settings where the platform provides them.
+- **FR-006-20** Screen changes. If the displays change while the Shelf is visible, it hides; hot zones are recalculated for the new screen set within 1 s. A screen with no usable visible frame for the chosen edge (for example fully covered) falls back to the screen containing the pointer for hotkey reveals and has no hot zone otherwise.
+
+## 4. Data Requirements
+- Reads items, pinned flag, thumbnails and `lastCopiedAt` (FRD-007); writes only through ingest (drops), `pasteCount`/`lastUsedAt` (drag-out and paste) and FRD-004 actions (pin, delete).
+- Settings (registry in FRD-008): `shelf.enabled` (bool, default true), `shelf.placement` (enum, default `rightEdge`), `shelf.revealOnEdgeHover` (bool, default false).
+- Constants (one home, here): edge zone 4 pt by 60 %; dwell 300 ms (drag) and 500 ms (hover); hide delay 600 ms; sections 20 and 20; card height 64 pt; width 280 pt; bottom height 140 pt.
+- Catalogue strings: `shelf.empty`, drop-zone label, close button, menu item titles.
+
+## 5. Business Rules
+- Dragging out never moves, renames or deletes an original file; the allowed operation is copy.
+- A drop is a capture: same kinds, same dedupe, same limits. It ignores capture mode and ignored apps because the user acted explicitly, but never defeats Concealed, Transient or AutoGenerated markers.
+- Revealing the Shelf never steals focus from the app the user is working in.
+- The Shelf never reads clip data merely to decide whether it can accept a drag.
+- Turning the Shelf off removes every observer it installed.
+
+## 6. Error States (codes in FRD-000 §7)
+| Situation | Code | Behaviour |
+|---|---|---|
+| Drag session could not start or was aborted by the system | SHF-OS-001 | cancelled; HUD |
+| Dropped file unreadable or gone | SHF-IO-001 | file skipped; HUD |
+| Dropped item over a size ceiling | SHF-LIM-001 | item skipped; HUD |
+| Drop has no storable content, or carries Concealed/Transient/AutoGenerated types | SHF-VAL-001 | refused; HUD |
+| All members of the dragged item are missing | LIB-DAT-001 | drag not started; HUD |
+| Accessibility off when pasting from a sticky Shelf | SET-PRM-001 | copy-only; HUD |
+| Database write failed on drop | STO-DB-001 | rolled back; surfaced per FRD-000 |
+
+## 7. Acceptance Criteria
+- **AC-006-01** (FR-006-01) Given a fresh install, then the Shelf is enabled on the right edge; toggling `shelf.enabled` off removes the global monitor, the hotkey registration and the menu item within 1 s; toggling on restores them without relaunch.
+- **AC-006-02** (FR-006-02,15) Given a text field has focus in another app, when the Shelf is revealed by any trigger, then the other app remains frontmost, its menu bar stays, its text field keeps focus (except a sticky Shelf made key per FR-006-08, where the app still stays frontmost), and the Shelf is present over a full-screen app.
+- **AC-006-03** (FR-006-03a) Given a file is being dragged from Finder, when the pointer rests in the right-edge zone for 300 ms, then the Shelf slides in; with no drag and `shelf.revealOnEdgeHover` off, resting at the same spot for 5 s does not reveal it; with hover on it reveals at 500 ms.
+- **AC-006-04** (FR-006-03c,04) Given the hotkey is pressed, then the Shelf shows on the screen with the pointer and stays until the hotkey is pressed again, the close button is clicked, or Esc is pressed while it is key; a transient reveal hides 600 ms after the pointer leaves.
+- **AC-006-05** (FR-006-05) Given two screens and the Dock on the right of the main screen, then the right-edge Shelf sits inside the visible frame without covering the Dock; bottom placement is 140 pt tall and at most 80 % of the width; with Reduce Motion on the panel fades rather than slides.
+- **AC-006-06** (FR-006-06) Given 25 pinned and 30 unpinned items, then Pinned shows 20 and Recent shows 20 ordered by `lastCopiedAt` descending; capturing a new clip while the Shelf is visible inserts it at the top of Recent within 200 ms; with no items the empty state shows.
+- **AC-006-07** (FR-006-07) Given image, text, link, colour, file, folder and bundle items, then each card shows the content defined, a bundle shows its member count, and pinned cards show the pin badge.
+- **AC-006-08** (FR-006-08) Given a sticky Shelf and a text field focused in another app, when Down, Down, Return is pressed, then the third card's text is pasted into that field and the Shelf hides; ⇧Return copies only; Esc hides without pasting; a transient Shelf receives no keyboard input.
+- **AC-006-09** (FR-006-09) Given a double-click on a card, then it is pasted into the recorded target app; the context menu shows exactly the entries in order; Delete of a pinned card asks for confirmation.
+- **AC-006-10** (FR-006-10) Given a screenshot card dragged into a Mail compose window, then the image attaches inline; given a bundle of 3 files dragged into Finder, then 3 copies are created and the originals stay where they were; given text dragged into a text field, the text is inserted; the general pasteboard's `changeCount` does not change during any of these drags.
+- **AC-006-11** (FR-006-10) Given the drop destination offers move, then the operation is still copy and the original file is unchanged (path, modification date).
+- **AC-006-12** (FR-006-11) Given an accepted drag-out, then `pasteCount` is incremented by 1 per dragged item; given a bundle whose members are all deleted, then no drag starts and `LIB-DAT-001` shows; given the drag is cancelled with Esc, nothing changes.
+- **AC-006-13** (FR-006-12) Given a drag carrying only a file promise or a colour, then the Shelf shows no highlight and the drop is refused with `SHF-VAL-001`; given a drag carrying `org.nspasteboard.ConcealedType`, refused; given a drag from the Shelf itself, refused.
+- **AC-006-14** (FR-006-13) Given Paused capture mode, when 3 files are dropped from Finder, then one bundle of 3 is stored with the source "Finder"; when text is dropped it is stored with kind detection (a dropped URL becomes `link`); dropping the same file set again bumps the existing bundle's `copyCount` and moves it to the top.
+- **AC-006-15** (FR-006-13) Given a drop from an app in the ignored-apps list, then it is stored (explicit action); given the same app's clipboard copy, it is not (FRD-001 gate 4).
+- **AC-006-16** (FR-006-14) Given a drop of 3 files where one is unreadable and one is over the limit, then the readable file is stored as a single item with `SHF-IO-001` and `SHF-LIM-001` shown (subject to throttling), and the drop is reported as partially stored; a drop of only unsupported content shows `SHF-VAL-001` and stores nothing.
+- **AC-006-17** (FR-006-15,16) Given a successful drop, then the card highlights for 600 ms and the Shelf stays 1.5 s; the dropped item is not captured a second time by the pasteboard poller; a paste from the Shelf is not re-captured.
+- **AC-006-18** (FR-006-17) Given 10,000 items, then over 20 runs reveal-to-visible is p95 ≤ 120 ms, drag start is p95 ≤ 100 ms, and a 5 MiB image drop is p95 ≤ 800 ms to a visible card; an idle enabled Shelf has no timers.
+- **AC-006-19** (FR-006-18) Given a dogfood session of reveals, drag-outs and drops, then `log show` yields one Info line per event with count or outcome codes only, and no clip text, file name or app name appears.
+- **AC-006-20** (FR-006-19,20) Given VoiceOver, then every card announces its label and offers Paste, Copy, Pin; given a display is disconnected while visible, the Shelf hides and its hot zone follows the new layout within 1 s.
+- **AC-006-21** (FR-006-03d) Given `menuBar` placement and a drag hovering over the menu-bar icon for 300 ms, then the Shelf appears under the icon and accepts a drop.
+
+## 8. UI Inventory
+| Element | Type | Where | Behavior |
+|---|---|---|---|
+| Shelf panel | borderless non-activating floating panel | screen edge or under menu-bar icon | FR-006-02 to -05 |
+| Pinned and Recent section headers | labels | panel | FR-006-06 |
+| Cards | draggable cells | panel | FR-006-07, -09, -10 |
+| Drop-zone highlight | border and tint | panel | FR-006-12 |
+| Close button | icon button | sticky panel corner | hides a sticky Shelf |
+| Empty state | text | panel | `shelf.empty` |
+| Context menu | menu | card | FR-006-09 |
+| Menu bar items "Toggle Shelf" and drop acceptance on the icon | menu item, drop target | menu bar (FRD-008) | FR-006-01, -03 |
+| Settings controls (enable, placement, hover reveal) | switch, popup, switch | Settings › General (FRD-008) | keys in FR-006-01 |
+| HUD | floating label | screen with pointer | `SHF-*`, `LIB-DAT-001`, `SET-PRM-001` |
+
+## 9. Assumptions and open items (flagged for Friday)
+1. Reveal model. The PRD says "edge/menu-bar panel" and does not define the reveal. This FRD reveals on a system-wide drag reaching the edge (so scrollbars and the Dock are not disturbed), on a hotkey or menu item, and optionally on edge hover. Whether a drag in progress can be reliably detected with global monitors without Accessibility on macOS 14 to 26 is unverified and needs a spike before build; fallback is hotkey, menu and hover only.
+2. Drops ignore capture mode and ignored apps (FR-006-13a) because they are explicit. This is a product choice; Concealed and Transient types still reject.
+3. Source app of a drop is the frontmost application (FR-006-13c); drag sources outside the frontmost app (rare) are mislabelled.
+4. Click behaviour: double-click pastes. A single click only selects, to avoid accidental pastes while moving to drag.
+5. Dock overlap is avoided by using the visible frame; a Dock on the same edge is accepted as is.
+6. On by default in v1 as the PRD says; the S3 review after a month of dogfooding uses the local log lines (FR-006-18). Demotion to off-by-default is a one-line default change in FR-006-01 and the FRD-008 registry.
+
+## 10. Out of Scope
+AirDrop and Share-sheet actions from the Shelf (v1.1 candidate, NOT DOING v1). Searching, filtering, tagging, noting or editing inside the Shelf. User-resizable or free-floating Shelf, multiple Shelves, per-app Shelves. Dragging out of Library rows (the Shelf is the drag path). Move or link drag operations. Dropping onto individual cards. Screenshots or capture of any kind (A3). Sync or network access (A1, A4).
