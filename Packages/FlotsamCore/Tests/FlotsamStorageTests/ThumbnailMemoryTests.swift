@@ -155,4 +155,49 @@ import FlotsamBase
         await db.warmThumbnails(itemId: live, source: png)
         #expect(rig.store.exists(thumbPath(rig, live, 256)))
     }
+
+    /// TASK-387 F2 (QA). Given a warm-up whose pre-check already passed and whose render is still running, when the
+    /// item is deleted during that render (the delete's own `discardThumbnails` finishes before any file exists),
+    /// then no thumbnail file exists once the warm-up returns. Goes red if `warmThumbnails` drops its post-write
+    /// re-check (the files written after the delete's cleanup stay as orphans). A large source keeps the render
+    /// running while the delete lands; if the machine is so loaded that the delete lands before the pre-check, the
+    /// test still passes (the pre-check covers that ordering, see `warmSkipsDeletedItem`).
+    @Test("TASK-387 warmThumbnails leaves no orphan when the item is deleted during the render")
+    func warmCleansUpWhenDeletedMidRender() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let db = rig.store.database
+        let id = try await ingestWarmed(rig, key: "race")
+        let neighbour = try await ingestWarmed(rig, key: "neighbour")
+        for edge in [256, 512] { try FileManager.default.removeItem(at: thumbPath(rig, id, edge)) }
+        let huge = TestImage.make(width: 9000, height: 9000, format: .png)
+
+        let warm = Task { await db.warmThumbnails(itemId: id, source: huge) }
+        try await Task.sleep(for: .milliseconds(40))
+        try #require(try await db.delete(ids: [id]).get() == [id])
+        await warm.value
+
+        #expect(!rig.store.exists(thumbPath(rig, id, 256)), "orphan grid thumbnail after a mid-render delete")
+        #expect(!rig.store.exists(thumbPath(rig, id, 512)), "orphan preview thumbnail after a mid-render delete")
+        #expect(try rig.itemCount() == 1)
+        #expect(rig.store.exists(thumbPath(rig, neighbour, 256)) && rig.store.exists(thumbPath(rig, neighbour, 512)))
+    }
+
+    /// TASK-387 F2 (QA). Given a warm-up whose existence read fails (the item table cannot be queried), when it runs,
+    /// then it keeps both thumbnails: an unknown answer must never discard a live item's files (they are regenerable
+    /// and reconcile sweeps true orphans). Goes red if a failed read is treated as "item deleted".
+    @Test("TASK-387 warmThumbnails keeps its files when the item read fails")
+    func warmKeepsThumbnailsWhenReadFails() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let db = rig.store.database
+        let id = try await ingestWarmed(rig, key: "unreadable")
+        for edge in [256, 512] { try FileManager.default.removeItem(at: thumbPath(rig, id, edge)) }
+        try await db.pool.write { try $0.execute(sql: "ALTER TABLE item RENAME TO item_unreadable") }
+
+        await db.warmThumbnails(itemId: id, source: TestImage.make(width: 1200, height: 800, format: .png))
+
+        #expect(rig.store.exists(thumbPath(rig, id, 256)), "a failed read discarded the grid thumbnail")
+        #expect(rig.store.exists(thumbPath(rig, id, 512)), "a failed read discarded the preview thumbnail")
+    }
 }
