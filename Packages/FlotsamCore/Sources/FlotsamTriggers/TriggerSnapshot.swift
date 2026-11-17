@@ -45,6 +45,13 @@ public struct TriggerPolicy: Sendable, Equatable {
         self.triggers = triggers
         self.excludedApps = excludedApps
     }
+
+    /// FR-005-13 b: the exclusion list plus Flotsam's own windows, which are always excluded and not editable. The
+    /// matcher decides with it at the match and the expander decides again with it at step 2 (FR-005-14), so the two
+    /// cannot disagree (Rule 9).
+    public func excludes(bundleId: String, ownBundleId: String) -> Bool {
+        bundleId == ownBundleId || excludedApps.contains(bundleId)
+    }
 }
 
 /// The shared holder of `TriggerPolicy`. Writers (settings, item events) replace the value; the tap reads it.

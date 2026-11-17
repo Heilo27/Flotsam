@@ -151,7 +151,7 @@ public final class TriggerMatcher {
 
         if environment.isSecureEventInputEnabled() { return .suppressed(.secureInput) }
         guard let app = environment.frontmostApp(), let bundleId = app.bundleId else { return .suppressed(.unknownApp) }
-        if bundleId == ownBundleId || policy.excludedApps.contains(bundleId) { return .suppressed(.excludedApp) }
+        if policy.excludes(bundleId: bundleId, ownBundleId: ownBundleId) { return .suppressed(.excludedApp) }
         if environment.isInputMethodActive() { return .suppressed(.inputMethod) }
 
         heldBoundaryKeys.insert(event.keyCode)

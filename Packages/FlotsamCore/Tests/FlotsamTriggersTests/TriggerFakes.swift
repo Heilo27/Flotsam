@@ -6,9 +6,27 @@ import Foundation
 final class ManualClock: WallClock, @unchecked Sendable {
     private let lock = NSLock()
     private var current = Date(timeIntervalSince1970: 1_800_000_000)
+    private var _slept: [Duration] = []
+    private var _onSleep: (@Sendable (Duration) -> Void)?
+
+    /// Every duration passed to `sleep`, in order.
+    var slept: [Duration] { lock.withLock { _slept } }
+    /// Runs inside `sleep`, so a test can change the world during a wait (another app copies, the user switches app).
+    var onSleep: (@Sendable (Duration) -> Void)? {
+        get { lock.withLock { _onSleep } }
+        set { lock.withLock { _onSleep = newValue } }
+    }
+
     func now() -> Date { lock.withLock { current } }
     func advance(_ seconds: TimeInterval) { lock.withLock { current = current.addingTimeInterval(seconds) } }
-    func sleep(for duration: Duration) async { advance(TimeInterval(duration.components.seconds)) }
+    func sleep(for duration: Duration) async {
+        let hook = lock.withLock { () -> (@Sendable (Duration) -> Void)? in
+            _slept.append(duration)
+            return _onSleep
+        }
+        advance(TimeInterval(duration.components.seconds))
+        hook?(duration)
+    }
 }
 
 /// Environment answers a test sets, with a count of how often the matcher asked.
