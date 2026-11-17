@@ -46,7 +46,7 @@ Known test noise (ignore it, but always name it in reports):
 | 007 | Retention / storage | S1 | merged | on `main` |
 | 009 | Distribution (`bin/release.sh`) | S1 | merged | on `main`; DMG signing waits on Ryan's Developer ID |
 | 001 | Capture | S1 | `frd001` | building |
-| 003 | Library: paste-back | S1 | `frd003` | **ready: 6fe1d6e** — S2: A3 app build + launch (S1 machine overloaded; app target never built here). Package tests 21/21 Paste. |
+| 003 | Library: paste-back | S1 | `frd003` | **ready: 6fe1d6e** — S2: A3 app build + launch (S1 machine overloaded; app target never built here). Package tests 21/21 Paste. **S2 A3: pass** (see `s2/log`). |
 | 003 | Library: panel UI | S1 | `frd003ui` | building |
 | 008 | Onboarding / settings / menu bar | S1 | `frd008` | building |
 | 002 | Screenshot pickup | **S2** | `s2/frd002` | S2 building: part 1 pushed (b983b9d); watcher + import wait on `frd001` + `frd008` reaching `main` |
@@ -79,7 +79,7 @@ Re-run this whenever `main` moves or a builder branch is marked `ready`:
   - quit cleanly.
 
   Note any crash logs (`~/Library/Logs/DiagnosticReports/Flotsam*`).
-- **A3** Same as A1 + A2 on each branch marked `ready`, before S1 merges it. **[S2: claimed 2026-11-17: `frd003` @ 6fe1d6e]**
+- **A3** Same as A1 + A2 on each branch marked `ready`, before S1 merges it. **[S2: done 2026-11-17: `frd003` @ 6fe1d6e, pass; build clean, tests = main baseline, launch OK; paste not drivable until adapters are wired (`s2/log` b8e7469)]**
 - **A4** Performance baseline on `main`, per the PRD/TRUTHS budgets:
   - idle CPU and RSS of the running app over 10 min;
   - capture latency;
