@@ -1,0 +1,311 @@
+{
+  "frd": "FRD-000",
+  "audited_by": "Data (8V independent run, head 57d65d7, after O'Brien lint fixes; supersedes Worf's pre-fix run)",
+  "mutations": [
+    {
+      "id": "M01",
+      "target": "ErrorReporter.report: Info raise recorded into ring before returning",
+      "oc": [
+        "OC-0011",
+        "OC-0066",
+        "OC-0067",
+        "OC-0068"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0011 only Fatal presents the fatal alert, and it is never throttled"
+    },
+    {
+      "id": "M02",
+      "target": "SurfacingThrottle.admit: per-code window `<` to `<=` (exact 60s counts as suppressed)",
+      "oc": [
+        "OC-0023"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s"
+    },
+    {
+      "id": "M03",
+      "target": "SurfacingThrottle.admit: window prune `>=` to `>` (exact 60s HUD stays counted)",
+      "oc": [
+        "OC-0024"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s"
+    },
+    {
+      "id": "M04",
+      "target": "SurfacingThrottle.admit: HUD cap `>=` to `>` (4 HUDs per minute)",
+      "oc": [
+        "OC-0024"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s"
+    },
+    {
+      "id": "M05",
+      "target": "SurfacingThrottle.window 60 to 59",
+      "oc": [
+        "OC-0023",
+        "OC-0024"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s"
+    },
+    {
+      "id": "M06",
+      "target": "SurfacingThrottle.admit: rejected occurrence resets the per-code timer",
+      "oc": [
+        "OC-0023"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0023 window is measured from the last surfaced occurrence"
+    },
+    {
+      "id": "M07",
+      "target": "ErrorRingBuffer.capacity 100 to 101",
+      "oc": [
+        "OC-0043"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0043 ring holds the last 100, oldest first"
+    },
+    {
+      "id": "M08",
+      "target": "ErrorRingBuffer overflow drops newest instead of oldest",
+      "oc": [
+        "OC-0043"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0043 ring holds the last 100, oldest first"
+    },
+    {
+      "id": "M09",
+      "target": "NoticeBoard.insert newest-first to append",
+      "oc": [
+        "OC-0023",
+        "OC-0027"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0023 window is measured from the last surfaced occurrence"
+    },
+    {
+      "id": "M10",
+      "target": "NoticeBoard.capacity 10 to 11",
+      "oc": [
+        "OC-0027"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0027 notices cap at 10, newest first"
+    },
+    {
+      "id": "M11",
+      "target": "ErrorReporter: every raise treated as HUD regardless of origin",
+      "oc": [
+        "OC-0024",
+        "OC-0027",
+        "OC-0028"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0024 at most three HUDs per minute across codes"
+    },
+    {
+      "id": "M12",
+      "target": "ErrorReporter dismiss-all: board.removeAll() removed",
+      "oc": [
+        "OC-0028"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0028 after dismiss all, the next notice is the only one listed"
+    },
+    {
+      "id": "M13",
+      "target": "ErrorReporter: fatal alert subjected to the throttle",
+      "oc": [
+        "OC-0011"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0011 only Fatal presents the fatal alert, and it is never throttled"
+    },
+    {
+      "id": "M14",
+      "target": "ErrorReporter.report: FlotsamLog.log(error) call deleted",
+      "oc": [],
+      "result": "SURVIVED",
+      "killed_by": null
+    },
+    {
+      "id": "M15",
+      "target": "NoticeBoard overflow evicts newest instead of oldest",
+      "oc": [
+        "OC-0027"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0027 newest notice carries its catalogue text"
+    },
+    {
+      "id": "M16",
+      "target": "MessageArgument.formatBytes countStyle .memory to .file (decimal units)",
+      "oc": [
+        "OC-0019"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'"
+    },
+    {
+      "id": "M17",
+      "target": "ErrorCode.severity: CAP-LIM-001 added to the severity case list that starts .sysInt001, .capIo001",
+      "oc": [
+        "OC-0007",
+        "OC-0058"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0007 severity counts are 2 fatal, 20 warning, 24 error, 14 info"
+    },
+    {
+      "id": "M18",
+      "target": "FlotsamStrings.message: placeholder count guard `==` to `<=`",
+      "oc": [
+        "OC-0050"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text"
+    },
+    {
+      "id": "M19",
+      "target": "FlotsamStrings.message: fallback returns empty string instead of SYS-INT-001 text",
+      "oc": [
+        "OC-0050"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text"
+    },
+    {
+      "id": "M20",
+      "target": "LogSafeValue.isPublic: .id/.bundleId made public",
+      "oc": [
+        "OC-0036"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0036 item ids are private; counts, durations, booleans and codes are public"
+    },
+    {
+      "id": "M21",
+      "target": "LogSafeValue.isPublic: every .uti public",
+      "oc": [
+        "OC-0071",
+        "OC-0072"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0071 a non-system UTI renders private"
+    },
+    {
+      "id": "M22",
+      "target": "FlotsamLog.log(error): message/cause privacy .private to .public",
+      "oc": [],
+      "result": "SURVIVED",
+      "killed_by": null
+    },
+    {
+      "id": "M23",
+      "target": "FlotsamLog.log(error): level fixed to .info instead of level(for: severity)",
+      "oc": [],
+      "result": "SURVIVED",
+      "killed_by": null
+    },
+    {
+      "id": "M24",
+      "target": "DiagnosticsReport: ring section reversed (newest first)",
+      "oc": [
+        "OC-0043",
+        "OC-0045"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0043 report lists 100 ring entries, E6 first, E5 absent"
+    },
+    {
+      "id": "M25",
+      "target": "DiagnosticsSnapshotBuilder: negative item-count clamp removed",
+      "oc": [],
+      "result": "KILLED",
+      "killed_by": "report clamps negative counts and byte sizes to zero"
+    },
+    {
+      "id": "M26",
+      "target": "DiagnosticsSnapshotBuilder.isRegistryKey: parts.count == 2 to >= 2",
+      "oc": [
+        "OC-0046"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0046 non-registry toggle keys never reach the report"
+    },
+    {
+      "id": "M27",
+      "target": "BundleIdentifier length limit 255 to 256 bytes",
+      "oc": [
+        "OC-0073"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0073 BundleIdentifier length boundary is 255 bytes"
+    },
+    {
+      "id": "M28",
+      "target": "check-architecture.sh: print/NSLog/dump rule drops dump",
+      "oc": [
+        "OC-0034"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0034 the lint names each injected print, NSLog and dump line"
+    },
+    {
+      "id": "M29",
+      "target": "check-architecture.sh: force-unwrap awk class drops `]` (d[\"k\"]! shape)",
+      "oc": [
+        "OC-0001"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0001 injected force-unwrap fails the lint at its line"
+    },
+    {
+      "id": "M30",
+      "target": "check-architecture.sh: public throws rule drops `package`",
+      "oc": [],
+      "result": "SURVIVED",
+      "killed_by": null
+    },
+    {
+      "id": "M32",
+      "target": "FlotsamLog.level(for:): .warning maps to .info instead of .default",
+      "oc": [
+        "OC-0032"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0032 CAP-POL-001, CAP-LIM-001, CAP-IO-001 and STO-IO-002 log at 1, 0, 16, 17"
+    },
+    {
+      "id": "M33",
+      "target": "LogEvent.name: triggerMatched \"trigger.matched\" to \"trigger.match\"",
+      "oc": [
+        "OC-0037",
+        "OC-0038",
+        "OC-0039"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields"
+    },
+    {
+      "id": "M34",
+      "target": "FlotsamLog.log(error): underlying cause drops domain",
+      "oc": [],
+      "result": "SURVIVED",
+      "killed_by": null
+    }
+  ],
+  "survivors": 5,
+  "discarded_equivalent": [
+    {
+      "id": "M31",
+      "target": "check-architecture.sh: as! rule drops `(` from [[:space:](]",
+      "reason": "`(as!` cannot occur in valid Swift; equivalent mutant, not counted"
+    }
+  ]
+}
