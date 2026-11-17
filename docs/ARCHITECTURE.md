@@ -70,7 +70,7 @@ Enforced by Swift's target graph (a missing dependency fails to compile) and, fo
 |---|---|
 | Base | Foundation, os |
 | Storage | Base, GRDB |
-| Payload | Base |
+| Payload | Base, CryptoKit |
 | Paste | Base, Storage |
 | Capture, Screenshots, Shelf | Base, Storage, Payload |
 | Library, Shortcuts, Triggers | Base, Storage, Paste |
