@@ -47,6 +47,24 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 - **FR-000-11** Mandatory instrumented callsites (each logs code or outcome only): pasteboard change processed (kind, byte size, outcome: stored / deduped / skipped + `POL` code); screenshot import outcome; paste-back start and outcome; hotkey registration result; Shelf reveal, drag-out and drop-in outcome; trigger buffer match result (matched yes/no only); permission state transitions; retention sweep result (rows and bytes removed); database open, migrate, integrity-check results; every Warning/Error/Fatal raised.
 - **FR-000-12** Performance signposts (`OSSignposter`, category `perf`) mark the PRD metrics: `capture.persist`, `library.open`, `library.search`, `paste.back`, `shelf.reveal`, `retention.sweep`, `trigger.expand`. Signposts carry no content. They are the measurement source for the p95 targets in other FRDs.
 
+**FR-000-11 callsite checklist.** One row per mandatory callsite. The owning module's ticket adds the `LogEvent` call (`LogEvent.swift`, one case each, typed payload so a callsite cannot log more than code or outcome). Tick a row only when the call is in the owning module's code. Status as of 2026-11-17.
+
+| Callsite | `LogEvent` case | Owning FR | Owning ticket | Done |
+|---|---|---|---|---|
+| Pasteboard change processed: skipped + `POL` code | `pasteboardProcessed` | FR-001-04 | TASK-121 | [ ] |
+| Pasteboard change processed: stored / deduped | `pasteboardProcessed` | FR-007-05 | TASK-051 | [ ] |
+| Screenshot import outcome | `screenshotImported` | FR-002-09 | TASK-219 | [ ] |
+| Paste-back start and outcome | `pasteBack` (`started`, then outcome) | FR-003-15 | TASK-187 | [ ] |
+| Hotkey registration result | `hotkeyRegistered` | FR-005-03 | TASK-305 | [ ] |
+| Shelf reveal, drag-out, drop-in outcome | `shelf` | FR-006-18 | TASK-295 | [ ] |
+| Trigger buffer match result (yes/no only) | `triggerMatched` | FR-005-12 | TASK-323 | [ ] |
+| Permission state transitions | `permissionChanged` | FR-008-13 | TASK-105 | [ ] |
+| Retention sweep result (rows, bytes) | `retentionSwept` | FR-007-09 | TASK-059 | [ ] |
+| Database open | `database(.open)` | FR-007-02 | TASK-045 | [ ] |
+| Database migrate | `database(.migrate)` | FR-007-17 | TASK-075 | [ ] |
+| Database integrity check | `database(.integrityCheck)` | FR-007-13 | TASK-067 | [ ] |
+| Every Warning / Error / Fatal raised | `FlotsamLog.log(error)` via `ErrorReporter` | FR-000-08 | TASK-027 | [x] |
+
 **Diagnostics**
 - **FR-000-13** An in-memory ring buffer holds the last 100 raised errors (code, severity, timestamp). It is never written to disk and is cleared on quit.
 - **FR-000-14** Settings › About › "Copy Diagnostics" builds a plain-text report on user action only: app version and build, macOS version, CPU architecture, permission states (Accessibility, Input Monitoring, screenshot folder access, pasteboard access), setting values that are not content (retention preset, budget preset, toggle states; never ignored-app lists), item counts by kind, database and blob byte sizes, and the ring buffer. It is copied to the clipboard marked with the pasteboard types in FR-001-03 so Flotsam does not capture its own report. It is never sent anywhere.
