@@ -10,30 +10,6 @@ public enum LogCategory: String, CaseIterable, Sendable {
 public enum LogKey: String, Sendable {
     case itemId, count, byteSize, durationMs, bundleId, kind, step, limitBytes
     case uti, outcome, code, permission, rows
-    /// A schema or app version number. Carried as `LogSafeValue.int`, so it is public (FR-000-10: OS and app versions).
-    case version
-}
-
-/// A successful outcome with no error code (FR-000-11: "code or outcome"), for `FlotsamLog.log(outcome:)`. A closed
-/// list, never free text: the raw value is the dotted name that is the first token of the log line. Adding a case is a
-/// deliberate change, the same rule as `LogEvent`. Dotted names share the `database.<step>` prefix of
-/// `LogEvent.database` so one log search finds both.
-public enum OutcomeName: String, Sendable, Equatable, CaseIterable {
-    case migrateComplete = "database.migrate.complete"
-    case integrityCheckOk = "database.integrityCheck.ok"
-}
-
-/// Level of an outcome line. Only the two non-alerting levels exist, so an outcome cannot be logged as a notice, an
-/// error or a fault; those belong to `FlotsamError` (FR-000-09 level mapping).
-public enum OutcomeLevel: Sendable, Equatable {
-    case info, debug
-
-    var osLogType: OSLogType {
-        switch self {
-        case .info: .info
-        case .debug: .debug
-        }
-    }
 }
 
 /// What happened at an instrumented callsite (FR-000-11). A closed list so an outcome is an enum raw value, which
@@ -263,16 +239,6 @@ public enum FlotsamLog {
         makeRecord(category: event.category, level: .info, headline: event.name, context: event.fields)
     }
 
-    /// The record for a code-less outcome: the outcome's dotted name in the clear, no message, no cause.
-    static func record(
-        for outcome: OutcomeName,
-        category: LogCategory,
-        level: OutcomeLevel,
-        context: [LogKey: LogSafeValue]
-    ) -> LogRecord {
-        makeRecord(category: category, level: level.osLogType, headline: outcome.rawValue, context: context)
-    }
-
     /// Logs an error's code, severity and safe context. `sink` defaults to `os.Logger`; tests pass their own.
     public static func log(_ error: FlotsamError, category: LogCategory? = nil, sink: any LogSink = OSLogSink()) {
         sink.write(record(for: error, category: category))
@@ -281,20 +247,6 @@ public enum FlotsamLog {
     /// Logs a successful or skipped outcome at an instrumented callsite (FR-000-11) at `.info`.
     public static func log(_ event: LogEvent, sink: any LogSink = OSLogSink()) {
         sink.write(record(for: event))
-    }
-
-    /// Logs a successful outcome that has no error code, such as a finished migration or a clean integrity check
-    /// (FR-000-11). The name is a closed enum, the level is info or debug, and the context is the same
-    /// `[LogKey: LogSafeValue]` an error carries, so there is no way to pass a string and the FR-000-10 redaction
-    /// applies unchanged. `sink` defaults to `os.Logger`; tests pass their own.
-    public static func log(
-        outcome: OutcomeName,
-        category: LogCategory,
-        level: OutcomeLevel = .info,
-        context: [LogKey: LogSafeValue] = [:],
-        sink: any LogSink = OSLogSink()
-    ) {
-        sink.write(record(for: outcome, category: category, level: level, context: context))
     }
 
     /// Verbose developer trace at `.debug`, compiled out of release builds (FR-000-09). Call sites that want the
