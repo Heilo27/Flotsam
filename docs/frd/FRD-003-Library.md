@@ -68,7 +68,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 
 **Preview**
 - **FR-003-14** Preview pane (right side, toggled by Space or ⌘Y, 280 pt wide, resizable with the panel). Content: text in full (up to 20,000 characters, then "Show more"); rich text rendered with its formatting; link as the URL text only (no network fetch, no favicon, no metadata); colour as a large swatch with its hex and rgb values; image and screenshot scaled to fit; file, folder and bundle members as Quick Look previews with names (up to 20 members shown, then "and {n} more"). Below the content, a metadata block: kind, source app, copied date and time, first-copied date, copy count, paste count, size on disk, pixel size for images, then its tags (colour dot and name) and its note when it has any. Preview is read-only. Opening preview never changes the selection.
-- **FR-003-13** Thumbnails. Rows and cells display thumbnails produced by the storage pipeline (FRD-007 FR-007-07). A row whose thumbnail is not yet ready shows the kind icon and swaps when ready; scrolling never blocks on thumbnail generation. The in-memory thumbnail cache is capped at 64 MB (least recently used).
+- **FR-003-13** Thumbnails. Rows and cells display thumbnails produced by the storage pipeline (FRD-007 FR-007-07). A row whose thumbnail is not yet ready shows the kind icon and swaps when ready; scrolling never blocks on thumbnail generation. The in-memory thumbnail cache is capped at 64 MB (least recently used) and is emptied when the last panel (Library or Shelf) closes, so an idle app holds none (S5; target state: `releaseMemory()` exists but is called from the panels by TASK-383, once they are built).
 
 **Paste-back**
 - **FR-003-15** Paste sequence. On Return, ⌥Return, ⇧Return or ⌘1 to ⌘9: (1) if the item references files, resolve bookmarks and drop members that no longer exist; none left → `LIB-DAT-001`, no paste, panel stays open; (2) write the item to the general pasteboard: every stored representation for text-bearing kinds (plain text only for ⌥Return); the stored image data for image and screenshot kinds (written through `NSImage` so the system supplies standard image types); every existing member as a file URL for file, folder and bundle kinds; (3) mark the write as Flotsam's own (FR-001-03); (4) increment the item's `pasteCount` and set `lastUsedAt` (FRD-007); (5) hide the panel; (6) for paste actions only: wait until the panel is no longer visible plus a settle delay of 40 ms, confirm the frontmost application is still the recorded target, then post ⌘V (key code 9 with the Command flag, key down then key up) to the session event tap. ⇧Return performs steps 1 to 5 only.
@@ -85,7 +85,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 ## 4. Data Requirements
 - Reads items, tags, source apps and counts through the storage query layer (FRD-007); writes only `pasteCount` and `lastUsedAt`.
 - Settings read (FRD-008 registry): `library.viewMode`, `library.panelSize`.
-- In memory: target app (bundle id, pid), selected item ids, current query, cache of 50 newest rows, thumbnail LRU (64 MB).
+- In memory: target app (bundle id, pid), selected item ids, current query, cache of 50 newest rows, thumbnail LRU (64 MB); the row cache and the thumbnail LRU are released when the panel closes (S5; target state, wired by TASK-383).
 
 ## 5. Business Rules
 - Paste-back never modifies stored items (no re-save of what was pasted).

@@ -51,7 +51,16 @@ private final class MemoryStore: KeyValueStore, @unchecked Sendable {
         #expect(LogSafeValue.milliseconds(40).rendered == "40ms")
     }
 
+    /// FR-000-09. given one code per module (a different one from OC-0031's), then each logs under its own module's
+    /// category. A code mapped to a neighbouring module's category turns this red.
     @Test func everyModuleHasALogCategory() {
-        #expect(LogCategory.allCases.count == 9)
+        #expect(ErrorCode.capIo001.logCategory.rawValue == "capture")
+        #expect(ErrorCode.sspLim001.logCategory.rawValue == "screenshots")
+        #expect(ErrorCode.libIo001.logCategory.rawValue == "library")
+        #expect(ErrorCode.orgLim001.logCategory.rawValue == "organize")
+        #expect(ErrorCode.trgOs002.logCategory.rawValue == "triggers")
+        #expect(ErrorCode.shfLim001.logCategory.rawValue == "shelf")
+        #expect(ErrorCode.stoIo002.logCategory.rawValue == "storage")
+        #expect(ErrorCode.setVal001.logCategory.rawValue == "settings")
     }
 }

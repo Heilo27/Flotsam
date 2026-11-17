@@ -12,7 +12,27 @@ public struct SettingKey<Value: SettingValue>: Sendable {
     }
 }
 
-public enum CaptureMode: String, SettingValue, CaseIterable { case active, paused, curated }
+public enum CaptureMode: String, SettingValue, CaseIterable {
+    case active, paused, curated
+
+    /// Whether the clipboard poll may save copies on its own (FR-007-12). The one definition: Capture asks here
+    /// rather than comparing modes, so the semantics cannot drift between callers.
+    public var capturesClipboardAutomatically: Bool { self == .active }
+
+    /// Whether screenshot pickup may import (FR-007-12). Paused and Curated both skip import but still advance
+    /// `screenshots.lastScanAt`, so nothing taken during the pause is imported on resume.
+    public var importsScreenshots: Bool { self == .active }
+
+    /// What the menu-bar item "Pause Capture" / "Resume Capture" does (FR-007-12). Only Paused shows "Resume Capture",
+    /// which returns to Active; Active and Curated both show "Pause Capture", which pauses. Curated is chosen in
+    /// Settings only, so the menu never produces it. One definition: the menu label and the action both come from
+    /// here, so the label can never promise a different mode than the click sets.
+    public var isPaused: Bool { self == .paused }
+    public var afterMenuToggle: CaptureMode { isPaused ? .active : .paused }
+
+    // Save Clipboard (FRD-005) and Shelf drops (FRD-006) work in every mode, so there is deliberately no property
+    // for them: a gate that always answers "yes" would only invite someone to make it answer "no".
+}
 public enum RetentionPreset: String, SettingValue, CaseIterable { case d7, d30, d90, y1, forever }
 public enum ImageBudget: String, SettingValue, CaseIterable { case mib500, gib2, gib10, unlimited }
 public enum ImageQuality: String, SettingValue, CaseIterable { case original, balanced, efficient }

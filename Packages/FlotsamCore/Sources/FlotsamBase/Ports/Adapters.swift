@@ -2,8 +2,6 @@ import Foundation
 
 /// `FileManager`-backed `FileSystemPort`. Foundation only, so it lives in Base.
 public struct LocalFileSystem: FileSystemPort {
-    private static let domain = "FlotsamFileSystem"
-
     public init() {}
 
     public func fileExists(at url: URL) -> Bool {
@@ -41,6 +39,48 @@ public struct LocalFileSystem: FileSystemPort {
         var buffer = [UInt8](repeating: 0, count: size)
         let read = getxattr(url.path, name, &buffer, size, 0, 0)
         return read >= 0 ? Data(buffer.prefix(read)) : nil
+    }
+
+    public func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> {
+        // Created with the final permissions (never world-readable, even briefly), then fsync'd.
+        let descriptor = open(url.path, O_WRONLY | O_CREAT | O_TRUNC, mode_t(permissions))
+        guard descriptor >= 0 else { return .failure(Self.posixFailure(errno)) }
+        defer { close(descriptor) }
+        var offset = 0
+        while offset < data.count {
+            let written = data.withUnsafeBytes { buffer -> Int in
+                guard let base = buffer.baseAddress else { return 0 }
+                return write(descriptor, base.advanced(by: offset), data.count - offset)
+            }
+            if written < 0 {
+                if errno == EINTR { continue }
+                return .failure(Self.posixFailure(errno))
+            }
+            offset += written
+        }
+        guard fsync(descriptor) == 0 else { return .failure(Self.posixFailure(errno)) }
+        return .success(())
+    }
+
+    public func readFile(at url: URL) -> FlotsamResult<Data> {
+        do { return .success(try Data(contentsOf: url)) } catch { return .failure(Self.mapped(error)) }
+    }
+
+    public func fileInfo(at url: URL) -> FileInfo? {
+        guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+            let size = attributes[.size] as? Int, let modified = attributes[.modificationDate] as? Date
+        else { return nil }
+        return FileInfo(byteSize: size, modifiedAt: modified)
+    }
+
+    public func availableCapacity(at url: URL) -> Int64? {
+        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        return values?.volumeAvailableCapacityForImportantUsage
+    }
+
+    private static func posixFailure(_ code: Int32) -> FlotsamError {
+        FlotsamError(
+            .sysInt001, "File write failed", underlying: UnderlyingErrorInfo(domain: NSPOSIXErrorDomain, code: Int(code)))
     }
 
     private func attempt(_ operation: () throws -> Void) -> FlotsamResult<Void> {
