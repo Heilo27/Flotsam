@@ -19,18 +19,62 @@ public enum LogOutcome: String, Sendable, Equatable {
     case matched, noMatch, granted, denied, registered, revealed, draggedOut, droppedIn, opened, migrated, passed
 }
 
+/// A source-app bundle identifier that has been checked to be reverse-DNS shaped: two or more dot-separated labels of
+/// ASCII letters, digits and hyphens, at most 255 characters. Construction fails for anything else.
+///
+/// Why a validated type and not a `String`: a bare string case would let a call site log a file name, a URL or clip
+/// text under the label "bundle id". Shape validation rejects spaces, slashes, colons and `@`, which every path, URL
+/// and sentence contains. It cannot prove the value is an app and not a domain name the user typed, so
+/// `LogSafeValue` still logs it `.private` (FR-000-10: source-app bundle identifiers are never public).
+public struct BundleIdentifier: Sendable, Equatable {
+    public let value: String
+
+    public init?(_ candidate: String) {
+        guard candidate.utf8.count <= 255 else { return nil }
+        let labels = candidate.split(separator: ".", omittingEmptySubsequences: false)
+        guard labels.count >= 2 else { return nil }
+        let allowed = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-")
+        for label in labels where label.isEmpty || !label.allSatisfy({ allowed.contains($0) }) { return nil }
+        value = candidate
+    }
+}
+
+/// A pasteboard type identifier. Public in a log only when it is one of the closed list of system-declared types
+/// below; any other identifier (an app's own type, a `dyn.` identifier that encodes a file extension or tag, or
+/// something that is not a type at all) is logged `.private`.
+///
+/// Why not trust the string: a UTI is whatever the writing app put on the pasteboard, so an unfiltered public UTI
+/// is an arbitrary string in the clear. Only identifiers Apple declares carry no user content by construction.
+public struct PasteboardTypeID: Sendable, Equatable {
+    public let identifier: String
+
+    public init(_ identifier: String) { self.identifier = identifier }
+
+    /// System-declared identifiers that can be logged in the clear. Closed: adding one is a deliberate change.
+    static let systemDeclared: Set<String> = [
+        "public.utf8-plain-text", "public.utf16-plain-text", "public.utf16-external-plain-text", "public.plain-text",
+        "public.text", "public.html", "public.rtf", "public.url", "public.file-url", "public.png", "public.tiff",
+        "public.jpeg", "public.heic", "public.image", "public.data", "public.vcard", "public.folder",
+        "com.apple.rtfd", "com.adobe.pdf", "NSStringPboardType",
+    ]
+
+    var isSystemDeclared: Bool { Self.systemDeclared.contains(identifier) }
+}
+
 /// Values allowed in an error or log context. There is deliberately no free-text case:
-/// clip text, paths, URLs and keystrokes can never be logged (TRUTHS anti-truth A4, FR-000-10).
+/// clip text, paths, URLs and keystrokes can never be logged (TRUTHS anti-truth A4, FR-000-10). The two cases that
+/// wrap a string-shaped value take a validating type (`BundleIdentifier`) or a classified one (`PasteboardTypeID`),
+/// so a call site cannot hand them arbitrary text and have it logged in the clear.
 public enum LogSafeValue: Sendable, Equatable {
     case int(Int)
     case bool(Bool)
     case id(UUID)
-    case bundleId(String)
+    case bundleId(BundleIdentifier)
     case bytes(Int)
     case milliseconds(Int)
     case kind(ItemKind)
-    /// A pasteboard type identifier: a format name such as `public.utf8-plain-text`, never data.
-    case uti(String)
+    /// A pasteboard type identifier such as `public.utf8-plain-text`, never data. Public only if system-declared.
+    case uti(PasteboardTypeID)
     case outcome(LogOutcome)
     case code(ErrorCode)
     case permission(PermissionName)
@@ -40,11 +84,11 @@ public enum LogSafeValue: Sendable, Equatable {
         case .int(let value): String(value)
         case .bool(let value): String(value)
         case .id(let value): value.uuidString
-        case .bundleId(let value): value
+        case .bundleId(let value): value.value
         case .bytes(let value): "\(value)B"
         case .milliseconds(let value): "\(value)ms"
         case .kind(let value): value.rawValue
-        case .uti(let value): value
+        case .uti(let value): value.identifier
         case .outcome(let value): value.rawValue
         case .code(let value): value.rawValue
         case .permission(let value): value.rawValue
@@ -52,12 +96,14 @@ public enum LogSafeValue: Sendable, Equatable {
     }
 
     /// True only for the FR-000-10 allowlist: counts, byte sizes, durations, booleans, enum raw values, item kind,
-    /// error codes and pasteboard type identifiers. Item ids and source-app bundle identifiers are not on it, so
-    /// they log `.private` and a release build shows `<private>` for them. An exhaustive switch with no `default`
-    /// means a new case cannot be added without deciding its privacy.
+    /// error codes and system-declared pasteboard type identifiers. Item ids, source-app bundle identifiers and any
+    /// pasteboard type outside the system list are not on it, so they log `.private` and a release build shows
+    /// `<private>` for them. An exhaustive switch with no `default` means a new case cannot be added without
+    /// deciding its privacy.
     var isPublic: Bool {
         switch self {
-        case .int, .bool, .bytes, .milliseconds, .kind, .uti, .outcome, .code, .permission: true
+        case .int, .bool, .bytes, .milliseconds, .kind, .outcome, .code, .permission: true
+        case .uti(let type): type.isSystemDeclared
         case .id, .bundleId: false
         }
     }
