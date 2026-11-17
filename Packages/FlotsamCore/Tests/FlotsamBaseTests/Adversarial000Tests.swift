@@ -855,21 +855,21 @@ struct Adversarial000KillCheckPins {
         #expect(try await status("a.addButton(withTitle: key)") == 0)
     }
 
-    // MARK: known issues, still present
+    // MARK: TASK-365 / TASK-366 (fixed in 2ed68a4 / e7a0510), pins added verifying them
 
-    // OC: FR-000-02. Defect: a line that STARTS with `/` (a division continued from the line above) opens a regex literal that
-    // closes at the next `/` on that line, hiding any banned call between the two slashes. Regression of the TASK-353 fix.
-    @Test("KNOWN: a continued-division line starting with / hides a banned call before the second slash")
+    // OC: FR-000-02. TASK-365. A line that STARTS with `/` (a division continued from the line above) must not open a regex literal
+    // that closes at the next `/` on that line and hides a banned call between the two slashes.
+    @Test("TASK-365: a continued-division line starting with / does not hide a banned call before the second slash")
     func divisionAtLineStartHidesViolation() async throws {
-        // given fatalError between two slashes on a line that starts with `/`, when linted, then it should fail (today it exits 0)
+        // given fatalError between two slashes on a line that starts with `/`, when linted, then it fails
         let hidden = try await status("let r = total\n    /n + g(fatalError(\"x\"))/2")
         #expect(hidden == 1)
         // control: the same body without the slashes fails, so the shape above is the only thing hiding it
         #expect(try await status("let r = total\n    + g(fatalError(\"x\"))") == 1)
     }
 
-    // OC: FR-000-10. Defect: LOGCALL knows only log/info/notice/error/fault/debug on a receiver named logger, with no newline before `(`.
-    @Test("KNOWN: LOGPRIVACY misses .trace/.warning/.critical, a receiver named log, and a newline before the paren")
+    // OC: FR-000-10. TASK-366. LOGCALL covers every os Logger level, a receiver named log, and a newline before `(`.
+    @Test("TASK-366: LOGPRIVACY sees .trace/.warning/.critical, a receiver named log, and a newline before the paren")
     func logPrivacyCallShapeGaps() async throws {
         let shapes = [
             "func f(v: Int, logger: Logger) {\n  logger.warning(\"a \\(v)\")\n}",
@@ -881,18 +881,140 @@ struct Adversarial000KillCheckPins {
         // control: the recognised shape fails
         #expect(try await status("func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v)\")\n}", at: logFilePath) == 1)
         for shape in shapes {
-            // given an unqualified interpolation in FlotsamLog.swift, when linted, then it should fail (today it exits 0)
+            // given an unqualified interpolation in FlotsamLog.swift, when linted, then it fails
             let code = try await status(shape, at: logFilePath)
             #expect(code == 1, "\(shape.debugDescription)")
         }
     }
 
-    // OC: FR-000-09. Defect: a backticked method name slips past the `.debug(` pattern in LOGGER.
-    @Test("KNOWN: log.`debug`(...) outside FlotsamLog.swift passes LOGGER")
+    // OC: FR-000-09. TASK-366. A backticked method name does not slip past the `.debug(` pattern in LOGGER.
+    @Test("TASK-366: log.`debug`(...) outside FlotsamLog.swift fails LOGGER")
     func backtickedDebugMiss() async throws {
         let backticked = try await status("log.`debug`(\"x\")")
         #expect(backticked == 1)
         #expect(try await status("log.debug(\"x\")") == 1)
+    }
+
+    // MARK: mutation pins for the TASK-365 / TASK-366 fixes (Worf, 2026-11-17)
+
+    private func logStatus(_ body: String) async throws -> Int32 {
+        try await status("func f(v: Int, logger: Logger) {\n  \(body)\n}", at: logFilePath)
+    }
+
+    // OC: FR-000-02. TASK-365. Mutants: prevcode reset on a comment/blank line (`prevcode = o` unconditionally); prevcode not reset at a
+    // file boundary; the first code line of a file judged division; prevcode kept with trailing whitespace.
+    @Test("TASK-365: the previous CODE line decides a line-start /, across comments, blanks, files and trailing spaces")
+    func lineStartSlashUsesPreviousCodeLine() async throws {
+        let body = "    /n + g(fatalError(\"x\"))/2"
+        // given a division continued across a comment line, a blank line or a block comment, when linted, then fatalError is still seen
+        for between in ["// c", "", "/* c */", "/// doc"] {
+            #expect(try await status("let r = total\n\(between)\n\(body)") == 1, "between \(between.debugDescription)")
+        }
+        // given a division after a string, a closing paren/brace/bracket, a multi-line string and a regex, then fatalError is still seen
+        for prev in ["let s = \"a/\"", "let r = (a + b)", "let r = { 1 }", "let r = a[0]", "let s = \"\"\"\n  abc\n  \"\"\"", "let r = /a/"] {
+            #expect(try await status("\(prev)\n\(body)") == 1, "after \(prev.debugDescription)")
+        }
+        // given a regex after `=` with trailing whitespace, a comment, a blank line, or inside an array, then it is a regex and passes unless a banned token is outside it
+        #expect(try await status("let r = \t\n    /\"/; fatalError(\"x\")") == 1)
+        #expect(try await status("let r = \n    /\"/; fatalError(\"x\")") == 1)
+        #expect(try await status("let r = // c\n    /fatalError(x)/") == 0)
+        #expect(try await status("let r =\n\n    /fatalError(x)/") == 0)
+        #expect(try await status("let rs = [\n    /fatalError(x)/,\n    /print(y)/\n]") == 0)
+        // given a regex that opens a file (after only comments), then it is a regex; the same shape in the second file starts fresh
+        #expect(try await status("/\"/; fatalError(\"x\")") == 1)
+        #expect(try await status("// header\n\n/\"/; fatalError(\"x\")") == 1)
+        let second = ["Packages/FlotsamCore/Sources/FlotsamBase/B.swift": "/\"/; fatalError(\"x\")"]
+        #expect(try await status("let a = total", at: "FlotsamBase/A.swift", extra: second) == 1)
+        // given the keyword `return` before a line-start regex, then it is a regex
+        #expect(try await status("func f() { return\n    /\"/; fatalError(\"x\") }") == 1)
+    }
+
+    // OC: FR-000-10. TASK-366. Mutants: drop any one of log/info/notice/error/fault/debug from LOGCALL.
+    @Test("TASK-366: every os Logger level fails LOGPRIVACY on an unqualified interpolation")
+    func everyLoggerLevel() async throws {
+        // given each level, when linted in FlotsamLog.swift, then it fails; the qualified form passes
+        for level in ["log", "info", "notice", "error", "fault", "debug", "trace", "warning", "critical"] {
+            #expect(try await logStatus("logger.\(level)(\"a \\(v)\")") == 1, "\(level)")
+            #expect(try await logStatus("logger.\(level)(\"a \\(v, privacy: .public)\")") == 0, "\(level) qualified")
+        }
+    }
+
+    // OC: FR-000-10. TASK-366. Mutants: `_?` dropped; left identifier boundary dropped; Logger(...) alternative dropped; optional backticks dropped.
+    @Test("TASK-366: receiver shapes (_log, self.log, Logger(...), backticked level) fail; catalog.info, blog.info do not")
+    func receiverShapes() async throws {
+        let call = "(\"a \\(v)\")"
+        // given each recognised receiver, when linted in FlotsamLog.swift, then it fails
+        for shape in ["_log.info", "self.log.info", "Logger(subsystem: \"a\", category: \"b\").info", "logger.`info`", "log.`warning`"] {
+            #expect(try await status("func f(v: Int) {\n  \(shape)\(call)\n}", at: logFilePath) == 1, "\(shape)")
+        }
+        // given a receiver that merely ends in log, when linted, then it is not a log call and passes
+        for shape in ["catalog.info", "blog.info", "x$log.info"] {
+            #expect(try await status("func f(v: Int) {\n  \(shape)\(call)\n}", at: logFilePath) == 0, "\(shape)")
+        }
+    }
+
+    // OC: FR-000-10. TASK-366. Mutants: pend cleared by a blank/comment line; `(` consumed twice (i = q); a non-call reference opens a call.
+    @Test("TASK-366: the paren may follow after blank/comment lines or a space; a reference that is not a call opens nothing")
+    func parenPlacement() async throws {
+        // given the paren after a blank line, a comment line, trailing whitespace or a space, when linted, then the interpolation is checked
+        #expect(try await logStatus("logger.info\n\n  (\"a \\(v)\")") == 1)
+        #expect(try await logStatus("logger.info\n  // c\n  (\"a \\(v)\")") == 1)
+        #expect(try await logStatus("logger.info  \n  (\"a \\(v)\")") == 1)
+        #expect(try await logStatus("logger.info (\"a \\(v)\")") == 1)
+        #expect(try await logStatus("logger.info\n  (\"a \\(v, privacy: .public)\")") == 0)
+        // given a call that closes, on the same line, a space before the paren, or the next line, then a later plain string is not a log message
+        #expect(try await logStatus("logger.info\n  (\"a\")\n  let s = \"b \\(v)\"") == 0)
+        #expect(try await logStatus("logger.info (\"a\")\n  let s = \"b \\(v)\"") == 0)
+        #expect(try await logStatus("logger.info\n  (\"a \\(v, privacy: .public)\")\n  let s = \"b \\(v)\"") == 0)
+        // given a reference to a log method that is never called, then a later plain string is not a log message
+        #expect(try await logStatus("let h = logger.info\n  let s = \"b \\(v)\"") == 0)
+        #expect(try await logStatus("let h = logger.info\n  = 1\n  let s = \"b \\(v)\"") == 0)
+        #expect(try await logStatus("let h = logger.info; let s = \"b \\(v)\"") == 0)
+        #expect(try await logStatus("use(logger.info, logger.error)\n  let s = \"b \\(v)\"") == 0)
+    }
+
+    // OC: FR-000-09. TASK-366. Mutants: drop the leading or the trailing optional backtick, or the newline allowance, in the LOGGER `.debug(` pattern.
+    @Test("TASK-366: .debug in every backtick and newline shape fails LOGGER; a longer name passes")
+    func debugShapes() async throws {
+        for shape in ["log.`debug`(\"x\")", "log.`debug(\"x\")", "log.debug`(\"x\")", "log.`debug`\n(\"x\")", "log.debug (\"x\")"] {
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+        #expect(try await status("log.debugger(\"x\")") == 0)
+    }
+
+    // MARK: known issues, still present
+
+    // OC: FR-000-02. TASK-368. Defect: a line-start regex after a line ending in `}`, `)`, a string, a regex or a `#if` line is read as
+    // division (judged by the previous code line), so its text is linted as code. New since 2ed68a4; RegexBuilder is the real shape.
+    @Test("KNOWN TASK-368: a statement-position regex literal after a code line is linted as code")
+    func statementPositionRegexAfterCodeLine() async throws {
+        let shapes = [
+            "let r = Regex {\n    /a/\n    /x!/\n}",
+            "let r = Regex {\n    Capture(.digit)\n    /print(x)/\n}",
+            "let r = Regex {\n    Capture { /\\d+/ }\n    /fatalError(x)/\n}",
+            "#if DEBUG\n/fatalError(x)/\n#endif",
+        ]
+        // control: the same regex after `let r =` is a regex and passes
+        #expect(try await status("let r =\n    /fatalError(x)/") == 0)
+        for shape in shapes {
+            // given a regex literal on its own line after a code line, when linted, then it should pass (today it exits 1)
+            let code = try await status(shape)
+            withKnownIssue("line-start / after a code line is division: \(shape.debugDescription)") {
+                #expect(code == 0)
+            }
+        }
+    }
+
+    // OC: FR-000-02. TASK-368. Defect: a previous line ending in `?` makes the next line-start / a regex, hiding a banned call (pre-existing).
+    @Test("KNOWN TASK-368: a division continued after a line ending in ? hides a banned call")
+    func divisionAfterQuestionMark() async throws {
+        // control: the same continuation after a plain identifier fails
+        #expect(try await status("let r = total\n    /n + g(fatalError(\"x\"))/2") == 1)
+        // given optional-chaining then a continued division, when linted, then it should fail (today it exits 0)
+        let code = try await status("let r = total?\n    /n + g(fatalError(\"x\"))/2")
+        withKnownIssue("`?` at line end reads the next line-start / as a regex") {
+            #expect(code == 1)
+        }
     }
 
     // OC: FR-000-05 / FR-000-04. Defect: USTRING view names have no left identifier boundary, and NETWORK is a bare substring match,
