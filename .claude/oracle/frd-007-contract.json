@@ -1529,6 +1529,17 @@
       "class": "layout",
       "source_verdict": "CONFIRMED",
       "must_verify": true
+    },
+    {
+      "id": "OC-7150",
+      "requirement": "FR-007-11",
+      "given": "A store with deletable text items whose unique content markers fill many pages, freelist empty",
+      "when": "Clear History (All time) completes",
+      "then": "PRAGMA freelist_count is 0 after the operation (free pages were released by incremental_vacuum), the main database file shrank, and no deleted item's unique marker bytes remain in the -wal file or the main database file",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-17 added by Friday after FRD-007 8V: FR-007-11's checkpoint + incremental_vacuum sentence had no assertion (survivor ClearHistory.swift:159)"
     }
   ]
 }
