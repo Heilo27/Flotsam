@@ -46,7 +46,7 @@ Known test noise (ignore it, but always name it in reports):
 | 007 | Retention / storage | S1 | merged | on `main` |
 | 009 | Distribution (`bin/release.sh`) | S1 | merged | on `main`; DMG signing waits on Ryan's Developer ID |
 | 001 | Capture | S1 | `frd001` | building |
-| 003 | Library: paste-back | S1 | `frd003` | building |
+| 003 | Library: paste-back | S1 | `frd003` | **ready: 6fe1d6e** — S2: A3 app build + launch (S1 machine overloaded; app target never built here). Package tests 21/21 Paste. |
 | 003 | Library: panel UI | S1 | `frd003ui` | building |
 | 008 | Onboarding / settings / menu bar | S1 | `frd008` | building |
 | 002 | Screenshot pickup | **S2** | `s2/frd002` | open: S2 lane C |
