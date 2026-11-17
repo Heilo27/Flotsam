@@ -12,7 +12,7 @@ import FlotsamBase
 // Fixtures are built with raw GRDB on throwaway folders and verified as damaged by an independent read-only
 // `quick_check` on a COPY, so each test proves its arrange actually produced a failing file.
 
-private enum V370 {
+enum V370 {
     static let pageSize = 4096
     enum ArrangeError: Error { case noPage }
     static let oldDate = Date(timeIntervalSince1970: 1_577_836_800)  // 2020-01-01T00:00:00Z
