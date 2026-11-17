@@ -72,6 +72,8 @@ Fields owned by this FRD (schema in FRD-007): item `pinned`, `note`, `updatedAt`
 | Edited text over ceiling | ORG-LIM-003 | rejected inline |
 | Transaction failed | STO-DB-001 | rolled back; surfaced per FRD-000 |
 
+An input rejection shown inline (ORG-VAL-001 to -003, ORG-LIM-001 to -003) is still logged and recorded, and never raises a HUD (FRD-000 FR-000-08 d).
+
 ## 7. Acceptance Criteria
 - **AC-004-01** (FR-004-01) Given items A (pinned) and B (unpinned) selected, when ⌘P is pressed, then both are pinned; pressing again unpins both; a pinned item older than the retention window survives a sweep.
 - **AC-004-02** (FR-004-02) Given tags "Work" and "work", then the second is rejected with `ORG-VAL-001`; a 33-character name, an empty name and a name of spaces are rejected; "Résumé" and "resume" are treated as duplicates.

@@ -128,7 +128,7 @@ final class AppContainer {
         // FRD-004: the coordinator and the organizer need each other (rejected input shows inline), so the organizer is
         // handed over after both exist.
         let organize = OrganizeCoordinator(
-            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+            report: { error, origin in Task { await reporter.report(error, origin: origin) } },
             loadContent: { await database.content(of: $0) },
             shortcutAndTrigger: { [weak self] ids in self?.actions.editShortcutAndTrigger?(ids) })
         let organizer = LibraryOrganizer(

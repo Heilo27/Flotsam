@@ -39,13 +39,13 @@ final class OrganizeCoordinator {
 
     @ObservationIgnored weak var model: LibraryViewModel?
     @ObservationIgnored var organizer: LibraryOrganizer?
-    @ObservationIgnored private let report: @MainActor (FlotsamError) -> Void
+    @ObservationIgnored private let report: @MainActor (FlotsamError, ErrorOrigin) -> Void
     @ObservationIgnored private let loadContent: @MainActor (UUID) async -> FlotsamResult<ItemContent>
     /// ⌘K belongs to FRD-005; this stays inert until that feature fills the closure.
     @ObservationIgnored private let shortcutAndTrigger: @MainActor ([UUID]) -> Void
 
     init(
-        report: @escaping @MainActor (FlotsamError) -> Void,
+        report: @escaping @MainActor (FlotsamError, ErrorOrigin) -> Void,
         loadContent: @escaping @MainActor (UUID) async -> FlotsamResult<ItemContent>,
         shortcutAndTrigger: @escaping @MainActor ([UUID]) -> Void
     ) {
@@ -59,12 +59,14 @@ final class OrganizeCoordinator {
     /// The inline codes: a rejected tag name, note or edit stays in the open overlay. Everything else is a HUD.
     private static let inlineCodes: Set<ErrorCode> = [.orgVal001, .orgVal002, .orgVal003, .orgLim001, .orgLim002, .orgLim003]
 
-    /// The organizer's `report` closure (FR-004-14): a rejected input shows inline, any other failure is reported.
+    /// The organizer's `report` closure (FR-004-14): a rejected input shows inline and is still logged and recorded
+    /// (FR-000-08 d), any other failure is reported as a HUD.
     func surface(_ error: FlotsamError) {
         if overlay != nil, Self.inlineCodes.contains(error.code) {
             validation = FlotsamStrings.message(for: error)
+            report(error, .inline)
         } else {
-            report(error)
+            report(error, .userInitiated)
         }
     }
 
@@ -114,7 +116,7 @@ final class OrganizeCoordinator {
                 draft = content.plainText ?? ""
                 validation = nil
                 overlay = .edit(row.id, kind: row.kind)
-            case .failure(let error): report(error)
+            case .failure(let error): report(error, .userInitiated)
             }
         }
     }
