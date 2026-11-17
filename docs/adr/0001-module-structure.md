@@ -29,7 +29,7 @@ Import table (the whole graph):
 |---|---|---|
 | Base | Foundation, os | FRD-000; settings registry (FRD-008 FR-008-02); seam protocols; `ItemKind`, `CapturedPayload`, `Chord`, `SearchNormalizer` |
 | Storage | Base, GRDB, ImageIO | FRD-007 (schema, ingest, blobs, image pipeline, query layer, retention, deletion, integrity) |
-| Payload | Base | FRD-001 FR-001-05 to -15 classification, typed-text detection, `contentKey` |
+| Payload | Base, CryptoKit | FRD-001 FR-001-05 to -15 classification, typed-text detection, `contentKey` |
 | Paste | Base, Storage | FR-003-15 steps 1 to 6, FR-001-03 own-write markers |
 | Capture | Base, Storage, Payload | FRD-001 polling state machine, gates, ignore list, privacy suspension |
 | Screenshots | Base, Storage, Payload | FRD-002 |

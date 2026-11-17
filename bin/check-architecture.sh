@@ -361,7 +361,7 @@ allowed_for() {
   case "$1" in
     FlotsamBase) echo "Foundation os" ;;
     FlotsamStorage) echo "Foundation FlotsamBase GRDB ImageIO" ;;
-    FlotsamPayload) echo "Foundation FlotsamBase" ;;
+    FlotsamPayload) echo "Foundation FlotsamBase CryptoKit" ;;
     FlotsamPaste) echo "Foundation FlotsamBase FlotsamStorage" ;;
     FlotsamCapture|FlotsamScreenshots|FlotsamShelf) echo "Foundation FlotsamBase FlotsamStorage FlotsamPayload" ;;
     FlotsamLibrary|FlotsamShortcuts|FlotsamTriggers) echo "Foundation FlotsamBase FlotsamStorage FlotsamPaste" ;;
