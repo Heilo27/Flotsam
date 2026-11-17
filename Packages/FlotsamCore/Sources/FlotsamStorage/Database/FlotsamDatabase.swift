@@ -97,8 +97,9 @@ public final class FlotsamDatabase: Sendable {
         let existed = (fileSystem.fileInfo(at: layout.databaseURL)?.byteSize ?? 0) > 0
         do {
             if existed {
-                // A read-only probe comes first so a newer-version database is refused while still byte-identical:
-                // opening the pool would switch the journal mode and rewrite the header (AC-007-15).
+                // A read-only probe comes first, and it carries the whole integrity check (FR-007-13), so a newer-version or
+                // damaged database is refused or quarantined while still byte-identical: opening the pool would switch the
+                // journal mode, rewrite the header and VACUUM (AC-007-15).
                 switch try probe(layout.databaseURL) {
                 case .damaged: return .damaged
                 case .version(let version) where version > Migrations.newestVersion(in: migrations):
@@ -114,8 +115,7 @@ public final class FlotsamDatabase: Sendable {
                     : .success(())
             }
             if case .failure(let error) = migrated { return .failed(error) }
-            let check = try pool.read { try String.fetchAll($0, sql: "PRAGMA quick_check") }
-            return check == ["ok"] ? .opened(pool) : .damaged
+            return .opened(pool)
         } catch {
             return isDamage(error) ? .damaged : .failed(mapped(error))
         }
@@ -128,7 +128,12 @@ public final class FlotsamDatabase: Sendable {
         readOnly.readonly = true
         do {
             let queue = try DatabaseQueue(path: url.path, configuration: readOnly)
-            return .version(try queue.read { try MigrationRunner.currentVersion($0) })
+            defer { try? queue.close() }
+            return try queue.read { db in
+                // `quick_check` runs before the version is trusted: a damaged file can report any user_version.
+                try String.fetchAll(db, sql: "PRAGMA quick_check") == ["ok"]
+                    ? .version(try MigrationRunner.currentVersion(db)) : .damaged
+            }
         } catch {
             if isDamage(error) { return .damaged }
             throw error
