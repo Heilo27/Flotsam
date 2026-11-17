@@ -101,7 +101,7 @@ public protocol KeyboardEnvironment: Sendable {
 @MainActor
 public protocol TriggerKeyPoster: KeyEventPoster {
     /// Key down then key up, `count` times, back to back (FR-005-14 step 5 uses key code 51, FR-005-15 re-posts the
-    /// boundary key). False when an event could not be created or posted.
+    /// boundary key). Every event is created before any is posted, so false means none was posted.
     func postKeyPress(keyCode: UInt16, count: Int) -> Bool
     /// Types `text` as one Unicode string event (FR-005-15 re-types the trigger).
     func postText(_ text: String) -> Bool
