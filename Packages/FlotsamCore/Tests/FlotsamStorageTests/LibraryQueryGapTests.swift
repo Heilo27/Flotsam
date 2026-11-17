@@ -65,6 +65,24 @@ import FlotsamBase
         }
     }
 
+    /// OC-7141, tie-break independent of insertion order. Given five rows with identical sort keys inserted in the
+    /// scrambled order 3, 5, 1, 4, 2 (so rowid order is NOT id order), when listed under each sort, then the order is
+    /// the id order 1..5. Red if the `recent` sort loses its `id ASC` tail: tied rows then come back in storage order
+    /// (3, 5, 1, 4, 2) and the page order depends on when each row happened to be written.
+    @Test("OC-7141 tied rows list in id order whatever order they were stored in")
+    func oc7141_tieBreakIgnoresInsertionOrder() async throws {
+        // given five tied rows stored out of id order
+        let store = try await Store.make()
+        defer { store.cleanUp() }
+        try await store.insert([3, 5, 1, 4, 2].map { Spec(n: $0, kind: .image, ageMs: 5_000) })
+
+        for sort in LibrarySort.allCases {
+            // when listed under each sort, then the ids are 1..5 in id order
+            let listing = try await store.database.listing(LibraryQuery(filter: .kind(.image), sort: sort))
+            #expect(listing.ids == (1...5).map(Store.id), "\(sort)")
+        }
+    }
+
     /// OC-7141, boundaries 0 / 1 / max / max+1 (200 per page). The `hasMore` flag and page count change exactly at 200.
     @Test("OC-7141 0, 1, 200 and 201 matches give 0, 1, 1 and 2 pages")
     func oc7141_pageSizeBoundaries() async throws {
@@ -80,6 +98,34 @@ import FlotsamBase
             #expect(listing.pageSizes == c.pages, "\(c.count) matches")
             #expect(listing.total == c.total, "\(c.count) matches")
             #expect(listing.unique == Set((0..<c.count).map { Store.id($0 + 1) }), "\(c.count) matches")
+        }
+    }
+
+    /// OC-7142, FR-003-12 app list cap (0 / 1 / max / max+1 around 15). Given 14, 15 and 16 distinct source apps with
+    /// one item each, when the sidebar is read, then it lists 14, 15 and 15 apps, in key order, and the 16th (the last
+    /// key) is the one left out. Red if the cap is 14 (the 15-app case then lists 14) or the cap is dropped.
+    @Test("OC-7142 the sidebar lists at most 15 source apps")
+    func oc7142_sidebarAppCap() async throws {
+        let cases: [(apps: Int, listed: Int)] = [(14, 14), (15, 15), (16, 15)]
+        for c in cases {
+            // given c.apps items, each from its own app
+            let store = try await Store.make()
+            defer { store.cleanUp() }
+            try await store.insert((1...c.apps).map { Spec(n: $0) })
+            try await store.database.pool.write { db in
+                for n in 1...c.apps {
+                    let key = String(format: "com.test.app%02d", n)
+                    try db.execute(
+                        sql: "UPDATE item SET sourceBundleId = ?, sourceName = ? WHERE id = ?",
+                        arguments: [key, "App \(n)", Store.id(n).uuidString])
+                }
+            }
+
+            // when the sidebar is read, then exactly the first c.listed keys are listed
+            let sidebar = try await store.database.sidebarCounts().get()
+            let expected = (1...c.listed).map { String(format: "com.test.app%02d", $0) }
+            #expect(sidebar.apps.map(\.identity) == expected.map { .bundle($0) }, "\(c.apps) apps")
+            #expect(sidebar.apps.map(\.count) == [Int](repeating: 1, count: c.listed), "\(c.apps) apps")
         }
     }
 
