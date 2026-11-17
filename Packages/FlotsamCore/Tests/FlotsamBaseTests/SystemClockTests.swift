@@ -11,9 +11,10 @@ private struct SleepOutcome: Sendable {
     let cancelledAfter: Bool
 }
 
-private func timedSleep(_ duration: Duration) async -> SleepOutcome {
+private func timedSleep(_ duration: Duration, onAboutToSleep: (@Sendable () -> Void)? = nil) async -> SleepOutcome {
     let clock = ContinuousClock()
     let start = clock.now
+    onAboutToSleep?()
     await SystemClock().sleep(for: duration)
     return SleepOutcome(elapsed: start.duration(to: clock.now), cancelledAfter: Task.isCancelled)
 }
@@ -47,17 +48,20 @@ struct SystemClockTests {
         #expect(outcome.cancelledAfter == true)
     }
 
-    // OC-0077. Given a task sleeping 10 s. When it is cancelled about 50 ms in.
-    // Then sleep returns in under 1 s total, at least ~50 ms after it began, and Task.isCancelled is true.
-    // Red if: cancellation during the sleep does not wake it, or sleep returns without sleeping at all.
+    // OC-0077. Given a task that has signalled it is about to sleep 10 s. When it is cancelled after that signal.
+    // Then sleep returns in under 1 s total, without throwing, and Task.isCancelled is true.
+    // Red if: cancellation during the sleep does not wake it (sleeps the full 10 s), or the cancelled flag is lost.
+    // No lower bound on elapsed: when the cancel lands relative to the sleep is scheduler-dependent, so any floor
+    // flaked under load (the child could start after cancel(), elapsed ~0). "Sleeps at all" is owned by the live
+    // 50 ms test above (red if sleep is skipped or shortened).
     @Test("cancelling during a 10 s sleep wakes it early")
-    func cancelledDuringSleepReturnsEarly() async throws {
-        let task = Task { await timedSleep(.seconds(10)) }
-        try await Task.sleep(for: .milliseconds(50))
+    func cancelledDuringSleepReturnsEarly() async {
+        let (signals, signal) = AsyncStream<Void>.makeStream()
+        let task = Task { await timedSleep(.seconds(10), onAboutToSleep: { signal.yield() }) }
+        for await _ in signals { break }  // deterministic: cancel only after the task reached its sleep
         task.cancel()
         let outcome = await task.value
         #expect(outcome.elapsed < .seconds(1))
-        #expect(outcome.elapsed >= .milliseconds(25))
         #expect(outcome.cancelledAfter == true)
     }
 }
