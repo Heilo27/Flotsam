@@ -94,6 +94,43 @@ import FlotsamBase
         #expect(emptyResults < 20)
     }
 
+    /// OC-7139, OC-7142. Given six items that all contain the word "ledger" (3 text, 2 link, 1 color), when "ledger" is
+    /// searched under each kind filter, then exactly the items of that kind come back, the totals agree, and a kind with
+    /// no match returns nothing. Red if the kind clause is inverted (`kind != ?`): the text filter would return the other
+    /// three items and the color filter the other five.
+    @Test("OC-7139 searching under a kind filter returns only that kind")
+    func oc7139_searchUnderKindFilter() async throws {
+        // given six items sharing one search word, indexed the way ingest indexes them
+        let store = try await Store.make()
+        defer { store.cleanUp() }
+        try await store.insert([
+            Spec(n: 1, ageMs: 1, text: "ledger one"), Spec(n: 2, ageMs: 2, text: "ledger two"), Spec(n: 3, ageMs: 3, text: "ledger three"),
+            Spec(n: 4, kind: .link, ageMs: 4, text: "https://ledger.example/a"), Spec(n: 5, kind: .link, ageMs: 5, text: "https://ledger.example/b"),
+            Spec(n: 6, kind: .color, ageMs: 6, text: "#LEDGER"),
+        ])
+        try await store.database.pool.write { db in
+            for n in 1...6 { try SearchIndex.refresh(db, itemId: Store.id(n).uuidString) }
+        }
+        let db = store.database
+
+        // when the same search runs under each filter, then each returns exactly its kind's ids
+        let all = try await db.matches("ledger")
+        #expect(all.unique == Set((1...6).map(Store.id)))
+        let text = try await db.matches("ledger", filter: .kind(.text))
+        #expect(text.unique == Set((1...3).map(Store.id)))
+        #expect(text.total == 3)
+        let link = try await db.matches("ledger", filter: .kind(.link))
+        #expect(link.unique == [Store.id(4), Store.id(5)])
+        #expect(link.total == 2)
+        let color = try await db.matches("ledger", filter: .kind(.color))
+        #expect(color.unique == [Store.id(6)])
+        #expect(color.total == 1)
+        // and a kind with no item gives nothing, even though the word is everywhere else
+        let image = try await db.matches("ledger", filter: .kind(.image))
+        #expect(image.ids.isEmpty)
+        #expect(image.total == 0)
+    }
+
     // MARK: OC-7143
 
     /// OC-7143. Given 'Café Résumé ÉCOLE' (and a decoy with only 'cafe'), when 'cafe', 'RESUME', 'ecole cafe' and
