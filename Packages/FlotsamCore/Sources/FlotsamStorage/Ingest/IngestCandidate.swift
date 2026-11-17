@@ -34,11 +34,15 @@ public struct IngestCandidate: Sendable, Equatable {
     public let occurredAt: Date
     /// Screenshots only.
     public let originalPath: String?
+    /// False only for screenshot backfill (FRD-002 FR-002-12), which is not a copy event: a `contentKey` match then
+    /// leaves the existing item fully untouched instead of bumping it (FRD-001 FR-001-15 exception).
+    public let countsAsCopy: Bool
 
     public init(
         kind: ItemKind, contentKey: String, plainText: String? = nil,
         representations: [PasteboardRepresentation] = [], members: [IngestMember] = [],
-        source: SourceApp? = nil, origin: CaptureOrigin, occurredAt: Date, originalPath: String? = nil
+        source: SourceApp? = nil, origin: CaptureOrigin, occurredAt: Date, originalPath: String? = nil,
+        countsAsCopy: Bool = true
     ) {
         self.kind = kind
         self.contentKey = contentKey
@@ -49,12 +53,15 @@ public struct IngestCandidate: Sendable, Equatable {
         self.origin = origin
         self.occurredAt = occurredAt
         self.originalPath = originalPath
+        self.countsAsCopy = countsAsCopy
     }
 }
 
 public enum IngestOutcome: Sendable, Equatable {
     case created(UUID)
     case bumped(UUID)
+    /// A candidate with `countsAsCopy == false` matched this item, which was left exactly as it was.
+    case unchanged(UUID)
 }
 
 /// What ingest did, plus the conditions the caller should surface without the item having failed: a dropped rich
