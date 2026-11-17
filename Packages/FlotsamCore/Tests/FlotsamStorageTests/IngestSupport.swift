@@ -241,8 +241,10 @@ struct Rig {
         guard let walker = FileManager.default.enumerator(at: store.blobsDir, includingPropertiesForKeys: [.isRegularFileKey])
         else { return [] }
         var names: Set<String> = []
+        // Resolve symlinks on both sides: the temp dir is /var/... but the enumerator reports /private/var/...
+        let base = store.blobsDir.resolvingSymlinksInPath().path
         for case let url as URL in walker where (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true {
-            names.insert(String(url.path.dropFirst(store.blobsDir.path.count + 1)))
+            names.insert(String(url.resolvingSymlinksInPath().path.dropFirst(base.count + 1)))
         }
         return names
     }
