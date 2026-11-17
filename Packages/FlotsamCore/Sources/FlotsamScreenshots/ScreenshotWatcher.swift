@@ -426,13 +426,19 @@ public actor ScreenshotWatcher {
 
     // MARK: Importing
 
-    /// FR-002-13: FIFO, at most `maxInFlight` at once.
+    /// FR-002-13: FIFO, at most `maxInFlight` at once. FR-002-12: live pickup (no batch) goes ahead of every queued
+    /// backfill job, so a 500-file backfill never starves a fresh screenshot; each class stays FIFO within itself.
     private func enqueue(_ files: [ScreenshotFile], batch: UUID?, bypassSeen: Bool) {
         for file in files {
             let path = file.url.path
             guard !pending.contains(path), bypassSeen || !seen.contains(file) else { continue }
             pending.insert(path)
-            queue.append(ImportJob(file: file, batch: batch))
+            let job = ImportJob(file: file, batch: batch)
+            if batch == nil, let firstBackfill = queue.firstIndex(where: { $0.batch != nil }) {
+                queue.insert(job, at: firstBackfill)
+            } else {
+                queue.append(job)
+            }
         }
         pump()
     }

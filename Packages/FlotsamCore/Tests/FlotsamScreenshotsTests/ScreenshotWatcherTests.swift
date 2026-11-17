@@ -406,6 +406,25 @@ struct WatcherSettingsTests {
         #expect(await rig.watcher.importRecent() == 0)
     }
 
+    @Test("FR-002-12: live pickup goes ahead of a running backfill")
+    func livePickupBeatsBackfill() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        defer { rig.cleanUp() }
+        await rig.watcher.start()
+        let now = Date()
+        for index in 0..<500 {
+            try rig.shot(in: rig.desktop, "Screenshot old \(index).png", born: now.addingTimeInterval(-Double(index) - 60))
+        }
+        let backfill = Task { await rig.watcher.importRecent() }
+        #expect(await eventually { rig.ingest.candidates.count >= 4 }, "the backfill is under way")
+        let live = try rig.shot(in: rig.desktop, "Screenshot live.png")
+        rig.event(live)
+        #expect(await backfill.value == 500)
+        #expect(await eventually { rig.ingest.names.contains(live.lastPathComponent) })
+        let position = try #require(rig.ingest.names.firstIndex(of: live.lastPathComponent))
+        #expect(position < 500, "the live file was imported before the backfill drained, not after it")
+    }
+
     @Test("OC-2024: Import recent screenshots is available in a capture mode that does not import")
     func backfillWhilePaused() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())
