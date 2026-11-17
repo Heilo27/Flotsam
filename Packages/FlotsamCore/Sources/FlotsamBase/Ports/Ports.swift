@@ -80,13 +80,32 @@ public protocol FileSystemPort: Sendable {
     func availableCapacity(at url: URL) -> Int64?
 }
 
-/// Size and modification time of one file.
+/// What a directory entry is, read without following a symbolic link.
+public enum FileKind: Sendable, Equatable {
+    case regular, directory, symbolicLink, other
+}
+
+/// Size, dates and kind of one file. `createdAt` is the birth date; screenshot pickup orders and filters by it
+/// (FRD-002 FR-002-08, FR-002-09). Nil when the volume does not record one.
 public struct FileInfo: Sendable, Equatable {
     public let byteSize: Int
     public let modifiedAt: Date
+    public let createdAt: Date?
+    public let kind: FileKind
 
-    public init(byteSize: Int, modifiedAt: Date) {
+    public init(byteSize: Int, modifiedAt: Date, createdAt: Date? = nil, kind: FileKind = .regular) {
         self.byteSize = byteSize
         self.modifiedAt = modifiedAt
+        self.createdAt = createdAt
+        self.kind = kind
     }
+}
+
+/// The system screenshot preferences (`com.apple.screencapture`), read fresh on every call because the user can
+/// change them with `defaults write` or the Screenshot app while Flotsam runs (FRD-002 FR-002-01, FR-002-02).
+public protocol ScreenCapturePreferences: Sendable {
+    /// The `location` value as stored (may start with `~`); nil when unset.
+    func location() -> String?
+    /// The `name` value (the file-name prefix the user chose); nil when unset.
+    func name() -> String?
 }
