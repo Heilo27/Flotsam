@@ -1,0 +1,458 @@
+{
+ "frd": "FRD-007",
+ "mutations": [
+  {
+   "id": "M01",
+   "target": "Retention/Exemption.swift: grace window halved (all sweeps)",
+   "oc": [
+    "OC-7071"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7071_unpinnedItemSurvivesTwentyFourHoursThenGoes()"
+  },
+  {
+   "id": "M02",
+   "target": "Retention/RetentionSweep.swift: time sweep+preview ignore 24h grace",
+   "oc": [
+    "OC-7071",
+    "OC-7072"
+   ],
+   "result": "KILLED",
+   "killed_by": "FR-007-09/10 a just-unpinned old item is not previewed until its grace ends"
+  },
+  {
+   "id": "M03",
+   "target": "Retention/ImageBudgetEnforcement.swift: budget eviction candidates ignore 24h grace",
+   "oc": [
+    "OC-7059",
+    "OC-7071"
+   ],
+   "result": "KILLED",
+   "killed_by": "graceProtectsOldestImageFromBudget()"
+  },
+  {
+   "id": "M04",
+   "target": "Retention/ImageBudgetEnforcement.swift: budget in-tx re-check drops grace",
+   "oc": [
+    "OC-7071",
+    "OC-7059"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M05",
+   "target": "Retention/Exemption.swift: grace boundary < -> <=",
+   "oc": [
+    "OC-7071"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M06",
+   "target": "Retention/Exemption.swift: notExempt ignores shortcut",
+   "oc": [
+    "OC-7067",
+    "OC-7079"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items"
+  },
+  {
+   "id": "M07",
+   "target": "Retention/Exemption.swift: notExempt ignores pinned",
+   "oc": [
+    "OC-7057",
+    "OC-7089"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items"
+  },
+  {
+   "id": "M08",
+   "target": "Retention/Exemption.swift: notExempt ignores trigger",
+   "oc": [
+    "OC-7067",
+    "OC-7079"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items"
+  },
+  {
+   "id": "M09",
+   "target": "Retention/Exemption.swift: sqlPredicate ignores hotkey (release stamp)",
+   "oc": [
+    "OC-7073"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7073_removingLastTriggerOrHotkeyStartsGrace()"
+  },
+  {
+   "id": "M10",
+   "target": "Retention/Exemption.swift: stamp on every non-exempt edit",
+   "oc": [
+    "OC-7072",
+    "OC-7074"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M11",
+   "target": "Retention/Exemption.swift: re-exempt does not clear stamp",
+   "oc": [
+    "OC-7072"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7072_repinClearsGraceAndSecondUnpinRestartsIt()"
+  },
+  {
+   "id": "M12",
+   "target": "Retention/ClearHistory.swift: lastHour reaches 24h",
+   "oc": [
+    "OC-7091"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7091_clearRangeWindows(range:expectedRemaining:)"
+  },
+  {
+   "id": "M13",
+   "target": "Retention/ClearHistory.swift: lower bound inclusive -> exclusive",
+   "oc": [
+    "OC-7091"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M14",
+   "target": "Retention/ClearHistory.swift: upper bound inclusive -> exclusive",
+   "oc": [
+    "OC-7091"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M15",
+   "target": "Retention/ClearHistory.swift: allTime treated as 24h",
+   "oc": [
+    "OC-7089",
+    "OC-7090"
+   ],
+   "result": "KILLED",
+   "killed_by": "graceDoesNotProtectFromClearHistory()"
+  },
+  {
+   "id": "M16",
+   "target": "Retention/ClearHistory.swift: scrub: incremental_vacuum dropped",
+   "oc": [
+    "OC-7095"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M17",
+   "target": "Retention/ClearHistory.swift: scrub: TRUNCATE->PASSIVE",
+   "oc": [
+    "OC-7095"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7095_clearHistoryLeavesNoMarkerInDatabaseFiles()"
+  },
+  {
+   "id": "M18",
+   "target": "Retention/ClearHistory.swift: clear in-tx re-check dropped",
+   "oc": [
+    "OC-7089",
+    "OC-7096"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M19",
+   "target": "Ingest/IngestActor.swift: dedupe bumps oldest, not newest",
+   "oc": [
+    "OC-7028",
+    "OC-7015"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M20",
+   "target": "Blobs/BlobStore.swift: blob shard 2->3 chars",
+   "oc": [
+    "OC-7020"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7020 two representations are exactly two sharded blob files"
+  },
+  {
+   "id": "M21",
+   "target": "Blobs/BlobStore.swift: reconcile pattern: ordinal not required numeric",
+   "oc": [
+    "OC-7113",
+    "OC-7114"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M22",
+   "target": "Blobs/BlobStore.swift: reconcile pattern: extra dots accepted",
+   "oc": [
+    "OC-7114"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7114_orphanThumbnailsGoAndForeignFilesSurvive()"
+  },
+  {
+   "id": "M23",
+   "target": "Reliability/Reconcile.swift: orphan grace 10 min -> 1 min",
+   "oc": [
+    "OC-7024"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7024_orphanBlobGraceIsTenMinutes()"
+  },
+  {
+   "id": "M24",
+   "target": "Reliability/Reconcile.swift: unknown-age blob deleted as orphan",
+   "oc": [
+    "OC-7113"
+   ],
+   "result": "KILLED",
+   "killed_by": "statFailureOnListedFileSkipsRepairAndNeverCountsAsOrphan()"
+  },
+  {
+   "id": "M25",
+   "target": "Reliability/Reconcile.swift: listing includes non-Flotsam names",
+   "oc": [
+    "OC-7114"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7114_orphanThumbnailsGoAndForeignFilesSurvive()"
+  },
+  {
+   "id": "M26",
+   "target": "Reliability/Reconcile.swift: stat failure no longer marks listing incomplete",
+   "oc": [
+    "OC-7113"
+   ],
+   "result": "KILLED",
+   "killed_by": "statFailureOnListedFileSkipsRepairAndNeverCountsAsOrphan()"
+  },
+  {
+   "id": "M27",
+   "target": "Folder/DataFolder.swift: flotsam-v.sqlite (no digits) matches",
+   "oc": [
+    "OC-7137"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M28",
+   "target": "Folder/DataFolder.swift: -shm not recognised as Flotsam copy",
+   "oc": [
+    "OC-7137"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7137_pruningTouchesOnlyFlotsamNamedFiles()"
+  },
+  {
+   "id": "M29",
+   "target": "Database/FlotsamDatabase.swift: prune deletes any file in pre-migration/",
+   "oc": [
+    "OC-7137"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7137_pruningTouchesOnlyFlotsamNamedFiles()"
+  },
+  {
+   "id": "M30",
+   "target": "Database/FlotsamDatabase.swift: copy taken without checkpoint",
+   "oc": [
+    "OC-7134"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M31",
+   "target": "Images/ImagePipeline.swift: thumbnail completeness: EOI marker check dropped",
+   "oc": [
+    "OC-7044"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7044 damaged thumbnail is regenerated, never served"
+  },
+  {
+   "id": "M32",
+   "target": "Images/ImagePipeline.swift: thumbnail completeness: full decode dropped",
+   "oc": [
+    "OC-7044"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M33",
+   "target": "Blobs/BlobStore.swift: atomic write no longer replaces existing file (OC-7044 origin)",
+   "oc": [
+    "OC-7044"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7044 damaged thumbnail is regenerated, never served"
+  },
+  {
+   "id": "M34",
+   "target": "Ingest/IngestActor.swift: item byteSize includes plain text",
+   "oc": [
+    "OC-7018"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7017 a copied plain text lands with the documented defaults and no representation"
+  },
+  {
+   "id": "M35",
+   "target": "Images/ImagePipeline.swift: Efficient no longer converts opaque PNG to JPEG",
+   "oc": [
+    "OC-7052"
+   ],
+   "result": "KILLED",
+   "killed_by": "FR-007-07 TIFF goes to PNG first, then the Efficient rule applies"
+  },
+  {
+   "id": "M36",
+   "target": "Images/ImagePipeline.swift: alpha PNG becomes JPEG",
+   "oc": [
+    "OC-7051"
+   ],
+   "result": "KILLED",
+   "killed_by": "FR-007-07 TIFF goes to PNG first, then the Efficient rule applies"
+  },
+  {
+   "id": "M37",
+   "target": "Images/ImagePipeline.swift: TIFF not converted to PNG when not Efficient",
+   "oc": [
+    "OC-7042"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7042 a TIFF is stored as a lossless PNG with identical pixels and a prompt thumbnail"
+  },
+  {
+   "id": "M38",
+   "target": "Images/ImagePipeline.swift: Efficient ceiling 2560->3840",
+   "oc": [
+    "OC-7048"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7048 Efficient ceiling boundary for JPEG: 2560 untouched, 2561 downscaled"
+  },
+  {
+   "id": "M39",
+   "target": "Images/ImagePipeline.swift: JPEG quality 0.85->0.3 (known gap)",
+   "oc": [
+    "OC-7048"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M40",
+   "target": "Database/Migrations.swift: schema version 1->2",
+   "oc": [
+    "OC-7019"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt"
+  },
+  {
+   "id": "M41",
+   "target": "Database/Migrations.swift: meta.schemaVersion mirror wrong",
+   "oc": [
+    "OC-7019"
+   ],
+   "result": "KILLED",
+   "killed_by": "OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt"
+  },
+  {
+   "id": "M42",
+   "target": "Retention/RetentionScheduler.swift: retention launch delay 30->60 s",
+   "oc": [
+    "OC-7075"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M43",
+   "target": "Retention/RetentionScheduler.swift: retention interval 1h->2h",
+   "oc": [
+    "OC-7075"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M44",
+   "target": "Retention/RetentionScheduler.swift: retention stop() does not cancel",
+   "oc": [
+    "OC-7075"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M45",
+   "target": "Retention/RetentionScheduler.swift: retention overlap guard dropped",
+   "oc": [
+    "OC-7075"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M46",
+   "target": "Reliability/ReconcileScheduler.swift: reconcile launch delay 15->30 s",
+   "oc": [
+    "OC-7113"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M47",
+   "target": "Reliability/ReconcileScheduler.swift: reconcile interval 7d->1d",
+   "oc": [
+    "OC-7113"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M48",
+   "target": "Reliability/ReconcileScheduler.swift: reconcile stop() does not cancel",
+   "oc": [
+    "OC-7113"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  },
+  {
+   "id": "M49",
+   "target": "Reliability/ReconcileScheduler.swift: reconcile overlap guard dropped",
+   "oc": [
+    "OC-7113"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null
+  }
+ ],
+ "survivors": 21
+}
