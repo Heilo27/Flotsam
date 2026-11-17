@@ -1,578 +1,3035 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "ui.source.remoteDevice" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Another device" } } }
-    },
-    "ui.library.footerCopyOnly" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Press ⌘V to paste" } } }
-    },
-    "ui.hud.pasted" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pasted “%@”" } } }
-    },
-    "ui.row.bundleCount" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld items" } } }
-    },
-    "ui.kind.text" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Text" } } }
-    },
-    "ui.kind.richText" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Rich Text" } } }
-    },
-    "ui.kind.link" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Link" } } }
-    },
-    "ui.kind.color" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Color" } } }
-    },
-    "ui.kind.phone" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Phone Number" } } }
-    },
-    "ui.kind.email" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Email" } } }
-    },
-    "ui.kind.image" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Image" } } }
-    },
-    "ui.kind.file" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "File" } } }
-    },
-    "ui.kind.folder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Folder" } } }
-    },
-    "ui.kind.bundle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Bundle" } } }
-    },
-    "ui.kind.screenshot" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot" } } }
-    },
     "error.CAP-IO-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't save a copy. The disk may be full or its data folder unreadable." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam couldn't save a copy. The disk may be full or its data folder unreadable."
+          }
+        }
+      }
     },
     "error.CAP-LIM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy was too large to save (over %@). It is still on your clipboard." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A copy was too large to save (over %@). It is still on your clipboard."
+          }
+        }
+      }
     },
     "error.CAP-LIM-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy of %lld files was trimmed to the first 500." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A copy of %lld files was trimmed to the first 500."
+          }
+        }
+      }
     },
     "error.CAP-OS-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't read the clipboard just now. It will keep trying." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam couldn't read the clipboard just now. It will keep trying."
+          }
+        }
+      }
     },
     "error.CAP-PRM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings."
+          }
+        }
+      }
     },
     "error.LIB-DAT-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The original file or folder has moved or been deleted." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The original file or folder has moved or been deleted."
+          }
+        }
+      }
     },
     "error.LIB-IO-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This item's data is missing, so it was removed." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This item's data is missing, so it was removed."
+          }
+        }
+      }
     },
     "error.LIB-OS-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't paste into that app. The item is on your clipboard; press ⌘V." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't paste into that app. The item is on your clipboard; press ⌘V."
+          }
+        }
+      }
     },
     "error.ORG-LIM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "An item can have up to 10 tags." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An item can have up to 10 tags."
+          }
+        }
+      }
     },
     "error.ORG-LIM-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "You can have up to 100 tags." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can have up to 100 tags."
+          }
+        }
+      }
     },
     "error.ORG-LIM-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That text is over the %@ limit. Shorten it and try again." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That text is over the %@ limit. Shorten it and try again."
+          }
+        }
+      }
     },
     "error.ORG-VAL-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Tag names must be 1 to 32 characters and unique." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag names must be 1 to 32 characters and unique."
+          }
+        }
+      }
     },
     "error.ORG-VAL-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Notes can be up to 2,000 characters." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes can be up to 2,000 characters."
+          }
+        }
+      }
     },
     "error.ORG-VAL-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Only text items can be edited, and they can't be empty." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only text items can be edited, and they can't be empty."
+          }
+        }
+      }
     },
     "error.SET-DAT-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A setting had an invalid value and was reset to its default." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A setting had an invalid value and was reset to its default."
+          }
+        }
+      }
     },
     "error.SET-OS-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't change Launch at Login. Check System Settings › General › Login Items." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't change Launch at Login. Check System Settings › General › Login Items."
+          }
+        }
+      }
     },
     "error.SET-PRM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V."
+          }
+        }
+      }
     },
     "error.SET-PRM-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security."
+          }
+        }
+      }
     },
     "error.SET-VAL-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That folder can't be used for screenshots. Choose a folder you can read." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That folder can't be used for screenshots. Choose a folder you can read."
+          }
+        }
+      }
     },
     "error.SET-VAL-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That isn't an app Flotsam can add. Choose an application." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That isn't an app Flotsam can add. Choose an application."
+          }
+        }
+      }
     },
     "error.SHF-IO-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A dropped file couldn't be read and was skipped." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A dropped file couldn't be read and was skipped."
+          }
+        }
+      }
     },
     "error.SHF-LIM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A dropped item was too large to save (over %@)." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A dropped item was too large to save (over %@)."
+          }
+        }
+      }
     },
     "error.SHF-OS-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't drag that item out. Try again or paste it from the Library." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't drag that item out. Try again or paste it from the Library."
+          }
+        }
+      }
     },
     "error.SHF-VAL-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't store that kind of content." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam can't store that kind of content."
+          }
+        }
+      }
     },
     "error.SSP-IO-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your screenshot folder isn't available, so Flotsam is watching the Desktop instead." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your screenshot folder isn't available, so Flotsam is watching the Desktop instead."
+          }
+        }
+      }
     },
     "error.SSP-IO-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your chosen screenshot folder is missing. Screenshot pickup is paused." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your chosen screenshot folder is missing. Screenshot pickup is paused."
+          }
+        }
+      }
     },
     "error.SSP-LIM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A screenshot was too large to import (over %@)." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A screenshot was too large to import (over %@)."
+          }
+        }
+      }
     },
     "error.SSP-OS-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Live screenshot watching isn't working. Flotsam is checking every 5 seconds instead." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Live screenshot watching isn't working. Flotsam is checking every 5 seconds instead."
+          }
+        }
+      }
     },
     "error.SSP-PRM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't read your screenshot folder. Allow access in System Settings › Privacy & Security › Files and Folders." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam can't read your screenshot folder. Allow access in System Settings › Privacy & Security › Files and Folders."
+          }
+        }
+      }
     },
     "error.STO-DB-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't save your history. Free up disk space and try again." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam couldn't save your history. Free up disk space and try again."
+          }
+        }
+      }
     },
     "error.STO-DB-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your history database was damaged. A fresh one was created and the old file was kept in the data folder." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your history database was damaged. A fresh one was created and the old file was kept in the data folder."
+          }
+        }
+      }
     },
     "error.STO-DB-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder."
+          }
+        }
+      }
     },
     "error.STO-DB-004" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't read your history. Try again." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't read your history. Try again."
+          }
+        }
+      }
     },
     "error.STO-IO-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't write to its data folder. Check free disk space." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam couldn't write to its data folder. Check free disk space."
+          }
+        }
+      }
     },
     "error.STO-IO-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't create its data folder, so it can't run." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam can't create its data folder, so it can't run."
+          }
+        }
+      }
     },
     "error.STO-LIM-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned and shortcut items alone exceed your image budget." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned and shortcut items alone exceed your image budget."
+          }
+        }
+      }
     },
     "error.STO-LIM-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Disk space is low, so Flotsam isn't saving images." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disk space is low, so Flotsam isn't saving images."
+          }
+        }
+      }
     },
     "error.SYS-INT-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings › About." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings › About."
+          }
+        }
+      }
     },
     "error.TRG-OS-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "macOS wouldn't let Flotsam use that shortcut. Try a different one." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS wouldn't let Flotsam use that shortcut. Try a different one."
+          }
+        }
+      }
     },
     "error.TRG-OS-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't expand that trigger. Your typed text was left as it was." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't expand that trigger. Your typed text was left as it was."
+          }
+        }
+      }
     },
     "error.TRG-OS-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Typed triggers were paused by macOS and have been restarted." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Typed triggers were paused by macOS and have been restarted."
+          }
+        }
+      }
     },
     "error.TRG-VAL-001" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Triggers start with a symbol (like ;), have 2 to 24 characters and contain no spaces." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Triggers start with a symbol (like ;), have 2 to 24 characters and contain no spaces."
+          }
+        }
+      }
     },
     "error.TRG-VAL-002" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That trigger is already used by another item." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That trigger is already used by another item."
+          }
+        }
+      }
     },
     "error.TRG-VAL-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcuts need ⌘ or ⌃ plus a key, and can't be a reserved system shortcut." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts need ⌘ or ⌃ plus a key, and can't be a reserved system shortcut."
+          }
+        }
+      }
     },
     "error.TRG-VAL-004" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "That shortcut is already used in Flotsam." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That shortcut is already used in Flotsam."
+          }
+        }
+      }
     },
     "error.TRG-VAL-005" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "An unknown variable was left as plain text." } } }
-    },
-    "ui.library.panelTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam Library" } } }
-    },
-    "ui.library.searchPlaceholder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Search clipboard history" } } }
-    },
-    "ui.library.emptyTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing copied yet" } } }
-    },
-    "ui.library.emptyBody" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy something and it appears here. Press ⌃⌘V any time to open this panel." } } }
-    },
-    "ui.library.noResultsTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No matches for “%@”" } } }
-    },
-    "ui.library.noResultsBody" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Check the spelling, or clear the search to see everything." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An unknown variable was left as plain text."
+          }
+        }
+      }
     },
     "ui.btn.clearSearch" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear Search" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Search"
+          }
+        }
+      }
     },
     "ui.btn.retry" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } } }
-    },
-    "ui.library.errorTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "History unavailable" } } }
-    },
-    "ui.library.footerItems" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld items" } } }
-    },
-    "ui.library.footerOneItem" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "1 item" } } }
-    },
-    "ui.library.footerSelected" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld selected" } } }
-    },
-    "ui.library.footerMultiDisabled" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select one item to paste" } } }
-    },
-    "ui.library.hintPaste" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste" } } }
-    },
-    "ui.library.hintPlain" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Plain text" } } }
-    },
-    "ui.library.hintCopy" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } } }
-    },
-    "ui.library.hintPreview" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview" } } }
-    },
-    "ui.library.hintClose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } } }
-    },
-    "ui.library.hintClearSelection" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear selection" } } }
-    },
-    "ui.library.keyReturn" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Return" } } }
-    },
-    "ui.library.keyOptionReturn" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "⌥Return" } } }
-    },
-    "ui.library.keyShiftReturn" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "⇧Return" } } }
-    },
-    "ui.library.keySpace" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Space" } } }
-    },
-    "ui.library.keyEsc" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Esc" } } }
-    },
-    "ui.library.sidebarAll" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "All" } } }
-    },
-    "ui.library.sidebarPinned" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } } }
-    },
-    "ui.library.sectionTypes" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Types" } } }
-    },
-    "ui.library.sectionTags" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Tags" } } }
-    },
-    "ui.library.sectionApps" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Apps" } } }
-    },
-    "ui.library.appAnotherDevice" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Another device" } } }
-    },
-    "ui.library.appUnknown" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } } }
-    },
-    "ui.library.typeText" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Text" } } }
-    },
-    "ui.library.typeRichText" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Rich Text" } } }
-    },
-    "ui.library.typeLink" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Links" } } }
-    },
-    "ui.library.typeColor" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Colors" } } }
-    },
-    "ui.library.typePhone" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Phone Numbers" } } }
-    },
-    "ui.library.typeEmail" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Emails" } } }
-    },
-    "ui.library.typeImage" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Images" } } }
-    },
-    "ui.library.typeFile" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Files" } } }
-    },
-    "ui.library.typeFolder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Folders" } } }
-    },
-    "ui.library.typeBundle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Bundles" } } }
-    },
-    "ui.library.typeScreenshot" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshots" } } }
-    },
-    "ui.library.tagOverflow" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "+%lld" } } }
-    },
-    "ui.library.fromApp" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "from %@" } } }
-    },
-    "ui.library.pinned" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } } }
-    },
-    "ui.library.previewShowMore" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Show more" } } }
-    },
-    "ui.library.previewMore" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "and %lld more" } } }
-    },
-    "ui.library.previewKind" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Kind" } } }
-    },
-    "ui.library.previewSource" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Source" } } }
-    },
-    "ui.library.previewCopied" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied" } } }
-    },
-    "ui.library.previewTimesPasted" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Times pasted" } } }
-    },
-    "ui.library.previewSize" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Size" } } }
-    },
-    "ui.library.previewPixelSize" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pixel size" } } }
-    },
-    "ui.library.previewUnavailable" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview unavailable" } } }
-    },
-    "ui.library.menuPaste" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste" } } }
-    },
-    "ui.library.menuPastePlain" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste as Plain Text" } } }
-    },
-    "ui.library.menuCopy" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } } }
-    },
-    "ui.library.menuPreview" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview" } } }
-    },
-    "ui.library.menuReveal" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reveal in Finder" } } }
-    },
-    "ui.library.viewGrid" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Grid view" } } }
-    },
-    "ui.library.viewList" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "List view" } } }
-    },
-    "ui.menu.openLibrary" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Library" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry"
+          }
+        }
+      }
     },
     "ui.fatal.quit" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit"
+          }
+        }
+      }
     },
     "ui.fatal.revealDataFolder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reveal Data Folder" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal Data Folder"
+          }
+        }
+      }
+    },
+    "ui.hud.pasted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasted “%@”"
+          }
+        }
+      }
+    },
+    "ui.kind.bundle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle"
+          }
+        }
+      }
+    },
+    "ui.kind.color" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color"
+          }
+        }
+      }
+    },
+    "ui.kind.email" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Email"
+          }
+        }
+      }
+    },
+    "ui.kind.file" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File"
+          }
+        }
+      }
+    },
+    "ui.kind.folder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folder"
+          }
+        }
+      }
+    },
+    "ui.kind.image" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image"
+          }
+        }
+      }
+    },
+    "ui.kind.link" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Link"
+          }
+        }
+      }
+    },
+    "ui.kind.phone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone Number"
+          }
+        }
+      }
+    },
+    "ui.kind.richText" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rich Text"
+          }
+        }
+      }
+    },
+    "ui.kind.screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot"
+          }
+        }
+      }
+    },
+    "ui.kind.text" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text"
+          }
+        }
+      }
+    },
+    "ui.library.appAnotherDevice" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another device"
+          }
+        }
+      }
+    },
+    "ui.library.appUnknown" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
+          }
+        }
+      }
+    },
+    "ui.library.emptyBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy something and it appears here. Press ⌃⌘V any time to open this panel."
+          }
+        }
+      }
+    },
+    "ui.library.emptyTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing copied yet"
+          }
+        }
+      }
+    },
+    "ui.library.errorTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History unavailable"
+          }
+        }
+      }
+    },
+    "ui.library.footerCopyOnly" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press ⌘V to paste"
+          }
+        }
+      }
+    },
+    "ui.library.footerItems" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items"
+          }
+        }
+      }
+    },
+    "ui.library.footerMultiDisabled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select one item to paste"
+          }
+        }
+      }
+    },
+    "ui.library.footerOneItem" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 item"
+          }
+        }
+      }
+    },
+    "ui.library.footerSelected" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld selected"
+          }
+        }
+      }
+    },
+    "ui.library.fromApp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "from %@"
+          }
+        }
+      }
+    },
+    "ui.library.hintClearSelection" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear selection"
+          }
+        }
+      }
+    },
+    "ui.library.hintClose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "ui.library.hintCopy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "ui.library.hintPaste" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste"
+          }
+        }
+      }
+    },
+    "ui.library.hintPlain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plain text"
+          }
+        }
+      }
+    },
+    "ui.library.hintPreview" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview"
+          }
+        }
+      }
+    },
+    "ui.library.keyEsc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esc"
+          }
+        }
+      }
+    },
+    "ui.library.keyOptionReturn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌥Return"
+          }
+        }
+      }
+    },
+    "ui.library.keyReturn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return"
+          }
+        }
+      }
+    },
+    "ui.library.keyShiftReturn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⇧Return"
+          }
+        }
+      }
+    },
+    "ui.library.keySpace" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Space"
+          }
+        }
+      }
+    },
+    "ui.library.menuCopy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy"
+          }
+        }
+      }
+    },
+    "ui.library.menuPaste" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste"
+          }
+        }
+      }
+    },
+    "ui.library.menuPastePlain" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste as Plain Text"
+          }
+        }
+      }
+    },
+    "ui.library.menuPreview" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview"
+          }
+        }
+      }
+    },
+    "ui.library.menuReveal" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal in Finder"
+          }
+        }
+      }
+    },
+    "ui.library.noResultsBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the spelling, or clear the search to see everything."
+          }
+        }
+      }
+    },
+    "ui.library.noResultsTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No matches for “%@”"
+          }
+        }
+      }
+    },
+    "ui.library.panelTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam Library"
+          }
+        }
+      }
+    },
+    "ui.library.pinned" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "ui.library.previewCopied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied"
+          }
+        }
+      }
+    },
+    "ui.library.previewKind" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kind"
+          }
+        }
+      }
+    },
+    "ui.library.previewMore" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "and %lld more"
+          }
+        }
+      }
+    },
+    "ui.library.previewPixelSize" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pixel size"
+          }
+        }
+      }
+    },
+    "ui.library.previewShowMore" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show more"
+          }
+        }
+      }
+    },
+    "ui.library.previewSize" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Size"
+          }
+        }
+      }
+    },
+    "ui.library.previewSource" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source"
+          }
+        }
+      }
+    },
+    "ui.library.previewTimesPasted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Times pasted"
+          }
+        }
+      }
+    },
+    "ui.library.previewUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview unavailable"
+          }
+        }
+      }
+    },
+    "ui.library.searchPlaceholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search clipboard history"
+          }
+        }
+      }
+    },
+    "ui.library.sectionApps" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apps"
+          }
+        }
+      }
+    },
+    "ui.library.sectionTags" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tags"
+          }
+        }
+      }
+    },
+    "ui.library.sectionTypes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Types"
+          }
+        }
+      }
+    },
+    "ui.library.sidebarAll" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "ui.library.sidebarPinned" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "ui.library.tagOverflow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
+        }
+      }
+    },
+    "ui.library.typeBundle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundles"
+          }
+        }
+      }
+    },
+    "ui.library.typeColor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colors"
+          }
+        }
+      }
+    },
+    "ui.library.typeEmail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Emails"
+          }
+        }
+      }
+    },
+    "ui.library.typeFile" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files"
+          }
+        }
+      }
+    },
+    "ui.library.typeFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folders"
+          }
+        }
+      }
+    },
+    "ui.library.typeImage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images"
+          }
+        }
+      }
+    },
+    "ui.library.typeLink" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Links"
+          }
+        }
+      }
+    },
+    "ui.library.typePhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone Numbers"
+          }
+        }
+      }
+    },
+    "ui.library.typeRichText" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rich Text"
+          }
+        }
+      }
+    },
+    "ui.library.typeScreenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots"
+          }
+        }
+      }
+    },
+    "ui.library.typeText" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text"
+          }
+        }
+      }
+    },
+    "ui.library.viewGrid" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid view"
+          }
+        }
+      }
+    },
+    "ui.library.viewList" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "List view"
+          }
+        }
+      }
     },
     "ui.menu.dismissAll" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Dismiss all" } } }
-    },
-    "ui.menu.noNotices" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No notices" } } }
-    },
-    "ui.menu.notices" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Notices" } } }
-    },
-    "ui.menu.quit" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Flotsam" } } }
-    },
-    "ui.menu.status" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam is running" } } }
-    },
-    "ui.menu.title" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam" } } }
-    },
-    "ui.permission.accessibility" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } } }
-    },
-    "ui.permission.inputMonitoring" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Input Monitoring" } } }
-    },
-    "ui.permission.pasteboard" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste from Other Apps" } } }
-    },
-    "ui.permission.screenshotFolder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot folder access" } } }
-    },
-    "ui.menu.pauseCapture" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pause Capture" } } }
-    },
-    "ui.menu.resumeCapture" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Resume Capture" } } }
-    },
-    "ui.menu.openLibrary" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Library" } } }
-    },
-    "ui.menu.saveClipboard" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Save Clipboard" } } }
-    },
-    "ui.menu.toggleShelf" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Toggle Shelf" } } }
-    },
-    "ui.menu.settings" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings…" } } }
-    },
-    "ui.menu.setupGuide" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Setup Guide…" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss all"
+          }
+        }
+      }
     },
     "ui.menu.iconActive" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam, capturing" } } }
-    },
-    "ui.menu.iconPaused" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam, capture paused" } } }
-    },
-    "ui.menu.iconCurated" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam, curated capture" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam, capturing"
+          }
+        }
+      }
     },
     "ui.menu.iconAttention" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Needs attention" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Needs attention"
+          }
+        }
+      }
     },
-    "ui.onboarding.welcomeTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to Flotsam" } } }
+    "ui.menu.iconCurated" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam, curated capture"
+          }
+        }
+      }
     },
-    "ui.onboarding.welcomePurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam keeps a local history of what you copy and screenshot." } } }
+    "ui.menu.iconPaused" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam, capture paused"
+          }
+        }
+      }
     },
-    "ui.onboarding.clipboardTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Clipboard access" } } }
+    "ui.menu.noNotices" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No notices"
+          }
+        }
+      }
     },
-    "ui.onboarding.clipboardPurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow Flotsam to read the clipboard so it can save what you copy." } } }
+    "ui.menu.notices" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notices"
+          }
+        }
+      }
     },
-    "ui.onboarding.accessibilityTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } } }
+    "ui.menu.openLibrary" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Library"
+          }
+        }
+      }
     },
-    "ui.onboarding.accessibilityPurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Lets Flotsam paste a saved item into the app you are using." } } }
+    "ui.menu.pauseCapture" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause Capture"
+          }
+        }
+      }
     },
-    "ui.onboarding.inputMonitoringTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Input Monitoring" } } }
+    "ui.menu.quit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quit Flotsam"
+          }
+        }
+      }
     },
-    "ui.onboarding.inputMonitoringPurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Lets Flotsam notice the trigger gestures you choose." } } }
+    "ui.menu.resumeCapture" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume Capture"
+          }
+        }
+      }
     },
-    "ui.onboarding.screenshotsTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshots" } } }
+    "ui.menu.saveClipboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save Clipboard"
+          }
+        }
+      }
     },
-    "ui.onboarding.screenshotsPurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose the folder Flotsam watches for new screenshots." } } }
+    "ui.menu.settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings…"
+          }
+        }
+      }
     },
-    "ui.onboarding.hotkeyTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcut" } } }
+    "ui.menu.setupGuide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Setup Guide…"
+          }
+        }
+      }
     },
-    "ui.onboarding.hotkeyPurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pick the shortcut that opens your Library." } } }
+    "ui.menu.status" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam is running"
+          }
+        }
+      }
     },
-    "ui.onboarding.loginItemTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch at Login" } } }
+    "ui.menu.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam"
+          }
+        }
+      }
     },
-    "ui.onboarding.loginItemPurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Start Flotsam when you log in so nothing is missed." } } }
-    },
-    "ui.onboarding.doneTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "You are set" } } }
-    },
-    "ui.onboarding.donePurpose" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam is running in the menu bar." } } }
-    },
-    "ui.onboarding.windowTitle" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam Setup" } } }
-    },
-    "ui.onboarding.stepOf" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Step %lld of %lld" } } }
-    },
-    "ui.onboarding.back" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Back" } } }
-    },
-    "ui.onboarding.skip" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Skip" } } }
-    },
-    "ui.onboarding.continue" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } } }
-    },
-    "ui.onboarding.finish" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } } }
-    },
-    "ui.onboarding.notNow" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Not Now" } } }
-    },
-    "ui.onboarding.allow" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow" } } }
-    },
-    "ui.onboarding.openSystemSettings" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } } }
-    },
-    "ui.onboarding.granted" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Granted" } } }
-    },
-    "ui.onboarding.notGranted" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Not granted" } } }
-    },
-    "ui.onboarding.welcomeNetwork" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam never sends anything off your Mac." } } }
-    },
-    "ui.onboarding.clipboardMissing" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Without it, Flotsam cannot save what you copy. In System Settings, set Flotsam to Allow under Paste from Other Apps." } } }
+    "ui.menu.toggleShelf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toggle Shelf"
+          }
+        }
+      }
     },
     "ui.onboarding.accessibilityMissing" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Without it, choosing an item copies it and you press ⌘V yourself." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without it, choosing an item copies it and you press ⌘V yourself."
+          }
+        }
+      }
     },
-    "ui.onboarding.inputMonitoringOptional" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Optional. Without it, typed triggers do nothing; everything else works." } } }
+    "ui.onboarding.accessibilityPurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lets Flotsam paste a saved item into the app you are using."
+          }
+        }
+      }
     },
-    "ui.onboarding.screenshotsMissing" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Without it, screenshots are not added to your history." } } }
+    "ui.onboarding.accessibilityTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility"
+          }
+        }
+      }
     },
-    "ui.onboarding.pickUpScreenshots" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pick up screenshots" } } }
+    "ui.onboarding.allow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow"
+          }
+        }
+      }
     },
-    "ui.onboarding.screenshotFolder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot folder" } } }
-    },
-    "ui.onboarding.screenshotFolderDefault" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "System default" } } }
+    "ui.onboarding.back" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
     },
     "ui.onboarding.chooseFolder" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose Folder…" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Folder…"
+          }
+        }
+      }
     },
-    "ui.onboarding.importRecent" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Import screenshots from the last 30 days" } } }
+    "ui.onboarding.clipboardMissing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without it, Flotsam cannot save what you copy. In System Settings, set Flotsam to Allow under Paste from Other Apps."
+          }
+        }
+      }
     },
-    "ui.onboarding.hotkeyOpenLibrary" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Library" } } }
+    "ui.onboarding.clipboardPurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow Flotsam to read the clipboard so it can save what you copy."
+          }
+        }
+      }
     },
-    "ui.onboarding.hotkeyUnbound" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Not set" } } }
+    "ui.onboarding.clipboardTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard access"
+          }
+        }
+      }
     },
-    "ui.onboarding.loginItemMissing" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Without it, Flotsam only runs after you open it yourself." } } }
-    },
-    "ui.onboarding.loginItemSwitch" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch Flotsam at login" } } }
-    },
-    "ui.onboarding.loginItemApproval" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Waiting for approval in System Settings" } } }
-    },
-    "ui.onboarding.openLoginItems" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Login Items" } } }
+    "ui.onboarding.continue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue"
+          }
+        }
+      }
     },
     "ui.onboarding.doneHowTo" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open your Library with the shortcut, or from the Flotsam icon in the menu bar." } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open your Library with the shortcut, or from the Flotsam icon in the menu bar."
+          }
+        }
+      }
+    },
+    "ui.onboarding.donePurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam is running in the menu bar."
+          }
+        }
+      }
+    },
+    "ui.onboarding.doneTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are set"
+          }
+        }
+      }
+    },
+    "ui.onboarding.finish" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "ui.onboarding.granted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granted"
+          }
+        }
+      }
+    },
+    "ui.onboarding.hotkeyOpenLibrary" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Library"
+          }
+        }
+      }
+    },
+    "ui.onboarding.hotkeyPurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick the shortcut that opens your Library."
+          }
+        }
+      }
+    },
+    "ui.onboarding.hotkeyTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut"
+          }
+        }
+      }
+    },
+    "ui.onboarding.hotkeyUnbound" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not set"
+          }
+        }
+      }
+    },
+    "ui.onboarding.importRecent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import screenshots from the last 30 days"
+          }
+        }
+      }
+    },
+    "ui.onboarding.inputMonitoringOptional" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional. Without it, typed triggers do nothing; everything else works."
+          }
+        }
+      }
+    },
+    "ui.onboarding.inputMonitoringPurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lets Flotsam notice the trigger gestures you choose."
+          }
+        }
+      }
+    },
+    "ui.onboarding.inputMonitoringTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Monitoring"
+          }
+        }
+      }
+    },
+    "ui.onboarding.loginItemApproval" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for approval in System Settings"
+          }
+        }
+      }
+    },
+    "ui.onboarding.loginItemMissing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without it, Flotsam only runs after you open it yourself."
+          }
+        }
+      }
+    },
+    "ui.onboarding.loginItemPurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start Flotsam when you log in so nothing is missed."
+          }
+        }
+      }
+    },
+    "ui.onboarding.loginItemSwitch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch Flotsam at login"
+          }
+        }
+      }
+    },
+    "ui.onboarding.loginItemTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch at Login"
+          }
+        }
+      }
+    },
+    "ui.onboarding.notGranted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not granted"
+          }
+        }
+      }
+    },
+    "ui.onboarding.notNow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Now"
+          }
+        }
+      }
     },
     "ui.onboarding.openLibrary" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Library" } } }
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Library"
+          }
+        }
+      }
+    },
+    "ui.onboarding.openLoginItems" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Login Items"
+          }
+        }
+      }
+    },
+    "ui.onboarding.openSystemSettings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open System Settings"
+          }
+        }
+      }
+    },
+    "ui.onboarding.pickUpScreenshots" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick up screenshots"
+          }
+        }
+      }
+    },
+    "ui.onboarding.screenshotFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot folder"
+          }
+        }
+      }
+    },
+    "ui.onboarding.screenshotFolderDefault" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System default"
+          }
+        }
+      }
+    },
+    "ui.onboarding.screenshotsMissing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without it, screenshots are not added to your history."
+          }
+        }
+      }
+    },
+    "ui.onboarding.screenshotsPurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose the folder Flotsam watches for new screenshots."
+          }
+        }
+      }
+    },
+    "ui.onboarding.screenshotsTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots"
+          }
+        }
+      }
+    },
+    "ui.onboarding.skip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skip"
+          }
+        }
+      }
+    },
+    "ui.onboarding.stepOf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step %lld of %lld"
+          }
+        }
+      }
+    },
+    "ui.onboarding.welcomeNetwork" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam never sends anything off your Mac."
+          }
+        }
+      }
+    },
+    "ui.onboarding.welcomePurpose" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam keeps a local history of what you copy and screenshot."
+          }
+        }
+      }
+    },
+    "ui.onboarding.welcomeTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Welcome to Flotsam"
+          }
+        }
+      }
+    },
+    "ui.onboarding.windowTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam Setup"
+          }
+        }
+      }
+    },
+    "ui.permission.accessibility" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility"
+          }
+        }
+      }
+    },
+    "ui.permission.inputMonitoring" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Monitoring"
+          }
+        }
+      }
+    },
+    "ui.permission.pasteboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste from Other Apps"
+          }
+        }
+      }
+    },
+    "ui.permission.screenshotFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot folder access"
+          }
+        }
+      }
+    },
+    "ui.row.bundleCount" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items"
+          }
+        }
+      }
+    },
+    "ui.settings.addApp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add app"
+          }
+        }
+      }
+    },
+    "ui.settings.budget10GB" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 GB"
+          }
+        }
+      }
+    },
+    "ui.settings.budget2GB" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2 GB"
+          }
+        }
+      }
+    },
+    "ui.settings.budget500MB" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "500 MB"
+          }
+        }
+      }
+    },
+    "ui.settings.budgetUnlimited" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlimited"
+          }
+        }
+      }
+    },
+    "ui.settings.cancel" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "ui.settings.captureMode" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture mode"
+          }
+        }
+      }
+    },
+    "ui.settings.chooseApp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose an app"
+          }
+        }
+      }
+    },
+    "ui.settings.chooseAppPrompt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "ui.settings.chooseFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose…"
+          }
+        }
+      }
+    },
+    "ui.settings.clearCount" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This permanently deletes %lld items. This can’t be undone."
+          }
+        }
+      }
+    },
+    "ui.settings.clearDelete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "ui.settings.clearDeleting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleting…"
+          }
+        }
+      }
+    },
+    "ui.settings.clearHistory" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear History…"
+          }
+        }
+      }
+    },
+    "ui.settings.clearIncludeExempt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also delete pinned items and items with a shortcut"
+          }
+        }
+      }
+    },
+    "ui.settings.clearNothing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing to clear in this range."
+          }
+        }
+      }
+    },
+    "ui.settings.clearRange" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Range"
+          }
+        }
+      }
+    },
+    "ui.settings.confirmBudget" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lowering the image limit removes %lld older images (%@). Pinned and shortcut items are kept."
+          }
+        }
+      }
+    },
+    "ui.settings.confirmBudgetTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lower the image limit?"
+          }
+        }
+      }
+    },
+    "ui.settings.confirmResetIgnored" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replace your list with the default apps?"
+          }
+        }
+      }
+    },
+    "ui.settings.confirmResetIgnoredTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset ignored apps?"
+          }
+        }
+      }
+    },
+    "ui.settings.confirmShorten" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This permanently deletes %lld items older than %@. Pinned items and items with a shortcut are kept."
+          }
+        }
+      }
+    },
+    "ui.settings.confirmShortenTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shorten history?"
+          }
+        }
+      }
+    },
+    "ui.settings.copyDiagnostics" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Diagnostics"
+          }
+        }
+      }
+    },
+    "ui.settings.diagnosticsCopied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostics copied"
+          }
+        }
+      }
+    },
+    "ui.settings.done" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "ui.settings.excludedApps" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluded apps"
+          }
+        }
+      }
+    },
+    "ui.settings.excludedAppsHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Typed triggers do not expand in these apps."
+          }
+        }
+      }
+    },
+    "ui.settings.expandTriggers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expand typed triggers"
+          }
+        }
+      }
+    },
+    "ui.settings.folderSystemDefault" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System default"
+          }
+        }
+      }
+    },
+    "ui.settings.historyHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off to pause. Existing items stay."
+          }
+        }
+      }
+    },
+    "ui.settings.ignoredApps" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ignored apps"
+          }
+        }
+      }
+    },
+    "ui.settings.ignoredAppsHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copies from these apps are never stored."
+          }
+        }
+      }
+    },
+    "ui.settings.imageLimit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image storage limit"
+          }
+        }
+      }
+    },
+    "ui.settings.imageQuality" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image quality"
+          }
+        }
+      }
+    },
+    "ui.settings.keepHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned items and items with a shortcut are always kept."
+          }
+        }
+      }
+    },
+    "ui.settings.keepHistoryFor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep history for"
+          }
+        }
+      }
+    },
+    "ui.settings.launchAtLogin" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Launch at login"
+          }
+        }
+      }
+    },
+    "ui.settings.licenceLine" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Released under the MIT licence."
+          }
+        }
+      }
+    },
+    "ui.settings.licenceTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Licence"
+          }
+        }
+      }
+    },
+    "ui.settings.loginApprovalCaption" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for approval in System Settings"
+          }
+        }
+      }
+    },
+    "ui.settings.modeActive" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Active"
+          }
+        }
+      }
+    },
+    "ui.settings.modeActiveHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copies and screenshots are saved as they happen."
+          }
+        }
+      }
+    },
+    "ui.settings.modeCurated" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Curated"
+          }
+        }
+      }
+    },
+    "ui.settings.modeCuratedHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copies are saved only when you use Save Clipboard."
+          }
+        }
+      }
+    },
+    "ui.settings.modePaused" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused"
+          }
+        }
+      }
+    },
+    "ui.settings.modePausedHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing is saved until you resume."
+          }
+        }
+      }
+    },
+    "ui.settings.neverStored" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam never stores concealed, transient or auto-generated clipboard content."
+          }
+        }
+      }
+    },
+    "ui.settings.noNetwork" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flotsam makes no network connections."
+          }
+        }
+      }
+    },
+    "ui.settings.notInstalled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not installed"
+          }
+        }
+      }
+    },
+    "ui.settings.openLoginItems" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Login Items"
+          }
+        }
+      }
+    },
+    "ui.settings.openSystemSettings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open System Settings"
+          }
+        }
+      }
+    },
+    "ui.settings.paneAbout" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        }
+      }
+    },
+    "ui.settings.paneGeneral" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "General"
+          }
+        }
+      }
+    },
+    "ui.settings.panePrivacy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
+    "ui.settings.paneShortcuts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts"
+          }
+        }
+      }
+    },
+    "ui.settings.paneStorage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storage"
+          }
+        }
+      }
+    },
+    "ui.settings.paneTriggers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Triggers"
+          }
+        }
+      }
+    },
+    "ui.settings.pasteOtherApps" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste from Other Apps"
+          }
+        }
+      }
+    },
+    "ui.settings.pasteOtherAppsHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow."
+          }
+        }
+      }
+    },
+    "ui.settings.permissionAccessibility" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility"
+          }
+        }
+      }
+    },
+    "ui.settings.permissionAccessibilityHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lets Flotsam paste into the app you are using."
+          }
+        }
+      }
+    },
+    "ui.settings.permissionGranted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Granted"
+          }
+        }
+      }
+    },
+    "ui.settings.permissionInputMonitoring" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Monitoring"
+          }
+        }
+      }
+    },
+    "ui.settings.permissionInputMonitoringHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lets triggers notice the text you type. Flotsam never stores keystrokes."
+          }
+        }
+      }
+    },
+    "ui.settings.permissionNotGranted" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not granted"
+          }
+        }
+      }
+    },
+    "ui.settings.pickUpScreenshots" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick up screenshots"
+          }
+        }
+      }
+    },
+    "ui.settings.placementBottomEdge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bottom Edge"
+          }
+        }
+      }
+    },
+    "ui.settings.placementLeftEdge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Left Edge"
+          }
+        }
+      }
+    },
+    "ui.settings.placementMenuBar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menu Bar"
+          }
+        }
+      }
+    },
+    "ui.settings.placementRightEdge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Right Edge"
+          }
+        }
+      }
+    },
+    "ui.settings.projectPage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Project Page"
+          }
+        }
+      }
+    },
+    "ui.settings.qualityBalanced" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Balanced"
+          }
+        }
+      }
+    },
+    "ui.settings.qualityBalancedHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images wider than 3840 pixels are scaled down."
+          }
+        }
+      }
+    },
+    "ui.settings.qualityEfficient" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficient"
+          }
+        }
+      }
+    },
+    "ui.settings.qualityEfficientHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images wider than 2560 pixels are scaled down and opaque ones are compressed."
+          }
+        }
+      }
+    },
+    "ui.settings.qualityOriginal" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        }
+      }
+    },
+    "ui.settings.qualityOriginalHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images are stored as received."
+          }
+        }
+      }
+    },
+    "ui.settings.rangeAllTime" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All time"
+          }
+        }
+      }
+    },
+    "ui.settings.rangeLast24Hours" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 24 hours"
+          }
+        }
+      }
+    },
+    "ui.settings.rangeLastHour" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last hour"
+          }
+        }
+      }
+    },
+    "ui.settings.removeApp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove app"
+          }
+        }
+      }
+    },
+    "ui.settings.resetAction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset"
+          }
+        }
+      }
+    },
+    "ui.settings.resetToDefaults" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset to Defaults"
+          }
+        }
+      }
+    },
+    "ui.settings.retention1Year" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 year"
+          }
+        }
+      }
+    },
+    "ui.settings.retention30Days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        }
+      }
+    },
+    "ui.settings.retention7Days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 days"
+          }
+        }
+      }
+    },
+    "ui.settings.retention90Days" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90 days"
+          }
+        }
+      }
+    },
+    "ui.settings.retentionForever" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Forever"
+          }
+        }
+      }
+    },
+    "ui.settings.revealAtEdge" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal when the pointer rests at the edge"
+          }
+        }
+      }
+    },
+    "ui.settings.revealDataFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reveal Data Folder"
+          }
+        }
+      }
+    },
+    "ui.settings.screenshotFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot folder"
+          }
+        }
+      }
+    },
+    "ui.settings.shelf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shelf"
+          }
+        }
+      }
+    },
+    "ui.settings.shelfPlacement" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shelf placement"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutClear" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear shortcut"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutNeedsModifier" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A shortcut needs ⌘ or ⌃ with the key."
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutNotSet" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not set"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutOpenLibrary" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Library"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutRecord" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record shortcut"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutRecording" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press the keys you want. Esc cancels."
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutSaveClipboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save Clipboard"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutToggleShelf" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toggle Shelf"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutsFootnote" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts for single items and typed triggers are set from the Library (⌘K)."
+          }
+        }
+      }
+    },
+    "ui.settings.showSetupGuide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Setup Guide…"
+          }
+        }
+      }
+    },
+    "ui.settings.tagline" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free, open source clipboard history. Everything stays on your Mac."
+          }
+        }
+      }
+    },
+    "ui.settings.usageDatabase" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Database"
+          }
+        }
+      }
+    },
+    "ui.settings.usageImages" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image storage"
+          }
+        }
+      }
+    },
+    "ui.settings.usageItems" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Items"
+          }
+        }
+      }
+    },
+    "ui.settings.usageUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
+          }
+        }
+      }
+    },
+    "ui.settings.useSystemDefault" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use System Default"
+          }
+        }
+      }
+    },
+    "ui.settings.version" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %@ (%@)"
+          }
+        }
+      }
+    },
+    "ui.settings.viewLicence" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View Licence"
+          }
+        }
+      }
+    },
+    "ui.settings.window" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "ui.source.remoteDevice" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another device"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
