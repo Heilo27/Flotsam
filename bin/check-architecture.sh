@@ -43,40 +43,172 @@ hits=$(grep -rlE 'import (GRDB|SQLite3)' "$SRC" | grep -v "$SRC/FlotsamStorage/"
 hits=$(grep -rnE 'URLSession|NWConnection|NWPathMonitor|WKWebView|CFNetwork|Sparkle' "$SRC" App 2>/dev/null)
 [ -n "$hits" ] && fail "network API referenced" "$hits"
 
-# No print/NSLog/dump; no try! (FR-000-02).
-hits=$(grep -rnE '(^|[^A-Za-z_.])(print|NSLog|dump)\(|try!' "$SRC" App 2>/dev/null)
-[ -n "$hits" ] && fail "print/NSLog/dump/try! used" "$hits"
-
-# FR-000-02 / AC-000-01: no thrown errors across a module boundary, no force-cast, no force-unwrap, and
-# fatalError only where it is annotated. Comment lines are ignored so doc comments can name the banned APIs.
+# FR-000-02 / FR-000-09 / AC-000-01: no print/NSLog/dump/debugPrint, no try!, no force-cast, no force-unwrap, no thrown
+# errors across a module boundary. These need to read Swift, not lines, so one awk pass (SWIFT_LINT_AWK below) first
+# strips comments (nested too) and string literals (plain, multi-line, raw; interpolations are kept as code), then runs
+# the rules on what is left. Hits are "KIND<TAB>file:line:original line". fatalError and the other grep rules below
+# still only skip whole-line // comments.
 NOT_COMMENT='^[^:]+:[0-9]+:[[:space:]]*//'
-hits=$(grep -rnE '(public|package|open)[^{=]* throws' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
-[ -n "$hits" ] && fail "public/package API declared 'throws' (return FlotsamResult; nothing in the package throws, WallClock.sleep returns early on cancellation)" "$hits"
-hits=$(grep -rnE '[[:space:](]as!' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
-[ -n "$hits" ] && fail "force cast (as!) used" "$hits"
-# Force unwrap (FR-000-02). Not a grep: the rule must see `d["k"]!` at end of line and before an operator, and must not
-# see `!=`, a prefix `!x`, or a `!` inside a string or comment. awk blanks string literals (incl. multi-line) and
-# comments first, drops the `try!` / `as!` tokens (their own rules above report them), then flags a `!` that directly
-# follows an identifier character, `)` or `]` and is not the start of `!=`.
-hits=$(find "$SRC" App -name '*.swift' 2>/dev/null | sort | xargs awk '
-  FNR == 1 { inblock = 0; inmulti = 0 }
-  {
-    out = ""; n = length($0); i = 1; instr = 0
-    while (i <= n) {
-      c = substr($0, i, 1); two = substr($0, i, 2); three = substr($0, i, 3)
-      if (inblock) { if (two == "*/") { inblock = 0; i += 2 } else { i++ }; continue }
-      if (inmulti) { if (three == "\"\"\"") { inmulti = 0; i += 3 } else if (c == "\\") { i += 2 } else { i++ }; continue }
-      if (instr) { if (c == "\\") { i += 2 } else if (c == "\"") { instr = 0; i++ } else { i++ }; continue }
-      if (two == "//") break
-      if (two == "/*") { inblock = 1; i += 2; continue }
-      if (three == "\"\"\"") { inmulti = 1; out = out "0"; i += 3; continue }
-      if (c == "\"") { instr = 1; out = out "0"; i++; continue }
-      out = out c; i++
+IFS= read -r -d '' SWIFT_LINT_AWK <<'AWK_EOF'
+# Swift source linter for FR-000-02 / FR-000-09. Prints "KIND<TAB>file:line:original line" per violation.
+# Pass 1 (san_line) turns each file into code-only text: comments (line, block, nested) become nothing, every string
+# literal (plain, multi-line, raw) becomes the single token 0, and only the code inside \( ) interpolations is kept.
+# Line numbers are preserved. Pass 2 runs the rules on that text; throws detection (scan_decls) is a small
+# declaration scanner so it sees multi-line signatures, default arguments, accessors, and members that inherit
+# public from a protocol or extension.
+function hashes_follow(s, p, h,   k) {
+  for (k = 0; k < h; k++) if (substr(s, p + k, 1) != "#") return 0
+  return 1
+}
+function san_line(s,   n, i, c, two, out, h, j, k, m) {
+  out = ""; n = length(s); i = 1
+  while (i <= n) {
+    c = substr(s, i, 1); m = mk[sp]
+    if (m == "B") {
+      two = substr(s, i, 2)
+      if (two == "/*") { bc[sp]++; i += 2 }
+      else if (two == "*/") { bc[sp]--; i += 2; if (bc[sp] == 0) { sp--; out = out " " } }
+      else i++
+      continue
     }
-    sub(/^try!/, "try", out); gsub(/[[:space:](;{]try!/, " try", out); gsub(/[[:space:](]as!/, " as", out)
-    if (out ~ /[]A-Za-z0-9_)]!([^=]|$)/) print FILENAME ":" FNR ":" $0
+    if (m == "S" || m == "M") {
+      h = hh[sp]
+      if (c == "\\" && hashes_follow(s, i + 1, h)) {
+        j = i + 1 + h
+        if (substr(s, j, 1) == "(") { sp++; mk[sp] = "C"; ip[sp] = 1; pd[sp] = 0; out = out "("; i = j + 1 }
+        else i = j + 1
+        continue
+      }
+      if (m == "S" && c == "\"" && hashes_follow(s, i + 1, h)) { sp--; i += 1 + h; continue }
+      if (m == "M" && substr(s, i, 3) == "\"\"\"" && hashes_follow(s, i + 3, h)) { sp--; i += 3 + h; continue }
+      i++; continue
+    }
+    two = substr(s, i, 2)
+    if (two == "//") break
+    if (two == "/*") { sp++; mk[sp] = "B"; bc[sp] = 1; i += 2; continue }
+    if (c == "#" || c == "\"") {
+      h = 0; j = i
+      while (substr(s, j, 1) == "#") { h++; j++ }
+      if (substr(s, j, 1) == "\"") {
+        sp++; hh[sp] = h; out = out "0"
+        if (substr(s, j, 3) == "\"\"\"") { mk[sp] = "M"; i = j + 3 } else { mk[sp] = "S"; i = j + 1 }
+        continue
+      }
+      out = out substr(s, i, h); i += h; continue
+    }
+    if (c == "(") { if (ip[sp]) pd[sp]++ }
+    else if (c == ")" && ip[sp]) {
+      if (pd[sp] == 0) { sp--; out = out ")"; i++; continue }
+      pd[sp]--
+    }
+    out = out c; i++
   }
-')
+  # A single-line string cannot span lines: drop an unterminated one (and anything inside it) at end of line.
+  for (k = 1; k <= sp; k++) if (mk[k] == "S") { sp = k - 1; break }
+  gsub(/[\200-\377]/, "A", out)                 # non-ASCII bytes: identifier characters
+  gsub(/(private|fileprivate|internal|public|package|open)[ \t]*\([ \t]*set[ \t]*\)/, "", out)   # private(set) is not an access level for the declaration
+  return out
+}
+
+function resethdr() { hthrow = 0; tline = 0; hfirst = ""; acc = ""; declKw = "" }
+function hit(kind, L,   key) {
+  key = kind SUBSEP L
+  if (key in seen) return
+  seen[key] = 1
+  printf "%s\t%s:%d:%s\n", kind, fname, L, orig[L]
+}
+# A header is the text of one declaration up to its { } or ; . Public if it says so, or if it sits directly in a public
+# protocol / public extension / accessor block of a public property.
+function evaluate(   p) {
+  if (!hthrow) return
+  if (ck[top] == "A") { if (cm[top] && hfirst ~ /^(get|set|_read|_modify|willSet|didSet)$/) hit("THROWS", tline); return }
+  p = (acc in PUB) ? 1 : (acc != "" ? 0 : cm[top])
+  if (p) hit("THROWS", tline)
+}
+function push_ctx(   p) {
+  p = (acc in PUB) ? 1 : (acc != "" ? 0 : cm[top])
+  top++; ck[top] = "B"; cm[top] = 0
+  if (hfirst in DECL) {
+    if (declKw == "var" || declKw == "let" || declKw == "subscript") { ck[top] = "A"; cm[top] = p }
+    else if (declKw == "protocol" || declKw == "extension") cm[top] = (acc in PUB) ? 1 : 0
+  }
+}
+function word(w, L, first) {
+  if (first && pdepth == 0 && declKw != "" && ((w in START) || substr(w, 1, 1) == "@")) { evaluate(); resethdr() }
+  if (hfirst == "" && substr(w, 1, 1) != "@" && !(w in MODS)) hfirst = w
+  if ((w == "throws" || w == "rethrows") && !hthrow) { hthrow = 1; tline = L }
+  if (pdepth == 0) {
+    if (w in ACC) { if (acc == "" && declKw == "") acc = w }
+    else if (w in DECL) { if (declKw == "" || (declKw == "class" && (w in MEMBER))) declKw = w }
+  }
+}
+function scan_decls(nl,   L, s, n, i, j, c, w, first) {
+  top = 0; cm[0] = 0; ck[0] = "B"; pdepth = 0; resethdr()
+  for (L = 1; L <= nl; L++) {
+    s = san[L]; n = length(s); first = 1; i = 1
+    while (i <= n) {
+      c = substr(s, i, 1)
+      if (c == " " || c == "\t") { i++; continue }
+      if (c ~ /[A-Za-z0-9_$@#]/) {
+        j = i
+        while (j <= n && substr(s, j, 1) ~ /[A-Za-z0-9_$@#]/) j++
+        w = substr(s, i, j - i); i = j
+        if (first && pdepth == 0 && w ~ /^#(if|else|elseif|endif)$/) { evaluate(); resethdr(); break }
+        word(w, L, first); first = 0
+        continue
+      }
+      first = 0
+      if (c == "(" || c == "[") pdepth++
+      else if (c == ")" || c == "]") { if (pdepth > 0) pdepth-- }
+      else if (pdepth == 0) {
+        if (c == "{") { evaluate(); push_ctx(); resethdr() }
+        else if (c == "}") { evaluate(); if (top > 0) top--; resethdr() }
+        else if (c == ";") { evaluate(); resethdr() }
+      }
+      i++
+    }
+  }
+  evaluate()
+}
+function finish(   L, t) {
+  for (L = 1; L <= nl; L++) {
+    t = san[L]
+    if (t ~ /(^|[^A-Za-z0-9_$.])(print|NSLog|dump|debugPrint)[ \t]*\(/ || \
+        t ~ /(^|[^A-Za-z0-9_$.])(Swift|Foundation)[ \t]*\.[ \t]*(print|NSLog|dump|debugPrint)[ \t]*\(/ || \
+        t ~ /(^|[^A-Za-z0-9_$])try!/) hit("BANNED", L)
+    if (t ~ /(^|[^A-Za-z0-9_$])as!/) hit("FORCECAST", L)
+    # Drop the try! / as! tokens (their own rules report them), then flag a ! that follows an identifier char, ) or ]
+    # and is not the start of !=.
+    gsub(/(^|[^A-Za-z0-9_$])try!/, " try ", t); gsub(/(^|[^A-Za-z0-9_$])as!/, " as ", t)
+    if (t ~ /[]A-Za-z0-9_)]!([^=]|$)/) hit("UNWRAP", L)
+  }
+  scan_decls(nl)
+}
+BEGIN {
+  split("public package open", a, " "); for (k in a) PUB[a[k]] = 1
+  for (k in PUB) ACC[k] = 1
+  split("private fileprivate internal", a, " "); for (k in a) ACC[a[k]] = 1
+  split("func var let init deinit subscript typealias associatedtype case struct class enum actor protocol extension", a, " "); for (k in a) DECL[a[k]] = 1
+  split("func var let init subscript", a, " "); for (k in a) MEMBER[a[k]] = 1
+  split("static final override mutating nonmutating lazy weak unowned dynamic required convenience indirect nonisolated isolated optional prefix postfix infix distributed borrowing consuming", a, " "); for (k in a) MODS[a[k]] = 1
+  for (k in ACC) MODS[k] = 1
+  for (k in DECL) START[k] = 1
+  for (k in MODS) START[k] = 1
+  split("if guard for while switch return throw defer do try", a, " "); for (k in a) START[a[k]] = 1
+}
+FNR == 1 { if (fname != "") finish(); fname = FILENAME; sp = 0; mk[0] = "C"; ip[0] = 0; split("", seen); split("", san); split("", orig) }
+{ nl = FNR; orig[FNR] = $0; san[FNR] = san_line($0) }
+END { if (fname != "") finish() }
+AWK_EOF
+swift_lint=$(find "$SRC" App -name '*.swift' -print0 2>/dev/null | sort -z | LC_ALL=C xargs -0 awk "$SWIFT_LINT_AWK")
+lint_hits() { printf '%s\n' "$swift_lint" | awk -F'\t' -v kinds="$1" 'BEGIN { n = split(kinds, k, " "); for (i = 1; i <= n; i++) want[k[i]] = 1 } ($1 in want) { print $2 }'; }
+hits=$(lint_hits BANNED)
+[ -n "$hits" ] && fail "print/NSLog/dump/try! used" "$hits"
+hits=$(lint_hits THROWS)
+[ -n "$hits" ] && fail "public/package API declared 'throws' (return FlotsamResult; nothing in the package throws, WallClock.sleep returns early on cancellation)" "$hits"
+hits=$(lint_hits FORCECAST)
+[ -n "$hits" ] && fail "force cast (as!) used" "$hits"
+hits=$(lint_hits UNWRAP)
 [ -n "$hits" ] && fail "force unwrap (!) used" "$hits"
 # Only the two Fatal codes (FR-000-04) and unreachable programmer-error invariants may stop the process; the latter
 # must say why on the same line with 'fatal-ok:'.
