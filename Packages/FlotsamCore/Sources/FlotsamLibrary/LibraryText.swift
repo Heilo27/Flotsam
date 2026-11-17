@@ -29,6 +29,7 @@ public enum LibraryText {
     public static let menuCopy = "ui.library.menuCopy"
     public static let menuPreview = "ui.library.menuPreview"
     public static let menuReveal = "ui.library.menuReveal"
+    public static let menuShortcutAndTrigger = "ui.library.menuShortcutAndTrigger"
     public static let sectionTypes = "ui.library.sectionTypes"
     public static let sectionTags = "ui.library.sectionTags"
     public static let sectionApps = "ui.library.sectionApps"

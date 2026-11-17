@@ -891,6 +891,16 @@
         }
       }
     },
+    "ui.library.menuShortcutAndTrigger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut and Trigger…"
+          }
+        }
+      }
+    },
     "ui.library.noResultsBody" : {
       "localizations" : {
         "en" : {
@@ -2147,6 +2157,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Done"
+          }
+        }
+      }
+    },
+    "ui.settings.editorItemGone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This item no longer exists."
+          }
+        }
+      }
+    },
+    "ui.settings.editorLoadFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This item could not be opened."
+          }
+        }
+      }
+    },
+    "ui.settings.editorNoTrigger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Triggers expand text, so this kind of item can have a shortcut only."
+          }
+        }
+      }
+    },
+    "ui.settings.editorSave" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "ui.settings.editorShortcut" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut"
+          }
+        }
+      }
+    },
+    "ui.settings.editorTrigger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trigger"
+          }
+        }
+      }
+    },
+    "ui.settings.editorTriggerHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type the trigger anywhere, then Space, Tab or Return, to paste this item. Leave empty for none."
+          }
+        }
+      }
+    },
+    "ui.settings.editorTriggerPlaceholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ";sig"
+          }
+        }
+      }
+    },
+    "ui.settings.editorWindow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut and Trigger"
           }
         }
       }

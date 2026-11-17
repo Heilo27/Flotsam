@@ -13,7 +13,7 @@ public struct PasteExpansion {
     /// What a successful `stage` leaves for the caller's later steps: the held clipboard and the change count after
     /// Flotsam's own write.
     public struct Staged: Sendable {
-        let capture: ClipboardCapture
+        let capture: HeldClipboard
         let writeChangeCount: Int
     }
 

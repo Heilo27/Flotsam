@@ -80,6 +80,7 @@ private struct RowInteraction: ViewModifier {
                 Button(LibraryText.string(LibraryText.menuPastePlain)) { act { model.perform(.paste(.plainText)) } }
                 Button(LibraryText.string(LibraryText.menuCopy)) { act { model.perform(.paste(.copyOnly)) } }
                 Divider()
+                Button(LibraryText.string(LibraryText.menuShortcutAndTrigger)) { act { model.perform(.external(.shortcutAndTrigger)) } }
                 Button(LibraryText.string(LibraryText.menuPreview)) { act { model.perform(.togglePreview) } }
                 if row.kind == .file || row.kind == .folder || row.kind == .bundle {
                     Button(LibraryText.string(LibraryText.menuReveal)) { act { model.perform(.revealInFinder) } }

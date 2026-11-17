@@ -25,7 +25,7 @@ final class AppContainer {
     /// What the menu and onboarding can trigger. Each owning FRD fills its own closure; a nil one disables its menu row.
     var actions = AppActions()
     /// Retained for the life of the app; the poll timer only holds it weakly.
-    private(set) var capture: FlotsamCapture.ClipboardCapture?
+    private(set) var capture: ClipboardCapture?
     /// The Library panel (FR-003-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var library: LibraryPanelController?
     /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
@@ -48,6 +48,8 @@ final class AppContainer {
     private let ownWrites = OwnWriteLedger()
     /// The Settings window (FR-008-03). Retained here; `actions.openSettings` holds it weakly.
     private var settingsWindow: SettingsWindowController?
+    /// The shortcut-and-trigger editor (FR-005-09). Nil until the database has opened.
+    private var itemEditor: ItemBindingsEditorWindowController?
 
     init() {
         let presenter = ErrorPresenterAdapter(dataFolder: Self.dataFolder)
@@ -110,7 +112,7 @@ final class AppContainer {
     /// check (FR-001-02 b, c); the launch check runs inside `start()` (FR-001-02 d).
     private func startCapture(database: FlotsamDatabase) {
         let settings = settings
-        let capture = FlotsamCapture.ClipboardCapture(
+        let capture = ClipboardCapture(
             pasteboard: SystemPasteboard(), sourceApps: SystemSourceApps(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
@@ -152,14 +154,28 @@ final class AppContainer {
         let expansion = PasteExpansion(
             pasteboard: pasteboard, files: files, codec: codec, preserver: preserver, ownWrites: ownWrites, clock: clock)
 
+        let presenter = presenter
+        let editor = ItemBindingsEditorWindowController(
+            services: ItemBindingsEditorServices(
+                database: database, registry: shortcuts,
+                // The engine is built after this; read at call time (FR-005-10: the prompt follows the first saved trigger).
+                didSaveTrigger: { [weak self] in await self?.triggerEngine?.userDidSaveTrigger() },
+                report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+                hud: { presenter.showHUD(message: $0) }))
+        itemEditor = editor
+
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             reveal: { paths in
                 NSWorkspace.shared.activateFileViewerSelecting(paths.map { URL(fileURLWithPath: $0) })
             },
-            // The organise/trigger commands (FRD-004, FRD-005) are not built yet: inert until then.
             openSettings: { [weak self] in self?.actions.openSettings?() },
-            external: { _, _ in },
+            // ⌘K opens the shortcut-and-trigger editor for the one selected item (FR-005-09). The organise commands
+            // (pin, tags, note, edit, delete, sort, ungroup) belong to FRD-004 and stay inert until it lands.
+            external: { [weak editor] command, ids in
+                guard command == .shortcutAndTrigger, ids.count == 1, let id = ids.first else { return }
+                editor?.open(itemId: id)
+            },
             isAccessibilityTrusted: { probe.isAccessibilityTrusted })
         let capture = capture
         let controller = LibraryPanelController(

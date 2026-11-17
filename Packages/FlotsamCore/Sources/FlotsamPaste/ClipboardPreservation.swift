@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Holds the user's previous clipboard in memory only. It is `Sendable` so it can ride an async sequence, and it has no
 /// `Codable`, no description and no logging: the bytes must never reach disk or a log (FR-005-16, FR-005-20).
-public struct ClipboardCapture: Sendable {
+public struct HeldClipboard: Sendable {
     public enum Disposition: Sendable, Equatable {
         /// A copy is held and will be put back.
         case held
@@ -62,28 +62,28 @@ public final class ClipboardPreserver {
 
     /// Reads the pasteboard. Type identifiers come first, with no bytes, so a Concealed or Transient pasteboard is
     /// recognised before any of its content is read.
-    public func capture() -> ClipboardCapture {
+    public func capture() -> HeldClipboard {
         let types = pasteboard.currentTypeIdentifiers()
         if types.contains(PasteboardMarkers.concealed) || types.contains(PasteboardMarkers.transient) {
-            return ClipboardCapture(disposition: .concealed, plainText: "", representations: [])
+            return HeldClipboard(disposition: .concealed, plainText: "", representations: [])
         }
-        guard !types.isEmpty else { return ClipboardCapture(disposition: .empty, plainText: "", representations: []) }
+        guard !types.isEmpty else { return HeldClipboard(disposition: .empty, plainText: "", representations: []) }
         guard case .success(let snapshot) = pasteboard.readSnapshot(types: types) else {
-            return ClipboardCapture(disposition: .unreadable, plainText: "", representations: [])
+            return HeldClipboard(disposition: .unreadable, plainText: "", representations: [])
         }
         let text = snapshot.representations.first { $0.uti == PastePayload.plainTextType }
             .flatMap { String(data: $0.data, encoding: .utf8) } ?? ""
         // The port has no size query, so the cap is applied after the read; the oversized copy is dropped here.
         let bytes = snapshot.representations.reduce(0) { $0 + $1.data.count }
         guard bytes <= Self.snapshotCap else {
-            return ClipboardCapture(disposition: .tooLarge, plainText: text, representations: [])
+            return HeldClipboard(disposition: .tooLarge, plainText: text, representations: [])
         }
-        return ClipboardCapture(disposition: .held, plainText: text, representations: Self.restorable(snapshot.representations))
+        return HeldClipboard(disposition: .held, plainText: text, representations: Self.restorable(snapshot.representations))
     }
 
     /// Waits `restoreDelay`, then writes the held copy back with own-write markers, but only if `changeCount` still
     /// equals `writeChangeCount`, the value Flotsam's own write produced. Any other value means another app copied.
-    public func restore(_ capture: ClipboardCapture, writeChangeCount: Int) async -> RestoreOutcome {
+    public func restore(_ capture: HeldClipboard, writeChangeCount: Int) async -> RestoreOutcome {
         guard capture.disposition == .held else { return .nothingHeld }
         await clock.sleep(for: Self.restoreDelay)
         guard pasteboard.changeCount == writeChangeCount else { return .changedByAnotherApp }
