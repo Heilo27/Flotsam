@@ -112,3 +112,9 @@ public struct UserDefaultsStore: KeyValueStore {
     public func setString(_ value: String, forKey key: String) { defaults.set(value, forKey: key) }
     public func removeValue(forKey key: String) { defaults.removeObject(forKey: key) }
 }
+
+extension SettingsStore {
+    /// The production store, backed by `UserDefaults.standard`. Lives here because this file is the one place
+    /// `UserDefaults` may be named (ADR-0009, grep-enforced); the app composes it through this factory.
+    public static func standard() -> SettingsStore { SettingsStore(store: UserDefaultsStore()) }
+}
