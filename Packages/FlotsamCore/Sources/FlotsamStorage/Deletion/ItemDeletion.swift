@@ -96,9 +96,3 @@ extension FlotsamDatabase {
 private func databaseQuestionMarks(count: Int) -> String {
     Array(repeating: "?", count: count).joined(separator: ",")
 }
-
-extension Array {
-    fileprivate func chunked(into size: Int) -> [[Element]] {
-        stride(from: 0, to: count, by: size).map { Array(self[$0..<Swift.min($0 + size, count)]) }
-    }
-}

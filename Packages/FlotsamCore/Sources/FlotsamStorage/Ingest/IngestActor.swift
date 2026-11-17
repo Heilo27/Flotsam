@@ -73,8 +73,12 @@ public actor IngestActor {
             return bumped(existingId, warnings: prepared.warnings)
         case .created:
             database.events.publish(.itemsChanged)
-            if prepared.pixelWidth != nil { warmThumbnails(itemId) }
-            return .success(IngestResult(outcome: .created(itemId), warnings: prepared.warnings))
+            var warnings = prepared.warnings
+            if prepared.pixelWidth != nil {
+                warmThumbnails(itemId)
+                warnings += await enforceBudget(protecting: itemId)
+            }
+            return .success(IngestResult(outcome: .created(itemId), warnings: warnings))
         }
     }
 
@@ -156,6 +160,19 @@ public actor IngestActor {
         let database = self.database
         Task.detached(priority: .utility) {
             for size in ThumbnailSize.allCases { _ = await database.thumbnail(itemId: itemId, size: size) }
+        }
+    }
+
+    /// Step 7: the image budget (FR-007-08). The item is already committed, so a failure here is logged and never
+    /// turns a successful ingest into a failed one; the next image ingest or sweep tries again. The returned
+    /// `STO-LIM-001`, if any, travels in the result's warnings for the caller to show.
+    private func enforceBudget(protecting itemId: UUID) async -> [FlotsamError] {
+        let budget = settings.value(SettingKeys.storageImageBudget)
+        switch await database.enforceImageBudget(budget, protecting: itemId) {
+        case .success(let outcome): return outcome.notice.map { [$0] } ?? []
+        case .failure(let error):
+            FlotsamLog.log(error, category: .storage)
+            return []
         }
     }
 
