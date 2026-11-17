@@ -688,31 +688,27 @@ struct Adversarial000Task351Tests {
     }
 }
 
-// MARK: - TASK-351 breaks found by blind verification (known issues, one ticket each)
+// MARK: - TASK-351 breaks found by blind verification (fixed in TASK-353...359)
 
-/// Each test pins a defect with `withKnownIssue`: the suite stays green while the lint is wrong, and goes red the moment the lint
-/// is fixed ("known issue did not occur"), which is the cue to delete the marker (the ticket's last acceptance criterion).
-/// The status is computed outside the marker so a harness failure is never swallowed as the known issue.
-@Suite("8A TASK-351 known lint breaks")
+/// One test per ticket. Each pins a shape the lint once let through (or wrongly rejected); the controls prove the lint still
+/// fails real violations, so a lint that always exits 0 (or 1) cannot pass.
+@Suite("8A TASK-351 lint breaks, fixed")
 struct Adversarial000Task351BreakTests {
-    /// Asserts the control exits 1 for real, then that each shape is (wrongly) not as expected, as a known issue.
+    /// Asserts every control exits 1 and every shape exits `expected`.
     private func pin(_ shapes: [String], controls: [String], expected: Int32, at path: String = "FlotsamBase/Fixture.swift",
                      ticket: String) async throws {
         for control in controls {
             #expect(try await AdvLintHarness.exitStatus(for: control, at: path) == 1, "control \(control.debugDescription)")
         }
         for shape in shapes {
-            let status = try await AdvLintHarness.exitStatus(for: shape, at: path)
-            withKnownIssue("\(ticket): \(shape.debugDescription)") {
-                #expect(status == expected, "\(shape.debugDescription)")
-            }
+            #expect(try await AdvLintHarness.exitStatus(for: shape, at: path) == expected, "\(ticket): \(shape.debugDescription)")
         }
     }
 
     // OC: FR-000-02. TASK-353 (regression from the strip pass). Mutation that turns it red: lex `/.../` regex literals in san_line.
     @Test("TASK-353: a regex literal containing a quote hides the rest of the line")
     func regexLiteralQuote() async throws {
-        // given a regex literal with a quote followed by fatalError, when linted, then it should fail (it exits 0)
+        // given a regex literal with a quote followed by fatalError, when linted, then it fails
         try await pin(["let r = /\"/; fatalError(\"x\")"], controls: ["let r = 1; fatalError(\"x\")"], expected: 1, ticket: "TASK-353")
     }
 
