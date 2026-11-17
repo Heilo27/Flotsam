@@ -94,7 +94,7 @@ The blind pass criteria live in `.claude/oracle/frd-NNN-contract.json`.
 - Write swift-testing tests that exercise each contract through the public API. Put them in the FRD's test target, on `s2/frdNNN-8t`, branched from the builder's `ready` SHA.
 - Run them and report pass/fail per contract ID.
 - A failing contract is a defect report, not a fix.
-- Order: 001 → 003 → 008 → 002 → 006 (as each is `ready`). **[S2: 001 claimed 2026-11-17 on `s2/frd001-8t` from `main` @ d7d11d9]**
+- Order: 001 → 003 → 008 → 002 → 006 (as each is `ready`). **[S2: 001 claimed 2026-11-17 on `s2/frd001-8t`; 003 claimed 2026-11-17 on `s2/frd003-8t`, both from `main` @ d7d11d9]**
 
 ### Lane C: build features while A and B are idle
 
