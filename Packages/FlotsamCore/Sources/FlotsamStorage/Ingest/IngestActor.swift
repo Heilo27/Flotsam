@@ -115,11 +115,15 @@ public actor IngestActor {
 
     // MARK: Step 2
 
-    /// Limits, disk guard and the image pipeline hook in here (FR-007-06, -14, -07).
+    /// Limits (FR-007-06) now; the disk guard and image pipeline hook in here (FR-007-14, -07).
     private func prepare(_ candidate: IngestCandidate) -> FlotsamResult<PreparedItem> {
-        .success(PreparedItem(
-            representations: candidate.representations, members: candidate.members,
-            pixelWidth: nil, pixelHeight: nil, warnings: []))
+        switch IngestLimits.apply(to: candidate) {
+        case .failure(let error): return .failure(error)
+        case .success(let limited):
+            return .success(PreparedItem(
+                representations: limited.representations, members: limited.members,
+                pixelWidth: nil, pixelHeight: nil, warnings: limited.warnings))
+        }
     }
 
     // MARK: Step 3
