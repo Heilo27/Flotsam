@@ -489,7 +489,7 @@ private enum AdvLintHarness {
     }
 
     /// Exit status of the lint on a tree containing only `source`.
-    static func exitStatus(for source: String) throws -> Int32 {
+    static func exitStatus(for source: String) async throws -> Int32 {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("flotsam-8a-lint-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
@@ -504,14 +504,7 @@ private enum AdvLintHarness {
         try Data((source + "\n").utf8).write(to: base.appendingPathComponent("Fixture.swift"))
         try Data().write(to: root.appendingPathComponent("Packages/FlotsamCore/Package.swift"))
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [root.appendingPathComponent("bin/check-architecture.sh").path]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
-        try process.run()
-        process.waitUntilExit()
-        return process.terminationStatus
+        return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path]).status
     }
 }
 
@@ -526,8 +519,8 @@ struct Adversarial000LintTests {
         ("let a = 1\nlet b = a != 2\nlet c = !b", Int32(0)),
         ("let s = \"wow!\"\n// x!\nlet t = \"\"\"\nmulti !\n\"\"\"", Int32(0)),
     ])
-    func controls(source: String, expected: Int32) throws {
-        #expect(try AdvLintHarness.exitStatus(for: source) == expected, "\(source.debugDescription)")
+    func controls(source: String, expected: Int32) async throws {
+        #expect(try await AdvLintHarness.exitStatus(for: source) == expected, "\(source.debugDescription)")
     }
 
     // OC: FR-000-02 / AC-000-01. 8A break, ticket TASK-349. Each shape declares a throwing public API or force-unwrap the lint must catch.
@@ -544,8 +537,8 @@ struct Adversarial000LintTests {
         "func f() { print (\"x\") }",
         "let ñ: Int? = 1\nlet z = ñ!",
     ])
-    func falseNegatives(source: String) throws {
-        #expect(try AdvLintHarness.exitStatus(for: source) == 1, "\(source.debugDescription)")
+    func falseNegatives(source: String) async throws {
+        #expect(try await AdvLintHarness.exitStatus(for: source) == 1, "\(source.debugDescription)")
     }
 
     // OC: FR-000-02 / FR-000-09. 8A break, ticket TASK-350. Correct code (banned names only in comments, strings or a block comment) must pass.
@@ -557,7 +550,7 @@ struct Adversarial000LintTests {
         "/* a /* b */ x! */\nlet a = 1",
         "let s = #\"a \"b!\" c\"#",
     ])
-    func falsePositives(source: String) throws {
-        #expect(try AdvLintHarness.exitStatus(for: source) == 0, "\(source.debugDescription)")
+    func falsePositives(source: String) async throws {
+        #expect(try await AdvLintHarness.exitStatus(for: source) == 0, "\(source.debugDescription)")
     }
 }

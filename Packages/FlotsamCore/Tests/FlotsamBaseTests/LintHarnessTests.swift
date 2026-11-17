@@ -10,46 +10,61 @@ import Testing
 
 // MARK: - Harness
 
-private struct RunResult {
-    let status: Int32
-    let output: String
-}
+/// One local-disk snapshot of the tree the lint inspects, made once per test process. The repo lives on an external
+/// drive where copying the ~66 files takes ~0.25 s; copying it afresh in each of ~17 concurrent tests held a
+/// cooperative-pool thread for ~0.5 s apiece and starved unrelated tasks (the SystemClock sleeper, OC-0077). Each
+/// `ScratchTree` now copies from this snapshot on the internal disk instead. The actor makes the first caller do the
+/// copy while the others suspend (no thread blocked).
+/// Path of the live snapshot, for the process-exit sweep (a C `atexit` handler cannot capture; it reads this global).
+/// Written once, by the actor below, before any reader exists.
+nonisolated(unsafe) private var snapshotPathForExit: UnsafeMutablePointer<CChar>?
 
-private func run(_ executable: String, _ arguments: [String]) throws -> RunResult {
-    let process = Process()
-    process.executableURL = URL(fileURLWithPath: executable)
-    process.arguments = arguments
-    let pipe = Pipe()
-    process.standardOutput = pipe
-    process.standardError = pipe
-    try process.run()
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    process.waitUntilExit()
-    return RunResult(status: process.terminationStatus, output: String(decoding: data, as: UTF8.self))
+private actor TreeSnapshot {
+    static let shared = TreeSnapshot()
+    private var cached: URL?
+
+    func root() throws -> URL {
+        if let cached { return cached }
+        let fm = FileManager.default
+        // Stale snapshots from killed runs (older than an hour) are swept before a new one is made.
+        let temp = fm.temporaryDirectory
+        for entry in (try? fm.contentsOfDirectory(at: temp, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        where entry.lastPathComponent.hasPrefix("flotsam-lint-snapshot-") {
+            let modified = (try? entry.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            if modified < Date(timeIntervalSinceNow: -3600) { try? fm.removeItem(at: entry) }
+        }
+        let snapshot = temp.appendingPathComponent("flotsam-lint-snapshot-\(UUID().uuidString)")
+        let repo = Repo.root()
+        try fm.createDirectory(at: snapshot.appendingPathComponent("Packages/FlotsamCore"), withIntermediateDirectories: true)
+        try fm.copyItem(at: repo.appendingPathComponent("bin"), to: snapshot.appendingPathComponent("bin"))
+        try fm.copyItem(at: repo.appendingPathComponent("App"), to: snapshot.appendingPathComponent("App"))
+        try fm.copyItem(at: repo.appendingPathComponent("project.yml"), to: snapshot.appendingPathComponent("project.yml"))
+        let pkg = repo.appendingPathComponent("Packages/FlotsamCore")
+        let dest = snapshot.appendingPathComponent("Packages/FlotsamCore")
+        try fm.copyItem(at: pkg.appendingPathComponent("Sources"), to: dest.appendingPathComponent("Sources"))
+        try fm.copyItem(at: pkg.appendingPathComponent("Package.swift"), to: dest.appendingPathComponent("Package.swift"))
+        snapshotPathForExit = strdup(snapshot.path)
+        atexit { if let path = snapshotPathForExit { try? FileManager.default.removeItem(atPath: String(cString: path)) } }
+        cached = snapshot
+        return snapshot
+    }
 }
 
 /// A scratch copy of the tree the lint inspects. `discard()` removes it.
 private struct ScratchTree {
     let root: URL
 
-    init() throws {
+    init() async throws {
         let fm = FileManager.default
+        let snapshot = try await TreeSnapshot.shared.root()
         root = fm.temporaryDirectory.appendingPathComponent("flotsam-lint-\(UUID().uuidString)")
-        let repo = Repo.root()
-        try fm.createDirectory(at: root.appendingPathComponent("Packages/FlotsamCore"), withIntermediateDirectories: true)
-        try fm.copyItem(at: repo.appendingPathComponent("bin"), to: root.appendingPathComponent("bin"))
-        try fm.copyItem(at: repo.appendingPathComponent("App"), to: root.appendingPathComponent("App"))
-        try fm.copyItem(at: repo.appendingPathComponent("project.yml"), to: root.appendingPathComponent("project.yml"))
-        let pkg = repo.appendingPathComponent("Packages/FlotsamCore")
-        let dest = root.appendingPathComponent("Packages/FlotsamCore")
-        try fm.copyItem(at: pkg.appendingPathComponent("Sources"), to: dest.appendingPathComponent("Sources"))
-        try fm.copyItem(at: pkg.appendingPathComponent("Package.swift"), to: dest.appendingPathComponent("Package.swift"))
+        try fm.copyItem(at: snapshot, to: root)
     }
 
     func discard() { try? FileManager.default.removeItem(at: root) }
 
-    func lint() throws -> RunResult {
-        try run("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path])
+    func lint() async throws -> ProcessResult {
+        try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path])
     }
 
     func contents(_ relativePath: String) throws -> String {
@@ -84,11 +99,11 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0001. Given the shipped sources, when the lint runs, then it exits 0, prints the pass line and names no
     /// violation. The same script fails the mutated copies in the tests below, so a no-op script cannot pass both.
     @Test("OC-0001 lint reports 0 violations on the shipped sources")
-    func shippedSourcesAreClean() throws {
-        let tree = try ScratchTree()
+    func shippedSourcesAreClean() async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
         #expect(tree.swiftSourceCount >= 28, "precondition: the copy holds the module sources")
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 0, "lint exit status; output: \(result.output)")
         #expect(result.output.contains("architecture checks passed"))
         #expect(!result.output.contains("ARCH VIOLATION"))
@@ -113,32 +128,32 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0002. Given a clean copy and one injected forbidden construct, when the lint runs, then it fails and names
     /// the injected file and line; given the mutation reverted, the lint passes again.
     @Test("OC-0002 each injected try!, as!, fatalError fails the lint at its line and reverting passes", arguments: oc0002Mutants)
-    func injectedConstructFailsLint(mutant: Mutant) throws {
-        let tree = try ScratchTree()
+    func injectedConstructFailsLint(mutant: Mutant) async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
         let original = try tree.contents(mutant.path)
-        #expect(try tree.lint().status == 0, "precondition: the copy lints clean before the mutation")
+        #expect(try await tree.lint().status == 0, "precondition: the copy lints clean before the mutation")
 
         let line = try tree.append(mutant.line, to: mutant.path)
-        let mutated = try tree.lint()
+        let mutated = try await tree.lint()
         #expect(mutated.status == 1, "mutated lint exit status")
         #expect(mutated.output.contains("\(mutant.path):\(line):"), "lint names the injected line \(line); output: \(mutated.output)")
 
         try tree.write(original, to: mutant.path)
-        let reverted = try tree.lint()
+        let reverted = try await tree.lint()
         #expect(reverted.status == 0, "reverted lint exit status; output: \(reverted.output)")
     }
 
     /// OC-0002 negative. Given a fatalError annotated `fatal-ok:` and one named only in a comment, when the lint runs,
     /// then it passes: the rule is the annotation, not the word.
     @Test("OC-0002 an annotated fatalError and a commented one are not violations")
-    func annotatedFatalErrorIsAllowed() throws {
-        let tree = try ScratchTree()
+    func annotatedFatalErrorIsAllowed() async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
         let path = "\(sources)/FlotsamBase/Errors/ErrorReporter.swift"
         try tree.append("func mutantAnnotated() { fatalError(\"unreachable\") } // fatal-ok: unreachable invariant", to: path)
         try tree.append("// fatalError(\"named only in a comment\")", to: path)
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 0, "lint exit status; output: \(result.output)")
         #expect(!result.output.contains("fatalError/precondition"))
     }
@@ -153,12 +168,12 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0001 force-unwrap rule. Given a force-unwrap of an optional (the shape a database row or pasteboard read
     /// takes), when the lint runs, then it fails and names the line. Subscript shapes are the ones a row value uses.
     @Test("OC-0001 injected force-unwrap fails the lint at its line", arguments: forceUnwrapShapes)
-    func forceUnwrapFailsLint(mutant: Mutant) throws {
-        let tree = try ScratchTree()
+    func forceUnwrapFailsLint(mutant: Mutant) async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
-        #expect(try tree.lint().status == 0, "precondition: clean before the mutation")
+        #expect(try await tree.lint().status == 0, "precondition: clean before the mutation")
         let line = try tree.append(mutant.line, to: mutant.path)
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 1, "mutated lint exit status")
         #expect(result.output.contains("\(mutant.path):\(line):"), "lint names line \(line); output: \(result.output)")
     }
@@ -171,8 +186,8 @@ private let sources = "Packages/FlotsamCore/Sources"
         Mutant(name: "dump", path: "\(sources)/FlotsamBase/Errors/ErrorRingBuffer.swift", line: "func mutantDump() { dump(1) }"),
     ]
 
-    private func mutatedLoggingTree() throws -> (tree: ScratchTree, lines: [(path: String, line: Int)]) {
-        let tree = try ScratchTree()
+    private func mutatedLoggingTree() async throws -> (tree: ScratchTree, lines: [(path: String, line: Int)]) {
+        let tree = try await ScratchTree()
         var lines: [(String, Int)] = []
         for mutant in Self.loggingMutants { lines.append((mutant.path, try tree.append(mutant.line, to: mutant.path))) }
         return (tree, lines)
@@ -180,11 +195,11 @@ private let sources = "Packages/FlotsamCore/Sources"
 
     /// OC-0034 clean half. Given the unmodified sources, when the lint runs, then no print, NSLog or dump is flagged.
     @Test("OC-0034 unmodified sources have 0 print, NSLog or dump occurrences flagged")
-    func cleanSourcesHaveNoLoggingCalls() throws {
-        let tree = try ScratchTree()
+    func cleanSourcesHaveNoLoggingCalls() async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
         #expect(tree.swiftSourceCount >= 28, "precondition: the copy holds the module sources")
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 0)
         #expect(!result.output.contains("print/NSLog/dump"))
     }
@@ -192,10 +207,10 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0034 detection. Given one print, one NSLog and one dump injected in three files, when the lint runs, then it
     /// fails and names all three lines.
     @Test("OC-0034 the lint names each injected print, NSLog and dump line")
-    func lintNamesEachLoggingCall() throws {
-        let (tree, lines) = try mutatedLoggingTree()
+    func lintNamesEachLoggingCall() async throws {
+        let (tree, lines) = try await mutatedLoggingTree()
         defer { tree.discard() }
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 1)
         #expect(lines.count == 3, "precondition: three mutations injected")
         for (path, line) in lines {
@@ -206,10 +221,10 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0034 count. Given one print, one NSLog and one dump, when the lint runs, then it reports 3 violations.
     /// The contract counts hits; the script prints one violation per rule, so it reports "1 violation(s)" here.
     @Test("OC-0034 the lint reports 3 violations for 3 injected logging calls")
-    func lintReportsThreeViolations() throws {
-        let (tree, _) = try mutatedLoggingTree()
+    func lintReportsThreeViolations() async throws {
+        let (tree, _) = try await mutatedLoggingTree()
         defer { tree.discard() }
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.output.contains("3 violation"), "summary line; output tail: \(result.output.split(separator: "\n").last ?? "")")
     }
 
@@ -225,12 +240,12 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0003 lint half. Given a public function declared `throws` added to the sources, when the lint runs, then it
     /// fails and names the line, wherever the function sits.
     @Test("OC-0003 an injected public throws function fails the lint at its line", arguments: publicThrowsMutants)
-    func publicThrowsFailsLint(mutant: Mutant) throws {
-        let tree = try ScratchTree()
+    func publicThrowsFailsLint(mutant: Mutant) async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
-        #expect(try tree.lint().status == 0, "precondition: clean before the mutation")
+        #expect(try await tree.lint().status == 0, "precondition: clean before the mutation")
         let line = try tree.append(mutant.line, to: mutant.path)
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 1, "mutated lint exit status")
         #expect(result.output.contains("\(mutant.path):\(line):"), "lint names line \(line); output: \(result.output)")
     }
@@ -240,7 +255,7 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0049 unit half, shipped manifests. Given the shipped Package.resolved, Package.swift and project.yml, then
     /// the only third-party package is GRDB and the Xcode project lists only the local FlotsamCore package.
     @Test("OC-0049 manifests declare GRDB as the only third-party package")
-    func onlyGRDBIsThirdParty() throws {
+    func onlyGRDBIsThirdParty() async throws {
         let resolved = try JSONSerialization.jsonObject(with: Data(contentsOf: Repo.packageRoot().appendingPathComponent("Package.resolved"))) as? [String: Any]
         let pins = resolved?["pins"] as? [[String: Any]] ?? []
         #expect(pins.compactMap { $0["identity"] as? String } == ["grdb.swift"], "Package.resolved identities")
@@ -268,12 +283,12 @@ private let sources = "Packages/FlotsamCore/Sources"
     /// OC-0049 unit half, lint. Given a crash or analytics SDK added to a manifest or imported in source, when the lint
     /// runs, then it fails and names the line.
     @Test("OC-0049 an injected crash or analytics SDK fails the lint at its line", arguments: sdkMutants)
-    func sdkFailsLint(mutant: Mutant) throws {
-        let tree = try ScratchTree()
+    func sdkFailsLint(mutant: Mutant) async throws {
+        let tree = try await ScratchTree()
         defer { tree.discard() }
-        #expect(try tree.lint().status == 0, "precondition: clean before the mutation")
+        #expect(try await tree.lint().status == 0, "precondition: clean before the mutation")
         let line = try tree.append(mutant.line, to: mutant.path)
-        let result = try tree.lint()
+        let result = try await tree.lint()
         #expect(result.status == 1, "mutated lint exit status")
         #expect(result.output.contains("\(mutant.path):\(line):"), "lint names line \(line); output: \(result.output)")
     }
@@ -455,20 +470,20 @@ private enum PublicAPI {
     private enum CompileSetupError: Error { case moduleNotBuilt(String) }
 
     /// Type-checks a snippet that imports FlotsamBase from outside the module (public API only).
-    private static func typecheck(_ body: String) throws -> RunResult {
+    private static func typecheck(_ body: String) async throws -> ProcessResult {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-compile-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = directory.appendingPathComponent("Snippet.swift")
         try ("import FlotsamBase\n" + body + "\n").write(to: file, atomically: true, encoding: .utf8)
-        return try run("/usr/bin/xcrun", ["swiftc", "-typecheck", "-swift-version", "6", "-I", try moduleDirectory(), file.path])
+        return try await runProcess("/usr/bin/xcrun", ["swiftc", "-typecheck", "-swift-version", "6", "-I", try moduleDirectory(), file.path])
     }
 
     /// OC-0073 control. Given a log context built from a validated BundleIdentifier and a PasteboardTypeID, when the
     /// snippet is type-checked, then it compiles. Without a green control a red result could mean a broken harness.
     @Test("OC-0073 control: validated bundle identifier and classified type identifier compile")
-    func validContextCompiles() throws {
-        let result = try Self.typecheck("""
+    func validContextCompiles() async throws {
+        let result = try await Self.typecheck("""
         func good() -> [LogKey: LogSafeValue] {
             [.bundleId: .bundleId(BundleIdentifier("com.apple.TextEdit")!), .uti: .uti(PasteboardTypeID("public.png"))]
         }
@@ -490,8 +505,8 @@ private enum PublicAPI {
     /// OC-0073. Given a log context whose bundle identifier or pasteboard type is given an arbitrary String, when the
     /// snippet is type-checked, then it fails to compile with a type error naming the validated type.
     @Test("OC-0073 an arbitrary String in a log context does not compile", arguments: mutations)
-    func arbitraryStringDoesNotCompile(mutation: (name: String, snippet: String, mentions: String)) throws {
-        let result = try Self.typecheck(mutation.snippet)
+    func arbitraryStringDoesNotCompile(mutation: (name: String, snippet: String, mentions: String)) async throws {
+        let result = try await Self.typecheck(mutation.snippet)
         #expect(result.status != 0, "\(mutation.name) must be rejected by the compiler")
         #expect(result.output.contains("error:"), "compiler error; output: \(result.output)")
         #expect(result.output.contains(mutation.mentions), "error names \(mutation.mentions); output: \(result.output)")

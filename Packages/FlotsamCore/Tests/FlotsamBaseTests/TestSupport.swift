@@ -69,6 +69,41 @@ final class FakePasteboard: PasteboardPort {
     }
 }
 
+/// Exit status and combined stdout+stderr of a finished subprocess.
+struct ProcessResult: Sendable {
+    let status: Int32
+    let output: String
+}
+
+/// Runs a subprocess WITHOUT parking a Swift-concurrency cooperative thread on it (OC-0077 flake, 2026-11-17).
+/// The old shape (`readDataToEndOfFile()` + `waitUntilExit()` inside a test) blocked one pool thread per running lint
+/// test for seconds; with ~17 of them in flight every pool thread was blocked and unrelated tasks, including the
+/// SystemClock sleeper that had to resume within 1 s, starved. Here the caller suspends on a continuation resumed from
+/// the process's `terminationHandler` (Foundation's own thread), and output goes to a temp file, so no thread has to
+/// drain a pipe while the child runs.
+func runProcess(_ executable: String, _ arguments: [String]) async throws -> ProcessResult {
+    let fm = FileManager.default
+    let outputURL = fm.temporaryDirectory.appendingPathComponent("flotsam-proc-\(UUID().uuidString).log")
+    guard fm.createFile(atPath: outputURL.path, contents: nil) else {
+        throw CocoaError(.fileWriteUnknown)
+    }
+    defer { try? fm.removeItem(at: outputURL) }
+    let sink = try FileHandle(forWritingTo: outputURL)
+    defer { try? sink.close() }
+
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: executable)
+    process.arguments = arguments
+    process.standardOutput = sink
+    process.standardError = sink
+    let status: Int32 = try await withCheckedThrowingContinuation { continuation in
+        process.terminationHandler = { finished in continuation.resume(returning: finished.terminationStatus) }
+        do { try process.run() } catch { continuation.resume(throwing: error) }
+    }
+    let data = try Data(contentsOf: outputURL)
+    return ProcessResult(status: status, output: String(decoding: data, as: UTF8.self))
+}
+
 enum Repo {
     /// Package root (`Packages/FlotsamCore`): Tests/FlotsamBaseTests/<file> up three levels.
     static func packageRoot(file: String = #filePath) -> URL {
