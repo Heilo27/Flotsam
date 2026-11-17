@@ -265,21 +265,27 @@ func settle() async { try? await Task.sleep(nanoseconds: 300_000_000) }
         #expect(try r.store.presentIds() == [2])
     }
 
-    /// Overlap guard (RetentionScheduler.swift:51). Given two sweepNow calls at the same moment over a library with
-    /// work to do, when both finish, then exactly one sweep ran (one read of the retention setting); and once idle a
-    /// further call does run, so the guard releases.
-    @Test func overlappingSweepNowRunsOnlyOneSweep() async throws {
+    /// OC-7075 overlap guard (RetentionScheduler.swift:51). Given two sweepNow calls at the same moment over a library
+    /// with work to do, when both finish, then exactly one sweep ran (one read of the retention setting); and once idle
+    /// a further call does run, so the guard releases.
+    /// Red if the `sweeping` guard is dropped (the second call also reads the setting, count 2).
+    @Test("OC-7075 overlapping sweepNow calls run only one sweep")
+    func overlappingSweepNowRunsOnlyOneSweep() async throws {
+        // given 300 expired items and one fresh item
         let r = try await make()
         defer { r.store.cleanUp() }
         try await r.store.insert((1...300).map { Spec(n: $0, ageMs: 31 * dayMs) } + [Spec(n: 999, ageMs: dayMs)])
 
+        // when two sweeps are requested at the same moment
         async let first: Void = r.scheduler.sweepNow()
         async let second: Void = r.scheduler.sweepNow()
         _ = await (first, second)
 
+        // then exactly one ran and only the fresh item remains
         #expect(r.kv.readCount(of: retentionKey) == 1)
         #expect(try r.store.presentIds() == [999])
 
+        // and once idle the guard released, so a further call runs
         await r.scheduler.sweepNow()
         #expect(r.kv.readCount(of: retentionKey) == 2)
     }
@@ -443,23 +449,29 @@ func settle() async { try? await Task.sleep(nanoseconds: 300_000_000) }
         #expect(r.clock.sleeps.isEmpty)
     }
 
-    /// Overlap guard (ReconcileScheduler.swift:43). Given two reconcileNow calls at the same moment, when both finish,
-    /// then exactly one ran a pass (one outcome, one nil) and that outcome removed the single orphan; once idle a
-    /// further call does run, so the guard releases.
-    @Test func overlappingReconcileNowRunsOnlyOnePass() async throws {
+    /// OC-7113 overlap guard (ReconcileScheduler.swift:43). Given two reconcileNow calls at the same moment, when both
+    /// finish, then exactly one ran a pass (one outcome, one nil) and that outcome removed the single orphan; once idle
+    /// a further call does run, so the guard releases.
+    /// Red if the `running` guard is dropped (both calls return an outcome).
+    @Test("OC-7113 overlapping reconcileNow calls run only one pass")
+    func overlappingReconcileNowRunsOnlyOnePass() async throws {
+        // given one orphan blob past the grace
         let r = try await make()
         defer { r.store.cleanUp() }
         let orphan = try r.store.plantOrphanBlob(90, ageMs: 11 * 60_000)
 
+        // when two passes are requested at the same moment
         async let first = r.scheduler.reconcileNow()
         async let second = r.scheduler.reconcileNow()
         let results = await [first, second]
 
+        // then exactly one ran and removed the orphan
         #expect(results.compactMap { $0 }.count == 1)
         #expect(results.filter { $0 == nil }.count == 1)
         #expect(results.compactMap { $0 }.first?.orphanBlobsRemoved == 1)
         #expect(!r.store.exists(orphan))
 
+        // and once idle a further pass runs
         #expect(await r.scheduler.reconcileNow() != nil)
     }
 }

@@ -59,6 +59,33 @@ import FlotsamBase
         #expect(try rig.row(text).plainText == "still saved")
     }
 
+    /// OC-7117 (screenshot kind). 400 MiB free: a screenshot picked up from a file is skipped with STO-LIM-002 like an
+    /// image, nothing is stored, and with space back the same screenshot is saved.
+    /// Red if the image tier covers `.image` only (the screenshot is stored at 400 MiB free, M92) or the skip leaves a
+    /// row or blob behind.
+    @Test("OC-7117 at 400 MiB free a screenshot is skipped with STO-LIM-002 like an image")
+    func oc7117_screenshotSkipped() async throws {
+        // given 400 MiB free and one text item already stored
+        let rig = try await Rig.make(capacity: 400 * mebi)
+        defer { rig.cleanUp() }
+        _ = try await rig.create(rig.text("k-text-first", "already here"))
+        let blobsBefore = rig.blobFiles()
+
+        // when a screenshot file is picked up
+        let shot = try await rig.ingest.ingest(rig.image("k-shot", png, kind: .screenshot, origin: .screenshotFile))
+
+        // then it is skipped as STO-LIM-002 and the library is unchanged
+        guard case .failure(let error) = shot else { Issue.record("expected the screenshot to be skipped"); return }
+        #expect(error.code == .stoLim002)
+        #expect(try rig.itemCount() == 1)
+        #expect(rig.blobFiles() == blobsBefore)
+
+        // and when space comes back, the same screenshot is saved (the skip was not sticky)
+        rig.fileSystem.setCapacity(10 * 1024 * mebi)
+        _ = try await rig.create(rig.image("k-shot", png, kind: .screenshot, origin: .screenshotFile))
+        #expect(try rig.itemCount() == 2)
+    }
+
     /// OC-7119. 200 MiB free: a three-file copy creates one files item with its three members.
     @Test("OC-7119 at 200 MiB free a three-file copy still creates one files item")
     func oc7119_filesSavedAt200MiB() async throws {
@@ -107,9 +134,9 @@ import FlotsamBase
         #expect(try rig.itemCount() == 3)
     }
 
-    /// FR-007-14 boundary, image tier: exactly 500 MiB free saves, one byte less skips, one byte more saves.
-    /// Red if the comparison becomes `<=` (500 MiB would skip) or the threshold moves.
-    @Test("FR-007-14 image tier boundary at 500 MiB free is strict")
+    /// OC-7117 / FR-007-14 boundary, image tier: exactly 500 MiB free saves, one byte less skips, one byte more saves.
+    /// Red if the comparison becomes `<=` (500 MiB would skip, M90) or the threshold moves.
+    @Test("OC-7117 image tier boundary at 500 MiB free is strict")
     func imageTierBoundary() async throws {
         let rig = try await Rig.make(capacity: 500 * mebi)
         defer { rig.cleanUp() }
@@ -132,9 +159,10 @@ import FlotsamBase
         #expect(try rig.itemCount() == 2)
     }
 
-    /// FR-007-14 boundary, hard tier: exactly 50 MiB free saves text and files, one byte less fails both with
+    /// OC-7120 / FR-007-14 boundary, hard tier: exactly 50 MiB free saves text and files, one byte less fails both with
     /// STO-IO-001, and an image just under 50 MiB gets STO-IO-001 rather than the milder STO-LIM-002.
-    @Test("FR-007-14 hard tier boundary at 50 MiB free is strict and outranks the image skip")
+    /// Red if the comparison becomes `<=` (50 MiB would fail, M89) or the threshold moves.
+    @Test("OC-7120 hard tier boundary at 50 MiB free is strict and outranks the image skip")
     func hardTierBoundary() async throws {
         let rig = try await Rig.make(capacity: 50 * mebi)
         defer { rig.cleanUp() }
