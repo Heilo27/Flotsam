@@ -1,0 +1,10 @@
+.DS_Store
+build/
+DerivedData/
+.dd*/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+.build/
+.claude/scratch/
+.claude/worktrees/
