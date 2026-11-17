@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command release: Release build -> sign -> DMG -> notarize + staple -> SHA-256 (FRD-009). Output in ./dist.
 # Credentials never live in the repo. Identity: FLOTSAM_SIGN_IDENTITY, else the keychain's "Developer ID Application".
-# Notary: keychain profile FLOTSAM_NOTARY_PROFILE (default "flotsam-notary"), or APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD.
+# Notary: keychain profile FLOTSAM_NOTARY_PROFILE (default "flotsam"), or APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD.
 # Missing either one -> ad-hoc signed, un-notarized DMG (local testing only) and a list of exactly what is missing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -10,7 +10,7 @@ BLD=$(sed -n 's/.*CFBundleVersion: "\(.*\)"/\1/p' project.yml)
 DD=build/release; APP=$DD/Build/Products/Release/Flotsam.app
 DMG=dist/Flotsam-$VER.dmg
 ID=${FLOTSAM_SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)}
-PROFILE=${FLOTSAM_NOTARY_PROFILE:-flotsam-notary}
+PROFILE=${FLOTSAM_NOTARY_PROFILE:-flotsam}
 missing=()
 [ -n "$ID" ] || missing+=("Developer ID Application certificate (Xcode > Settings > Accounts > Manage Certificates > + > Developer ID Application)")
 notary=()

@@ -23,6 +23,6 @@ Get `Flotsam-<version>.dmg` from [GitHub Releases](https://github.com/Heilo27/Fl
 ## Release (maintainers)
 `bin/release.sh` builds, signs, notarizes, staples and checksums into `dist/` ([FRD-009](docs/frd/FRD-009-Distribution.md)). Bump the version in `project.yml` first (build resets to 1). One-time setup:
 1. Create a *Developer ID Application* certificate (Xcode > Settings > Accounts > Manage Certificates).
-2. `xcrun notarytool store-credentials flotsam-notary --apple-id <id> --team-id <team>` (prompts for an app-specific password).
+2. `xcrun notarytool store-credentials flotsam --apple-id <id> --team-id <team>` (prompts for an app-specific password).
 
 Or set `FLOTSAM_SIGN_IDENTITY`, `FLOTSAM_NOTARY_PROFILE`, or `APPLE_ID`/`APPLE_TEAM_ID`/`APPLE_APP_PASSWORD`. Without them the script makes an ad-hoc DMG for local testing and lists what is missing. Tagging and uploading to Releases is manual.
