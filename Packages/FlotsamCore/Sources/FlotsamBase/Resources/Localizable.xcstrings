@@ -181,6 +181,186 @@
     "error.TRG-VAL-005" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "An unknown variable was left as plain text." } } }
     },
+    "ui.library.panelTitle" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam Library" } } }
+    },
+    "ui.library.searchPlaceholder" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Search clipboard history" } } }
+    },
+    "ui.library.emptyTitle" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Nothing copied yet" } } }
+    },
+    "ui.library.emptyBody" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy something and it appears here. Press ⌃⌘V any time to open this panel." } } }
+    },
+    "ui.library.noResultsTitle" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No matches for “%@”" } } }
+    },
+    "ui.library.noResultsBody" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Check the spelling, or clear the search to see everything." } } }
+    },
+    "ui.btn.clearSearch" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear Search" } } }
+    },
+    "ui.btn.retry" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } } }
+    },
+    "ui.library.errorTitle" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "History unavailable" } } }
+    },
+    "ui.library.footerItems" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld items" } } }
+    },
+    "ui.library.footerOneItem" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "1 item" } } }
+    },
+    "ui.library.footerSelected" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld selected" } } }
+    },
+    "ui.library.footerMultiDisabled" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select one item to paste" } } }
+    },
+    "ui.library.hintPaste" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste" } } }
+    },
+    "ui.library.hintPlain" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Plain text" } } }
+    },
+    "ui.library.hintCopy" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } } }
+    },
+    "ui.library.hintPreview" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview" } } }
+    },
+    "ui.library.hintClose" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } } }
+    },
+    "ui.library.hintClearSelection" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear selection" } } }
+    },
+    "ui.library.keyReturn" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Return" } } }
+    },
+    "ui.library.keyOptionReturn" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "⌥Return" } } }
+    },
+    "ui.library.keyShiftReturn" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "⇧Return" } } }
+    },
+    "ui.library.keySpace" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Space" } } }
+    },
+    "ui.library.keyEsc" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Esc" } } }
+    },
+    "ui.library.sidebarAll" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "All" } } }
+    },
+    "ui.library.sidebarPinned" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } } }
+    },
+    "ui.library.sectionTypes" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Types" } } }
+    },
+    "ui.library.sectionTags" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Tags" } } }
+    },
+    "ui.library.sectionApps" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Apps" } } }
+    },
+    "ui.library.appAnotherDevice" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Another device" } } }
+    },
+    "ui.library.appUnknown" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } } }
+    },
+    "ui.library.typeText" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Text" } } }
+    },
+    "ui.library.typeRichText" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Rich Text" } } }
+    },
+    "ui.library.typeLink" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Links" } } }
+    },
+    "ui.library.typeColor" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Colors" } } }
+    },
+    "ui.library.typePhone" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Phone Numbers" } } }
+    },
+    "ui.library.typeEmail" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Emails" } } }
+    },
+    "ui.library.typeImage" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Images" } } }
+    },
+    "ui.library.typeFile" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Files" } } }
+    },
+    "ui.library.typeFolder" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Folders" } } }
+    },
+    "ui.library.typeBundle" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Bundles" } } }
+    },
+    "ui.library.typeScreenshot" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshots" } } }
+    },
+    "ui.library.tagOverflow" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "+%lld" } } }
+    },
+    "ui.library.fromApp" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "from %@" } } }
+    },
+    "ui.library.pinned" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } } }
+    },
+    "ui.library.previewShowMore" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Show more" } } }
+    },
+    "ui.library.previewMore" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "and %lld more" } } }
+    },
+    "ui.library.previewKind" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Kind" } } }
+    },
+    "ui.library.previewSource" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Source" } } }
+    },
+    "ui.library.previewCopied" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copied" } } }
+    },
+    "ui.library.previewTimesPasted" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Times pasted" } } }
+    },
+    "ui.library.previewSize" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Size" } } }
+    },
+    "ui.library.previewPixelSize" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pixel size" } } }
+    },
+    "ui.library.previewUnavailable" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview unavailable" } } }
+    },
+    "ui.library.menuPaste" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste" } } }
+    },
+    "ui.library.menuPastePlain" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Paste as Plain Text" } } }
+    },
+    "ui.library.menuCopy" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Copy" } } }
+    },
+    "ui.library.menuPreview" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview" } } }
+    },
+    "ui.library.menuReveal" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reveal in Finder" } } }
+    },
+    "ui.menu.openLibrary" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Library" } } }
+    },
     "ui.fatal.quit" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } } }
     },
