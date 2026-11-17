@@ -143,3 +143,62 @@ Machine: macOS 26.7, Xcode 26.3, Swift 6.2.4. Fresh clone, detached at d7d11d9. 
 **Defects:** none new. D1 and D2 are closed.
 
 **Harness note (not a Flotsam defect):** `NSPasteboard.writeObjects([NSURL])` from a process that exits straight away leaves the pasteboard empty. Use `setString` on `public.file-url`, or Finder, instead.
+
+---
+
+## 2026-11-17: BLOCKER: Xcode 27.0 auto-update, licence not accepted (17:09)
+
+`swift` and `/usr/bin/git` refuse to run until Ryan runs `sudo xcodebuild -license accept`. Command Line Tools git works for commits; nothing is built that way. **Every item below is written, never compiled, and never run. No results are claimed.**
+
+### C1 FRD-002 part 2, on `s2/frd002` @ 31d11be (WIP, "NOT COMPILED")
+Rebased onto `main` d7d11d9; part 1 is now a8c525e.
+
+**Written**
+- `FolderEventSource` port (Base).
+- In Screenshots: the `ScreenshotWatcher` actor, `ScreenshotImporter`, `DatabaseWatermarkStore` and `PollingFolderSource`.
+- `FSEventsFolderSource` (App/Platform).
+- `AppContainer.startScreenshots`.
+- FRs coded but unverified: FR-002-02, 03, 04, 05, 07, 08, 09, 12 (engine) and 13.
+
+**Left**
+- Watcher unit tests. These need a suspending stepped clock.
+- FRD-002 edits:
+  - "3 attempts" is read as 3 retries after the first skip.
+  - Backfill is allowed when pickup is off or the mode isn't Active.
+  - The string key is `ui.source.screenshot`.
+- A possible FR-000-08 note for `ErrorReporter.clearNotices(code:)`.
+- The GeneralPane import button and status line (overlaps FRD-008).
+- `ModuleInfo`.
+- The smoke test.
+
+**Outside Screenshots (S1 review at merge)**
+- `Ports/FolderEvents.swift`
+- `ErrorReporter.clearNotices(code:)`
+- The catalogue key `ui.source.screenshot`
+- `FSEventsFolderSource.swift`
+- `AppContainer.swift`
+- The `Package.swift` test-target dependencies
+
+**Open:** a 500-file backfill takes about 125 s (0.5 s stability wait, 2 in flight); this needs a spec ruling. Spike 3 is still unverified.
+
+### B FRD-001 8T, part 1, on `s2/frd001-8t` (local and uncommitted)
+- Harness `FRD001ContractHarness.swift`, plus tests drafted for OC-1002, 1004–1006 and 1008–1021.
+- Unreachable from the package:
+  - OC-1001: CPU profile.
+  - OC-1003: menu tracking.
+  - OC-1022 and OC-1023: Secure Event Input.
+  - OC-1033: system screenshot.
+  - OC-1007: the panel half only.
+- Next ID: OC-1024.
+- Lead L-A: the CAP-LIM-003 context count may be the 500 limit rather than the actual count. Unconfirmed.
+- Lead L-B: CAP-LIM-001 carries `.byteSize`, but the message reads `.limitBytes`. Unconfirmed.
+
+### B FRD-003 8T, part 1, on `s2/frd003-8t` @ f9ea349 (WIP, "NOT COMPILED, NOT RUN")
+- OC-3008–3028 drafted (OC-3017 not written).
+- Unreachable from the package: OC-3001–3007, 3014, 3016, 3021 and 3048 (AppKit, windows and geometry).
+- Next ID: OC-3017.
+- **Suspected defects, from reading the code only; to be confirmed by a run:**
+  - **D3 (Major):** `LibraryViewModel.jump(toLast:)` (~line 292). ⌘↓ sets `visibleLimit = loadedRows.count` (one 200-row page) and never pages, so with 10k rows the selection lands on row 200, not the oldest item (OC-3015).
+  - **D4 (Major):** `LibraryPresentation.relativeTime` (~line 47). `RelativeDateTimeFormatter` gives "yesterday" and "10 days ago". OC-3019 wants "Yesterday", and an absolute date after 7 days.
+  - **D5 (Major):** `ItemRow` / `LibraryRowPresentation` have no missing-file state, so OC-3020's "Missing" badge can't be shown.
+  - **D6 (Minor):** `LibraryPreview.memberLimit = 10`, but the FRD and OC-3060 say 20.
