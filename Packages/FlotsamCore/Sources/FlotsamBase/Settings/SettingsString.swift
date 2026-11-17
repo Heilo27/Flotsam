@@ -70,4 +70,11 @@ public enum SettingsString: String, CaseIterable, Sendable {
         guard FlotsamStrings.placeholderKinds(in: template) == [.integer, .text] else { return template }
         return String(format: template, max(0, count), label.text)
     }
+
+    /// The About line "Version {version} ({build})": two text slots filled from the bundle's own version strings.
+    public func text(version: String, build: String) -> String {
+        let template = text
+        guard FlotsamStrings.placeholderKinds(in: template) == [.text, .text] else { return template }
+        return String(format: template, version, build)
+    }
 }

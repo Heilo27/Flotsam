@@ -129,4 +129,10 @@ private struct StubProbe: PermissionProbe {
         #expect(SettingsString.confirmBudget.text([.byteSize(1), .count(1)]) == template)
         #expect(SettingsString.confirmShorten.text([.count(1)]) == SettingsString.confirmShorten.text)
     }
+
+    @Test func aboutVersionLineFillsVersionAndBuild() {
+        let text = SettingsString.version.text(version: "0.1.0", build: "1")
+        #expect(text == "Version 0.1.0 (1)")
+        #expect(SettingsString.launchAtLogin.text(version: "0.1.0", build: "1") == SettingsString.launchAtLogin.text)
+    }
 }
