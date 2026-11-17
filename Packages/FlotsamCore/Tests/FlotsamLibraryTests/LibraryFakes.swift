@@ -94,9 +94,9 @@ struct Harness {
     let source: FakeSource
     let paster = FakePaster()
     let host = FakeHost()
-    let prefs = FakePreferences()
+    let prefs: FakePreferences
     let model: LibraryViewModel
-    let reported = Reported()
+    let reported: Reported
 
     @MainActor final class Reported {
         var errors: [FlotsamError] = []
@@ -107,13 +107,23 @@ struct Harness {
 
     init(rows: [ItemRow], counts: SidebarCounts? = nil, accessibility: Bool = true) {
         source = FakeSource(rows: rows, counts: counts)
-        let reported = reported
+        let reported = Reported()
+        self.reported = reported
+        prefs = FakePreferences()
         model = LibraryViewModel(
             source: source, paster: paster, host: host, preferences: prefs,
             effects: LibraryEffects(
                 report: { reported.errors.append($0) }, reveal: { reported.revealed.append($0) },
                 openSettings: { reported.settingsOpened += 1 },
                 external: { reported.external.append(($0, $1)) }, isAccessibilityTrusted: { accessibility }))
+    }
+
+    /// Wraps a model built elsewhere (an organizer test attaches its own).
+    init(model: LibraryViewModel, source: FakeSource, prefs: FakePreferences, reported: Reported) {
+        self.source = source
+        self.model = model
+        self.reported = reported
+        self.prefs = prefs
     }
 
     static func rows(_ count: Int) -> [ItemRow] { (0..<count).map { makeRow($0) } }
