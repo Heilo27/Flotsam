@@ -231,6 +231,32 @@ final class FakeOrganizeStore: LibraryOrganizeStore, @unchecked Sendable {
         #expect(r.model.filter == .tag(5))
     }
 
+    // MARK: Confirmed command against a changed selection (FR-004-09, -11)
+
+    @Test func aConfirmedUngroupActsOnlyOnTheBundleThatWasConfirmed() async {
+        let r = await rig(3)
+        let asked = r.harness.source.rows[0].id
+        let other = r.harness.source.rows[1].id
+        r.model.select(id: other)  // the list reloaded or the selection moved while the question was open
+        #expect(await r.model.ungroupSelected(expecting: asked) == nil)
+        #expect(!r.store.calls.contains("ungroup"))
+        #expect(r.harness.reported.errors.isEmpty)
+        r.model.select(id: asked)
+        #expect(await r.model.ungroupSelected(expecting: asked) != nil)
+        #expect(r.store.calls.contains("ungroup"))
+    }
+
+    @Test func aConfirmedDeleteActsOnlyOnTheSelectionThatWasConfirmed() async {
+        let r = await rig(3)
+        let asked = r.harness.source.rows[0].id
+        let other = r.harness.source.rows[1].id
+        r.model.select(id: other)
+        #expect(await r.model.deleteSelected(expecting: [asked]) == nil)
+        #expect(!r.store.calls.contains { $0.hasPrefix("delete") })
+        #expect(r.harness.source.rows.count == 3)
+        #expect(await r.model.deleteSelected(expecting: [other]) == [other])
+    }
+
     // MARK: Confirmation rules (FR-004-09, -11)
 
     private func row(_ n: Int, kind: ItemKind = .text, pinned: Bool = false, trigger: Bool = false, shortcut: Bool = false) -> ItemRow {

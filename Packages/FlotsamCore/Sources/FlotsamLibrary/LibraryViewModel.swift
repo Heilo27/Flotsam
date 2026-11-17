@@ -507,16 +507,24 @@ public final class LibraryViewModel {
     }
 
     /// Replaces the selected bundle with its members and selects them (FR-004-11).
-    public func ungroupSelected() async -> [UUID]? {
+    ///
+    /// `expecting` is the bundle the user was asked about. A confirmation stays open while the list can still reload,
+    /// so at confirm time the selection may no longer be that bundle; then nothing happens, rather than ungrouping a
+    /// different bundle the user never confirmed. Nil means "whatever is selected now" (no question was asked).
+    public func ungroupSelected(expecting bundle: UUID? = nil) async -> [UUID]? {
         guard let id = selectedRow?.id else { return nil }
+        if let bundle, selection != [bundle] { return nil }
         return await organize(selecting: { $0 }) { await $0.ungroup(bundle: id) }
     }
 
     /// Deletes the selection and selects the row after the last one removed (FR-004-09). The caller confirms first when
-    /// `LibraryOrganizer.deleteNeedsConfirmation` says so.
-    public func deleteSelected() async -> [UUID]? {
+    /// `LibraryOrganizer.deleteNeedsConfirmation` says so. `expecting` is the selection the user confirmed: when the
+    /// selection has changed since, nothing is deleted (a delete is permanent, FR-004-09). Nil means "the selection
+    /// now".
+    public func deleteSelected(expecting confirmed: Set<UUID>? = nil) async -> [UUID]? {
         let ids = selection
         guard !ids.isEmpty else { return nil }
+        if let confirmed, ids != confirmed { return nil }
         let next = Self.selectionAfterDeleting(ids, in: loadedRows)
         return await organize(selecting: { _ in next.map { [$0] } }) { await $0.delete(Array(ids)) }
     }

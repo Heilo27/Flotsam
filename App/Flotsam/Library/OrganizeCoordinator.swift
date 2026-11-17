@@ -39,13 +39,13 @@ final class OrganizeCoordinator {
 
     @ObservationIgnored weak var model: LibraryViewModel?
     @ObservationIgnored var organizer: LibraryOrganizer?
-    @ObservationIgnored private let report: @MainActor (FlotsamError) -> Void
+    @ObservationIgnored private let report: @MainActor (FlotsamError, ErrorOrigin) -> Void
     @ObservationIgnored private let loadContent: @MainActor (UUID) async -> FlotsamResult<ItemContent>
     /// ⌘K belongs to FRD-005; this stays inert until that feature fills the closure.
     @ObservationIgnored private let shortcutAndTrigger: @MainActor ([UUID]) -> Void
 
     init(
-        report: @escaping @MainActor (FlotsamError) -> Void,
+        report: @escaping @MainActor (FlotsamError, ErrorOrigin) -> Void,
         loadContent: @escaping @MainActor (UUID) async -> FlotsamResult<ItemContent>,
         shortcutAndTrigger: @escaping @MainActor ([UUID]) -> Void
     ) {
@@ -59,12 +59,14 @@ final class OrganizeCoordinator {
     /// The inline codes: a rejected tag name, note or edit stays in the open overlay. Everything else is a HUD.
     private static let inlineCodes: Set<ErrorCode> = [.orgVal001, .orgVal002, .orgVal003, .orgLim001, .orgLim002, .orgLim003]
 
-    /// The organizer's `report` closure (FR-004-14): a rejected input shows inline, any other failure is reported.
+    /// The organizer's `report` closure (FR-004-14): a rejected input shows inline and is still logged and recorded
+    /// (FR-000-08 d), any other failure is reported as a HUD.
     func surface(_ error: FlotsamError) {
         if overlay != nil, Self.inlineCodes.contains(error.code) {
             validation = FlotsamStrings.message(for: error)
+            report(error, .inline)
         } else {
-            report(error)
+            report(error, .userInitiated)
         }
     }
 
@@ -114,7 +116,7 @@ final class OrganizeCoordinator {
                 draft = content.plainText ?? ""
                 validation = nil
                 overlay = .edit(row.id, kind: row.kind)
-            case .failure(let error): report(error)
+            case .failure(let error): report(error, .userInitiated)
             }
         }
     }
@@ -122,12 +124,14 @@ final class OrganizeCoordinator {
     private func requestDelete(_ model: LibraryViewModel) {
         let rows = model.selectedRows
         guard !rows.isEmpty else { return }
+        // What the user was asked about, re-checked when they confirm: the list can reload under an open question.
+        let asked = Set(rows.map(\.id))
         if LibraryOrganizer.deleteNeedsConfirmation(rows) {
             confirm(message: LibraryText.confirmDelete(count: rows.count), button: LibraryText.buttonDelete) {
-                _ = await model.deleteSelected()
+                _ = await model.deleteSelected(expecting: asked)
             }
         } else {
-            Task { _ = await model.deleteSelected() }
+            Task { _ = await model.deleteSelected(expecting: asked) }
         }
     }
 
@@ -139,10 +143,10 @@ final class OrganizeCoordinator {
             let hasNote = await organizer.note(of: row.id) != nil
             if LibraryOrganizer.ungroupNeedsConfirmation(row, hasNote: hasNote) {
                 confirm(message: LibraryText.string(LibraryText.confirmUngroup), button: LibraryText.buttonUngroup) {
-                    _ = await model.ungroupSelected()
+                    _ = await model.ungroupSelected(expecting: row.id)
                 }
             } else {
-                _ = await model.ungroupSelected()
+                _ = await model.ungroupSelected(expecting: row.id)
             }
         }
     }
