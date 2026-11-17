@@ -13,15 +13,28 @@ public enum FlotsamStrings {
     /// User-facing message for an error code, with `arguments` filling the catalogue placeholders in order
     /// (`%lld` for a count, `%@` for a size, duration, permission or app name).
     ///
-    /// Falls back to the SYS-INT-001 text (FRD-000 section 8) when the key is missing or when the number of
-    /// arguments does not match the placeholders. The mismatch case matters: `String(format:)` with too few
-    /// arguments reads garbage, and a wrong message is better than a crash or a corrupted one.
+    /// Falls back to the SYS-INT-001 text (FRD-000 section 8) when the key is missing, when the template has a
+    /// specifier other than `%lld`/`%@`, or when the arguments do not match the placeholders in number AND kind.
+    /// Why kind matters: `String(format:)` reads a `%@` slot as an object pointer, so an integer there crashes the
+    /// process, and a string in a `%lld` slot prints a pointer as a number. A wrong message beats either.
+    /// The result is at most 140 characters (FR-000-06): an over-long app name is cut with "…", never the template.
     public static func message(for code: ErrorCode, arguments: [MessageArgument] = []) -> String {
         guard let template = text(forKey: code.catalogueKey),
-              placeholderCount(in: template) == arguments.count
+              let kinds = placeholderKinds(in: template),
+              kinds == arguments.map(\.kind)
         else { return fallbackMessage }
         guard !arguments.isEmpty else { return template }
-        return String(format: template, arguments: arguments.map(\.formatArgument))
+
+        var nameLimit = arguments.reduce(0) { longest, argument in
+            if case .appName(let name) = argument { max(longest, name.count) } else { longest }
+        }
+        while true {
+            let rendered = String(format: template, arguments: arguments.map { $0.formatArgument(appNameLimit: nameLimit) })
+            let excess = rendered.count - maxMessageLength
+            // Nothing left to cut (no app name, or every name is already just the ellipsis): return as is.
+            if excess <= 0 || nameLimit <= 1 { return rendered }
+            nameLimit = max(1, nameLimit - excess)
+        }
     }
 
     /// User-facing message for a raised error. Placeholder values come from the error's safe context: `count`
@@ -37,14 +50,44 @@ public enum FlotsamStrings {
         text(forKey: ErrorCode.sysInt001.catalogueKey) ?? ""
     }
 
-    /// Number of format placeholders in a catalogue template; `%%` is a literal percent sign, not a placeholder.
-    static func placeholderCount(in template: String) -> Int {
-        var count = 0
-        var iterator = template.makeIterator()
-        while let character = iterator.next() {
-            guard character == "%" else { continue }
-            if iterator.next() != "%" { count += 1 }
+    /// The FR-000-06 length budget for one message.
+    static let maxMessageLength = 140
+
+    /// The kinds of the format placeholders in a catalogue template, in order; `%%` is a literal percent sign.
+    /// Nil when the template uses any specifier other than `%lld` and `%@` (positional, `%d`, `%f`, a trailing `%`),
+    /// because none of those can be checked against a `MessageArgument` and so none may reach `String(format:)`.
+    static func placeholderKinds(in template: String) -> [MessageArgumentKind]? {
+        var kinds: [MessageArgumentKind] = []
+        var rest = Substring(template)
+        while let percent = rest.firstIndex(of: "%") {
+            rest = rest[rest.index(after: percent)...]
+            if rest.hasPrefix("%") {
+                rest = rest.dropFirst()
+            } else if rest.hasPrefix("@") {
+                kinds.append(.text)
+                rest = rest.dropFirst()
+            } else if rest.hasPrefix("lld") {
+                kinds.append(.integer)
+                rest = rest.dropFirst(3)
+            } else {
+                return nil
+            }
         }
-        return count
+        return kinds
+    }
+
+    /// FR-000-05 consistency check, run against any catalogue and code list: for every non-Info code the argument
+    /// kinds the code declares (`ErrorCode.messageArgumentKinds`) equal the specifiers of its template, and the
+    /// template uses only supported specifiers. Returns one tag per violation (empty means consistent). A code with
+    /// no catalogue entry is `CatalogueConsistency`'s concern, not reported here.
+    public static func argumentKindViolations(catalogue: [String: String], codes: [ErrorCode]) -> [String] {
+        var found: [String] = []
+        for code in codes {
+            guard let template = catalogue[code.catalogueKey] else { continue }
+            if placeholderKinds(in: template) != code.messageArgumentKinds {
+                found.append("argumentKinds:\(code.catalogueKey)")
+            }
+        }
+        return found.sorted()
     }
 }

@@ -183,3 +183,16 @@ public enum ErrorCode: String, CaseIterable, Sendable {
 public enum ErrorSeverity: String, Sendable {
     case fatal, error, warning, info
 }
+
+extension ErrorCode {
+    /// The argument kinds this code's catalogue message takes, in placeholder order (FR-000-05). The one declaration
+    /// of which codes carry placeholders; `FlotsamStrings.argumentKindViolations` fails if it drifts from the
+    /// catalogue, so a mismatch is caught by the consistency check and never reaches `String(format:)` at runtime.
+    public var messageArgumentKinds: [MessageArgumentKind] {
+        switch self {
+        case .capLim001, .orgLim003, .shfLim001, .sspLim001: [.text]
+        case .capLim003: [.integer]
+        default: []
+        }
+    }
+}

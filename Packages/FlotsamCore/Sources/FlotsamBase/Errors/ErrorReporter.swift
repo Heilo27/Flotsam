@@ -23,6 +23,10 @@ struct NoticeBoard: Sendable, Equatable {
 
 /// FR-000-08 throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall.
 ///
+/// Why a surfacing time ahead of `now` counts as expired: the wall clock can step backwards (NTP, a manual change,
+/// resume from sleep). Read as a negative age it would suppress the code, and pin the HUD window full, until the clock
+/// caught up, possibly hours. A user who sets the clock back would rather see one extra notice than have errors hidden.
+///
 /// Why a rejected occurrence leaves no trace in the state: if a suppressed error reset the per-code timer, a fault
 /// that fires every 20 s would never surface again after its first appearance. Only an occurrence that actually
 /// surfaces counts.
@@ -33,10 +37,16 @@ struct SurfacingThrottle: Sendable {
     private var lastSurfaced: [ErrorCode: Date] = [:]
     private var hudTimes: [Date] = []
 
+    /// True while a surfacing at `time` still counts: 0 <= age < 60 s. A time in the future (age < 0) has expired.
+    private static func isLive(_ time: Date, now: Date) -> Bool {
+        let age = now.timeIntervalSince(time)
+        return age >= 0 && age < window
+    }
+
     mutating func admit(_ code: ErrorCode, isHUD: Bool, now: Date) -> Bool {
-        if let last = lastSurfaced[code], now.timeIntervalSince(last) < Self.window { return false }
+        if let last = lastSurfaced[code], Self.isLive(last, now: now) { return false }
         if isHUD {
-            hudTimes.removeAll { now.timeIntervalSince($0) >= Self.window }
+            hudTimes.removeAll { !Self.isLive($0, now: now) }
             if hudTimes.count >= Self.maxHUDsPerWindow { return false }
             hudTimes.append(now)
         }
