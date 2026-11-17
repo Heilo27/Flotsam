@@ -248,69 +248,82 @@ import FlotsamBase
         #expect(!s.exists(s.thumbURL(1, 256)) && !s.exists(s.thumbURL(1, 512)))
     }
 
-    /// OC-7087 (delete part). Given a files item with three real referenced files, when the user deletes it, then it goes
-    /// and the three files are untouched.
+    /// OC-7087 (delete part). Given three items, the middle one (id 2) a files item with three real referenced files, when
+    /// the user deletes it, then it goes, ids 1 and 3 remain, and the three files are untouched.
+    /// The target is deliberately not first or last in id, insertion or age order, so a positional delete cannot pass.
     @Test func oc7087_deletingFilesItemLeavesReferencedFiles() async throws {
         let s = try await Store.make()
         let refs = References()
         defer { s.cleanUp(); refs.cleanUp() }
         let files = [try refs.make("a.txt", "A"), try refs.make("b.txt", "B"), try refs.make("c.txt", "C")]
-        var item = Spec(n: 1, kind: .file, ageMs: hourMs, pinned: true)
+        var item = Spec(n: 2, kind: .file, ageMs: 2 * hourMs, pinned: true)
         item.members = files.map { ($0.path, false) }
-        try await s.insert([item, Spec(n: 2, ageMs: hourMs)])
+        try await s.insert([Spec(n: 1, ageMs: hourMs), item, Spec(n: 3, ageMs: 3 * hourMs)])
+        #expect(try s.presentIds() == [1, 2, 3], "precondition")
 
-        let removed = try await s.database.delete(ids: [Store.id(1)]).get()
+        let removed = try await s.database.delete(ids: [Store.id(2)]).get()
 
-        #expect(removed == [Store.id(1)])
-        #expect(try s.presentIds() == [2])
+        #expect(removed == [Store.id(2)])
+        #expect(try s.presentIds() == [1, 3])
         #expect(try s.count("bundleMember") == 0)
         #expect(files.map { refs.read($0) } == ["A", "B", "C"])
     }
 }
 
 @Suite struct ItemDeleteDestructiveTests {
-    /// OC-7086. Given an item that is pinned, has a trigger and has a hotkey, when the user deletes it, then it is
-    /// deleted unconditionally and the deletion event names it.
+    /// OC-7086. Given three items, the middle one pinned with a trigger and a hotkey, when the user deletes it, then it is
+    /// deleted unconditionally, items 1 and 3 remain, and the deletion event names only it.
     @Test func oc7086_userDeleteIsUnconditional() async throws {
         let s = try await Store.make()
         defer { s.cleanUp() }
-        try await s.insert([Spec(n: 1, ageMs: hourMs, pinned: true, trigger: ";all", hotkey: 3), Spec(n: 2, ageMs: hourMs)])
+        try await s.insert([
+            Spec(n: 1, ageMs: hourMs), Spec(n: 2, ageMs: 2 * hourMs, pinned: true, trigger: ";all", hotkey: 3), Spec(n: 3, ageMs: 3 * hourMs),
+        ])
+        #expect(try s.presentIds() == [1, 2, 3], "precondition")
         let events = EventCollector(s.database.events)
 
-        let removed = try await s.database.delete(ids: [Store.id(1)]).get()
+        let removed = try await s.database.delete(ids: [Store.id(2)]).get()
 
-        #expect(removed == [Store.id(1)])
-        #expect(try s.presentIds() == [2])
-        #expect(events.deletedIds == [Store.id(1)])
+        #expect(removed == [Store.id(2)])
+        #expect(try s.presentIds() == [1, 3])
+        #expect(events.deletedIds == [Store.id(2)])
     }
 
-    /// OC-7122 / OC-7123 (happy part) / OC-7125. Given a bundle with a hotkey, a trigger, two blobs, two thumbnails, three
-    /// real referenced files, and a screenshot item whose original is a real file, when both are deleted, then the event
-    /// has arrived by the time delete returns, the rows, blobs and thumbnails are gone, and every referenced file and the
-    /// original are untouched.
+    /// OC-7122 / OC-7123 (happy part) / OC-7125. Given five items, id 2 a bundle with a hotkey, a trigger, two blobs, two
+    /// thumbnails and three real referenced files, id 4 a screenshot whose original is a real file, and ids 1, 3 and 5
+    /// plain items with a blob each (id 3 with thumbnails), when ids 2 and 4 are deleted, then the event has arrived by
+    /// the time delete returns, the rows, blobs and thumbnails of 2 and 4 are gone, ids 1, 3 and 5 keep rows, blobs and
+    /// thumbnails, and every referenced file and the original are untouched.
+    /// The targets are not adjacent and not the first ids, so deleting the first N or a contiguous run cannot pass.
     @Test func oc7122_deleteCascadesRowsBlobsThumbsAndPublishesBeforeReturn() async throws {
         let s = try await Store.make()
         let refs = References()
         defer { s.cleanUp(); refs.cleanUp() }
         let files = [try refs.make("1.txt", "one"), try refs.make("2.txt", "two"), try refs.make("3.txt", "three")]
         let original = try refs.make("shot.png", "ORIGINAL")
-        var bundle = Spec(n: 1, kind: .bundle, ageMs: hourMs, trigger: ";b", hotkey: 8, blobs: 2, repBytes: 10, thumbs: true)
+        var bundle = Spec(n: 2, kind: .bundle, ageMs: 2 * hourMs, trigger: ";b", hotkey: 8, blobs: 2, repBytes: 10, thumbs: true)
         bundle.members = files.map { ($0.path, false) }
-        var shot = Spec(n: 2, kind: .screenshot, ageMs: hourMs, blobs: 1, repBytes: 10)
+        var shot = Spec(n: 4, kind: .screenshot, ageMs: 4 * hourMs, blobs: 1, repBytes: 10)
         shot.originalPath = original.path
-        try await s.insert([bundle, shot, Spec(n: 3, ageMs: hourMs, blobs: 1, repBytes: 10)])
+        try await s.insert([
+            Spec(n: 1, ageMs: hourMs, blobs: 1, repBytes: 10), bundle, Spec(n: 3, ageMs: 3 * hourMs, blobs: 1, repBytes: 10, thumbs: true),
+            shot, Spec(n: 5, ageMs: 5 * hourMs, blobs: 1, repBytes: 10),
+        ])
+        #expect(try s.presentIds() == [1, 2, 3, 4, 5], "precondition")
         let events = EventCollector(s.database.events)
 
-        let removed = try await s.database.delete(ids: [Store.id(1), Store.id(2)]).get()
+        let removed = try await s.database.delete(ids: [Store.id(2), Store.id(4)]).get()
 
-        #expect(Set(removed) == [Store.id(1), Store.id(2)])
-        #expect(events.deletedIds == [Store.id(1), Store.id(2)])
-        #expect(try s.presentIds() == [3])
-        #expect(try s.representationCount(1) == 0 && s.representationCount(2) == 0)
+        #expect(Set(removed) == [Store.id(2), Store.id(4)])
+        #expect(events.deletedIds == [Store.id(2), Store.id(4)])
+        #expect(try s.presentIds() == [1, 3, 5])
+        #expect(try s.representationCount(2) == 0 && s.representationCount(4) == 0)
+        #expect(try s.representationCount(1) == 1 && s.representationCount(3) == 1 && s.representationCount(5) == 1)
         #expect(try s.count("bundleMember") == 0)
-        #expect(!s.exists(s.blobURL(1, 1)) && !s.exists(s.blobURL(1, 2)) && !s.exists(s.blobURL(2, 1)))
-        #expect(!s.exists(s.thumbURL(1, 256)) && !s.exists(s.thumbURL(1, 512)))
-        #expect(s.exists(s.blobURL(3, 1)))
+        #expect(!s.exists(s.blobURL(2, 1)) && !s.exists(s.blobURL(2, 2)) && !s.exists(s.blobURL(4, 1)))
+        #expect(!s.exists(s.thumbURL(2, 256)) && !s.exists(s.thumbURL(2, 512)))
+        #expect(s.exists(s.blobURL(1, 1)) && s.exists(s.blobURL(3, 1)) && s.exists(s.blobURL(5, 1)))
+        #expect(s.exists(s.thumbURL(3, 256)) && s.exists(s.thumbURL(3, 512)))
         #expect(files.map { refs.read($0) } == ["one", "two", "three"])
         #expect(refs.read(original) == "ORIGINAL")
     }
@@ -360,28 +373,48 @@ import FlotsamBase
         #expect(events.deletedBatches.isEmpty)
     }
 
-    /// OC-7123. Given a blob file that cannot be removed, when the user deletes its item, then the delete still succeeds and
-    /// the item is gone; the blob file remains as an orphan, and a later reconcile after the 10 minute grace removes it.
-    @Test func oc7123_undeletableBlobDoesNotFailDeleteAndReconcileCleansItLater() async throws {
+    /// OC-7123. Given three items with a blob each and the middle item's blob file unremovable, when the user deletes the
+    /// middle item, then the delete still succeeds and the outer two remain; the blob file remains as an orphan, the
+    /// failure is logged as STO-IO-003 carrying that item's id, and a later reconcile after the 10 minute grace removes
+    /// the orphan and only the orphan.
+    /// The item numbers are unique to this test so the `itemId=` fragment in the log line is not shared with any other
+    /// test running in this process.
+    @Test("OC-7123 an undeletable blob does not fail the delete, is logged STO-IO-003 with its item, and reconcile cleans it later")
+    func oc7123_undeletableBlobDoesNotFailDeleteAndReconcileCleansItLater() async throws {
+        // given three items (ids unique to this test) and a blob of the middle one that cannot be removed
+        let first = 7_123_001, middle = 7_123_002, last = 7_123_003
         var faulty = FaultyFileSystem()
-        let stuck = Store.id(1).uuidString + ".1"
+        let stuck = Store.id(middle).uuidString + ".1"
         faulty.failRemove = { $0.lastPathComponent == stuck }
         let s = try await Store.make(fileSystem: faulty)
         defer { s.cleanUp() }
-        try await s.insert([Spec(n: 1, ageMs: hourMs, blobs: 1, repBytes: 10), Spec(n: 2, ageMs: hourMs, blobs: 1, repBytes: 10)])
+        try await s.insert([
+            Spec(n: first, ageMs: hourMs, blobs: 1, repBytes: 10), Spec(n: middle, ageMs: 2 * hourMs, blobs: 1, repBytes: 10),
+            Spec(n: last, ageMs: 3 * hourMs, blobs: 1, repBytes: 10),
+        ])
+        #expect(try s.presentIds() == [first, middle, last], "precondition")
+        let logged = ProcessLogProbe()
 
-        let removed = try await s.database.delete(ids: [Store.id(1)]).get()
+        // when the middle item is deleted
+        let removed = try await s.database.delete(ids: [Store.id(middle)]).get()
 
-        #expect(removed == [Store.id(1)])
-        #expect(try s.presentIds() == [2])
-        #expect(s.exists(s.blobURL(1, 1)))
+        // then the delete succeeds, only the middle item is gone, and its blob file is left behind
+        #expect(removed == [Store.id(middle)])
+        #expect(try s.presentIds() == [first, last])
+        #expect(s.exists(s.blobURL(middle, 1)))
+        #expect(s.exists(s.blobURL(first, 1)) && s.exists(s.blobURL(last, 1)))
+        // and the failure is logged as STO-IO-003 for this item
+        let lines = await logged.waitForEntries(containing: ["STO-IO-003", "itemId=\(Store.id(middle).uuidString)"])
+        #expect(lines.count == 1, "one STO-IO-003 line for the stuck item: saw \(lines)")
+        #expect(lines.first?.contains("left for reconcile") == true)
 
+        // and a later reconcile after the grace removes that orphan and only that orphan
         s.clock.advance(ms: 11 * 60_000)
         let healthy = try await Store.make(root: s.root, clock: s.clock)
         let outcome = try await healthy.database.reconcile().get()
 
         #expect(outcome.orphanBlobsRemoved == 1)
-        #expect(!s.exists(s.blobURL(1, 1)))
-        #expect(s.exists(s.blobURL(2, 1)))
+        #expect(!s.exists(s.blobURL(middle, 1)))
+        #expect(s.exists(s.blobURL(first, 1)) && s.exists(s.blobURL(last, 1)))
     }
 }

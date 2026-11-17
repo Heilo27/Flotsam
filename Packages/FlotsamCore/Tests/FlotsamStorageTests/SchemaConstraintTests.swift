@@ -140,42 +140,52 @@ struct SchemaConstraintTests {
     }
 
     // OC-7016: removing ON DELETE CASCADE from any child, or cascading from itemTag to tag, turns this red.
-    @Test("OC-7016 deleting an item removes its children but leaves tags and other items' tag links")
+    @Test("OC-7016 deleting the middle item removes its children but leaves tags and both neighbours intact")
     func deleteCascades() async throws {
-        // given X with 2 representations, 3 members, tags T1 and T2; Y shares T1
+        // given W, X, Z in that order; X (the middle) has 2 representations, 3 members, tags T1 and T2; W and Z each
+        // have children and share T1 with X
         let store = try await Store.make()
         defer { store.cleanUp() }
-        try await store.insert(Spec(n: 1, blobs: 2, repBytes: 10, members: [("/a", false), ("/b", false), ("/c", true)]))
-        try await store.insert(Spec(n: 2, blobs: 1, repBytes: 10))
-        try await store.addTags(["T1", "T2"], onItem: 1)
+        try await store.insert(Spec(n: 1, blobs: 1, repBytes: 10, members: [("/w", false)]))
+        try await store.insert(Spec(n: 2, blobs: 2, repBytes: 10, members: [("/a", false), ("/b", false), ("/c", true)]))
+        try await store.insert(Spec(n: 3, blobs: 1, repBytes: 10, members: [("/z1", false), ("/z2", false)]))
+        try await store.addTags(["T1", "T2"], onItem: 2)
         try await store.database.pool.write { db in
-            try db.execute(
-                sql: "INSERT INTO itemTag (itemId, tagId) SELECT ?, id FROM tag WHERE name = 'T1'",
-                arguments: [Store.id(2).uuidString])
+            for n in [1, 3] {
+                try db.execute(
+                    sql: "INSERT INTO itemTag (itemId, tagId) SELECT ?, id FROM tag WHERE name = 'T1'",
+                    arguments: [Store.id(n).uuidString])
+            }
         }
-        #expect(try store.representationCount(1) == 2)
-        #expect(try store.memberRows(1) == 3)
-        #expect(try store.tagLinks(1) == 2)
+        #expect(try store.presentIds() == [1, 2, 3], "precondition")
+        #expect(try store.representationCount(2) == 2)
+        #expect(try store.memberRows(2) == 3)
+        #expect(try store.tagLinks(2) == 2)
 
-        // when X is deleted
-        let removed = try await store.database.delete(ids: [Store.id(1)]).get()
+        // when X (the middle item) is deleted
+        let removed = try await store.database.delete(ids: [Store.id(2)]).get()
 
-        // then only X is removed and its children go with it
-        #expect(removed == [Store.id(1)])
-        #expect(try store.count("item") == 1)
-        #expect(try store.representationCount(1) == 0)
-        #expect(try store.memberRows(1) == 0)
-        #expect(try store.tagLinks(1) == 0)
+        // then only X is removed, its children go with it, and the full remaining set is W and Z
+        #expect(removed == [Store.id(2)])
+        #expect(try store.presentIds() == [1, 3])
+        #expect(try store.count("item") == 2)
+        #expect(try store.representationCount(2) == 0)
+        #expect(try store.memberRows(2) == 0)
+        #expect(try store.tagLinks(2) == 0)
         // and the tag rows are untouched
         #expect(try store.count("tag") == 2)
-        // and Y keeps its link to T1, its representation and no others
-        let yTags = try await store.reader().read {
-            try String.fetchAll(
-                $0, sql: "SELECT tag.name FROM itemTag JOIN tag ON tag.id = itemTag.tagId WHERE itemTag.itemId = ?",
-                arguments: [Store.id(2).uuidString])
+        // and each neighbour keeps its link to T1 only, its representations and its members
+        for n in [1, 3] {
+            let tags = try await store.reader().read {
+                try String.fetchAll(
+                    $0, sql: "SELECT tag.name FROM itemTag JOIN tag ON tag.id = itemTag.tagId WHERE itemTag.itemId = ?",
+                    arguments: [Store.id(n).uuidString])
+            }
+            #expect(tags == ["T1"], "neighbour \(n) tag links")
+            #expect(try store.representationCount(n) == 1, "neighbour \(n) representations")
         }
-        #expect(yTags == ["T1"])
-        #expect(try store.representationCount(2) == 1)
+        #expect(try store.memberRows(1) == 1)
+        #expect(try store.memberRows(3) == 2)
     }
 
     // OC-7019: not writing the version mirror, or not stamping the sweep, turns this red.

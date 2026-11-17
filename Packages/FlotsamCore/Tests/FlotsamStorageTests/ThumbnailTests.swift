@@ -17,8 +17,8 @@ import FlotsamBase
     }
 
     /// Ingests a 1200x800 PNG and waits for the post-commit warm-up to put both thumbnails on disk.
-    private func ingestWarmed(_ rig: Rig) async throws -> UUID {
-        let id = try await rig.create(rig.image("img", TestImage.make(width: 1200, height: 800, format: .png)))
+    private func ingestWarmed(_ rig: Rig, key: String = "img", width: Int = 1200, height: Int = 800) async throws -> UUID {
+        let id = try await rig.create(rig.image(key, TestImage.make(width: width, height: height, format: .png)))
         let warmed = await waitUntil { rig.store.exists(thumbPath(rig, id, 256)) && rig.store.exists(thumbPath(rig, id, 512)) }
         try #require(warmed, "warm-up never wrote both thumbnails")
         return id
@@ -79,31 +79,41 @@ import FlotsamBase
         #expect(try Data(contentsOf: thumbPath(rig, id, 512)) == served)
     }
 
-    /// OC-7129. Given two items with warm thumbnails in the memory cache and on disk, when one is deleted, then its
-    /// thumbnail files are gone, asking for its thumbnail again returns nothing (the memory cache was evicted too),
-    /// and the other item's thumbnails are untouched.
-    @Test("OC-7129 delete removes thumbnail files and evicts the cache, survivor keeps both")
+    /// OC-7129. Given three items with warm thumbnails on disk and the middle one's in the memory cache, when the
+    /// middle one is deleted, then its thumbnail files are gone, asking for its thumbnail again returns nothing (the
+    /// memory cache was evicted too), and both neighbours keep their thumbnails and blobs.
+    @Test("OC-7129 delete removes thumbnail files and evicts the cache, both neighbours keep theirs")
     func oc7129_deleteDiscardsThumbnails() async throws {
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
+        // given three ingested items, the doomed one in the middle
+        let first = try await ingestWarmed(rig, key: "img-1", width: 640, height: 480)
         let doomed = try await ingestWarmed(rig)
-        let survivor = try await rig.create(rig.image("img-2", TestImage.make(width: 640, height: 480, format: .png)))
-        let warmed = await waitUntil { rig.store.exists(thumbPath(rig, survivor, 256)) && rig.store.exists(thumbPath(rig, survivor, 512)) }
-        try #require(warmed)
+        let third = try await ingestWarmed(rig, key: "img-3", width: 800, height: 600)
+        let survivors = [first, third]
+        let idsBefore = try await rig.store.reader().read { try String.fetchAll($0, sql: "SELECT id FROM item") }
+        #expect(Set(idsBefore) == Set([first, doomed, third].map(\.uuidString)), "precondition")
+        let blobsBefore = rig.blobFiles().count
         // Prime the memory cache of the instance that will do the deleting.
         _ = await rig.store.database.thumbnail(itemId: doomed, size: .grid)
         _ = await rig.store.database.thumbnail(itemId: doomed, size: .preview)
 
+        // when the middle item is deleted
         let deleted = try await rig.store.database.delete(ids: [doomed]).get()
 
+        // then only the middle item is gone, and the whole remaining set is the two neighbours
         #expect(deleted == [doomed])
-        #expect(try rig.itemCount() == 1)
+        let idsAfter = try await rig.store.reader().read { try String.fetchAll($0, sql: "SELECT id FROM item") }
+        #expect(Set(idsAfter) == Set(survivors.map(\.uuidString)))
+        #expect(try rig.itemCount() == 2)
         #expect(!rig.store.exists(thumbPath(rig, doomed, 256)))
         #expect(!rig.store.exists(thumbPath(rig, doomed, 512)))
         #expect(await rig.store.database.thumbnail(itemId: doomed, size: .grid) == nil)
         #expect(await rig.store.database.thumbnail(itemId: doomed, size: .preview) == nil)
-        #expect(rig.store.exists(thumbPath(rig, survivor, 256)))
-        #expect(rig.store.exists(thumbPath(rig, survivor, 512)))
-        #expect(rig.blobFiles().count == 1)
+        for survivor in survivors {
+            #expect(rig.store.exists(thumbPath(rig, survivor, 256)), "neighbour 256 thumb")
+            #expect(rig.store.exists(thumbPath(rig, survivor, 512)), "neighbour 512 thumb")
+        }
+        #expect(rig.blobFiles().count == blobsBefore - 1)
     }
 }

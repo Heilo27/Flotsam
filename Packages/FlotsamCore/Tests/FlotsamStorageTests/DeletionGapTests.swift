@@ -15,24 +15,25 @@ import FlotsamBase
     /// OC-7128. Given bundle B referencing files F1..F3, when B is deleted (what ungroup does to B), then B and its
     /// member rows are gone, the other item survives, and F1..F3 still exist byte-identical.
     /// Red if deletion follows a bundle member path and removes the file, or leaves member rows behind.
-    @Test("OC-7128 deleting a bundle leaves every referenced file byte-identical")
+    @Test("OC-7087 OC-7128 deleting a bundle leaves every referenced file byte-identical and both neighbours present")
     func oc7128_deletingBundleKeepsReferencedFiles() async throws {
-        // given a bundle of three real files held by reference (one is binary) and an unrelated item
+        // given a bundle of three real files held by reference (one is binary) sitting between two unrelated items
         let store = try await Store.make()
         let refs = References()
         defer { store.cleanUp(); refs.cleanUp() }
         let files = [try refs.make("f1.txt", "first file"), try refs.make("f2.txt", "second\nfile"), try refs.make("f3.bin", "\u{0}\u{1}third")]
-        var bundle = Spec(n: 1, kind: .bundle, ageMs: hourMs)
+        var bundle = Spec(n: 2, kind: .bundle, ageMs: 2 * hourMs)
         bundle.members = files.map { ($0.path, false) }
-        try await store.insert([bundle, Spec(n: 2, ageMs: hourMs)])
+        try await store.insert([Spec(n: 1, ageMs: hourMs), bundle, Spec(n: 3, ageMs: 3 * hourMs)])
+        #expect(try store.presentIds() == [1, 2, 3], "precondition")
         #expect(try store.count("bundleMember") == 3)
 
-        // when the bundle item is deleted
-        let removed = try await store.database.delete(ids: [Store.id(1)]).get()
+        // when the middle item (the bundle) is deleted
+        let removed = try await store.database.delete(ids: [Store.id(2)]).get()
 
-        // then B is absent, its member rows are gone, the other item stays, and each file is untouched
-        #expect(removed == [Store.id(1)])
-        #expect(try store.presentIds() == [2])
+        // then only the bundle is absent, its member rows are gone, both neighbours stay, and each file is untouched
+        #expect(removed == [Store.id(2)])
+        #expect(try store.presentIds() == [1, 3])
         #expect(try store.count("bundleMember") == 0)
         #expect(files.map { refs.read($0) } == ["first file", "second\nfile", "\u{0}\u{1}third"])
         #expect(files.allSatisfy { store.exists($0) })

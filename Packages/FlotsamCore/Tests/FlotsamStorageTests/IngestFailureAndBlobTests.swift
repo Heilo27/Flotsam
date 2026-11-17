@@ -91,41 +91,45 @@ import FlotsamBase
 
     // MARK: OC-7023
 
-    /// OC-7023. Given a blob renamed into blobs/ whose transaction never committed (the process died), when the store is
-    /// reopened and reconcile runs after the blob is over 10 minutes old, then the file is gone, no row references it,
-    /// the healthy item's blob stays, and STO-IO-003 was logged.
-    /// Weak half: the log line carries no item id, and other suites log the same code in this process, so the log
-    /// assertion can only prove "at least one more STO-IO-003 line appeared"; the file and row assertions carry the test.
-    @Test("OC-7023 an orphan left by a killed ingest is removed by reconcile and logged")
+    /// OC-7023. Given three blobs renamed into blobs/ whose transactions never committed (the process died), when the
+    /// store is reopened and reconcile runs after they are over 10 minutes old, then all three files are gone, no row
+    /// references them, the healthy item's blob stays, and STO-IO-003 "Orphan blob removed" was logged at least three
+    /// times (once per orphan).
+    /// The orphan log line carries no context (no id, no blob name), so it cannot be matched to this test's uuids. The
+    /// bound is therefore "at least 3 lines of that exact code and message since this test started": the only way to
+    /// reach 3 is the reconcile in this test removing three orphans; if the code changes, no line matches at all.
+    @Test("OC-7023 OC-7113 orphans left by a killed ingest are removed by reconcile and logged STO-IO-003")
     func oc7023_killedIngestOrphanIsReconciled() async throws {
-        // given one stored image and a blob written by an ingest that died before its transaction
+        // given one stored image and three blobs written by ingests that died before their transactions
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         let kept = try await rig.create(rig.image("k-7023-kept", TestImage.make(width: 40, height: 40, format: .png)))
         let keptBlob = try #require(try rig.reps(kept).first)
-        let orphanId = UUID()
-        let orphanName = try rig.store.database.blobs.write(Data("died-before-commit".utf8), itemId: orphanId, ordinal: 0).get()
-        let orphanURL = rig.store.blobsDir.appendingPathComponent(orphanName)
-        #expect(rig.store.exists(orphanURL))
+        let orphanNames = try (0..<3).map {
+            try rig.store.database.blobs.write(Data("died-before-commit-\($0)".utf8), itemId: UUID(), ordinal: 0).get()
+        }
+        let orphanURLs = orphanNames.map { rig.store.blobsDir.appendingPathComponent($0) }
+        #expect(orphanURLs.allSatisfy { rig.store.exists($0) }, "precondition")
         #expect(try rig.store.count("representation") == 1)
-        let logged = LogProbe()
+        let logged = ProcessLogProbe()
 
-        // when 9 minutes pass, reconcile leaves it alone; when it is 11 minutes old, reconcile removes it
+        // when 9 minutes pass, reconcile leaves them alone; when they are 11 minutes old, reconcile removes them
         rig.store.clock.advance(ms: 9 * 60_000)
         let early = try await rig.store.database.reconcile().get()
         #expect(early.orphanBlobsRemoved == 0)
-        #expect(rig.store.exists(orphanURL))
+        #expect(orphanURLs.allSatisfy { rig.store.exists($0) })
         rig.store.clock.advance(ms: 2 * 60_000)
         let late = try await rig.store.database.reconcile().get()
 
-        // then the orphan is gone and nothing else is
-        #expect(late.orphanBlobsRemoved == 1)
-        #expect(!rig.store.exists(orphanURL))
+        // then the orphans are gone and nothing else is
+        #expect(late.orphanBlobsRemoved == 3)
+        #expect(orphanURLs.allSatisfy { !rig.store.exists($0) })
         #expect(rig.blobFiles() == [keptBlob.blobName])
         #expect(try rig.reps(kept) == [keptBlob])
         #expect(try rig.store.count("representation") == 1)
         #expect(try rig.store.count("item") == 1)
-        #expect(await logged.sawNewLine(containing: "STO-IO-003"))
+        let lines = await logged.waitForEntries(atLeast: 3, containing: ["STO-IO-003", "Orphan blob removed by reconcile"])
+        #expect(lines.count >= 3, "orphan removals logged as STO-IO-003: saw \(lines.count)")
     }
 
     // MARK: OC-7025
@@ -235,21 +239,31 @@ import FlotsamBase
 
 private extension Int64 { var asInt: Int { Int(self) } }
 
-/// Counts STO-IO-003 lines this process has logged, so a test can see whether its own action added one. Other suites in
-/// the same process log the same code, so this proves presence of a new line, not whose line it was.
-private struct LogProbe {
+/// Reads this process's own os_log entries written since the probe was created. The log is process-wide and Swift
+/// Testing runs suites in parallel, so a test must match a fragment unique to its own action (an item id, a count no
+/// other test produces) or use a lower bound ("at least N lines") that only its own action can reach.
+struct ProcessLogProbe {
     private let start = Date()
 
-    func sawNewLine(containing code: String) async -> Bool {
-        guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else { return false }
+    /// Composed messages of this process's log entries since `start` that contain every fragment.
+    func entries(containing fragments: [String]) -> [String] {
+        guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else { return [] }
+        let position = store.position(date: start.addingTimeInterval(-1))
+        let all = (try? store.getEntries(at: position)) ?? AnySequence([])
+        return all.compactMap { ($0 as? OSLogEntryLog)?.composedMessage }.filter { message in
+            fragments.allSatisfy { message.contains($0) }
+        }
+    }
+
+    /// Polls up to five seconds for at least `atLeast` entries containing every fragment; returns what it saw last.
+    func waitForEntries(atLeast: Int = 1, containing fragments: [String]) async -> [String] {
         let deadline = Date().addingTimeInterval(5)
+        var seen: [String] = []
         repeat {
-            let position = store.position(date: start.addingTimeInterval(-1))
-            let predicate = NSPredicate(format: "composedMessage CONTAINS %@", code)
-            let entries = (try? store.getEntries(at: position, matching: predicate)) ?? AnySequence([])
-            if entries.contains(where: { ($0 as? OSLogEntryLog)?.composedMessage.contains(code) == true }) { return true }
+            seen = entries(containing: fragments)
+            if seen.count >= atLeast { return seen }
             try? await Task.sleep(nanoseconds: 100_000_000)
         } while Date() < deadline
-        return false
+        return seen
     }
 }
