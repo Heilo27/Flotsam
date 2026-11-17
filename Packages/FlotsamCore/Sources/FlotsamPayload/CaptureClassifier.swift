@@ -118,9 +118,8 @@ public enum CaptureClassifier {
         let kind: ItemKind
         if members.count > 1 {
             kind = .bundle
-        } else if let only = members.first, only.isDirectory,
-                  (try? URL(fileURLWithPath: only.path).resourceValues(forKeys: [.isPackageKey]).isPackage) != true {
-            kind = .folder
+        } else if let only = members.first {
+            kind = memberKind(path: only.path, isDirectory: only.isDirectory)
         } else {
             kind = .file
         }

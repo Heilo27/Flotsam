@@ -96,8 +96,11 @@ public struct LibraryFooter: Equatable {
     public let countText: String
     /// "Press ⌘V to paste" when Accessibility is off; "Select one item to paste" while several rows are selected.
     public let notice: String?
+    /// The active sort's name, shown beside the count (FR-004-12).
+    public let sortName: String
 
-    public init(totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool) {
+    public init(totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool, sort: LibrarySort) {
+        sortName = LibraryText.sortName(sort)
         let multi = selectionCount >= 2
         if multi {
             hints = [Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClearSelection"))]

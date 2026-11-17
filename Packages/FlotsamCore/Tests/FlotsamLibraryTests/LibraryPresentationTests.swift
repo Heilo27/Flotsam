@@ -57,21 +57,21 @@ import Testing
     }
 
     @Test func footerShowsThreeHintsAndTheCount() {
-        let footer = LibraryFooter(totalCount: 12, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true)
+        let footer = LibraryFooter(totalCount: 12, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
         #expect(footer.hints.count == 3)
         #expect(footer.countText == "12 items")
         #expect(footer.notice == nil)
-        #expect(LibraryFooter(totalCount: 1, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true).countText == "1 item")
+        #expect(LibraryFooter(totalCount: 1, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent).countText == "1 item")
     }
 
     @Test func footerShowsTheCopyOnlyNoticeWithoutAccessibility() {
-        let footer = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: true, isAccessibilityTrusted: false)
+        let footer = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: true, isAccessibilityTrusted: false, sort: .recent)
         #expect(footer.notice == "Press ⌘V to paste")
         #expect(footer.hints.contains { $0.label == "Close" })
     }
 
     @Test func footerForAMultiSelectionCountsAndDisablesPaste() {
-        let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isPreviewOpen: false, isAccessibilityTrusted: true)
+        let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
         #expect(footer.countText == "3 selected")
         #expect(footer.notice == "Select one item to paste")
     }
