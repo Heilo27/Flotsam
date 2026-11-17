@@ -6,6 +6,9 @@ public enum ErrorOrigin: Sendable, Equatable {
     case userInitiated
     /// Capture, screenshot pickup, retention and other work the user did not just ask for: a Notice and a badge.
     case background
+    /// The user's input was rejected and the view that took it shows the message in place (ORG-VAL, ORG-LIM, TRG-VAL):
+    /// logged and recorded like any Warning or Error, but never a HUD or a Notice (FR-000-08 d).
+    case inline
 }
 
 /// The newest-first list behind menu bar, Notices (FR-000-08 b): at most 10, memory only.
@@ -93,9 +96,13 @@ public actor ErrorReporter {
             await presenter.presentFatal(error)
         case .warning, .error:
             ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))
+            // The caller shows an inline message itself; surfacing it again would also spend the HUD throttle.
+            guard origin != .inline else { return }
             guard throttle.admit(error.code, isHUD: origin == .userInitiated, now: now) else { return }
             let message = FlotsamStrings.message(for: error)
             switch origin {
+            case .inline:
+                return
             case .userInitiated:
                 await presenter.showHUD(message: message)
             case .background:

@@ -45,6 +45,7 @@ public final class LibraryViewModel {
     @ObservationIgnored private let host: any PasteHost
     @ObservationIgnored private let preferences: any LibraryPreferences
     @ObservationIgnored private let effects: LibraryEffects
+    @ObservationIgnored private let organizer: LibraryOrganizer?
 
     // MARK: Private state
 
@@ -64,13 +65,15 @@ public final class LibraryViewModel {
 
     public init(
         source: any LibraryDataSource, paster: any PastePerforming, host: any PasteHost,
-        preferences: any LibraryPreferences, effects: LibraryEffects = LibraryEffects()
+        preferences: any LibraryPreferences, effects: LibraryEffects = LibraryEffects(),
+        organizer: LibraryOrganizer? = nil
     ) {
         self.source = source
         self.paster = paster
         self.host = host
         self.preferences = preferences
         self.effects = effects
+        self.organizer = organizer
         viewMode = preferences.viewMode
         sort = preferences.sort
     }
@@ -92,8 +95,11 @@ public final class LibraryViewModel {
     public func footer(now: Date = Date()) -> LibraryFooter {
         LibraryFooter(
             totalCount: totalCount, selectionCount: selection.count, isPreviewOpen: isPreviewOpen,
-            isAccessibilityTrusted: effects.isAccessibilityTrusted())
+            isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort)
     }
+
+    /// The active sort, for the header's sort menu (FR-004-12).
+    public var activeSort: LibrarySort { sort }
 
     public func rowPresentations(now: Date = Date()) -> [LibraryRowPresentation] {
         visibleRows.enumerated().map { LibraryRowPresentation(row: $1, position: $0, now: now) }
@@ -158,7 +164,39 @@ public final class LibraryViewModel {
         startReload(interval: nil)
     }
 
-    private func startReload(interval: PerfInterval?) {
+    /// What a finished first-page load does with the selection.
+    private enum SelectionPolicy {
+        /// Select the first row (open, search, filter).
+        case reset
+        /// Keep these rows selected where they are still listed; fall back to the first row when none are.
+        case keep(Set<UUID>)
+    }
+
+    /// Reloads the list after an Organize command changed it (storage publishes `.itemsChanged`, but this model does not
+    /// subscribe to it). The scroll position stays. `selecting` names the rows to select afterwards; nil keeps the
+    /// current selection. Rows no longer listed drop out of it (FR-004-13).
+    public func refresh(selecting ids: [UUID]? = nil) async {
+        startReload(interval: nil, selection: .keep(ids.map(Set.init) ?? selection))
+        await loadTask?.value
+    }
+
+    /// The row to select once `ids` are deleted: the first remaining row after the last deleted one in list order, else
+    /// the last remaining row before it, else nil (FR-004-09).
+    public static func selectionAfterDeleting(_ ids: Set<UUID>, in rows: [ItemRow]) -> UUID? {
+        guard let lastDeleted = rows.lastIndex(where: { ids.contains($0.id) }) else { return nil }
+        if let after = rows[(lastDeleted + 1)...].first(where: { !ids.contains($0.id) }) { return after.id }
+        return rows[..<lastDeleted].last(where: { !ids.contains($0.id) })?.id
+    }
+
+    /// ⌘S (FR-004-12): the next sort, remembered, list back at its top.
+    public func cycleSort() {
+        sort = sort.next
+        preferences.sort = sort
+        scrollResetToken += 1
+        startReload(interval: nil)
+    }
+
+    private func startReload(interval: PerfInterval?, selection policy: SelectionPolicy = .reset) {
         loadTask?.cancel()
         generation += 1
         isFetchingPage = false
@@ -173,11 +211,13 @@ public final class LibraryViewModel {
             let (page, counts) = await (pageResult, countsResult)
             span?.end()
             guard !Task.isCancelled, generation == self.generation else { return }
-            applyFirstPage(page, counts: counts)
+            applyFirstPage(page, counts: counts, selection: policy)
         }
     }
 
-    private func applyFirstPage(_ page: FlotsamResult<ItemPage>, counts: FlotsamResult<SidebarCounts>) {
+    private func applyFirstPage(
+        _ page: FlotsamResult<ItemPage>, counts: FlotsamResult<SidebarCounts>, selection policy: SelectionPolicy
+    ) {
         if case .success(let counts) = counts { sidebar = counts }
         switch page {
         case .failure(let error):
@@ -188,17 +228,34 @@ public final class LibraryViewModel {
             totalCount = page.totalCount
             loadedPage = page.page
             hasMorePages = page.hasMore
-            visibleLimit = Self.rowsPerStep
+            switch policy {
+            case .reset: visibleLimit = Self.rowsPerStep
+            case .keep: visibleLimit = max(Self.rowsPerStep, min(visibleLimit, page.rows.count))
+            }
             loadState = .loaded
-            if let first = page.rows.first {
+            applySelection(policy, rows: page.rows)
+            refreshPreview()
+        }
+    }
+
+    private func applySelection(_ policy: SelectionPolicy, rows: [ItemRow]) {
+        var kept: Set<UUID> = []
+        if case .keep(let wanted) = policy { kept = Set(rows.map(\.id)).intersection(wanted) }
+        if kept.isEmpty {
+            if let first = rows.first {
                 selectOnly(first.id)
             } else {
                 selection = []
                 cursor = nil
                 anchor = nil
             }
-            refreshPreview()
+            return
         }
+        // A kept row below the first 50 must be on screen to stay selected.
+        if let deepest = rows.lastIndex(where: { kept.contains($0.id) }) { visibleLimit = max(visibleLimit, deepest + 1) }
+        selection = kept
+        if cursor.map({ !kept.contains($0) }) ?? true { cursor = rows.first { kept.contains($0.id) }?.id }
+        if anchor.map({ !kept.contains($0) }) ?? true { anchor = cursor }
     }
 
     /// Shows 50 more rows, fetching the next storage page when the loaded ones run out (FR-003-05).
@@ -330,6 +387,7 @@ public final class LibraryViewModel {
         case .toggleViewMode: toggleViewMode()
         case .revealInFinder: reveal()
         case .openSettings: effects.openSettings()
+        case .external(.cycleSort): cycleSort()
         case .external(let command): effects.external(command, selectedRows.map(\.id))
         }
     }
@@ -390,6 +448,97 @@ public final class LibraryViewModel {
             if error.code == .libIo001 { startReload(interval: nil) }
         }
     }
+
+    // MARK: Organize (FRD-004)
+
+    /// Each command runs through the organizer, then refreshes the list on success. A failure is reported by the
+    /// organizer and leaves the list as it was (FR-004-14). Nil also when no organizer was supplied.
+    private func organize<T>(selecting ids: (T) -> [UUID]? = { _ in nil }, _ action: (LibraryOrganizer) async -> T?) async -> T? {
+        guard let organizer, let result = await action(organizer) else { return nil }
+        await refresh(selecting: ids(result))
+        return result
+    }
+
+    /// Pin or unpin the selection: all pinned, or all unpinned (FR-004-01). Returns the state applied.
+    public func togglePinSelected() async -> Bool? {
+        let ids = Array(selection)
+        guard !ids.isEmpty else { return nil }
+        return await organize { await $0.togglePin(ids) }
+    }
+
+    /// Whether Pin on a context menu opened on row `id` would unpin (FR-004-01): the action covers the selection when the
+    /// row is in it, else just the row, and unpins only when every item it covers is pinned (any unpinned one: pin all).
+    public func pinActionUnpins(menuRowID id: UUID, isPinned: Bool) -> Bool {
+        guard selection.contains(id) else { return isPinned }
+        let covered = selectedRows
+        return !covered.isEmpty && covered.allSatisfy(\.isPinned)
+    }
+
+    /// Tag or untag the selection with an existing tag (FR-004-02). Returns true when the tag was applied.
+    public func toggleTagOnSelection(_ tagId: Int64) async -> Bool? {
+        let ids = Array(selection)
+        guard !ids.isEmpty else { return nil }
+        return await organize { await $0.toggleTag(tagId, on: ids) }
+    }
+
+    public func createTagOnSelection(name: String, color: TagColor = .default) async -> Int64? {
+        let ids = Array(selection)
+        return await organize { await $0.createTag(name: name, color: color, applyingTo: ids) }
+    }
+
+    public func renameTag(_ tagId: Int64, to name: String) async -> Bool {
+        await organize { await $0.renameTag(tagId, to: name) ? true : nil } ?? false
+    }
+
+    public func recolorTag(_ tagId: Int64, to color: TagColor) async -> Bool {
+        await organize { await $0.recolorTag(tagId, to: color) ? true : nil } ?? false
+    }
+
+    /// Removes the tag from every item; the items stay. Returns how many carried it. A list filtered to the tag falls
+    /// back to All, since the tag is gone.
+    public func deleteTag(_ tagId: Int64) async -> Int? {
+        let wasFiltered = filter == .tag(tagId)
+        if wasFiltered { filter = .all }
+        let removed = await organize { await $0.deleteTag(tagId) }
+        if removed == nil, wasFiltered { filter = .tag(tagId) }
+        return removed
+    }
+
+    public func saveNote(_ note: String?, for id: UUID) async -> Bool {
+        await organize { await $0.setNote(note, for: id) ? true : nil } ?? false
+    }
+
+    /// The new kind of the edited selected item (FR-004-07); nil when nothing is selected or the edit was rejected.
+    public func saveEdit(text: String) async -> ItemKind? {
+        guard let id = selectedRow?.id else { return nil }
+        return await organize { await $0.editText(id: id, to: text) }
+    }
+
+    /// Replaces the selected bundle with its members and selects them (FR-004-11).
+    ///
+    /// `expecting` is the bundle the user was asked about. A confirmation stays open while the list can still reload,
+    /// so at confirm time the selection may no longer be that bundle; then nothing happens, rather than ungrouping a
+    /// different bundle the user never confirmed. Nil means "whatever is selected now" (no question was asked).
+    public func ungroupSelected(expecting bundle: UUID? = nil) async -> [UUID]? {
+        guard let id = selectedRow?.id else { return nil }
+        if let bundle, selection != [bundle] { return nil }
+        return await organize(selecting: { $0 }) { await $0.ungroup(bundle: id) }
+    }
+
+    /// Deletes the selection and selects the row after the last one removed (FR-004-09). The caller confirms first when
+    /// `LibraryOrganizer.deleteNeedsConfirmation` says so. `expecting` is the selection the user confirmed: when the
+    /// selection has changed since, nothing is deleted (a delete is permanent, FR-004-09). Nil means "the selection
+    /// now".
+    public func deleteSelected(expecting confirmed: Set<UUID>? = nil) async -> [UUID]? {
+        let ids = selection
+        guard !ids.isEmpty else { return nil }
+        if let confirmed, ids != confirmed { return nil }
+        let next = Self.selectionAfterDeleting(ids, in: loadedRows)
+        return await organize(selecting: { _ in next.map { [$0] } }) { await $0.delete(Array(ids)) }
+    }
+
+    /// How many selected items carry each tag, for the tag menu's all, some or none marks.
+    public func tagMembershipOfSelection() async -> [Int64: Int] { await organizer?.tagMembership(of: Array(selection)) ?? [:] }
 
     // MARK: Preview
 

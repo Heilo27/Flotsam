@@ -29,6 +29,12 @@ public enum LibraryFilter: Sendable, Equatable, Hashable {
 /// The sort model (FRD-004 FR-004-12). Every sort ends in the same stable tie-break, so repeated loads agree.
 public enum LibrarySort: String, Sendable, Equatable, CaseIterable {
     case recent, oldest, mostUsed, alphabetical
+
+    /// ⌘S cycles in declaration order: Recent, Oldest, Most Used, A to Z, then back to Recent (FR-004-12).
+    public var next: LibrarySort {
+        let all = Self.allCases
+        return all[(all.firstIndex(of: self).map { $0 + 1 } ?? 0) % all.count]
+    }
 }
 
 /// One request to the query layer (FR-007-18): filter, search text and sort, for one page.

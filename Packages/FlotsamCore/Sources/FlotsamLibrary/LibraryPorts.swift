@@ -29,8 +29,8 @@ extension PasteService: PastePerforming {}
 public protocol LibraryPreferences: Sendable {
     var viewMode: LibraryViewMode { get nonmutating set }
     var panelSize: PanelSize { get nonmutating set }
-    /// The sort FRD-004 FR-004-12 persists; the Library only reads it.
-    var sort: LibrarySort { get }
+    /// The sort FR-004-12 remembers: ⌘S writes it, the panel reads it on open.
+    var sort: LibrarySort { get nonmutating set }
 }
 
 public struct SettingsLibraryPreferences: LibraryPreferences {
@@ -48,7 +48,10 @@ public struct SettingsLibraryPreferences: LibraryPreferences {
         nonmutating set { settings.set(newValue, for: SettingKeys.libraryPanelSize) }
     }
 
-    public var sort: LibrarySort { settings.value(SettingKeys.librarySort) }
+    public var sort: LibrarySort {
+        get { settings.value(SettingKeys.librarySort) }
+        nonmutating set { settings.set(newValue, for: SettingKeys.librarySort) }
+    }
 }
 
 /// Everything the view model asks of its surroundings that is not storage or paste: error reporting, Finder, Settings,

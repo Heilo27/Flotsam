@@ -7,6 +7,7 @@ import SwiftUI
 /// preview pane on the right when open, the footer at the bottom. All state and behaviour live in `LibraryViewModel`.
 struct LibraryView: View {
     let model: LibraryViewModel
+    let organize: OrganizeCoordinator
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -14,7 +15,7 @@ struct LibraryView: View {
             searchField
             Divider()
             HStack(spacing: 0) {
-                LibrarySidebar(model: model)
+                LibrarySidebar(model: model, organize: organize)
                     .frame(width: 170)
                 Divider()
                 content
@@ -27,9 +28,14 @@ struct LibraryView: View {
             Divider()
             LibraryFooterView(model: model)
         }
+        .overlay { OrganizeOverlayHost(organize: organize, model: model) }
         .onAppear { searchFocused = true }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-            searchFocused = true
+            if !organize.isOverlayOpen { searchFocused = true }
+        }
+        // The overlay's field had the focus; hand it back to search when the overlay closes.
+        .onChange(of: organize.isOverlayOpen) { _, open in
+            if !open { searchFocused = true }
         }
     }
 
@@ -107,6 +113,7 @@ struct LibraryStateView: View {
 
 struct LibrarySidebar: View {
     let model: LibraryViewModel
+    let organize: OrganizeCoordinator
 
     var body: some View {
         let entries = model.sidebarEntries
@@ -143,6 +150,26 @@ struct LibrarySidebar: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(model.filter == entry.filter ? .isSelected : [])
+                .contextMenu { tagMenu(for: entry) }
+            }
+        }
+    }
+}
+
+extension LibrarySidebar {
+    /// Rename, Colour and Delete on a tag entry (FR-004-04); the other entries have no menu.
+    @ViewBuilder
+    fileprivate func tagMenu(for entry: SidebarEntry) -> some View {
+        if case .tag(let id) = entry.filter {
+            Button(LibraryText.string(LibraryText.menuRename)) { organize.renameTag(id: id, currentName: entry.title) }
+            Menu(LibraryText.string(LibraryText.menuColor)) {
+                ForEach(TagColor.allCases, id: \.self) { color in
+                    Button(LibraryText.colorName(color)) { organize.recolorTag(id: id, to: color) }
+                }
+            }
+            Divider()
+            Button(LibraryText.string(LibraryText.menuDelete)) {
+                organize.deleteTag(id: id, name: entry.title, itemCount: entry.count)
             }
         }
     }
