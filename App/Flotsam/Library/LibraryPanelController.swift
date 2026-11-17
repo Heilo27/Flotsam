@@ -161,8 +161,12 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             // Local monitors run on the main thread; NSEvent is not Sendable, so it crosses the isolation hop in a box.
-            let box = UncheckedEventBox(event)
-            return MainActor.assumeIsolated { UncheckedEventBox(self?.handle(box.event!) ?? box.event) }.event
+            let incoming = Unchecked(event)
+            // nil means the Library consumed the key; a released controller lets the event through.
+            return MainActor.assumeIsolated {
+                guard let self else { return Unchecked<NSEvent?>(incoming.value) }
+                return Unchecked(self.handle(incoming.value))
+            }.value
         }
     }
 
@@ -181,8 +185,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     }
 }
 
-/// Carries an `NSEvent` across `MainActor.assumeIsolated`; local monitors are always called on the main thread.
-private struct UncheckedEventBox: @unchecked Sendable {
-    let event: NSEvent?
-    init(_ event: NSEvent?) { self.event = event }
+/// Carries a non-Sendable `NSEvent` across `MainActor.assumeIsolated`; local monitors are always called on the main thread.
+private struct Unchecked<Value>: @unchecked Sendable {
+    let value: Value
+    init(_ value: Value) { self.value = value }
 }
