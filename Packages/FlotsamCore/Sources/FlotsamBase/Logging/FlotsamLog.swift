@@ -8,7 +8,7 @@ public enum LogCategory: String, CaseIterable, Sendable {
 
 /// Keys allowed in an error or log context. Free text is not a key.
 public enum LogKey: String, Sendable {
-    case itemId, count, byteSize, durationMs, bundleId, kind, step
+    case itemId, count, byteSize, durationMs, bundleId, kind, step, limitBytes
 }
 
 /// Values allowed in an error or log context. There is deliberately no free-text case:
