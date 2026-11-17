@@ -1,0 +1,1 @@
+../../../../App/Flotsam/Settings/ShortcutRecorderModel.swift
