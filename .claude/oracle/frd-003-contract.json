@@ -623,6 +623,16 @@
       "must_verify": true
     },
     {
+      "id": "OC-3105",
+      "requirement": "FR-003-14",
+      "given": "an image item tagged 'work' (blue) with the note 'hero shot', and a text item with no tags and no note",
+      "when": "preview is opened on each",
+      "then": "the image's metadata block shows its pixel size, then the 'work' tag with a blue dot, then 'hero shot'; the text item's metadata block shows no tag or note rows",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
       "id": "OC-3063",
       "requirement": "AC-003-10",
       "given": "Accessibility granted; a text item 'paste-<uuid>'",
