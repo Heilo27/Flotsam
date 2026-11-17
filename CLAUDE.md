@@ -16,5 +16,8 @@ Swift 6 · SwiftUI + AppKit (NSPanel) · SQLite (decided in architecture) · mac
 ## Project State
 2026-11-16: Specs, design, architecture done. Oracle contracts for FRD-000…008 in .claude/oracle/ (blind; the pass criteria for tests). Phase 8 underway: FRD-000 (branch frd000) in 8V remediation — log sink seam landed, Worf killing 5 mutation survivors, Data re-runs 8V next; FRD-007 (branch frd007) OC-7044/OC-7018 fixed, Worf 8T batch 2 part 2 running, then Data 8V. Merge note for frd000→frd007 in the decisions file. Spec rulings pending FRD edits: .claude/scratch/flotsam-frd007-decisions.md.
 
+## Parallel sessions
+Two Macs build at once: see docs/PARALLEL-SESSIONS.md. Session 2 (second Mac) owns only `s2/*` branches and reports on `s2/log`. Only Session 1 merges to main.
+
 ## Ticketmaster ID
 `flotsam`
