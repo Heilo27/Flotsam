@@ -1,0 +1,26 @@
+import Foundation
+
+/// Text for a chord, for menu rows and labels. The key table is the US ANSI layout; a layout-aware table belongs with
+/// the recorder (FRD-005), which should replace this when it lands.
+extension Chord {
+    private static let keys: [UInt16: String] = [
+        0: "a", 1: "s", 2: "d", 3: "f", 4: "h", 5: "g", 6: "z", 7: "x", 8: "c", 9: "v", 11: "b", 12: "q", 13: "w",
+        14: "e", 15: "r", 16: "y", 17: "t", 18: "1", 19: "2", 20: "3", 21: "4", 22: "6", 23: "5", 24: "=", 25: "9",
+        26: "7", 27: "-", 28: "8", 29: "0", 30: "]", 31: "o", 32: "u", 33: "[", 34: "i", 35: "p", 37: "l", 38: "j",
+        39: "'", 40: "k", 41: ";", 42: "\\", 43: ",", 44: "/", 45: "n", 46: "m", 47: ".", 49: " ", 50: "`",
+    ]
+
+    /// The character a menu item uses as its key equivalent; nil for a key the table does not know.
+    public var keyEquivalent: String? { Self.keys[keyCode] }
+
+    /// Modifier glyphs in the system order (control, option, shift, command), then the key: "⌃⌘V".
+    public var displayString: String {
+        var text = ""
+        if modifiers.contains(.control) { text += "\u{2303}" }
+        if modifiers.contains(.option) { text += "\u{2325}" }
+        if modifiers.contains(.shift) { text += "\u{21E7}" }
+        if modifiers.contains(.command) { text += "\u{2318}" }
+        let key = keyEquivalent.map { $0 == " " ? "Space" : $0.uppercased() } ?? "#\(keyCode)"
+        return text + key
+    }
+}

@@ -68,6 +68,7 @@ public enum ChordBinding: SettingValue {
         }
     }
 
+    /// Single home of the chord-usability rule: FRD-005's recorder reuses this and must not restate it (Rule 9).
     /// The structural half of FR-005-02: a stored chord must carry ⌘ or ⌃. The full binding rules (reserved list,
     /// system hotkeys) are FRD-005's and run when a chord is recorded; this only rejects stored data that no recorder
     /// could have produced.
@@ -165,4 +166,25 @@ public struct PanelSize: SettingValue {
     public var persisted: String { "\(width)x\(height)" }
 
     var isUsable: Bool { width.isFinite && height.isFinite && width > 0 && height > 0 }
+}
+
+extension FolderOverride {
+    /// Validates a chosen folder (exists, is a directory, readable, listable) and stores a security-scoped bookmark of
+    /// it (FR-008-10). Any failure is `SET-VAL-001` and the previous value stays with the caller.
+    public static func choosing(_ url: URL) -> FlotsamResult<FolderOverride> {
+        var isDirectory: ObjCBool = false
+        let manager = FileManager.default
+        guard manager.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue,
+              manager.isReadableFile(atPath: url.path), (try? manager.contentsOfDirectory(atPath: url.path)) != nil,
+              let data = try? url.bookmarkData(options: [.withSecurityScope])
+        else { return .failure(FlotsamError(.setVal001, "Chosen screenshot folder is unusable")) }
+        return .success(.bookmark(data))
+    }
+
+    /// The folder a bookmark points at; nil for `.none` or a bookmark that no longer resolves.
+    public var resolvedURL: URL? {
+        guard case .bookmark(let data) = self else { return nil }
+        var stale = false
+        return try? URL(resolvingBookmarkData: data, options: [.withSecurityScope], relativeTo: nil, bookmarkDataIsStale: &stale)
+    }
 }

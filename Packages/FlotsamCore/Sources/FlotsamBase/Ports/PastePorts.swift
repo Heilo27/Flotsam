@@ -20,12 +20,6 @@ public protocol FrontmostAppProvider {
     func frontmost() -> FrontmostApp?
 }
 
-/// Whether Flotsam may synthesise key events. Checked on every paste, never cached, so granting Accessibility takes
-/// effect without a relaunch (FR-008-14).
-public protocol PermissionProbe: Sendable {
-    var isAccessibilityTrusted: Bool { get }
-}
-
 /// Posts ⌘V (key code 9 with the Command flag, key down then key up) to the session event tap (FR-003-15 step 6).
 @MainActor
 public protocol KeyEventPoster {

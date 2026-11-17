@@ -63,18 +63,18 @@ struct LibraryView: View {
             ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let error):
             LibraryStateView(
-                title: LibraryText.string(LibraryText.errorTitle), body: FlotsamStrings.message(for: error),
+                title: LibraryText.string(LibraryText.errorTitle), message: FlotsamStrings.message(for: error),
                 buttonTitle: LibraryText.string(LibraryText.retryButton)
             ) { Task { await model.retry() } }
         case .loaded:
             if model.isHistoryEmpty {
                 LibraryStateView(
-                    title: LibraryText.string(LibraryText.emptyTitle), body: LibraryText.string(LibraryText.emptyBody),
+                    title: LibraryText.string(LibraryText.emptyTitle), message: LibraryText.string(LibraryText.emptyBody),
                     buttonTitle: nil, action: {})
             } else if model.isNoResults {
                 LibraryStateView(
                     title: LibraryText.noResultsTitle(query: model.searchText),
-                    body: LibraryText.string(LibraryText.noResultsBody),
+                    message: LibraryText.string(LibraryText.noResultsBody),
                     buttonTitle: model.searchText.isEmpty ? nil : LibraryText.string(LibraryText.clearSearchButton)
                 ) { model.setSearchText(String()) }
             } else {
@@ -87,14 +87,14 @@ struct LibraryView: View {
 /// Empty history, no results and load failure share one shape: a title, a line, an optional button (FR-003-17).
 struct LibraryStateView: View {
     let title: String
-    let body: String
+    let message: String
     let buttonTitle: String?
     let action: () -> Void
 
     var body: some View {
         VStack(spacing: 8) {
             Text(verbatim: title).font(.headline)
-            Text(verbatim: body).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Text(verbatim: message).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             if let buttonTitle {
                 Button(buttonTitle, action: action).padding(.top, 4)
             }

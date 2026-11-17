@@ -1,0 +1,73 @@
+import Foundation
+
+/// Which glyph the status item shows (FR-008-16): one shape per capture mode, plus a warning dot while unacknowledged
+/// Warning or Error Notices exist. The dot combines with any mode. Shape, not colour, tells the states apart.
+public struct MenuIcon: Equatable, Sendable {
+    public let mode: CaptureMode
+    public let warning: Bool
+
+    public init(mode: CaptureMode, warning: Bool) {
+        self.mode = mode
+        self.warning = warning
+    }
+
+    /// Catalogue keys for the VoiceOver label, in reading order: the mode, then "needs attention" when the dot shows.
+    public var accessibilityKeys: [String] {
+        let modeKey: String
+        switch mode {
+        case .active: modeKey = "ui.menu.iconActive"
+        case .paused: modeKey = "ui.menu.iconPaused"
+        case .curated: modeKey = "ui.menu.iconCurated"
+        }
+        return warning ? [modeKey, "ui.menu.iconAttention"] : [modeKey]
+    }
+}
+
+/// One row of the menu-bar menu, in the order of FR-008-16.
+public enum MenuEntry: Equatable, Sendable {
+    case openLibrary(ChordBinding)
+    case saveClipboard(ChordBinding)
+    case toggleShelf(ChordBinding)
+    case separator
+    /// "Pause Capture" or "Resume Capture"; choosing it writes `next` to `capture.mode`.
+    case captureToggle(titleKey: String, next: CaptureMode)
+    case notices
+    case settings
+    case setupGuide
+    case quit
+}
+
+/// The menu's content as a function of settings, so the menu is built when it opens and is never stale.
+public enum MenuBarModel {
+    public static func icon(mode: CaptureMode, hasWarning: Bool) -> MenuIcon {
+        MenuIcon(mode: mode, warning: hasWarning)
+    }
+
+    /// Active pauses; paused and curated both resume to active.
+    public static func captureToggle(for mode: CaptureMode) -> (titleKey: String, next: CaptureMode) {
+        switch mode {
+        case .active: ("ui.menu.pauseCapture", .paused)
+        case .paused, .curated: ("ui.menu.resumeCapture", .active)
+        }
+    }
+
+    public static func entries(settings: SettingsStore) -> [MenuEntry] {
+        entries(
+            mode: settings.value(SettingKeys.captureMode), shelfEnabled: settings.value(SettingKeys.shelfEnabled),
+            openLibrary: settings.value(SettingKeys.shortcutsOpenLibrary),
+            saveClipboard: settings.value(SettingKeys.shortcutsSaveClipboard),
+            toggleShelf: settings.value(SettingKeys.shortcutsToggleShelf))
+    }
+
+    public static func entries(
+        mode: CaptureMode, shelfEnabled: Bool, openLibrary: ChordBinding, saveClipboard: ChordBinding,
+        toggleShelf: ChordBinding
+    ) -> [MenuEntry] {
+        let toggle = captureToggle(for: mode)
+        var rows: [MenuEntry] = [.openLibrary(openLibrary), .saveClipboard(saveClipboard)]
+        if shelfEnabled { rows.append(.toggleShelf(toggleShelf)) }
+        rows += [.separator, .captureToggle(titleKey: toggle.titleKey, next: toggle.next), .notices, .separator]
+        rows += [.settings, .setupGuide, .separator, .quit]
+        return rows
+    }
+}

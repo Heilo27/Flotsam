@@ -87,6 +87,9 @@ final class FakeFrontmost: FrontmostAppProvider {
 
 struct FakePermission: PermissionProbe {
     var isAccessibilityTrusted: Bool
+    func isGranted(_ kind: PermissionKind) -> Bool { kind == .accessibility ? isAccessibilityTrusted : false }
+    func request(_ kind: PermissionKind) {}
+    func openSystemSettings(_ kind: PermissionKind) {}
 }
 
 @MainActor

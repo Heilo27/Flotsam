@@ -10,6 +10,8 @@ final class ErrorPresenterAdapter: ErrorPresenter {
     private(set) var notices: [Notice] = []
     var hasBadge: Bool { !notices.isEmpty }
 
+    /// Called after every change to the Notices list, so the status item can redraw its warning dot.
+    @ObservationIgnored var onNoticesChanged: (() -> Void)?
     @ObservationIgnored private let dataFolder: URL
     @ObservationIgnored private var hudPanel: NSPanel?
     @ObservationIgnored private var hudLabel: NSTextField?
@@ -21,6 +23,7 @@ final class ErrorPresenterAdapter: ErrorPresenter {
 
     func noticesChanged(_ notices: [Notice]) {
         self.notices = notices
+        onNoticesChanged?()
     }
 
     func presentFatal(_ error: FlotsamError) {

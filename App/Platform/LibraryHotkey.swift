@@ -1,7 +1,7 @@
 import FlotsamBase
 
 /// Keeps the global "open Library" hotkey registered (FR-003-01, FR-005-01). The chord comes from
-/// `LibraryHotkeyPreferences` so the settings store can replace the default without touching this type.
+/// `LibraryHotkeyPreferences` (the `shortcuts.openLibrary` setting).
 @MainActor
 final class LibraryHotkey {
     private let registrar: any HotkeyRegistrar
@@ -11,7 +11,7 @@ final class LibraryHotkey {
 
     init(
         registrar: any HotkeyRegistrar,
-        preferences: any LibraryHotkeyPreferences = DefaultLibraryHotkeyPreferences(),
+        preferences: any LibraryHotkeyPreferences,
         toggleLibrary: @escaping @MainActor () -> Void
     ) {
         self.registrar = registrar
@@ -25,7 +25,8 @@ final class LibraryHotkey {
     func apply() -> FlotsamResult<Void> {
         if let registration { registrar.unregister(registration) }
         registration = nil
-        switch registrar.register(preferences.openLibraryChord, handler: toggleLibrary) {
+        guard case .chord(let chord) = preferences.openLibraryChord else { return .success(()) }
+        switch registrar.register(chord, handler: toggleLibrary) {
         case .success(let handle):
             registration = handle
             return .success(())

@@ -18,15 +18,17 @@ public protocol HotkeyRegistrar {
     func unregisterAll()
 }
 
-/// Where the Library hotkey comes from. Until the settings store (FRD-008 `shortcuts.openLibrary`) is wired in, the
-/// default implementation supplies ⌃⌘V.
+/// Where the Library hotkey comes from: the `shortcuts.openLibrary` setting (FR-005-01, FR-008-01), whose default is
+/// ⌃⌘V. `.none` means the user cleared the chord, so nothing is registered.
 @MainActor
 public protocol LibraryHotkeyPreferences {
-    var openLibraryChord: Chord { get }
+    var openLibraryChord: ChordBinding { get }
 }
 
-public struct DefaultLibraryHotkeyPreferences: LibraryHotkeyPreferences {
-    public init() {}
-    /// Key code 9 is V.
-    public var openLibraryChord: Chord { Chord(keyCode: 9, modifiers: [.control, .command]) }
+public struct SettingsLibraryHotkeyPreferences: LibraryHotkeyPreferences {
+    private let settings: SettingsStore
+
+    public init(settings: SettingsStore) { self.settings = settings }
+
+    public var openLibraryChord: ChordBinding { settings.value(SettingKeys.shortcutsOpenLibrary) }
 }

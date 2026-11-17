@@ -160,7 +160,9 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     private func installKeyMonitor() {
         guard keyMonitor == nil else { return }
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            MainActor.assumeIsolated { self?.handle(event) ?? event }
+            // Local monitors run on the main thread; NSEvent is not Sendable, so it crosses the isolation hop in a box.
+            let box = UncheckedEventBox(event)
+            return MainActor.assumeIsolated { UncheckedEventBox(self?.handle(box.event!) ?? box.event) }.event
         }
     }
 
@@ -177,4 +179,10 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         guard let stroke = LibraryKeyTranslator.stroke(for: event) else { return event }
         return model.handle(stroke) ? nil : event
     }
+}
+
+/// Carries an `NSEvent` across `MainActor.assumeIsolated`; local monitors are always called on the main thread.
+private struct UncheckedEventBox: @unchecked Sendable {
+    let event: NSEvent?
+    init(_ event: NSEvent?) { self.event = event }
 }
