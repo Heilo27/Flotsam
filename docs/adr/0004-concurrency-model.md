@@ -21,7 +21,7 @@ Swift 6 strict concurrency. Hard timing facts: pasteboard poll every 0.5 s (FR-0
 | Hotkeys | Carbon event handler on the main thread | Dispatches to `@MainActor` command handlers. |
 
 Rules:
-- Values crossing isolation are `Sendable` value types; `@unchecked Sendable` and `nonisolated(unsafe)` are allowed only for (a) the tap-thread context object and (b) the immutable trigger snapshot holder, each with a comment naming the invariant, and are listed in `docs/ARCHITECTURE.md`. A new one needs an ADR amendment.
+- Values crossing isolation are `Sendable` value types; `@unchecked Sendable` and `nonisolated(unsafe)` are allowed only for (a) the tap-thread context object, (b) the immutable trigger snapshot holder and (c) the `UserDefaults` stored in `UserDefaultsStore` (Apple documents `UserDefaults` as thread-safe), each with a comment naming the invariant, and are listed in `docs/ARCHITECTURE.md`. A new one needs an ADR amendment.
 - No `DispatchQueue.main.sync`, no blocking wait on a Task, no `Thread.sleep` outside the tap thread's run loop.
 - Cancellation: every long-running actor loop checks `Task.isCancelled` between units of work; quitting cancels the ingest actor after the in-flight transaction.
 - Timers and delays use the injected `Clock` (ADR-0011) so the 40 ms, 250 ms, 300 ms and 500 ms windows are testable without sleeping.

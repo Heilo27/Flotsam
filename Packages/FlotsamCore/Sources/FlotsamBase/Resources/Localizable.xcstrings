@@ -1,0 +1,21 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "error.STO-DB-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder." } } }
+    },
+    "error.STO-IO-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't create its data folder, so it can't run." } } }
+    },
+    "error.SYS-INT-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings › About." } } }
+    },
+    "ui.menu.status" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam is running" } } }
+    },
+    "ui.menu.quit" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Flotsam" } } }
+    }
+  },
+  "version" : "1.0"
+}

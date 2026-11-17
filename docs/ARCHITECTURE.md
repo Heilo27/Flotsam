@@ -86,7 +86,7 @@ Enforced by Swift's target graph (a missing dependency fails to compile) and, fo
 
 ## 5. Concurrency ([ADR-0004](adr/0004-concurrency-model.md))
 
-MainActor owns UI and the 0.5 s pasteboard poll, which only compares `changeCount`, runs the gates and copies bytes. An immutable `Sendable` `CapturedPayload` then goes to a serial `IngestActor` in Storage, which hashes, classifies, converts and writes in one transaction. The database is a GRDB `DatabasePool` with async-only access. The CGEventTap runs on its own run-loop thread with a thread-confined matcher. The paste coordinator, screenshot watcher, retention scheduler and settings store each have one isolation domain. Timers use an injected clock. `@unchecked Sendable` is permitted only for the tap-thread context and the trigger snapshot holder.
+MainActor owns UI and the 0.5 s pasteboard poll, which only compares `changeCount`, runs the gates and copies bytes. An immutable `Sendable` `CapturedPayload` then goes to a serial `IngestActor` in Storage, which hashes, classifies, converts and writes in one transaction. The database is a GRDB `DatabasePool` with async-only access. The CGEventTap runs on its own run-loop thread with a thread-confined matcher. The paste coordinator, screenshot watcher, retention scheduler and settings store each have one isolation domain. Timers use an injected clock. `@unchecked Sendable` and `nonisolated(unsafe)` are permitted only for the tap-thread context, the trigger snapshot holder and the `UserDefaults` in `UserDefaultsStore`.
 
 Open item: whether reading a large image's bytes off the main actor is safe for `NSPasteboard` is unverified (belongs to S-4's remit).
 
@@ -176,7 +176,7 @@ swift test --package-path Packages/FlotsamCore
 bin/check-architecture.sh
 ```
 
-`project.yml` is the single description of the app target; `Flotsam.xcodeproj` is generated and gitignored. No team ID or signing identity is committed. The bundle identifier `com.flotsam.Flotsam` is a placeholder pending Ryan's choice of reverse-DNS domain; it also appears in no other file (the logging subsystem reads it from the bundle).
+`project.yml` is the single description of the app target; `Flotsam.xcodeproj` is generated and gitignored. No team ID or signing identity is committed. The bundle identifier is `io.github.heilo27.Flotsam` (a namespace the project owns through GitHub Pages); it is set in `project.yml` and the logging subsystem reads it from the bundle, with the same value as its fallback in `FlotsamLog`.
 
 ## 12. Stress: change scenarios
 
