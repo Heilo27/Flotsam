@@ -1,458 +1,1186 @@
 {
  "frd": "FRD-007",
+ "run": "8V re-run 2026-11-17, branch frd007 @ 661b95f, swift test --filter FlotsamStorageTests, 180 tests",
  "mutations": [
   {
    "id": "M01",
-   "target": "Retention/Exemption.swift: grace window halved (all sweeps)",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:12 (grace window halved)",
    "oc": [
     "OC-7071"
    ],
    "result": "KILLED",
-   "killed_by": "oc7071_unpinnedItemSurvivesTwentyFourHoursThenGoes()"
+   "killed_by": "oc7071_budgetGraceBoundary; oc7071_sweepGraceBoundary; oc7071_sweepGraceBoundary",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M02",
-   "target": "Retention/RetentionSweep.swift: time sweep+preview ignore 24h grace",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionSweep.swift:39 (time sweep ignores grace)",
    "oc": [
     "OC-7071",
     "OC-7072"
    ],
    "result": "KILLED",
-   "killed_by": "FR-007-09/10 a just-unpinned old item is not previewed until its grace ends"
+   "killed_by": "oc7071_sweepGraceBoundary; oc7071_sweepGraceBoundary; oc7071_unpinnedItemSurvivesTwentyFourHoursThenGoes",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M03",
-   "target": "Retention/ImageBudgetEnforcement.swift: budget eviction candidates ignore 24h grace",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:143 (budget candidates ignore grace)",
    "oc": [
     "OC-7059",
     "OC-7071"
    ],
    "result": "KILLED",
-   "killed_by": "graceProtectsOldestImageFromBudget()"
+   "killed_by": "oc7071_budgetGraceBoundary",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M04",
-   "target": "Retention/ImageBudgetEnforcement.swift: budget in-tx re-check drops grace",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:63 (budget in-tx re-check drops grace)",
    "oc": [
     "OC-7071",
     "OC-7059"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7059_oc7071_budgetKeepsImageThatBecameProtectedAfterPlan; oc7059_oc7071_budgetKeepsImageThatBecameProtectedAfterPlan",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M05",
-   "target": "Retention/Exemption.swift: grace boundary < -> <=",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:17 (grace boundary < -> <=)",
    "oc": [
     "OC-7071"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7071_budgetGraceBoundary; oc7071_sweepGraceBoundary; oc7071_sweepGraceBoundary",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M06",
-   "target": "Retention/Exemption.swift: notExempt ignores shortcut",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:10 (notExempt ignores shortcut)",
    "oc": [
     "OC-7067",
     "OC-7079"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items"
+   "killed_by": "\"OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items\"; oc7067_sweepRemovesOnlyThePlainItemAndKeepsExemptOnes",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M07",
-   "target": "Retention/Exemption.swift: notExempt ignores pinned",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:10 (notExempt ignores pinned)",
    "oc": [
     "OC-7057",
     "OC-7089"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items"
+   "killed_by": "oc7057_oc7058_pinnedOnlyOverBudgetNoticesOncePerDay; oc7089_clearAllTimeWithoutExemptKeepsExemptItemsAndTags; oc7089_clearHistoryKeepsItemsExemptedAfterSelection",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M08",
-   "target": "Retention/Exemption.swift: notExempt ignores trigger",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:10 (notExempt ignores trigger)",
    "oc": [
     "OC-7067",
     "OC-7079"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items"
+   "killed_by": "\"OC-7079 shortening Forever to 7 days previews exactly the older non-exempt items\"; oc7067_sweepRemovesOnlyThePlainItemAndKeepsExemptOnes",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M09",
-   "target": "Retention/Exemption.swift: sqlPredicate ignores hotkey (release stamp)",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:9 (sqlPredicate ignores hotkey)",
    "oc": [
     "OC-7073"
    ],
    "result": "KILLED",
-   "killed_by": "oc7073_removingLastTriggerOrHotkeyStartsGrace()"
+   "killed_by": "oc7073_removingLastTriggerOrHotkeyStartsGrace",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M10",
-   "target": "Retention/Exemption.swift: stamp on every non-exempt edit",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:77 (stamp on every non-exempt edit)",
    "oc": [
     "OC-7072",
     "OC-7074"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7072_editingNeverExemptItemLeavesStampNull; oc7072_editingNeverExemptItemLeavesStampNull; oc7074_editingAlreadyReleasedItemDoesNotExtendGrace",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M11",
-   "target": "Retention/Exemption.swift: re-exempt does not clear stamp",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/Exemption.swift:72 (re-exempt does not clear stamp)",
    "oc": [
     "OC-7072"
    ],
    "result": "KILLED",
-   "killed_by": "oc7072_repinClearsGraceAndSecondUnpinRestartsIt()"
+   "killed_by": "oc7072_repinClearsGraceAndSecondUnpinRestartsIt",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M12",
-   "target": "Retention/ClearHistory.swift: lastHour reaches 24h",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:12 (lastHour reaches 24h)",
    "oc": [
     "OC-7091"
    ],
    "result": "KILLED",
-   "killed_by": "oc7091_clearRangeWindows(range:expectedRemaining:)"
+   "killed_by": "oc7091_clearRangeEdges; oc7091_clearRangeEdges; oc7091_clearRangeWindows",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M13",
-   "target": "Retention/ClearHistory.swift: lower bound inclusive -> exclusive",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:47 (clear lower bound inclusive->exclusive)",
    "oc": [
     "OC-7091"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7091_clearRangeEdges; oc7091_clearRangeEdges",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M14",
-   "target": "Retention/ClearHistory.swift: upper bound inclusive -> exclusive",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:46 (clear upper bound inclusive->exclusive)",
    "oc": [
     "OC-7091"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7091_allTimeHasUpperBoundOnly; oc7091_clearRangeEdges; oc7091_clearRangeEdges",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M15",
-   "target": "Retention/ClearHistory.swift: allTime treated as 24h",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:14 (allTime treated as 24h)",
    "oc": [
     "OC-7089",
     "OC-7090"
    ],
    "result": "KILLED",
-   "killed_by": "graceDoesNotProtectFromClearHistory()"
+   "killed_by": "oc7089_clearAllTimeWithoutExemptKeepsExemptItemsAndTags; oc7090_oc7101_clearWithExemptOptionDeletesEverythingAndPublishesIds",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M16",
-   "target": "Retention/ClearHistory.swift: scrub: incremental_vacuum dropped",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:159 (scrub drops incremental_vacuum)",
    "oc": [
-    "OC-7095"
+    "OC-7095",
+    "OC-7153"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7153_clearAllReturnsFreePagesAndLeavesNoMarkerBytes",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M17",
-   "target": "Retention/ClearHistory.swift: scrub: TRUNCATE->PASSIVE",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:161 (scrub TRUNCATE->PASSIVE)",
    "oc": [
     "OC-7095"
    ],
    "result": "KILLED",
-   "killed_by": "oc7095_clearHistoryLeavesNoMarkerInDatabaseFiles()"
+   "killed_by": "oc7095_clearHistoryLeavesNoMarkerInDatabaseFiles",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M18",
-   "target": "Retention/ClearHistory.swift: clear in-tx re-check dropped",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:136 (clear in-tx re-check dropped)",
    "oc": [
     "OC-7089",
     "OC-7096"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7089_clearHistoryKeepsItemsExemptedAfterSelection",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M19",
-   "target": "Ingest/IngestActor.swift: dedupe bumps oldest, not newest",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:111 (dedupe bumps oldest)",
    "oc": [
     "OC-7028",
     "OC-7015"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "\"OC-7028 a repeated copy bumps the newest of several same-key rows\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M20",
-   "target": "Blobs/BlobStore.swift: blob shard 2->3 chars",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Blobs/BlobStore.swift:17 (blob shard 2->3)",
    "oc": [
     "OC-7020"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7020 two representations are exactly two sharded blob files"
+   "killed_by": "\"OC-7020 two representations are exactly two sharded blob files\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M21",
-   "target": "Blobs/BlobStore.swift: reconcile pattern: ordinal not required numeric",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Blobs/BlobStore.swift:31 (blob name ordinal not numeric)",
    "oc": [
     "OC-7113",
     "OC-7114"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "\"OC-7114 reconcile never deletes a uuid file whose extension is not an integer\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M22",
-   "target": "Blobs/BlobStore.swift: reconcile pattern: extra dots accepted",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Blobs/BlobStore.swift:31 (blob name extra dots)",
    "oc": [
     "OC-7114"
    ],
    "result": "KILLED",
-   "killed_by": "oc7114_orphanThumbnailsGoAndForeignFilesSurvive()"
+   "killed_by": "oc7114_orphanThumbnailsGoAndForeignFilesSurvive",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M23",
-   "target": "Reliability/Reconcile.swift: orphan grace 10 min -> 1 min",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/Reconcile.swift:21 (orphan grace 10->1 min)",
    "oc": [
     "OC-7024"
    ],
    "result": "KILLED",
-   "killed_by": "oc7024_orphanBlobGraceIsTenMinutes()"
+   "killed_by": "oc7024_orphanBlobGraceIsTenMinutes",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M24",
-   "target": "Reliability/Reconcile.swift: unknown-age blob deleted as orphan",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/Reconcile.swift:131 (unknown-age blob deleted)",
    "oc": [
     "OC-7113"
    ],
    "result": "KILLED",
-   "killed_by": "statFailureOnListedFileSkipsRepairAndNeverCountsAsOrphan()"
+   "killed_by": "statFailureOnListedFileSkipsRepairAndNeverCountsAsOrphan",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M25",
-   "target": "Reliability/Reconcile.swift: listing includes non-Flotsam names",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/Reconcile.swift:114 (listing includes foreign names)",
    "oc": [
     "OC-7114"
    ],
    "result": "KILLED",
-   "killed_by": "oc7114_orphanThumbnailsGoAndForeignFilesSurvive()"
+   "killed_by": "\"OC-7114 reconcile never deletes a uuid file whose extension is not an integer\"; oc7114_orphanThumbnailsGoAndForeignFilesSurvive",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M26",
-   "target": "Reliability/Reconcile.swift: stat failure no longer marks listing incomplete",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/Reconcile.swift:119 (stat failure not incomplete)",
    "oc": [
     "OC-7113"
    ],
    "result": "KILLED",
-   "killed_by": "statFailureOnListedFileSkipsRepairAndNeverCountsAsOrphan()"
-  },
-  {
-   "id": "M27",
-   "target": "Folder/DataFolder.swift: flotsam-v.sqlite (no digits) matches",
-   "oc": [
-    "OC-7137"
-   ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "killed_by": "statFailureOnListedFileSkipsRepairAndNeverCountsAsOrphan",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M28",
-   "target": "Folder/DataFolder.swift: -shm not recognised as Flotsam copy",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Folder/DataFolder.swift:34 (-shm not a Flotsam copy)",
    "oc": [
     "OC-7137"
    ],
    "result": "KILLED",
-   "killed_by": "oc7137_pruningTouchesOnlyFlotsamNamedFiles()"
+   "killed_by": "\"OC-7137 name test accepts flotsam-v<int>.sqlite[-wal|-shm] and nothing else\"; \"OC-7137 name test accepts flotsam-v<int>.sqlite[-wal|-shm] and nothing else\" with 10 test cases; oc7137_pruningTouchesOnlyFlotsamNamedFiles",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M29",
-   "target": "Database/FlotsamDatabase.swift: prune deletes any file in pre-migration/",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:198 (prune deletes any file)",
    "oc": [
     "OC-7137"
    ],
    "result": "KILLED",
-   "killed_by": "oc7137_pruningTouchesOnlyFlotsamNamedFiles()"
+   "killed_by": "\"OC-7137 pruning never deletes a flotsam-v.sqlite with no version digits\"; oc7137_pruningTouchesOnlyFlotsamNamedFiles",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M30",
-   "target": "Database/FlotsamDatabase.swift: copy taken without checkpoint",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:182 (pre-migration copy without checkpoint)",
    "oc": [
     "OC-7134"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "\"OC-7134 the pre-migration copy contains committed rows that were still only in the WAL\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M31",
-   "target": "Images/ImagePipeline.swift: thumbnail completeness: EOI marker check dropped",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:100 (EOI check dropped)",
    "oc": [
     "OC-7044"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7044 damaged thumbnail is regenerated, never served"
+   "killed_by": "\"OC-7044 damaged thumbnail is regenerated, never served\"; \"OC-7044 damaged thumbnail is regenerated, never served\" with 4 test cases; \"OC-7044 only an intact JPEG is a complete JPEG\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M32",
-   "target": "Images/ImagePipeline.swift: thumbnail completeness: full decode dropped",
-   "oc": [
-    "OC-7044"
-   ],
-   "result": "SURVIVED",
-   "killed_by": null
-  },
-  {
-   "id": "M33",
-   "target": "Blobs/BlobStore.swift: atomic write no longer replaces existing file (OC-7044 origin)",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:102 (thumbnail full decode dropped)",
    "oc": [
     "OC-7044"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7044 damaged thumbnail is regenerated, never served"
+   "killed_by": "\"OC-7044 a JPEG with an end marker but a broken body is not a complete JPEG\"; \"OC-7044 a JPEG with an end marker but a broken body is not a complete JPEG\" with 3 test cases; \"OC-7044 a thumbnail file with an end marker but a broken body is regenerated\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M33",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Blobs/BlobStore.swift:60 (atomic write does not replace)",
+   "oc": [
+    "OC-7044"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7044 a thumbnail file with an end marker but a broken body is regenerated\"; \"OC-7044 damaged thumbnail is regenerated, never served\"; \"OC-7044 damaged thumbnail is regenerated, never served\" with 4 test cases",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M34",
-   "target": "Ingest/IngestActor.swift: item byteSize includes plain text",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:209 (byteSize includes plain text)",
    "oc": [
     "OC-7018"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7017 a copied plain text lands with the documented defaults and no representation"
+   "killed_by": "\"OC-7018 byteSize is the sum of blob file sizes, stable across thumbnail generation\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M35",
-   "target": "Images/ImagePipeline.swift: Efficient no longer converts opaque PNG to JPEG",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:72 (Efficient no opaque PNG->JPEG)",
    "oc": [
     "OC-7052"
    ],
    "result": "KILLED",
-   "killed_by": "FR-007-07 TIFF goes to PNG first, then the Efficient rule applies"
+   "killed_by": "\"OC-7052 Efficient sends an opaque PNG to JPEG even without a downscale",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M36",
-   "target": "Images/ImagePipeline.swift: alpha PNG becomes JPEG",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:131 (alpha PNG becomes JPEG)",
    "oc": [
     "OC-7051"
    ],
    "result": "KILLED",
-   "killed_by": "FR-007-07 TIFF goes to PNG first, then the Efficient rule applies"
+   "killed_by": "\"OC-7051 Efficient keeps transparent PNG as PNG and JPEG as JPEG, both downscaled\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M37",
-   "target": "Images/ImagePipeline.swift: TIFF not converted to PNG when not Efficient",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:73 (TIFF kept as TIFF)",
    "oc": [
     "OC-7042"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7042 a TIFF is stored as a lossless PNG with identical pixels and a prompt thumbnail"
+   "killed_by": "\"OC-7042 a TIFF is stored as a lossless PNG with identical pixels and a prompt thumbnail\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M38",
-   "target": "Images/ImagePipeline.swift: Efficient ceiling 2560->3840",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:34 (Efficient ceiling 2560->3840)",
    "oc": [
     "OC-7048"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7048 Efficient ceiling boundary for JPEG: 2560 untouched, 2561 downscaled"
+   "killed_by": "\"OC-7048 Efficient ceiling boundary for JPEG: 2560 untouched, 2561 downscaled\"; \"OC-7048 Efficient downscales an opaque PNG to a 2560x1440 JPEG\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M39",
-   "target": "Images/ImagePipeline.swift: JPEG quality 0.85->0.3 (known gap)",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Images/ImagePipeline.swift:25 (JPEG quality 0.85->0.3)",
    "oc": [
     "OC-7048"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "\"OC-7048 the stored JPEG is encoded at quality 0.85\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M40",
-   "target": "Database/Migrations.swift: schema version 1->2",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/Migrations.swift:42 (user_version wrong)",
    "oc": [
     "OC-7019"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt"
+   "killed_by": "\"OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M41",
-   "target": "Database/Migrations.swift: meta.schemaVersion mirror wrong",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/Migrations.swift:46 (meta.schemaVersion wrong)",
    "oc": [
     "OC-7019"
    ],
    "result": "KILLED",
-   "killed_by": "OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt"
+   "killed_by": "\"OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt\"",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M42",
-   "target": "Retention/RetentionScheduler.swift: retention launch delay 30->60 s",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionScheduler.swift:9 (retention launch delay 30->60)",
    "oc": [
     "OC-7075"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7075_firstSweepWaitsThirtySecondsThenRuns; oc7075_nextSweepIsOneHourLater; oc7075_startAfterStopBeginsAFreshLoop",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M43",
-   "target": "Retention/RetentionScheduler.swift: retention interval 1h->2h",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionScheduler.swift:10 (retention interval 1h->2h)",
    "oc": [
     "OC-7075"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7075_nextSweepIsOneHourLater",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M44",
-   "target": "Retention/RetentionScheduler.swift: retention stop() does not cancel",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionScheduler.swift:44 (retention stop no cancel)",
    "oc": [
     "OC-7075"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7075_stopBeforeFirstSweepPreventsAnySweep; oc7075_stopBetweenSweepsPreventsTheNextSweep",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M45",
-   "target": "Retention/RetentionScheduler.swift: retention overlap guard dropped",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionScheduler.swift:51 (retention overlap guard dropped)",
    "oc": [
     "OC-7075"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "overlappingSweepNowRunsOnlyOneSweep",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
   },
   {
    "id": "M46",
-   "target": "Reliability/ReconcileScheduler.swift: reconcile launch delay 15->30 s",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/ReconcileScheduler.swift:9 (reconcile launch delay 15->30)",
    "oc": [
     "OC-7113"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7113_firstPassWaitsFifteenSecondsThenRemovesOnlyTheOldOrphan; oc7113_weeklyPassDeletesAnOrphanCreatedAfterLaunch",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M47",
-   "target": "Reliability/ReconcileScheduler.swift: reconcile interval 7d->1d",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/ReconcileScheduler.swift:10 (reconcile interval 7d->1d)",
    "oc": [
     "OC-7113"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7113_weeklyPassDeletesAnOrphanCreatedAfterLaunch",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M48",
-   "target": "Reliability/ReconcileScheduler.swift: reconcile stop() does not cancel",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/ReconcileScheduler.swift:36 (reconcile stop no cancel)",
    "oc": [
     "OC-7113"
    ],
-   "result": "SURVIVED",
-   "killed_by": null
+   "result": "KILLED",
+   "killed_by": "oc7113_stopBeforeFirstPassPreventsAnyPass; oc7113_stopBetweenPassesPreventsTheWeeklyPass",
+   "killed_by_mapped_test": true
   },
   {
    "id": "M49",
-   "target": "Reliability/ReconcileScheduler.swift: reconcile overlap guard dropped",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/ReconcileScheduler.swift:43 (reconcile overlap guard dropped)",
    "oc": [
     "OC-7113"
    ],
+   "result": "KILLED",
+   "killed_by": "overlappingReconcileNowRunsOnlyOnePass",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M50",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Folder/DataFolder.swift:58 (tmp not emptied at launch)",
+   "oc": [
+    "OC-7002"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7002 launch empties tmp and creates nothing from what it held\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M51",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Folder/DataFolder.swift:55 (thumbs not backup-excluded)",
+   "oc": [
+    "OC-7003"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7003 only the regenerable thumbnails are excluded from backups\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M52",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Folder/DataFolder.swift:7 (folder mode 0755)",
+   "oc": [
+    "OC-7001"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7001 a first launch creates the owner-only folder with its four members\"; \"OC-7001 blobs, thumbnails and database side files are owner-only too\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M53",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Folder/DataFolder.swift:8 (db file mode 0644)",
+   "oc": [
+    "OC-7001"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7001 a first launch creates the owner-only folder with its four members\"; \"OC-7001 blobs, thumbnails and database side files are owner-only too\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M54",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:66 (insert failure leaves blobs)",
+   "oc": [
+    "OC-7025",
+    "OC-7121"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7025 a; \"OC-7121 a",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M55",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:190 (blob write failure leaves earlier blobs)",
+   "oc": [
+    "OC-7025"
+   ],
    "result": "SURVIVED",
-   "killed_by": null
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M56",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:66 (insert failure code STO-DB-004)",
+   "oc": [
+    "OC-7026",
+    "OC-7121"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7121 a; \"OC-7121 a text copy on a full database fails STO-DB-001 and leaves no partial rows\"; \"OC-7121 after the disk frees, the same copy is stored as a new item\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M57",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:147 (undecodable image code swapped)",
+   "oc": [
+    "OC-7046"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7046 undecodable image bytes are refused with the origin's VAL code and leave no blob\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M58",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:120 (dedupe moves lastCopiedAt backwards)",
+   "oc": [
+    "OC-7030"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7030 a late screenshot pickup never moves lastCopiedAt backwards\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M59",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:120 (dedupe no copyCount bump)",
+   "oc": [
+    "OC-7027",
+    "OC-7028"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7027 concurrent identical payloads create one item with copyCount 2 and leak no blob\"; \"OC-7028 a re-copy bumps only lastCopiedAt and copyCount and floats the item to the top of Recent\"; \"OC-7028 a repeated copy bumps the newest of several same-key rows\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M60",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:58 (in-tx dedupe re-check dropped)",
+   "oc": [
+    "OC-7033",
+    "OC-7015"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7027 concurrent identical payloads create one item with copyCount 2 and leak no blob\"",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M61",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Search/SearchIndex.swift:13 (search limit 10k->100k)",
+   "oc": [
+    "OC-7145"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7145 only the first 10,000 characters of plain text are searchable\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M62",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Search/SearchIndex.swift:24 (note not indexed)",
+   "oc": [
+    "OC-7144",
+    "OC-7143"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7144 a tag rename and a note edit are searchable at once and the old words stop matching\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M63",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Search/SearchIndex.swift:42 (search text not normalized)",
+   "oc": [
+    "OC-7143"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7143 case and diacritic folding, AND over tokens\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M64",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Search/SearchIndex.swift:42 (fields joined with space)",
+   "oc": [
+    "OC-7143"
+   ],
+   "result": "EQUIVALENT",
+   "killed_by": null,
+   "killed_by_mapped_test": null,
+   "note": "Equivalent: SearchNormalizer.tokens splits on whitespace and folding leaves whitespace intact, so instr(searchText, token) is identical whether fields are joined by \"\\n\" or \" \"."
+  },
+  {
+   "id": "M65",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:57 (pinned filter ignored)",
+   "oc": [
+    "OC-7139",
+    "OC-7142"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7142 every sidebar count equals the rows that selecting it lists\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M66",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:70 (search token match ignored)",
+   "oc": [
+    "OC-7143",
+    "OC-7139"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7139 50 random queries over 10,000 items return exactly the reference set\"; \"OC-7143 case and diacritic folding, AND over tokens\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M67",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:132 (page offset overlaps)",
+   "oc": [
+    "OC-7141"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7141 0, 1, 200 and 201 matches give 0, 1, 1 and 2 pages\"; \"OC-7141 450 matches page as 200, 200, 50 with every id once and count 450\"; \"OC-7141 every sort pages stably when all sort keys tie\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M68",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:115 (recent sort no id tie-break)",
+   "oc": [
+    "OC-7141"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M69",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:271 (zero kind counts listed)",
+   "oc": [
+    "OC-7142"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7142 an empty library has zero counts and no kind, tag or app rows\"; \"OC-7142 every sidebar count equals the rows that selecting it lists\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M70",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:59 (kind filter inverted)",
+   "oc": [
+    "OC-7139",
+    "OC-7142"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7141 0, 1, 200 and 201 matches give 0, 1, 1 and 2 pages\"; \"OC-7141 450 matches page as 200, 200, 50 with every id once and count 450\"",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M71",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Deletion/ItemDeletion.swift:90 (delete leaves blobs)",
+   "oc": [
+    "OC-7122"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7122_deleteCascadesRowsBlobsThumbsAndPublishesBeforeReturn",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M72",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Deletion/ItemDeletion.swift:97 (delete leaves thumbnails)",
+   "oc": [
+    "OC-7122"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7122_deleteCascadesRowsBlobsThumbsAndPublishesBeforeReturn",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M73",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Deletion/ItemDeletion.swift:88 (delete publishes nothing)",
+   "oc": [
+    "OC-7122",
+    "OC-7101"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7090_oc7101_clearWithExemptOptionDeletesEverythingAndPublishesIds; oc7122_deleteCascadesRowsBlobsThumbsAndPublishesBeforeReturn",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M74",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Deletion/ItemDeletion.swift:92 (blob removal failure logs wrong code)",
+   "oc": [
+    "OC-7123"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M75",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:244 (write failure -> STO-DB-004)",
+   "oc": [
+    "OC-7026",
+    "OC-7121"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7121 a; \"OC-7121 a text copy on a full database fails STO-DB-001 and leaves no partial rows\"; \"OC-7121 after the disk frees, the same copy is stored as a new item\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M76",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:249 (read failure -> STO-DB-001)",
+   "oc": [
+    "OC-7146"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7146 a",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M77",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:226 (secure_delete off)",
+   "oc": [
+    "OC-7009"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7095_clearHistoryLeavesNoMarkerInDatabaseFiles; oc7153_clearAllReturnsFreePagesAndLeavesNoMarkerBytes; opensRealFileWithRequiredPragmas",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M78",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:223 (foreign keys off)",
+   "oc": [
+    "OC-7009"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7016 deleting an item removes its children but leaves tags and other items' tag links\"; \"OC-7128 deleting a bundle leaves every referenced file byte-identical\"; oc7054_budgetEvictsOldestPrefixDownToNinetyPercent",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M79",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:151 (auto_vacuum none)",
+   "oc": [
+    "OC-7153"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7153_clearAllReturnsFreePagesAndLeavesNoMarkerBytes",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M80",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:155 (budget notice not throttled)",
+   "oc": [
+    "OC-7057",
+    "OC-7058"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7057_oc7058_pinnedOnlyOverBudgetNoticesOncePerDay",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M81",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:155 (budget throttle boundary)",
+   "oc": [
+    "OC-7058"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M82",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:89 (evict to limit not 90%)",
+   "oc": [
+    "OC-7054"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7054_budgetEvictsOldestPrefixDownToNinetyPercent",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M83",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:139 (just-ingested not protected)",
+   "oc": [
+    "OC-7055"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7055_justIngestedImageIsNeverEvicted",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M84",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:48 (includeExempt inverted)",
+   "oc": [
+    "OC-7089",
+    "OC-7090"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7089_clearAllTimeWithoutExemptKeepsExemptItemsAndTags; oc7089_clearHistoryKeepsItemsExemptedAfterSelection; oc7090_oc7101_clearWithExemptOptionDeletesEverythingAndPublishesIds",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M85",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionSweep.swift:93 (lastSweepAt not stamped)",
+   "oc": [
+    "OC-7019"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7019 schemaVersion mirrors user_version and one sweep stamps retention.lastSweepAt\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M86",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionSweep.swift:34 (age from createdAt)",
+   "oc": [
+    "OC-7069"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7069 a re-copy renews: age counts from lastCopiedAt, not createdAt\"; \"OC-7069 boundary: 30 days from lastCopiedAt is kept, 1 ms more goes, whatever createdAt says\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M87",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionSweep.swift:12 (30d preset off by one day)",
+   "oc": [
+    "OC-7068",
+    "OC-7076"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7068_sweepKeepsJustInsidePeriodAndRemovesJustOutside; oc7076_sweepDeletesInBatchesOfAtMost500",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M88",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/RetentionSweep.swift:88 (sweep log count wrong)",
+   "oc": [
+    "OC-7076"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M89",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Limits/DiskGuard.swift:19 (hard tier boundary)",
+   "oc": [
+    "OC-7120"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"FR-007-14 hard tier boundary at 50 MiB free is strict and outranks the image skip\"",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M90",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Limits/DiskGuard.swift:22 (image tier boundary)",
+   "oc": [
+    "OC-7117"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"FR-007-14 image tier boundary at 500 MiB free is strict\"",
+   "killed_by_mapped_test": false,
+   "note": "Killed only by tests not tagged with this mutant's OC: unmapped kill, Worf tagging/test fix."
+  },
+  {
+   "id": "M91",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Limits/DiskGuard.swift:23 (image tier wrong code)",
+   "oc": [
+    "OC-7117",
+    "OC-7118"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7117 at 400 MiB free an image is skipped with STO-LIM-002 and text still saves\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M92",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Limits/DiskGuard.swift:22 (screenshot not image tier)",
+   "oc": [
+    "OC-7117"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M93",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Limits/IngestLimits.swift:44 (text ceiling boundary)",
+   "oc": [
+    "OC-7036"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7036 text over 10 MiB is refused, exactly 10 MiB is stored in full\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M94",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ImageBudgetEnforcement.swift:56 (budget at limit evicts)",
+   "oc": [
+    "OC-7054",
+    "OC-7066"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M95",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/Reconcile.swift:195 (thumb pattern boundary)",
+   "oc": [
+    "OC-7114"
+   ],
+   "result": "EQUIVALENT",
+   "killed_by": null,
+   "killed_by_mapped_test": null,
+   "note": "Equivalent: a 36-character name ending \".jpg\" makes prefix(36) the whole name, which UUID(uuidString:) rejects, so the guard returns nil either way."
+  },
+  {
+   "id": "M96",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:118 (quick_check ignored)",
+   "oc": [
+    "OC-7110",
+    "OC-7111"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M97",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:164 (quarantine leaves blobs)",
+   "oc": [
+    "OC-7110"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M98",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/Migrations.swift:38 (no pre-migration copy)",
+   "oc": [
+    "OC-7134"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7134 the pre-migration copy contains committed rows that were still only in the WAL\"; oc7134_copyIsTakenBeforeMigratingAndIsAtTheOldVersion",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M99",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift:105 (newer db wrong code)",
+   "oc": [
+    "OC-7135",
+    "OC-7136"
+   ],
+   "result": "KILLED",
+   "killed_by": "oc7135_newerDatabaseIsRefusedAndLeftByteIdentical",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M100",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:231 (new item not indexed)",
+   "oc": [
+    "OC-7139",
+    "OC-7143"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7143 case and diacritic folding, AND over tokens\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M101",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:217 (createdAt not now)",
+   "oc": [
+    "OC-7148",
+    "OC-7027"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7148 a text deleted by retention is stored as a new item when copied again\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M102",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:168 (alphabetical tie-break reversed)",
+   "oc": [
+    "OC-7141"
+   ],
+   "result": "KILLED",
+   "killed_by": "\"OC-7141 every sort pages stably when all sort keys tie\"",
+   "killed_by_mapped_test": true
+  },
+  {
+   "id": "M103",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Query/LibraryQueries.swift:262 (sidebar app limit 15->14)",
+   "oc": [
+    "OC-7142"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M104",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Retention/ClearHistory.swift:144 (clear loops on empty batch)",
+   "oc": [
+    "OC-7089"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null,
+   "note": "Probable equivalent (no ruling): the re-read uses the same selection SQL as the delete guard, so an empty removal is followed by an empty read; only an extra read differs. Needs a Friday ruling or a guard-fault seam."
+  },
+  {
+   "id": "M105",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Ingest/IngestActor.swift:74 (ingest publishes nothing)",
+   "oc": [
+    "OC-7027"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
+  },
+  {
+   "id": "M106",
+   "target": "Packages/FlotsamCore/Sources/FlotsamStorage/Reliability/Reconcile.swift:134 (orphan removal logs wrong code)",
+   "oc": [
+    "OC-7023",
+    "OC-7113"
+   ],
+   "result": "SURVIVED",
+   "killed_by": null,
+   "killed_by_mapped_test": null
   }
  ],
- "survivors": 21
+ "survivors": 13,
+ "equivalent": 2,
+ "unmapped_kills": [
+  "M45",
+  "M49",
+  "M60",
+  "M70",
+  "M77",
+  "M78",
+  "M89",
+  "M90"
+ ],
+ "oc_without_mutant_dse": [
+  "7013",
+  "7014",
+  "7016",
+  "7029",
+  "7031",
+  "7037",
+  "7038",
+  "7039",
+  "7040",
+  "7043",
+  "7056",
+  "7060",
+  "7061",
+  "7064",
+  "7070",
+  "7083",
+  "7084",
+  "7086",
+  "7087",
+  "7092",
+  "7093",
+  "7094",
+  "7097",
+  "7112",
+  "7124",
+  "7125",
+  "7128",
+  "7129"
+ ],
+ "oc_without_test": [
+  "7004",
+  "7005",
+  "7006",
+  "7007",
+  "7008",
+  "7009",
+  "7010",
+  "7011",
+  "7032",
+  "7034",
+  "7041",
+  "7047",
+  "7062",
+  "7063",
+  "7065",
+  "7080",
+  "7081",
+  "7085",
+  "7088",
+  "7098",
+  "7102",
+  "7103",
+  "7104",
+  "7105",
+  "7106",
+  "7107",
+  "7108",
+  "7109",
+  "7115",
+  "7116",
+  "7118",
+  "7126",
+  "7127",
+  "7130",
+  "7131",
+  "7132",
+  "7133",
+  "7140",
+  "7149",
+  "7150",
+  "7151",
+  "7152"
+ ],
+ "verdict": "FAIL"
 }
