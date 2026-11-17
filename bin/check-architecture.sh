@@ -54,7 +54,29 @@ hits=$(grep -rnE '(public|package|open)[^{=]* throws' "$SRC" App --include='*.sw
 [ -n "$hits" ] && fail "public/package API declared 'throws' (return FlotsamResult; nothing in the package throws, WallClock.sleep returns early on cancellation)" "$hits"
 hits=$(grep -rnE '[[:space:](]as!' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
 [ -n "$hits" ] && fail "force cast (as!) used" "$hits"
-hits=$(grep -rnE '[A-Za-z0-9_)]!([.,)]|[[:space:]]*$)' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+# Force unwrap (FR-000-02). Not a grep: the rule must see `d["k"]!` at end of line and before an operator, and must not
+# see `!=`, a prefix `!x`, or a `!` inside a string or comment. awk blanks string literals (incl. multi-line) and
+# comments first, drops the `try!` / `as!` tokens (their own rules above report them), then flags a `!` that directly
+# follows an identifier character, `)` or `]` and is not the start of `!=`.
+hits=$(find "$SRC" App -name '*.swift' 2>/dev/null | sort | xargs awk '
+  FNR == 1 { inblock = 0; inmulti = 0 }
+  {
+    out = ""; n = length($0); i = 1; instr = 0
+    while (i <= n) {
+      c = substr($0, i, 1); two = substr($0, i, 2); three = substr($0, i, 3)
+      if (inblock) { if (two == "*/") { inblock = 0; i += 2 } else { i++ }; continue }
+      if (inmulti) { if (three == "\"\"\"") { inmulti = 0; i += 3 } else if (c == "\\") { i += 2 } else { i++ }; continue }
+      if (instr) { if (c == "\\") { i += 2 } else if (c == "\"") { instr = 0; i++ } else { i++ }; continue }
+      if (two == "//") break
+      if (two == "/*") { inblock = 1; i += 2; continue }
+      if (three == "\"\"\"") { inmulti = 1; out = out "0"; i += 3; continue }
+      if (c == "\"") { instr = 1; out = out "0"; i++; continue }
+      out = out c; i++
+    }
+    sub(/^try!/, "try", out); gsub(/[[:space:](;{]try!/, " try", out); gsub(/[[:space:](]as!/, " as", out)
+    if (out ~ /[]A-Za-z0-9_)]!([^=]|$)/) print FILENAME ":" FNR ":" $0
+  }
+')
 [ -n "$hits" ] && fail "force unwrap (!) used" "$hits"
 # Only the two Fatal codes (FR-000-04) and unreachable programmer-error invariants may stop the process; the latter
 # must say why on the same line with 'fatal-ok:'.
