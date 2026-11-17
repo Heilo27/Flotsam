@@ -1,6 +1,39 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "kind.text" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Text" } } }
+    },
+    "kind.richText" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Rich Text" } } }
+    },
+    "kind.link" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Link" } } }
+    },
+    "kind.color" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Color" } } }
+    },
+    "kind.phone" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Phone Number" } } }
+    },
+    "kind.email" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Email" } } }
+    },
+    "kind.image" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Image" } } }
+    },
+    "kind.file" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "File" } } }
+    },
+    "kind.folder" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Folder" } } }
+    },
+    "kind.bundle" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Bundle" } } }
+    },
+    "kind.screenshot" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Screenshot" } } }
+    },
     "error.CAP-LIM-001" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy was too large to save (over {limit}). It is still on your clipboard." } } }
     },

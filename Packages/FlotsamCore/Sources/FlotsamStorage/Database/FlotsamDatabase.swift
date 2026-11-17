@@ -26,24 +26,33 @@ public final class FlotsamDatabase: Sendable {
     let pool: DatabasePool
     let fileSystem: any FileSystemPort
     public let folder: DataFolder
+    /// The one clock for ingest, sweep and clear (FR-007-03 stores UTC milliseconds); tests inject a manual one.
+    let clock: any WallClock
     public let events = ItemEventBus()
     /// `STO-DB-002` when this launch found the file damaged, moved it aside and started fresh (FR-007-13). The app
     /// raises it as a Notice; Storage cannot, it has no UI.
     public let openNotice: FlotsamError?
 
-    private init(pool: DatabasePool, folder: DataFolder, fileSystem: any FileSystemPort, notice: FlotsamError?) {
+    private init(
+        pool: DatabasePool, folder: DataFolder, fileSystem: any FileSystemPort, clock: any WallClock,
+        notice: FlotsamError?
+    ) {
         self.pool = pool
         self.folder = folder
         self.fileSystem = fileSystem
+        self.clock = clock
         self.openNotice = notice
     }
+
+    /// Blob files for this database's folder (FR-007-04). A value built on demand: it holds no state of its own.
+    var blobs: BlobStore { BlobStore(folder: folder, fileSystem: fileSystem) }
 
     /// Creates the data folder (0700), opens the pool with the FR-007-02 pragmas, migrates and integrity-checks.
     /// Folder failure is `STO-IO-002`; any other database failure is `STO-DB-003` (both Fatal, FR-000-04).
     public static func open(
-        folder: URL, fileSystem: any FileSystemPort = LocalFileSystem()
+        folder: URL, fileSystem: any FileSystemPort = LocalFileSystem(), clock: any WallClock = SystemClock()
     ) async -> FlotsamResult<FlotsamDatabase> {
-        await open(folder: folder, fileSystem: fileSystem, migrations: Migrations.all)
+        await open(folder: folder, fileSystem: fileSystem, clock: clock, migrations: Migrations.all)
     }
 
     private enum Attempt {
@@ -54,7 +63,7 @@ public final class FlotsamDatabase: Sendable {
 
     /// Internal so tests can simulate a later release's migrations against an existing file.
     static func open(
-        folder root: URL, fileSystem: any FileSystemPort, migrations: [Migration]
+        folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(), migrations: [Migration]
     ) async -> FlotsamResult<FlotsamDatabase> {
         let layout = DataFolder(root: root)
         if case .failure(let error) = layout.prepare(fileSystem: fileSystem) { return .failure(error) }
@@ -66,7 +75,7 @@ public final class FlotsamDatabase: Sendable {
             switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations) {
             case .opened(let pool):
                 layout.restrictDatabaseFilePermissions()
-                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, notice: notice))
+                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice))
             case .failed(let error):
                 return .failure(error)
             case .damaged:
