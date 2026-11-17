@@ -98,7 +98,7 @@ private struct RowInteraction: ViewModifier {
     @ViewBuilder
     private var organizeMenu: some View {
         let single = !model.selection.contains(row.id) || model.selection.count == 1
-        Button(LibraryText.string(row.isPinned ? LibraryText.menuUnpin : LibraryText.menuPin)) { act { model.perform(.external(.pin)) } }
+        Button(LibraryText.string(model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned) ? LibraryText.menuUnpin : LibraryText.menuPin)) { act { model.perform(.external(.pin)) } }
         Button(LibraryText.string(LibraryText.menuTags)) { act { model.perform(.external(.tags)) } }
         if single {
             Button(LibraryText.string(LibraryText.menuNote)) { act { model.perform(.external(.note)) } }

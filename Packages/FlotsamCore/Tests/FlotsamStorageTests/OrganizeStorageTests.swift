@@ -235,6 +235,22 @@ private func failure<T>(_ result: FlotsamResult<T>) -> ErrorCode? {
         #expect(try await store.database.setNote("x", for: Store.id(99)).get() == false)
     }
 
+    @Test("FR-004-06 the note counter and save count the same unit: 1,000 ZWJ family emoji are over the limit in both")
+    func noteCounterAgreesWithSave() async throws {
+        let store = try await Store.make()
+        defer { store.cleanUp() }
+        try await store.insert(Spec(n: 1))
+        let family = "\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}\u{200D}\u{1F466}"
+        let note = String(repeating: family, count: 1_000)
+        #expect(note.count == 1_000)
+        #expect(IngestLimits.noteLength(note) > IngestLimits.maxNoteCharacters)
+        #expect(IngestLimits.noteLength(note) >= IngestLimits.noteCounterThreshold)
+        #expect(failure(await store.database.setNote(note, for: Store.id(1))) == .orgVal002)
+        let atLimit = String(repeating: "n", count: IngestLimits.maxNoteCharacters)
+        #expect(IngestLimits.noteLength(atLimit) == IngestLimits.maxNoteCharacters)
+        #expect(try await store.database.setNote(atLimit, for: Store.id(1)).get() == true)
+    }
+
     @Test("FR-004-06 the note reads back exactly as stored; none and a missing item read as nil")
     func noteReadBack() async throws {
         let store = try await Store.make()

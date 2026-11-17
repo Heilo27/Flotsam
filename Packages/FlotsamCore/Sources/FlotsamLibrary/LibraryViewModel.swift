@@ -466,6 +466,14 @@ public final class LibraryViewModel {
         return await organize { await $0.togglePin(ids) }
     }
 
+    /// Whether Pin on a context menu opened on row `id` would unpin (FR-004-01): the action covers the selection when the
+    /// row is in it, else just the row, and unpins only when every item it covers is pinned (any unpinned one: pin all).
+    public func pinActionUnpins(menuRowID id: UUID, isPinned: Bool) -> Bool {
+        guard selection.contains(id) else { return isPinned }
+        let covered = selectedRows
+        return !covered.isEmpty && covered.allSatisfy(\.isPinned)
+    }
+
     /// Tag or untag the selection with an existing tag (FR-004-02). Returns true when the tag was applied.
     public func toggleTagOnSelection(_ tagId: Int64) async -> Bool? {
         let ids = Array(selection)

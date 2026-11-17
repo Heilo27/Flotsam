@@ -1,5 +1,6 @@
 import FlotsamBase
 import FlotsamLibrary
+import FlotsamStorage
 import SwiftUI
 
 extension TagColor {
@@ -168,9 +169,9 @@ private struct TagRow: View {
 private struct NoteCard: View {
     let organize: OrganizeCoordinator
     @FocusState private var focused: Bool
-    /// The counter appears only near the limit (FR-004-06).
-    private static let counterThreshold = 1_800
-    private static let limit = 2_000
+    /// The counter appears only near the limit (FR-004-06). Limit, threshold and counting rule are Storage's
+    /// (`IngestLimits`), so the counter agrees with what save accepts.
+    private var length: Int { IngestLimits.noteLength(organize.draft) }
 
     var body: some View {
         @Bindable var organize = organize
@@ -182,9 +183,9 @@ private struct NoteCard: View {
                 .frame(width: 320, height: 140)
                 .scrollContentBackground(.hidden)
                 .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
-            if organize.draft.count >= Self.counterThreshold {
-                Text(verbatim: LibraryText.noteCounter(organize.draft.count)).font(.caption)
-                    .foregroundStyle(organize.draft.count > Self.limit ? .red : .secondary)
+            if length >= IngestLimits.noteCounterThreshold {
+                Text(verbatim: LibraryText.noteCounter(length)).font(.caption)
+                    .foregroundStyle(length > IngestLimits.maxNoteCharacters ? .red : .secondary)
             }
             ValidationLabel(message: organize.validation)
             SaveCancelRow(organize: organize)
