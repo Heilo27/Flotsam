@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// What happened to stored items. Published by Storage after the transaction commits (FR-007-05, FR-007-15).
 public enum ItemEvent: Sendable, Equatable {
@@ -15,9 +16,13 @@ public enum ItemEvent: Sendable, Equatable {
 /// Handlers therefore run on the publisher's executor and must be quick and non-blocking (copy a snapshot, hop to
 /// another actor, or yield into their own `AsyncStream` via `stream()`).
 /// Lives in Base so Shortcuts and Triggers can subscribe without importing Storage internals.
-public final class ItemEventBus: @unchecked Sendable {
-    private let lock = NSLock()
-    private var handlers: [UUID: @Sendable (ItemEvent) -> Void] = [:]
+///
+/// Why not an actor: an actor's `publish` would have to be `async`, which is the "schedules delivery" behaviour above.
+/// Why not `Synchronization.Mutex`: it needs macOS 15 and the package targets macOS 14. `OSAllocatedUnfairLock` (in
+/// `os`, macOS 13+) is `Sendable` and owns the state it guards, so the compiler checks this class's Sendability and
+/// it needs no `@unchecked` exception (ADR-0004).
+public final class ItemEventBus: Sendable {
+    private let handlers = OSAllocatedUnfairLock(initialState: [UUID: @Sendable (ItemEvent) -> Void]())
 
     public init() {}
 
@@ -25,14 +30,14 @@ public final class ItemEventBus: @unchecked Sendable {
     @discardableResult
     public func subscribe(_ handler: @escaping @Sendable (ItemEvent) -> Void) -> @Sendable () -> Void {
         let token = UUID()
-        lock.withLock { handlers[token] = handler }
-        return { [weak self] in self?.lock.withLock { self?.handlers[token] = nil } }
+        handlers.withLock { $0[token] = handler }
+        return { [weak self] in self?.handlers.withLock { $0[token] = nil } }
     }
 
     /// Delivers `event` to every current subscriber before returning.
     public func publish(_ event: ItemEvent) {
         // Snapshot under the lock, call outside it: a handler may subscribe or unsubscribe without deadlocking.
-        let snapshot = lock.withLock { Array(handlers.values) }
+        let snapshot = handlers.withLock { Array($0.values) }
         for handler in snapshot { handler(event) }
     }
 
