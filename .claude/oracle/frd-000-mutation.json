@@ -1,643 +1,4396 @@
 {
-  "frd": "FRD-000",
-  "audited_by": "Data (8V independent run, head 57d65d7, after O'Brien lint fixes; supersedes Worf's pre-fix run)",
-  "mutations": [
-    {
-      "id": "M01",
-      "target": "ErrorReporter.report: Info raise recorded into ring before returning",
-      "oc": [
-        "OC-0011",
-        "OC-0066",
-        "OC-0067",
-        "OC-0068"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0011 only Fatal presents the fatal alert, and it is never throttled"
-    },
-    {
-      "id": "M02",
-      "target": "SurfacingThrottle.admit: per-code window `<` to `<=` (exact 60s counts as suppressed)",
-      "oc": [
-        "OC-0023"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s"
-    },
-    {
-      "id": "M03",
-      "target": "SurfacingThrottle.admit: window prune `>=` to `>` (exact 60s HUD stays counted)",
-      "oc": [
-        "OC-0024"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s"
-    },
-    {
-      "id": "M04",
-      "target": "SurfacingThrottle.admit: HUD cap `>=` to `>` (4 HUDs per minute)",
-      "oc": [
-        "OC-0024"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s"
-    },
-    {
-      "id": "M05",
-      "target": "SurfacingThrottle.window 60 to 59",
-      "oc": [
-        "OC-0023",
-        "OC-0024"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s"
-    },
-    {
-      "id": "M06",
-      "target": "SurfacingThrottle.admit: rejected occurrence resets the per-code timer",
-      "oc": [
-        "OC-0023"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0023 window is measured from the last surfaced occurrence"
-    },
-    {
-      "id": "M07",
-      "target": "ErrorRingBuffer.capacity 100 to 101",
-      "oc": [
-        "OC-0043"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0043 ring holds the last 100, oldest first"
-    },
-    {
-      "id": "M08",
-      "target": "ErrorRingBuffer overflow drops newest instead of oldest",
-      "oc": [
-        "OC-0043"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0043 ring holds the last 100, oldest first"
-    },
-    {
-      "id": "M09",
-      "target": "NoticeBoard.insert newest-first to append",
-      "oc": [
-        "OC-0023",
-        "OC-0027"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0023 window is measured from the last surfaced occurrence"
-    },
-    {
-      "id": "M10",
-      "target": "NoticeBoard.capacity 10 to 11",
-      "oc": [
-        "OC-0027"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0027 notices cap at 10, newest first"
-    },
-    {
-      "id": "M11",
-      "target": "ErrorReporter: every raise treated as HUD regardless of origin",
-      "oc": [
-        "OC-0024",
-        "OC-0027",
-        "OC-0028"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0024 at most three HUDs per minute across codes"
-    },
-    {
-      "id": "M12",
-      "target": "ErrorReporter dismiss-all: board.removeAll() removed",
-      "oc": [
-        "OC-0028"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0028 after dismiss all, the next notice is the only one listed"
-    },
-    {
-      "id": "M13",
-      "target": "ErrorReporter: fatal alert subjected to the throttle",
-      "oc": [
-        "OC-0011"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0011 only Fatal presents the fatal alert, and it is never throttled"
-    },
-    {
-      "id": "M14",
-      "target": "ErrorReporter.report: FlotsamLog.log(error) call deleted",
-      "oc": [
-        "OC-0040",
-        "OC-0013",
-        "OC-0014"
-      ],
-      "result": "KILLED",
-      "killed_by": "ErrorReporterLogTests: everySeverityWritesOneRecord (x4), throttledBackgroundOccurrencesAreLogged, capSuppressedHUDIsLogged, sessionOfThreeSeverities"
-    },
-    {
-      "id": "M15",
-      "target": "NoticeBoard overflow evicts newest instead of oldest",
-      "oc": [
-        "OC-0027"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0027 newest notice carries its catalogue text"
-    },
-    {
-      "id": "M16",
-      "target": "MessageArgument.formatBytes countStyle .memory to .file (decimal units)",
-      "oc": [
-        "OC-0019"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'"
-    },
-    {
-      "id": "M17",
-      "target": "ErrorCode.severity: CAP-LIM-001 added to the severity case list that starts .sysInt001, .capIo001",
-      "oc": [
-        "OC-0007",
-        "OC-0058"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0007 severity counts are 2 fatal, 20 warning, 24 error, 14 info"
-    },
-    {
-      "id": "M18",
-      "target": "FlotsamStrings.message: placeholder count guard `==` to `<=`",
-      "oc": [
-        "OC-0050"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text"
-    },
-    {
-      "id": "M19",
-      "target": "FlotsamStrings.message: fallback returns empty string instead of SYS-INT-001 text",
-      "oc": [
-        "OC-0050"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text"
-    },
-    {
-      "id": "M20",
-      "target": "LogSafeValue.isPublic: .id/.bundleId made public",
-      "oc": [
-        "OC-0036"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0036 item ids are private; counts, durations, booleans and codes are public"
-    },
-    {
-      "id": "M21",
-      "target": "LogSafeValue.isPublic: every .uti public",
-      "oc": [
-        "OC-0071",
-        "OC-0072"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0071 a non-system UTI renders private"
-    },
-    {
-      "id": "M22",
-      "target": "FlotsamLog.log(error): message/cause privacy .private to .public",
-      "oc": [
-        "OC-0013",
-        "OC-0035",
-        "OC-0040"
-      ],
-      "result": "KILLED",
-      "killed_by": "ErrorReporterLogTests.privacySplitAtTheSink (private context into publicContext; message into headline also red). The OSLogSink .private qualifier itself is a 9F integration check, not unit-reachable"
-    },
-    {
-      "id": "M23",
-      "target": "FlotsamLog.log(error): level fixed to .info instead of level(for: severity)",
-      "oc": [
-        "OC-0032",
-        "OC-0013"
-      ],
-      "result": "KILLED",
-      "killed_by": "ErrorReporterLogTests.recordLevelAndCategory (levels 0/16/17 for Warning/Error/Fatal)"
-    },
-    {
-      "id": "M24",
-      "target": "DiagnosticsReport: ring section reversed (newest first)",
-      "oc": [
-        "OC-0043",
-        "OC-0045"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0043 report lists 100 ring entries, E6 first, E5 absent"
-    },
-    {
-      "id": "M25",
-      "target": "DiagnosticsSnapshotBuilder: negative item-count clamp removed",
-      "oc": [],
-      "result": "KILLED",
-      "killed_by": "report clamps negative counts and byte sizes to zero"
-    },
-    {
-      "id": "M26",
-      "target": "DiagnosticsSnapshotBuilder.isRegistryKey: parts.count == 2 to >= 2",
-      "oc": [
-        "OC-0046"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0046 non-registry toggle keys never reach the report"
-    },
-    {
-      "id": "M27",
-      "target": "BundleIdentifier length limit 255 to 256 bytes",
-      "oc": [
-        "OC-0073"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0073 BundleIdentifier length boundary is 255 bytes"
-    },
-    {
-      "id": "M28",
-      "target": "check-architecture.sh: print/NSLog/dump rule drops dump",
-      "oc": [
-        "OC-0034"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0034 the lint names each injected print, NSLog and dump line"
-    },
-    {
-      "id": "M29",
-      "target": "check-architecture.sh: force-unwrap awk class drops `]` (d[\"k\"]! shape)",
-      "oc": [
-        "OC-0001"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0001 injected force-unwrap fails the lint at its line"
-    },
-    {
-      "id": "M30",
-      "target": "check-architecture.sh: public throws rule drops `package`",
-      "oc": [
-        "OC-0003"
-      ],
-      "result": "KILLED",
-      "killed_by": "LintHarnessTests OC-0003 \"package throws in a module file\" mutant (open throws mutant added too)"
-    },
-    {
-      "id": "M32",
-      "target": "FlotsamLog.level(for:): .warning maps to .info instead of .default",
-      "oc": [
-        "OC-0032"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0032 CAP-POL-001, CAP-LIM-001, CAP-IO-001 and STO-IO-002 log at 1, 0, 16, 17"
-    },
-    {
-      "id": "M33",
-      "target": "LogEvent.name: triggerMatched \"trigger.matched\" to \"trigger.match\"",
-      "oc": [
-        "OC-0037",
-        "OC-0038",
-        "OC-0039"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields"
-    },
-    {
-      "id": "M34",
-      "target": "FlotsamLog.log(error): underlying cause drops domain",
-      "oc": [
-        "OC-0013",
-        "OC-0035"
-      ],
-      "result": "KILLED",
-      "killed_by": "ErrorReporterLogTests.privacySplitAtTheSink (privateText ends NSCocoaErrorDomain:640)"
-    },
-    {
-      "id": "M14",
-      "pass": "re-run 2026-11-16",
-      "target": "re-run: ErrorReporter.report: delete FlotsamLog.log(error, sink:) call",
-      "oc": [
-        "OC-0013",
-        "OC-0014",
-        "OC-0040"
-      ],
-      "result": "KILLED",
-      "killed_by": "everySeverityWritesOneRecord, throttledOccurrenceIsStillLogged, cap-suppressed HUD still logged (23 issues)"
-    },
-    {
-      "id": "M22",
-      "pass": "re-run 2026-11-16",
-      "target": "re-run: LogRecord: message moved from privateText to publicText",
-      "oc": [
-        "OC-0033",
-        "OC-0035"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0013 OC-0035 user data, message and cause only in the private text; OC-0035 no-cause record (5 issues)"
-    },
-    {
-      "id": "M23",
-      "pass": "re-run 2026-11-16",
-      "target": "re-run: record(for: error) level fixed .info",
-      "oc": [
-        "OC-0032",
-        "OC-0013"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0032 OC-0013 level and category follow severity and module (3 issues)"
-    },
-    {
-      "id": "M34",
-      "pass": "re-run 2026-11-16",
-      "target": "re-run: LogRecord.privateText cause drops domain",
-      "oc": [
-        "OC-0035"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0013 OC-0035 domain:code only in private text (1 issue)"
-    },
-    {
-      "id": "M30",
-      "pass": "re-run 2026-11-16",
-      "target": "re-run: check-architecture.sh throws rule drops `package`",
-      "oc": [
-        "OC-0003"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0003 an injected public throws function fails the lint (package case)"
-    },
-    {
-      "id": "N1",
-      "pass": "re-run 2026-11-16",
-      "target": "LogRecord.publicText also emits privateContext",
-      "oc": [
-        "OC-0013",
-        "OC-0035"
-      ],
-      "result": "KILLED",
-      "killed_by": "user data only in private text"
-    },
-    {
-      "id": "N2",
-      "pass": "re-run 2026-11-16",
-      "target": "LogRecord.privateText drops the cause",
-      "oc": [
-        "OC-0035"
-      ],
-      "result": "KILLED",
-      "killed_by": "domain:code only in private text"
-    },
-    {
-      "id": "N3",
-      "pass": "re-run 2026-11-16",
-      "target": "LogRecord.privateText drops the message",
-      "oc": [
-        "OC-0035"
-      ],
-      "result": "KILLED",
-      "killed_by": "user data/message in private text; no-cause record"
-    },
-    {
-      "id": "N4",
-      "pass": "re-run 2026-11-16",
-      "target": "ErrorReporter.report logs Warning/Error after the throttle instead of before",
-      "oc": [
-        "OC-0013",
-        "OC-0014",
-        "OC-0040"
-      ],
-      "result": "KILLED",
-      "killed_by": "AC-000-04 throttled occurrence still logged; HUD cap still logged"
-    },
-    {
-      "id": "N5a",
-      "pass": "re-run 2026-11-16",
-      "target": "FlotsamCatalogue.englishStrings(from:) reads `de` instead of `en`",
-      "oc": [
-        "OC-0021",
-        "OC-0016",
-        "OC-0018"
-      ],
-      "result": "KILLED",
-      "killed_by": "107 issues; OC-0021 (1)-(3), OC-0016, OC-0018"
-    },
-    {
-      "id": "N5b",
-      "pass": "re-run 2026-11-16",
-      "target": "englishStrings(from:) returns success([:]) when the strings table is missing",
-      "oc": [
-        "OC-0021"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0021 a non-JSON or table-less catalogue fails to read"
-    },
-    {
-      "id": "N5c",
-      "pass": "re-run 2026-11-16",
-      "target": "englishStrings(from:) returns success([:]) on non-JSON",
-      "oc": [
-        "OC-0021"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0021 a non-JSON or table-less catalogue fails to read"
-    },
-    {
-      "id": "N5d",
-      "pass": "re-run 2026-11-16",
-      "target": "englishStrings(from:) reads stringUnit `state` instead of `value`",
-      "oc": [
-        "OC-0021",
-        "OC-0018",
-        "OC-0057"
-      ],
-      "result": "KILLED",
-      "killed_by": "141 issues; OC-0018, OC-0057..0059"
-    },
-    {
-      "id": "N6a",
-      "pass": "re-run 2026-11-16",
-      "target": "FlotsamCatalogue.shippedURL drops one deletingLastPathComponent",
-      "oc": [
-        "OC-0006",
-        "OC-0016",
-        "OC-0018"
-      ],
-      "result": "KILLED",
-      "killed_by": "26 issues; every catalogue-reading test goes red"
-    },
-    {
-      "id": "N6b",
-      "pass": "re-run 2026-11-16",
-      "target": "FlotsamCatalogue.shippedURL path Resources -> Resource",
-      "oc": [
-        "OC-0006",
-        "OC-0016",
-        "OC-0018"
-      ],
-      "result": "KILLED",
-      "killed_by": "26 issues"
-    },
-    {
-      "id": "N7",
-      "pass": "re-run 2026-11-16",
-      "target": "check-architecture.sh throws rule drops `open`",
-      "oc": [
-        "OC-0003"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0003 an injected public throws function fails the lint (open case, mutant 'open throws in a module file')"
-    },
-    {
-      "id": "N8a",
-      "pass": "re-run 2026-11-16",
-      "target": "SystemClock.sleep: try? -> try! (traps on cancellation)",
-      "oc": [
-        "OC-0003"
-      ],
-      "result": "KILLED",
-      "killed_by": "by the lint (OC-0001/0002 no-try! rule over shipped sources, 25 issues), not by a runtime test"
-    },
-    {
-      "id": "N8b",
-      "pass": "re-run 2026-11-16",
-      "target": "SystemClock.sleep: sleeps .zero instead of duration",
-      "oc": [],
-      "result": "SURVIVED",
-      "note": "no test calls SystemClock.sleep; no contract id covers its runtime behaviour",
-      "rerun_8T_OC-0077": {
-        "date": "2026-11-17",
-        "by": "Worf",
-        "oc": [
-          "OC-0077"
-        ],
-        "result": "KILLED",
-        "killed_by": "OC-0077 live 50 ms sleep (elapsed >= 50 ms) and cancel-during-sleep (elapsed >= 25 ms)",
-        "tests": "SystemClockTests.swift"
-      }
-    },
-    {
-      "id": "N8c",
-      "pass": "re-run 2026-11-16",
-      "target": "SystemClock.sleep: on cancellation, sleeps the full duration again (no early return)",
-      "oc": [],
-      "result": "SURVIVED",
-      "note": "no test cancels a SystemClock.sleep; OC-0003 only checks the signature does not throw",
-      "rerun_8T_OC-0077": {
-        "date": "2026-11-17",
-        "by": "Worf",
-        "oc": [
-          "OC-0077"
-        ],
-        "result": "KILLED",
-        "killed_by": "OC-0077 cancel-before-start and cancel-during-sleep: elapsed < 1 s (mutant took 10 s)",
-        "tests": "SystemClockTests.swift"
-      }
-    },
-    {
-      "id": "N8d",
-      "pass": "re-run 2026-11-16",
-      "target": "SystemClock.sleep: body is a no-op",
-      "oc": [],
-      "result": "SURVIVED",
-      "note": "no test calls SystemClock.sleep",
-      "rerun_8T_OC-0077": {
-        "date": "2026-11-17",
-        "by": "Worf",
-        "oc": [
-          "OC-0077"
-        ],
-        "result": "KILLED",
-        "killed_by": "OC-0077 live 50 ms sleep (elapsed >= 50 ms) and cancel-during-sleep (elapsed >= 25 ms, isCancelled)",
-        "tests": "SystemClockTests.swift"
-      }
-    },
-    {
-      "id": "N9",
-      "pass": "re-run 2026-11-16",
-      "target": "ErrorReporter.report passes category .core to the log",
-      "oc": [
-        "OC-0032",
-        "OC-0013"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0032 OC-0013 level and category follow severity and module"
-    },
-    {
-      "id": "N10",
-      "pass": "re-run 2026-11-16",
-      "target": "record(for: error) category fixed .core",
-      "oc": [
-        "OC-0032",
-        "OC-0013"
-      ],
-      "result": "KILLED",
-      "killed_by": "OC-0032 OC-0013"
-    },
-    {
-      "id": "N11",
-      "pass": "re-run 2026-11-16",
-      "target": "FlotsamLog.log(error) writes the record twice",
-      "oc": [
-        "OC-0040",
-        "OC-0013",
-        "OC-0014"
-      ],
-      "result": "KILLED",
-      "killed_by": "exactly-one-record tests (15 issues)"
-    }
-  ],
-  "survivors": 0,
-  "discarded_equivalent": [
-    {
-      "id": "M31",
-      "target": "check-architecture.sh: as! rule drops `(` from [[:space:](]",
-      "reason": "`(as!` cannot occur in valid Swift; equivalent mutant, not counted"
-    }
-  ],
-  "rerun_8T": {
-    "by": "Worf",
-    "note": "8V survivors M14 M22 M23 M34 M30 re-run one at a time against the new tests, each reverted; all KILLED. Data re-runs 8V independently."
+ "frd": "FRD-000",
+ "audited_by": "data (TASK-369 8V mutation gate)",
+ "head": "70fcc3c",
+ "suite": "swift test --filter FlotsamBaseTests (Packages/FlotsamCore), sandbox git-archive copies, 240s timeout, 4GB RSS cap; TIMEOUT(hang) and OOM(>4GB) counted KILLED",
+ "totals": {
+  "mutants": 310,
+  "KILLED": 221,
+  "SURVIVED": 79,
+  "EQUIVALENT": 10
+ },
+ "verdict": "FAIL",
+ "mutations": [
+  {
+   "id": "X001",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 10,
+   "kind": "delete",
+   "original": "self.name = name",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200912] FlotsamBase error: Build failed error: fatalError "
+   ]
   },
-  "survivor_ids": [],
-  "rerun_8V": {
-    "by": "Data",
-    "date": "2026-11-16",
-    "head": "101b947",
-    "baseline_tests": 105,
-    "re_applied": [
-      "M14",
-      "M22",
-      "M23",
-      "M30",
-      "M34"
-    ],
-    "re_applied_killed": 5,
-    "planted_new": 18,
-    "planted_new_killed": 15,
-    "total_run": 23,
-    "total_killed": 20,
-    "survivors": 3,
-    "verdict": "FAIL",
-    "method": "one mutant at a time, swift test --package-path Packages/FlotsamCore --filter FlotsamBaseTests, git checkout of the file after each, git status clean after each"
+  {
+   "id": "X002",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 11,
+   "kind": "delete",
+   "original": "self.defaultValue = defaultValue",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
   },
-  "b_findings_recheck": {
-    "SettingsAndModelTests.swift:55": "RESOLVED: asserts logCategory for one code per module (8 modules)",
-    "ErrorCatalogueTests.swift:50": "RESOLVED: SYS-INT-001 compared to verbatim section 7 text",
-    "DiagnosticsTests.swift:161-162": "RESOLVED: Set of utis plus first-by-uti lookups, no positional index"
+  {
+   "id": "X003",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 22,
+   "kind": "string",
+   "original": "public static let captureMode = SettingKey(\"capture.mode\", default: CaptureMode.active)",
+   "mutated": "public static let captureMode = SettingKey(\"capture.mode~\", default: CaptureMode.active)",
+   "result": "SURVIVED",
+   "ticket": "TASK-375"
   },
-  "OC-0021_verdict": "MET as written (see report)",
-  "rerun_8T_OC-0077": {
-    "by": "Worf",
-    "date": "2026-11-17",
-    "note": "N8b N8c N8d re-applied one at a time against SystemClockTests (3 tests, 108 total in FlotsamBaseTests), each reverted, git status clean after each; all KILLED. Data re-runs 8V independently.",
-    "baseline_tests": 108,
-    "killed": [
-      "N8b",
-      "N8c",
-      "N8d"
-    ]
+  {
+   "id": "X004",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 23,
+   "kind": "string",
+   "original": "public static let storageRetention = SettingKey(\"storage.retention\", default: RetentionPreset.d30)",
+   "mutated": "public static let storageRetention = SettingKey(\"storage.retention~\", default: RetentionPreset.d30)",
+   "result": "SURVIVED",
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X005",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 24,
+   "kind": "string",
+   "original": "public static let storageImageBudget = SettingKey(\"storage.imageBudget\", default: ImageBudget.gib2)",
+   "mutated": "public static let storageImageBudget = SettingKey(\"storage.imageBudget~\", default: ImageBudget.gib2)",
+   "result": "SURVIVED",
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X006",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 25,
+   "kind": "string",
+   "original": "public static let storageImageQuality = SettingKey(\"storage.imageQuality\", default: ImageQuality.original)",
+   "mutated": "public static let storageImageQuality = SettingKey(\"storage.imageQuality~\", default: ImageQuality.original)",
+   "result": "SURVIVED",
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X007",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 42,
+   "kind": "op",
+   "original": "return SettingReading(value: key.defaultValue, recoveredFromInvalid: false)",
+   "mutated": "return SettingReading(value: key.defaultValue, recoveredFromInvalid: true)",
+   "result": "SURVIVED",
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X008",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 45,
+   "kind": "op",
+   "original": "return SettingReading(value: value, recoveredFromInvalid: false)",
+   "mutated": "return SettingReading(value: value, recoveredFromInvalid: true)",
+   "result": "SURVIVED",
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X009",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 47,
+   "kind": "op",
+   "original": "return SettingReading(value: key.defaultValue, recoveredFromInvalid: true)",
+   "mutated": "return SettingReading(value: key.defaultValue, recoveredFromInvalid: false)",
+   "result": "KILLED",
+   "killed_by": [
+    "(suite failure)"
+   ]
+  },
+  {
+   "id": "X010",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 53,
+   "kind": "delete",
+   "original": "store.setString(value.rawValue, forKey: key.name)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report shows changed retention and budget presets"
+   ]
+  },
+  {
+   "id": "X011",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 21,
+   "kind": "delete",
+   "original": "URL(fileURLWithPath: file ?? #filePath)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X012",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 23,
+   "kind": "string",
+   "original": ".appendingPathComponent(\"Resources/Localizable.xcstrings\")",
+   "mutated": ".appendingPathComponent(\"Resources/Localizable.xcstrings~\")",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 46 non-Info codes",
+    "OC-0018 every message has 1 or 2 sentences",
+    "OC-0018 every message is at most 140 characters",
+    "OC-0018 no message contains an error-code-shaped substring",
+    "OC-0018 placeholders are only %@ and %lld, on exactly the five expected codes"
+   ]
+  },
+  {
+   "id": "X013",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 27,
+   "kind": "op",
+   "original": "public static func englishStrings(at url: URL = shippedURL()) -> FlotsamResult<[String: String]> {",
+   "mutated": "public static func englishStrings(at url: URL = shippedURL()) -> FlotsamResult<=[String: String]> {",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) te/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X014",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 31,
+   "kind": "string",
+   "original": "return .failure(FlotsamError(.sysInt001, \"catalogue file unreadable\", underlying: UnderlyingErrorInfo(error)))",
+   "mutated": "return .failure(FlotsamError(.sysInt001, \"catalogue file unreadable~\", underlying: UnderlyingErrorInfo(error)))",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X015",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 37,
+   "kind": "op",
+   "original": "public static func englishStrings(from data: Data) -> FlotsamResult<[String: String]> {",
+   "mutated": "public static func englishStrings(from data: Data) -> FlotsamResult<=[String: String]> {",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) te/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X016",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 40,
+   "kind": "delete",
+   "original": "json = try JSONSerialization.jsonObject(with: data)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X017",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 42,
+   "kind": "string",
+   "original": "return .failure(FlotsamError(.sysInt001, \"catalogue is not JSON\", underlying: UnderlyingErrorInfo(error)))",
+   "mutated": "return .failure(FlotsamError(.sysInt001, \"catalogue is not JSON~\", underlying: UnderlyingErrorInfo(error)))",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X018",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 44,
+   "kind": "string",
+   "original": "guard let root = json as? [String: Any], let entries = root[\"strings\"] as? [String: [String: Any]] else {",
+   "mutated": "guard let root = json as? [String: Any], let entries = root[\"strings~\"] as? [String: [String: Any]] else {",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 46 non-Info codes",
+    "OC-0018 every message has 1 or 2 sentences",
+    "OC-0018 every message is at most 140 characters",
+    "OC-0018 no message contains an error-code-shaped substring",
+    "OC-0018 placeholders are only %@ and %lld, on exactly the five expected codes"
+   ]
+  },
+  {
+   "id": "X019",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 45,
+   "kind": "string",
+   "original": "return .failure(FlotsamError(.sysInt001, \"catalogue has no strings table\"))",
+   "mutated": "return .failure(FlotsamError(.sysInt001, \"catalogue has no strings table~\"))",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X020",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 48,
+   "kind": "string",
+   "original": "let english = (entry[\"localizations\"] as? [String: Any])?[\"en\"] as? [String: Any]",
+   "mutated": "let english = (entry[\"localizations~\"] as? [String: Any])?[\"en\"] as? [String: Any]",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 46 non-Info codes",
+    "OC-0018 every message is at most 140 characters",
+    "OC-0018 placeholders are only %@ and %lld, on exactly the five expected codes",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check"
+   ]
+  },
+  {
+   "id": "X021",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 48,
+   "kind": "string",
+   "original": "let english = (entry[\"localizations\"] as? [String: Any])?[\"en\"] as? [String: Any]",
+   "mutated": "let english = (entry[\"localizations\"] as? [String: Any])?[\"en~\"] as? [String: Any]",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 46 non-Info codes",
+    "OC-0016 OC-0020 OC-0053 catalogue error keys \u2718 Test ",
+    "OC-0018 every message is at most 140 characters",
+    "OC-0018 placeholders are only %@ and %lld, on exactly the five expected codes",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes"
+   ]
+  },
+  {
+   "id": "X022",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 49,
+   "kind": "string",
+   "original": "return (english?[\"stringUnit\"] as? [String: Any])?[\"value\"] as? String",
+   "mutated": "return (english?[\"stringUnit~\"] as? [String: Any])?[\"value\"] as? String",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 46 non-Info codes",
+    "OC-0018 every message is at most 140 characters",
+    "OC-0018 placeholders are only %@ and %lld, on exactly the five expected codes",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check"
+   ]
+  },
+  {
+   "id": "X023",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 49,
+   "kind": "string",
+   "original": "return (english?[\"stringUnit\"] as? [String: Any])?[\"value\"] as? String",
+   "mutated": "return (english?[\"stringUnit\"] as? [String: Any])?[\"value~\"] as? String",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 46 non-Info codes",
+    "OC-0018 every message is at most 140 characters",
+    "OC-0018 placeholders are only %@ and %lld, on exactly the five expected codes",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check"
+   ]
+  },
+  {
+   "id": "X024",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 8,
+   "kind": "string",
+   "original": "let missingMarker = \"\\u{0}missing\"",
+   "mutated": "let missingMarker = \"\\u{0}missing~\"",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X025",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 10,
+   "kind": "op",
+   "original": "return value == missingMarker ? nil : value",
+   "mutated": "return value != missingMarker ? nil : value",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0012 user-initiated LIB-OS-001 shows a HUD with the exact text and no notice",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0024 at most three HUDs per minute across codes",
+    "OC-0026 background SSP-LIM-001 is a notice with the limit shown, never a HUD"
+   ]
+  },
+  {
+   "id": "X026",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 24,
+   "kind": "op",
+   "original": "kinds == arguments.map(\\.kind)",
+   "mutated": "kinds != arguments.map(\\.kind)",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text",
+    "SYS-INT-001 text is verbatim and is the fallback for an unfilled template"
+   ]
+  },
+  {
+   "id": "X027",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 26,
+   "kind": "op",
+   "original": "guard !arguments.isEmpty else { return template }",
+   "mutated": "guard !arguments.isEmpty == false else { return template }",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0026 background SSP-LIM-001 is a notice with the limit shown, never a HUD",
+    "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text",
+    "a negative count renders as 0, never with a minus sign (FR-000-06, TASK-347)"
+   ]
+  },
+  {
+   "id": "X028",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 26,
+   "kind": "negate-guard",
+   "original": "guard !arguments.isEmpty else { return template }",
+   "mutated": "guard !(!arguments.isEmpty) else { return template }",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0026 background SSP-LIM-001 is a notice with the limit shown, never a HUD",
+    "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text",
+    "a negative count renders as 0, never with a minus sign (FR-000-06, TASK-347)"
+   ]
+  },
+  {
+   "id": "X029",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 26,
+   "kind": "drop-not",
+   "original": "guard !arguments.isEmpty else { return template }",
+   "mutated": "guard arguments.isEmpty else { return template }",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0026 background SSP-LIM-001 is a notice with the limit shown, never a HUD",
+    "OC-0050 missing key or placeholder mismatch falls back to the SYS-INT-001 text",
+    "a negative count renders as 0, never with a minus sign (FR-000-06, TASK-347)"
+   ]
+  },
+  {
+   "id": "X030",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 28,
+   "kind": "op",
+   "original": "var nameLimit = arguments.reduce(0) { longest, argument in",
+   "mutated": "var nameLimit = arguments.reduce(1) { longest, argument in",
+   "result": "EQUIVALENT",
+   "proof": "reduce(0) vs reduce(1) differs only when every app name is empty or none exist. Then limit 0 and limit 1 render identically (an empty name is never truncated, other args ignore the limit) and both exit on the first pass via nameLimit<=1."
+  },
+  {
+   "id": "X031",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 31,
+   "kind": "op",
+   "original": "while true {",
+   "mutated": "while false {",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X032",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 33,
+   "kind": "op",
+   "original": "let excess = rendered.count - maxMessageLength",
+   "mutated": "let excess = rendered.count + maxMessageLength",
+   "result": "KILLED",
+   "killed_by": [
+    "an over-long app name is cut with an ellipsis and the rest of the sentence survives",
+    "hostile app names are substituted verbatim and never re-interpreted"
+   ]
+  },
+  {
+   "id": "X033",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
+   "mutated": "if excess < 0 || nameLimit <= 1 { return rendered }",
+   "result": "KILLED",
+   "killed_by": [
+    "TIMEOUT(hang)"
+   ]
+  },
+  {
+   "id": "X034",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
+   "mutated": "if excess <= 0 || nameLimit < 1 { return rendered }",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X035",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
+   "mutated": "if excess <= 0 && nameLimit <= 1 { return rendered }",
+   "result": "KILLED",
+   "killed_by": [
+    "TIMEOUT(hang)"
+   ]
+  },
+  {
+   "id": "X036",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
+   "mutated": "if excess <= 1 || nameLimit <= 1 { return rendered }",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X037",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
+   "mutated": "if excess <= 0 || nameLimit <= 2 { return rendered }",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X038",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "kind": "negate-if",
+   "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
+   "mutated": "if !(excess <= 0 || nameLimit <= 1) { return rendered }",
+   "result": "KILLED",
+   "killed_by": [
+    "TIMEOUT(hang)"
+   ]
+  },
+  {
+   "id": "X039",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 36,
+   "kind": "op",
+   "original": "nameLimit = max(1, nameLimit - excess)",
+   "mutated": "nameLimit = max(1, nameLimit + excess)",
+   "result": "KILLED",
+   "killed_by": [
+    "TIMEOUT(hang)"
+   ]
+  },
+  {
+   "id": "X040",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 36,
+   "kind": "op",
+   "original": "nameLimit = max(1, nameLimit - excess)",
+   "mutated": "nameLimit = max(2, nameLimit - excess)",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X041",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 36,
+   "kind": "delete",
+   "original": "nameLimit = max(1, nameLimit - excess)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "TIMEOUT(hang)"
+   ]
+  },
+  {
+   "id": "X042",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 54,
+   "kind": "op",
+   "original": "static let maxMessageLength = 140",
+   "mutated": "static let maxMessageLength = 141",
+   "result": "KILLED",
+   "killed_by": [
+    "a 10,000-character app name cannot push a message past 140 characters (FR-000-06, TASK-347)",
+    "an over-long app name is cut with an ellipsis and the rest of the sentence survives"
+   ]
+  },
+  {
+   "id": "X043",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 62,
+   "kind": "op",
+   "original": "while let percent = rest.firstIndex(of: \"%\") {",
+   "mutated": "while let percent = rest.lastIndex(of: \"%\") {",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X044",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 62,
+   "kind": "string",
+   "original": "while let percent = rest.firstIndex(of: \"%\") {",
+   "mutated": "while let percent = rest.firstIndex(of: \"%~\") {",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X045",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 63,
+   "kind": "delete",
+   "original": "rest = rest[rest.index(after: percent)...]",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check"
+   ]
+  },
+  {
+   "id": "X046",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 64,
+   "kind": "negate-if",
+   "original": "if rest.hasPrefix(\"%\") {",
+   "mutated": "if !(rest.hasPrefix(\"%\")) {",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check"
+   ]
+  },
+  {
+   "id": "X047",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 64,
+   "kind": "string",
+   "original": "if rest.hasPrefix(\"%\") {",
+   "mutated": "if rest.hasPrefix(\"%~\") {",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0021 (6) a reworded template with matching specifiers passes"
+   ]
+  },
+  {
+   "id": "X048",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 65,
+   "kind": "op",
+   "original": "rest = rest.dropFirst()",
+   "mutated": "rest = rest.dropLast()",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0021 (6) a reworded template with matching specifiers passes"
+   ]
+  },
+  {
+   "id": "X049",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 65,
+   "kind": "delete",
+   "original": "rest = rest.dropFirst()",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0021 (6) a reworded template with matching specifiers passes"
+   ]
+  },
+  {
+   "id": "X050",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 66,
+   "kind": "negate-if",
+   "original": "} else if rest.hasPrefix(\"@\") {",
+   "mutated": "} else if !(rest.hasPrefix(\"@\")) {",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check"
+   ]
+  },
+  {
+   "id": "X051",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 66,
+   "kind": "string",
+   "original": "} else if rest.hasPrefix(\"@\") {",
+   "mutated": "} else if rest.hasPrefix(\"@~\") {",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check",
+    "OC-0021 (5) two codes sharing a raw value fail the check"
+   ]
+  },
+  {
+   "id": "X052",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 67,
+   "kind": "delete",
+   "original": "kinds.append(.text)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check",
+    "OC-0021 (5) two codes sharing a raw value fail the check"
+   ]
+  },
+  {
+   "id": "X053",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 68,
+   "kind": "op",
+   "original": "rest = rest.dropFirst()",
+   "mutated": "rest = rest.dropLast()",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X054",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 68,
+   "kind": "delete",
+   "original": "rest = rest.dropFirst()",
+   "mutated": "<statement deleted>",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X055",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 69,
+   "kind": "negate-if",
+   "original": "} else if rest.hasPrefix(\"lld\") {",
+   "mutated": "} else if !(rest.hasPrefix(\"lld\")) {",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check"
+   ]
+  },
+  {
+   "id": "X056",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 69,
+   "kind": "string",
+   "original": "} else if rest.hasPrefix(\"lld\") {",
+   "mutated": "} else if rest.hasPrefix(\"lld~\") {",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check"
+   ]
+  },
+  {
+   "id": "X057",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 70,
+   "kind": "delete",
+   "original": "kinds.append(.integer)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "Int.max count is printed in full",
+    "OC-0019 CAP-LIM-003 shows the count 501",
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check"
+   ]
+  },
+  {
+   "id": "X058",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 71,
+   "kind": "op",
+   "original": "rest = rest.dropFirst(3)",
+   "mutated": "rest = rest.dropLast(3)",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X059",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 71,
+   "kind": "op",
+   "original": "rest = rest.dropFirst(3)",
+   "mutated": "rest = rest.dropFirst(4)",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X060",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 71,
+   "kind": "delete",
+   "original": "rest = rest.dropFirst(3)",
+   "mutated": "<statement deleted>",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X061",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 87,
+   "kind": "op",
+   "original": "if placeholderKinds(in: template) != code.messageArgumentKinds {",
+   "mutated": "if placeholderKinds(in: template) == code.messageArgumentKinds {",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check",
+    "OC-0021 (5) two codes sharing a raw value fail the check",
+    "OC-0021 (6) a reworded template with matching specifiers passes"
+   ]
+  },
+  {
+   "id": "X062",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 87,
+   "kind": "negate-if",
+   "original": "if placeholderKinds(in: template) != code.messageArgumentKinds {",
+   "mutated": "if !(placeholderKinds(in: template) != code.messageArgumentKinds) {",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0021 (1) a removed key fails the check",
+    "OC-0021 (2) a 141-character message fails; 140 passes",
+    "OC-0021 (3) a message on an Info code fails the check",
+    "OC-0021 (4) an orphan error key fails the check",
+    "OC-0021 (5) two codes sharing a raw value fail the check",
+    "OC-0021 (6) a reworded template with matching specifiers passes"
+   ]
+  },
+  {
+   "id": "X063",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 88,
+   "kind": "delete",
+   "original": "found.append(\"argumentKinds:\\(code.catalogueKey)\")",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0021 (6) a template that disagrees with its code's argument kinds fails the check"
+   ]
+  },
+  {
+   "id": "X064",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 91,
+   "kind": "op",
+   "original": "return found.sorted()",
+   "mutated": "return found.reversed().sorted()",
+   "result": "EQUIVALENT",
+   "proof": "sorted() over unique Strings is a total order; the result is independent of input order, so reversed().sorted() == sorted()."
+  },
+  {
+   "id": "X065",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 45,
+   "kind": "op",
+   "original": "case .count(let value): max(0, value)",
+   "mutated": "case .count(let value): max(1, value)",
+   "result": "KILLED",
+   "killed_by": [
+    "a negative count renders as 0, never with a minus sign (FR-000-06, TASK-347)"
+   ]
+  },
+  {
+   "id": "X066",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count >= appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "result": "KILLED",
+   "killed_by": [
+    "hostile app names are substituted verbatim and never re-interpreted"
+   ]
+  },
+  {
+   "id": "X067",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) - \"\\u{2026}\" : name",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X068",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit + 1))) + \"\\u{2026}\" : name",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X069",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count > appNameLimit ? String(name.suffix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X070",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count > appNameLimit ? String(name.prefix(max(1, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "result": "SURVIVED",
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X071",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 2))) + \"\\u{2026}\" : name",
+   "result": "KILLED",
+   "killed_by": [
+    "an over-long app name is cut with an ellipsis and the rest of the sentence survives"
+   ]
+  },
+  {
+   "id": "X072",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "kind": "string",
+   "original": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}\" : name",
+   "mutated": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) + \"\\u{2026}~\" : name",
+   "result": "KILLED",
+   "killed_by": [
+    "an over-long app name is cut with an ellipsis and the rest of the sentence survives"
+   ]
+  },
+  {
+   "id": "X073",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "formatter.allowsNonnumericFormatting = false",
+   "mutated": "formatter.allowsNonnumericFormatting = true",
+   "result": "KILLED",
+   "killed_by": [
+    "a zero byte size never renders 'Zero KB' inside a sentence (FR-000-06, TASK-347)",
+    "byte sizes -1, 0 and 1 read as 0 bytes, 0 bytes and 1 byte in digits"
+   ]
+  },
+  {
+   "id": "X074",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 60,
+   "kind": "op",
+   "original": "return formatter.string(fromByteCount: Int64(max(0, bytes)))",
+   "mutated": "return formatter.string(fromByteCount: Int64(max(1, bytes)))",
+   "result": "KILLED",
+   "killed_by": [
+    "byte sizes -1, 0 and 1 read as 0 bytes, 0 bytes and 1 byte in digits"
+   ]
+  },
+  {
+   "id": "X075",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 65,
+   "kind": "op",
+   "original": "Duration.milliseconds(max(0, milliseconds)).formatted(.units(allowed: [.minutes, .seconds], width: .wide))",
+   "mutated": "Duration.milliseconds(max(1, milliseconds)).formatted(.units(allowed: [.minutes, .seconds], width: .wide))",
+   "result": "EQUIVALENT",
+   "proof": "max(1,ms) vs max(0,ms) differs only for ms<=0 (0 ms vs 1 ms); both format as '0 seconds' (verified with Duration.formatted on this OS: 0 and 1 both give '0 seconds', 500 gives '0 seconds')."
+  },
+  {
+   "id": "X076",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 65,
+   "kind": "delete",
+   "original": "Duration.milliseconds(max(0, milliseconds)).formatted(.units(allowed: [.minutes, .seconds], width: .wide))",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X077",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 17,
+   "kind": "delete",
+   "original": "self.bundleId = bundleId",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X078",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 18,
+   "kind": "delete",
+   "original": "self.name = name",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X079",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 32,
+   "kind": "delete",
+   "original": "self.representations = representations",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X080",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 33,
+   "kind": "delete",
+   "original": "self.source = source",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X081",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 34,
+   "kind": "delete",
+   "original": "self.capturedAt = capturedAt",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X082",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 35,
+   "kind": "delete",
+   "original": "self.origin = origin",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X083",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "public static let command = ChordModifiers(rawValue: 1 << 0)",
+   "mutated": "public static let command = ChordModifiers(rawValue: 2 << 0)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X084",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "public static let command = ChordModifiers(rawValue: 1 << 0)",
+   "mutated": "public static let command = ChordModifiers(rawValue: 1 << 1)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X085",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 44,
+   "kind": "op",
+   "original": "public static let control = ChordModifiers(rawValue: 1 << 1)",
+   "mutated": "public static let control = ChordModifiers(rawValue: 2 << 1)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X086",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 44,
+   "kind": "op",
+   "original": "public static let control = ChordModifiers(rawValue: 1 << 1)",
+   "mutated": "public static let control = ChordModifiers(rawValue: 1 << 2)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X087",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 45,
+   "kind": "op",
+   "original": "public static let option = ChordModifiers(rawValue: 1 << 2)",
+   "mutated": "public static let option = ChordModifiers(rawValue: 2 << 2)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X088",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 45,
+   "kind": "op",
+   "original": "public static let option = ChordModifiers(rawValue: 1 << 2)",
+   "mutated": "public static let option = ChordModifiers(rawValue: 1 << 3)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X089",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 46,
+   "kind": "op",
+   "original": "public static let shift = ChordModifiers(rawValue: 1 << 3)",
+   "mutated": "public static let shift = ChordModifiers(rawValue: 2 << 3)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X090",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 46,
+   "kind": "op",
+   "original": "public static let shift = ChordModifiers(rawValue: 1 << 3)",
+   "mutated": "public static let shift = ChordModifiers(rawValue: 1 << 4)",
+   "result": "SURVIVED",
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X091",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 55,
+   "kind": "delete",
+   "original": "self.keyCode = keyCode",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X092",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 56,
+   "kind": "delete",
+   "original": "self.modifiers = modifiers",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X093",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 64,
+   "kind": "delete",
+   "original": "text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X094",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 14,
+   "kind": "delete",
+   "original": "self.appVersion = appVersion",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X095",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 15,
+   "kind": "delete",
+   "original": "self.build = build",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200912] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X096",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 16,
+   "kind": "delete",
+   "original": "self.macOSVersion = macOSVersion",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X097",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 17,
+   "kind": "delete",
+   "original": "self.cpuArchitecture = cpuArchitecture",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X098",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 23,
+   "kind": "string",
+   "original": "let architecture = \"arm64\"",
+   "mutated": "let architecture = \"arm64~\"",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X099",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 25,
+   "kind": "string",
+   "original": "let architecture = \"x86_64\"",
+   "mutated": "let architecture = \"x86_64~\"",
+   "result": "EQUIVALENT",
+   "proof": "Inside the inactive #elseif arch(x86_64) branch; not compiled on arm64, the only build platform (mutant has no effect on the built binary)."
+  },
+  {
+   "id": "X100",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 27,
+   "kind": "string",
+   "original": "let architecture = \"unknown\"",
+   "mutated": "let architecture = \"unknown~\"",
+   "result": "EQUIVALENT",
+   "proof": "Inside the inactive #else branch of #if arch; not compiled on arm64."
+  },
+  {
+   "id": "X101",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 30,
+   "kind": "string",
+   "original": "appVersion: info?[\"CFBundleShortVersionString\"] as? String ?? \"unknown\",",
+   "mutated": "appVersion: info?[\"CFBundleShortVersionString~\"] as? String ?? \"unknown\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X102",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 30,
+   "kind": "string",
+   "original": "appVersion: info?[\"CFBundleShortVersionString\"] as? String ?? \"unknown\",",
+   "mutated": "appVersion: info?[\"CFBundleShortVersionString\"] as? String ?? \"unknown~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X103",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 31,
+   "kind": "string",
+   "original": "build: info?[\"CFBundleVersion\"] as? String ?? \"unknown\",",
+   "mutated": "build: info?[\"CFBundleVersion~\"] as? String ?? \"unknown\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X104",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 31,
+   "kind": "string",
+   "original": "build: info?[\"CFBundleVersion\"] as? String ?? \"unknown\",",
+   "mutated": "build: info?[\"CFBundleVersion\"] as? String ?? \"unknown~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X105",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 67,
+   "kind": "delete",
+   "original": "self.environment = environment",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [7\u2009/\u200911] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X106",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 68,
+   "kind": "delete",
+   "original": "self.permissions = permissions",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X107",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 69,
+   "kind": "delete",
+   "original": "self.retention = retention",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [7\u2009/\u200911] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X108",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 70,
+   "kind": "delete",
+   "original": "self.imageBudget = imageBudget",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X109",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 71,
+   "kind": "delete",
+   "original": "self.toggles = toggles",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X110",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 72,
+   "kind": "delete",
+   "original": "self.itemCounts = itemCounts",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X111",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 73,
+   "kind": "delete",
+   "original": "self.databaseBytes = databaseBytes",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X112",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 74,
+   "kind": "delete",
+   "original": "self.blobBytes = blobBytes",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X113",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 75,
+   "kind": "delete",
+   "original": "self.recentErrors = recentErrors",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X114",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 86,
+   "kind": "string",
+   "original": "var lines: [String] = [\"Flotsam diagnostics\", \"\"]",
+   "mutated": "var lines: [String] = [\"Flotsam diagnostics~\", \"\"]",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly"
+   ]
+  },
+  {
+   "id": "X115",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 93,
+   "kind": "string",
+   "original": "\"Permissions\",",
+   "mutated": "\"Permissions~\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly"
+   ]
+  },
+  {
+   "id": "X116",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 96,
+   "kind": "delete",
+   "original": "lines.append(\"  \\(name.rawValue): \\(snapshot.permissions[name]?.rawValue ?? PermissionState.notDetermined.rawValue)\")",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0076 a second report reflects current counts and permissions"
+   ]
+  },
+  {
+   "id": "X117",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 98,
+   "kind": "delete",
+   "original": "lines += [\"\", \"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0045 report shows changed retention and budget presets"
+   ]
+  },
+  {
+   "id": "X118",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 98,
+   "kind": "string",
+   "original": "lines += [\"\", \"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "mutated": "lines += [\"\", ~\"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X119",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 98,
+   "kind": "string",
+   "original": "lines += [\"\", \"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "mutated": "lines += [\"\", \"Settings\", ~\"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X120",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 98,
+   "kind": "string",
+   "original": "lines += [\"\", \"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "mutated": "lines += [\"\", \"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", ~\"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X121",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 99,
+   "kind": "op",
+   "original": "for key in snapshot.toggles.keys.sorted() {",
+   "mutated": "for key in snapshot.toggles.keys.reversed().sorted() {",
+   "result": "EQUIVALENT",
+   "proof": "sorted() over unique dictionary keys (Strings); result independent of input order."
+  },
+  {
+   "id": "X122",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 100,
+   "kind": "delete",
+   "original": "lines.append(\"  \\(key): \\(snapshot.toggles[key] == true ? \"on\" : \"off\")\")",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X123",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 100,
+   "kind": "string",
+   "original": "lines.append(\"  \\(key): \\(snapshot.toggles[key] == true ? \"on\" : \"off\")\")",
+   "mutated": "lines.append(\"  \\(key): \\(snapshot.toggles[key] == true ? \"on\" : ~\"off\")\")",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X124",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 100,
+   "kind": "string",
+   "original": "lines.append(\"  \\(key): \\(snapshot.toggles[key] == true ? \"on\" : \"off\")\")",
+   "mutated": "lines.append(\"  \\(key): \\(snapshot.toggles[key] == true ? \"on\" : \"off\")~\")",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X125",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 102,
+   "kind": "delete",
+   "original": "lines += [\"\", \"Items\"]",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly"
+   ]
+  },
+  {
+   "id": "X126",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 102,
+   "kind": "string",
+   "original": "lines += [\"\", \"Items\"]",
+   "mutated": "lines += [\"\", ~\"Items\"]",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X127",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 104,
+   "kind": "delete",
+   "original": "lines.append(\"  \\(kind.rawValue): \\(snapshot.itemCounts[kind] ?? 0)\")",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0076 a second report reflects current counts and permissions",
+    "report clamps negative counts and byte sizes to zero"
+   ]
+  },
+  {
+   "id": "X128",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 108,
+   "kind": "string",
+   "original": "\"Storage\",",
+   "mutated": "\"Storage~\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly"
+   ]
+  },
+  {
+   "id": "X129",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 115,
+   "kind": "delete",
+   "original": "lines.append(\"  \\(time.string(from: entry.timestamp)) \\(entry.severity.rawValue) \\(entry.code.rawValue)\")",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0043 report lists 100 ring entries, E6 first, E5 absent",
+    "OC-0045 report equals the FR-000-14 text exactly"
+   ]
+  },
+  {
+   "id": "X130",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 117,
+   "kind": "op",
+   "original": "return lines.joined(separator: \"\\n\") + \"\\n\"",
+   "mutated": "return lines.joined(separator: \"\\n\") - \"\\n\"",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X131",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 117,
+   "kind": "string",
+   "original": "return lines.joined(separator: \"\\n\") + \"\\n\"",
+   "mutated": "return lines.joined(separator: \"\\n~\") + \"\\n\"",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0043 report lists 100 ring entries, E6 first, E5 absent",
+    "OC-0045 report equals the FR-000-14 text exactly"
+   ]
+  },
+  {
+   "id": "X132",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 117,
+   "kind": "string",
+   "original": "return lines.joined(separator: \"\\n\") + \"\\n\"",
+   "mutated": "return lines.joined(separator: \"\\n\") + \"\\n~\"",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0043 report lists 100 ring entries, E6 first, E5 absent",
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0068 empty ring renders 'Recent errors (0, oldest first)' with no entry lines"
+   ]
+  },
+  {
+   "id": "X133",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 132,
+   "kind": "delete",
+   "original": "self.pasteboard = pasteboard",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X134",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 133,
+   "kind": "delete",
+   "original": "self.ownWriteTypes = ownWriteTypes",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X135",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 138,
+   "kind": "string",
+   "original": "let text = PasteboardRepresentation(uti: \"public.utf8-plain-text\", data: Data(report.utf8))",
+   "mutated": "let text = PasteboardRepresentation(uti: \"public.utf8-plain-text~\", data: Data(report.utf8))",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0047 copy writes the text and the self-write marker types in one write"
+   ]
+  },
+  {
+   "id": "X136",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 140,
+   "kind": "op",
+   "original": "return pasteboard.write([text] + markers)",
+   "mutated": "return pasteboard.write([text] - markers)",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X137",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 42,
+   "kind": "delete",
+   "original": "self.environment = environment",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X138",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 43,
+   "kind": "delete",
+   "original": "self.settings = settings",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X139",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 44,
+   "kind": "delete",
+   "original": "self.source = source",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X140",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 45,
+   "kind": "delete",
+   "original": "self.toggles = toggles",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X141",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 46,
+   "kind": "delete",
+   "original": "self.recentErrors = recentErrors",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X142",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 51,
+   "kind": "op",
+   "original": "let parts = key.split(separator: \".\", omittingEmptySubsequences: false)",
+   "mutated": "let parts = key.split(separator: \".\", omittingEmptySubsequences: true)",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X143",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 51,
+   "kind": "string",
+   "original": "let parts = key.split(separator: \".\", omittingEmptySubsequences: false)",
+   "mutated": "let parts = key.split(separator: \".~\", omittingEmptySubsequences: false)",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X144",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 52,
+   "kind": "op",
+   "original": "guard parts.count == 2 else { return false }",
+   "mutated": "guard parts.count != 2 else { return false }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X145",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 52,
+   "kind": "op",
+   "original": "guard parts.count == 2 else { return false }",
+   "mutated": "guard parts.count == 2 else { return true }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X146",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 52,
+   "kind": "op",
+   "original": "guard parts.count == 2 else { return false }",
+   "mutated": "guard parts.count == 3 else { return false }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X147",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 52,
+   "kind": "negate-guard",
+   "original": "guard parts.count == 2 else { return false }",
+   "mutated": "guard !(parts.count == 2) else { return false }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report",
+    "cancelling during a 10 s sleep wakes it early"
+   ]
+  },
+  {
+   "id": "X148",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 53,
+   "kind": "op",
+   "original": "return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) } }",
+   "mutated": "return parts.allSatisfy { !$0.isEmpty || $0.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) } }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X149",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 53,
+   "kind": "op",
+   "original": "return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) } }",
+   "mutated": "return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII || ($0.isLetter || $0.isNumber) } }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X150",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 53,
+   "kind": "op",
+   "original": "return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) } }",
+   "mutated": "return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII && ($0.isLetter && $0.isNumber) } }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report"
+   ]
+  },
+  {
+   "id": "X151",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 53,
+   "kind": "op",
+   "original": "return parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) } }",
+   "mutated": "return parts.allSatisfy { !$0.isEmpty == false && $0.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) } }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0045 report equals the FR-000-14 text exactly",
+    "OC-0046 non-registry toggle keys never reach the report",
+    "cancelling during a 10 s sleep wakes it early"
+   ]
+  },
+  {
+   "id": "X152",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 64,
+   "kind": "op",
+   "original": "itemCounts: await source.itemCounts().mapValues { max(0, $0) },",
+   "mutated": "itemCounts: await source.itemCounts().mapValues { max(1, $0) },",
+   "result": "KILLED",
+   "killed_by": [
+    "report clamps negative counts and byte sizes to zero"
+   ]
+  },
+  {
+   "id": "X153",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 65,
+   "kind": "op",
+   "original": "databaseBytes: max(0, sizes.database),",
+   "mutated": "databaseBytes: max(1, sizes.database),",
+   "result": "KILLED",
+   "killed_by": [
+    "report clamps negative counts and byte sizes to zero"
+   ]
+  },
+  {
+   "id": "X154",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 66,
+   "kind": "op",
+   "original": "blobBytes: max(0, sizes.blobs),",
+   "mutated": "blobBytes: max(1, sizes.blobs),",
+   "result": "KILLED",
+   "killed_by": [
+    "report clamps negative counts and byte sizes to zero"
+   ]
+  },
+  {
+   "id": "X155",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 56,
+   "kind": "op",
+   "original": "let parts = raw.split(separator: \"-\", omittingEmptySubsequences: false)",
+   "mutated": "let parts = raw.split(separator: \"-\", omittingEmptySubsequences: true)",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X156",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "let parts = raw.split(separator: \"-\", omittingEmptySubsequences: false)",
+   "mutated": "let parts = raw.split(separator: \"-~\", omittingEmptySubsequences: false)",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X157",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 57,
+   "kind": "op",
+   "original": "guard parts.count == 3,",
+   "mutated": "guard parts.count != 3,",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0006 all seven POL codes are Info with no message"
+   ]
+  },
+  {
+   "id": "X158",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 57,
+   "kind": "op",
+   "original": "guard parts.count == 3,",
+   "mutated": "guard parts.count == 4,",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X159",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 58,
+   "kind": "op",
+   "original": "let module = ErrorModule(rawValue: String(parts[0])),",
+   "mutated": "let module = ErrorModule(rawValue: String(parts[1])),",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X160",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "let category = ErrorCategory(rawValue: String(parts[1])),",
+   "mutated": "let category = ErrorCategory(rawValue: String(parts[2])),",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X161",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 60,
+   "kind": "op",
+   "original": "parts[2].count == 3,",
+   "mutated": "parts[2].count != 3,",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X162",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 60,
+   "kind": "op",
+   "original": "parts[2].count == 3,",
+   "mutated": "parts[3].count == 3,",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ressed at 59 s, shown at exactly 60 s\" started. \u25c7 Test \"OC-0021 (2) a 141-character message fails; 140 passes\" started. Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X163",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 60,
+   "kind": "op",
+   "original": "parts[2].count == 3,",
+   "mutated": "parts[2].count == 4,",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X164",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "kind": "op",
+   "original": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "mutated": "parts[2].allSatisfy({ $0 >= \"0\" && $0 < \"9\" }),",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser"
+   ]
+  },
+  {
+   "id": "X165",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "kind": "op",
+   "original": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "mutated": "parts[2].allSatisfy({ $0 > \"0\" && $0 <= \"9\" }),",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0005 malformed code shapes are rejected by the parser",
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X166",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "kind": "op",
+   "original": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "mutated": "parts[2].allSatisfy({ $0 >= \"0\" || $0 <= \"9\" }),",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X167",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "kind": "op",
+   "original": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "mutated": "parts[3].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ccepted \u2192 false to \"OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails\" started. Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X168",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "kind": "string",
+   "original": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "mutated": "parts[2].allSatisfy({ $0 >= \"0~\" && $0 <= \"9\" }),",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X169",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "kind": "string",
+   "original": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9\" }),",
+   "mutated": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9~\" }),",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X170",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 62,
+   "kind": "op",
+   "original": "let number = Int(parts[2]), number >= 1",
+   "mutated": "let number = Int(parts[2]), number > 1",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X171",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 62,
+   "kind": "op",
+   "original": "let number = Int(parts[2]), number >= 1",
+   "mutated": "let number = Int(parts[3]), number >= 1",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) \"let s = \"fatal-ok:\"; fatalError(\"x\")\", expected \u2192 1 to \"fatal-ok waives only from a comment on the same line\" started. Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X172",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 62,
+   "kind": "op",
+   "original": "let number = Int(parts[2]), number >= 1",
+   "mutated": "let number = Int(parts[2]), number >= 2",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0006 all seven POL codes are Info with no message",
+    "OC-0031 each module's codes log under its own category; nine categories exist",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module"
+   ]
+  },
+  {
+   "id": "X173",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 13,
+   "kind": "op",
+   "original": "static let capacity = 10",
+   "mutated": "static let capacity = 11",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0027 notices cap at 10, newest first",
+    "eleventh background notice evicts the oldest and sits first"
+   ]
+  },
+  {
+   "id": "X174",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 17,
+   "kind": "op",
+   "original": "notices.insert(notice, at: 0)",
+   "mutated": "notices.insert(notice, at: 1)",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ray.swift:430: Fatal error: Array index is out of range Swift/Array.swift:430: Fatal error: Array index is out of range Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X175",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 17,
+   "kind": "delete",
+   "original": "notices.insert(notice, at: 0)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0023 window is measured from the last surfaced occurrence"
+   ]
+  },
+  {
+   "id": "X176",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 18,
+   "kind": "op",
+   "original": "if notices.count > Self.capacity { notices.removeLast(notices.count - Self.capacity) }",
+   "mutated": "if notices.count >= Self.capacity { notices.removeLast(notices.count - Self.capacity) }",
+   "result": "EQUIVALENT",
+   "proof": "count>=capacity: removeLast(count-capacity) removes 0 elements when count==capacity, a no-op; identical state."
+  },
+  {
+   "id": "X177",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 18,
+   "kind": "op",
+   "original": "if notices.count > Self.capacity { notices.removeLast(notices.count - Self.capacity) }",
+   "mutated": "if notices.count > Self.capacity { notices.removeLast(notices.count + Self.capacity) }",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ins Swift/RangeReplaceableCollection.swift:899: Fatal error: Can't remove more items from a collection than it contains Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X178",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 18,
+   "kind": "negate-if",
+   "original": "if notices.count > Self.capacity { notices.removeLast(notices.count - Self.capacity) }",
+   "mutated": "if !(notices.count > Self.capacity) { notices.removeLast(notices.count - Self.capacity) }",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 9 seconds. Swift/RangeReplaceableCollection.swift:892: Fatal error: Number of elements to remove should be non-negative Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X179",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 34,
+   "kind": "op",
+   "original": "static let window: TimeInterval = 60",
+   "mutated": "static let window: TimeInterval = 61",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "a code firing every 20 s surfaces at 0 s and 60 s only",
+    "same code is suppressed at 59.999 s and admitted at exactly 60 s",
+    "the HUD cap releases after 60 s"
+   ]
+  },
+  {
+   "id": "X180",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "static let maxHUDsPerWindow = 3",
+   "mutated": "static let maxHUDsPerWindow = 4",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X181",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return age >= 0 && age < window",
+   "mutated": "return age > 0 && age < window",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X182",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return age >= 0 && age < window",
+   "mutated": "return age >= 0 || age < window",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0023 window is measured from the last surfaced occurrence",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "a code firing every 20 s surfaces at 0 s and 60 s only",
+    "a fourth distinct code surfaces 61 s after a backward jump past three recent HUDs (FR-000-08, TASK-348)"
+   ]
+  },
+  {
+   "id": "X183",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return age >= 0 && age < window",
+   "mutated": "return age >= 0 && age <= window",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "a code firing every 20 s surfaces at 0 s and 60 s only",
+    "same code is suppressed at 59.999 s and admitted at exactly 60 s",
+    "the HUD cap releases after 60 s"
+   ]
+  },
+  {
+   "id": "X184",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return age >= 0 && age < window",
+   "mutated": "return age >= 1 && age < window",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X185",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 47,
+   "kind": "op",
+   "original": "if let last = lastSurfaced[code], Self.isLive(last, now: now) { return false }",
+   "mutated": "if let last = lastSurfaced[code], Self.isLive(last, now: now) { return true }",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0023 window is measured from the last surfaced occurrence",
+    "a code firing every 20 s surfaces at 0 s and 60 s only"
+   ]
+  },
+  {
+   "id": "X186",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 48,
+   "kind": "negate-if",
+   "original": "if isHUD {",
+   "mutated": "if !(isHUD) {",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "OC-0027 newest notice carries its catalogue text",
+    "OC-0027 notices cap at 10, newest first",
+    "OC-0028 after dismiss all, the next notice is the only one listed"
+   ]
+  },
+  {
+   "id": "X187",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 49,
+   "kind": "drop-not",
+   "original": "hudTimes.removeAll { !Self.isLive($0, now: now) }",
+   "mutated": "hudTimes.removeAll { Self.isLive($0, now: now) }",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X188",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "if hudTimes.count >= Self.maxHUDsPerWindow { return false }",
+   "mutated": "if hudTimes.count > Self.maxHUDsPerWindow { return false }",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X189",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 50,
+   "kind": "op",
+   "original": "if hudTimes.count >= Self.maxHUDsPerWindow { return false }",
+   "mutated": "if hudTimes.count >= Self.maxHUDsPerWindow { return true }",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X190",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 50,
+   "kind": "negate-if",
+   "original": "if hudTimes.count >= Self.maxHUDsPerWindow { return false }",
+   "mutated": "if !(hudTimes.count >= Self.maxHUDsPerWindow) { return false }",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0012 user-initiated LIB-OS-001 shows a HUD with the exact text and no notice",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes"
+   ]
+  },
+  {
+   "id": "X191",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 51,
+   "kind": "delete",
+   "original": "hudTimes.append(now)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "flood guard still caps at three HUDs after a backward jump",
+    "four distinct codes at one instant surface exactly three HUDs and drop the fourth"
+   ]
+  },
+  {
+   "id": "X192",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 53,
+   "kind": "delete",
+   "original": "lastSurfaced[code] = now",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0023 window is measured from the last surfaced occurrence",
+    "a code firing every 20 s surfaces at 0 s and 60 s only"
+   ]
+  },
+  {
+   "id": "X193",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 54,
+   "kind": "op",
+   "original": "return true",
+   "mutated": "return false",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0012 user-initiated LIB-OS-001 shows a HUD with the exact text and no notice",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries"
+   ]
+  },
+  {
+   "id": "X194",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 75,
+   "kind": "delete",
+   "original": "self.presenter = presenter",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X195",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 76,
+   "kind": "delete",
+   "original": "self.clock = clock",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X196",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 77,
+   "kind": "delete",
+   "original": "self.sink = sink",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X197",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 84,
+   "kind": "delete",
+   "original": "FlotsamLog.log(error, sink: sink)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module",
+    "OC-0035 an error with no cause logs no cause text"
+   ]
+  },
+  {
+   "id": "X198",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 92,
+   "kind": "delete",
+   "original": "ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled"
+   ]
+  },
+  {
+   "id": "X199",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 93,
+   "kind": "delete",
+   "original": "await presenter.presentFatal(error)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled"
+   ]
+  },
+  {
+   "id": "X200",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 95,
+   "kind": "delete",
+   "original": "ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 window is measured from the last surfaced occurrence",
+    "OC-0024 at most three HUDs per minute across codes",
+    "OC-0027 notices cap at 10, newest first"
+   ]
+  },
+  {
+   "id": "X201",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 96,
+   "kind": "op",
+   "original": "guard throttle.admit(error.code, isHUD: origin == .userInitiated, now: now) else { return }",
+   "mutated": "guard throttle.admit(error.code, isHUD: origin != .userInitiated, now: now) else { return }",
+   "result": "KILLED",
+   "killed_by": [
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes",
+    "OC-0027 newest notice carries its catalogue text",
+    "OC-0027 notices cap at 10, newest first",
+    "OC-0028 after dismiss all, the next notice is the only one listed"
+   ]
+  },
+  {
+   "id": "X202",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 96,
+   "kind": "negate-guard",
+   "original": "guard throttle.admit(error.code, isHUD: origin == .userInitiated, now: now) else { return }",
+   "mutated": "guard !(throttle.admit(error.code, isHUD: origin == .userInitiated, now: now)) else { return }",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0012 user-initiated LIB-OS-001 shows a HUD with the exact text and no notice",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries"
+   ]
+  },
+  {
+   "id": "X203",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 100,
+   "kind": "delete",
+   "original": "await presenter.showHUD(message: message)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a HUD suppressed by the three-per-minute cap is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0012 user-initiated LIB-OS-001 shows a HUD with the exact text and no notice",
+    "OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s",
+    "OC-0024 at most three HUDs per minute across codes"
+   ]
+  },
+  {
+   "id": "X204",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 102,
+   "kind": "delete",
+   "original": "board.add(Notice(code: error.code, severity: error.severity, message: message, date: now))",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0023 window is measured from the last surfaced occurrence"
+   ]
+  },
+  {
+   "id": "X205",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 103,
+   "kind": "delete",
+   "original": "await presenter.noticesChanged(board.notices)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "AC-000-04 a throttled occurrence is still logged",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s",
+    "OC-0023 window is measured from the last surfaced occurrence"
+   ]
+  },
+  {
+   "id": "X206",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 110,
+   "kind": "delete",
+   "original": "board.removeAll()",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0028 after dismiss all, the next notice is the only one listed",
+    "dismissAll clears the list and later notices start from empty"
+   ]
+  },
+  {
+   "id": "X207",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorReporter.swift",
+   "line": 111,
+   "kind": "delete",
+   "original": "await presenter.noticesChanged([])",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0028 dismiss all empties the notices and leaves the ring intact",
+    "dismissAll clears the list and later notices start from empty",
+    "dismissAll racing background reports ends with a list the presenter last saw"
+   ]
+  },
+  {
+   "id": "X208",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 11,
+   "kind": "delete",
+   "original": "self.code = code",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X209",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 12,
+   "kind": "delete",
+   "original": "self.severity = severity",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X210",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 13,
+   "kind": "delete",
+   "original": "self.timestamp = timestamp",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X211",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 23,
+   "kind": "op",
+   "original": "public static let capacity = 100",
+   "mutated": "public static let capacity = 101",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "OC-0043 ring holds the last 100, oldest first",
+    "ring holds exactly 100, then drops only the oldest on the 101st"
+   ]
+  },
+  {
+   "id": "X212",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 31,
+   "kind": "delete",
+   "original": "storage.append(entry)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "200 concurrent reports across severities: ring holds the newest 100, HUD cap holds, fatal always presented",
+    "OC-0011 only Fatal presents the fatal alert, and it is never throttled",
+    "OC-0022 ten identical background warnings in 30 s give one notice, ten ring entries",
+    "OC-0023 window is measured from the last surfaced occurrence",
+    "OC-0024 at most three HUDs per minute across codes",
+    "OC-0027 notices cap at 10, newest first"
+   ]
+  },
+  {
+   "id": "X213",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 32,
+   "kind": "op",
+   "original": "if storage.count > Self.capacity { storage.removeFirst(storage.count - Self.capacity) }",
+   "mutated": "if storage.count >= Self.capacity { storage.removeFirst(storage.count - Self.capacity) }",
+   "result": "EQUIVALENT",
+   "proof": "count>=capacity: removeFirst(count-capacity) removes 0 elements when count==capacity, a no-op; identical state."
+  },
+  {
+   "id": "X214",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 32,
+   "kind": "op",
+   "original": "if storage.count > Self.capacity { storage.removeFirst(storage.count - Self.capacity) }",
+   "mutated": "if storage.count > Self.capacity { storage.removeFirst(storage.count + Self.capacity) }",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) haracter message fails; 140 passes\" passed after 0.018 seconds. \u2714 Suite ErrorCatalogueTests passed after 0.048 seconds. Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X215",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorRingBuffer.swift",
+   "line": 32,
+   "kind": "negate-if",
+   "original": "if storage.count > Self.capacity { storage.removeFirst(storage.count - Self.capacity) }",
+   "mutated": "if !(storage.count > Self.capacity) { storage.removeFirst(storage.count - Self.capacity) }",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) n-negative Swift/RangeReplaceableCollection.swift:594: Fatal error: Number of elements to remove should be non-negative Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X216",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 14,
+   "kind": "delete",
+   "original": "self.domain = domain",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X217",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 15,
+   "kind": "delete",
+   "original": "self.code = code",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X218",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 50,
+   "kind": "delete",
+   "original": "self.code = code",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X219",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 51,
+   "kind": "delete",
+   "original": "self.internalMessage = internalMessage",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X220",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 52,
+   "kind": "delete",
+   "original": "self.context = context",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X221",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 53,
+   "kind": "delete",
+   "original": "self.underlying = underlying",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X222",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 58,
+   "kind": "op",
+   "original": "public static func == (lhs: FlotsamError, rhs: FlotsamError) -> Bool {",
+   "mutated": "public static func != (lhs: FlotsamError, rhs: FlotsamError) -> Bool {",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X223",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "lhs.code == rhs.code && lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "mutated": "lhs.code != rhs.code && lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X224",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "lhs.code == rhs.code && lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "mutated": "lhs.code == rhs.code && lhs.context != rhs.context && lhs.underlying == rhs.underlying",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X225",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "lhs.code == rhs.code && lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "mutated": "lhs.code == rhs.code && lhs.context == rhs.context && lhs.underlying != rhs.underlying",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X226",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "lhs.code == rhs.code && lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "mutated": "lhs.code == rhs.code || lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X227",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "kind": "op",
+   "original": "lhs.code == rhs.code && lhs.context == rhs.context && lhs.underlying == rhs.underlying",
+   "mutated": "lhs.code == rhs.code && lhs.context == rhs.context || lhs.underlying == rhs.underlying",
+   "result": "SURVIVED",
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X228",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 5,
+   "kind": "string",
+   "original": "private static let domain = \"FlotsamFileSystem\"",
+   "mutated": "private static let domain = \"FlotsamFileSystem~\"",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X229",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 10,
+   "kind": "delete",
+   "original": "FileManager.default.fileExists(atPath: url.path)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X230",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 15,
+   "kind": "op",
+   "original": "at: url, withIntermediateDirectories: true, attributes: [.posixPermissions: permissions]) }",
+   "mutated": "at: url, withIntermediateDirectories: false, attributes: [.posixPermissions: permissions]) }",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X231",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 30,
+   "kind": "op",
+   "original": "public func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> {",
+   "mutated": "public func contentsOfDirectory(at url: URL) -> FlotsamResult<=[URL]> {",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) te/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X232",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 39,
+   "kind": "op",
+   "original": "let size = getxattr(url.path, name, nil, 0, 0, 0)",
+   "mutated": "let size = getxattr(url.path, name, nil, 1, 0, 0)",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X233",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 39,
+   "kind": "op",
+   "original": "let size = getxattr(url.path, name, nil, 0, 0, 0)",
+   "mutated": "let size = getxattr(url.path, name, nil, 0, 1, 0)",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X234",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 39,
+   "kind": "op",
+   "original": "let size = getxattr(url.path, name, nil, 0, 0, 0)",
+   "mutated": "let size = getxattr(url.path, name, nil, 0, 0, 1)",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X235",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 40,
+   "kind": "op",
+   "original": "guard size >= 0 else { return nil }",
+   "mutated": "guard size > 0 else { return nil }",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X236",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 40,
+   "kind": "op",
+   "original": "guard size >= 0 else { return nil }",
+   "mutated": "guard size >= 1 else { return nil }",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X237",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 40,
+   "kind": "negate-guard",
+   "original": "guard size >= 0 else { return nil }",
+   "mutated": "guard !(size >= 0) else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "cancelling during a 10 s sleep wakes it early"
+   ]
+  },
+  {
+   "id": "X238",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 41,
+   "kind": "op",
+   "original": "var buffer = [UInt8](repeating: 0, count: size)",
+   "mutated": "var buffer = [UInt8](repeating: 1, count: size)",
+   "result": "EQUIVALENT",
+   "proof": "Buffer fill byte is overwritten by getxattr for the first `read` bytes and only buffer.prefix(read) is returned, so the initial fill is unobservable."
+  },
+  {
+   "id": "X239",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 42,
+   "kind": "op",
+   "original": "let read = getxattr(url.path, name, &buffer, size, 0, 0)",
+   "mutated": "let read = getxattr(url.path, name, &buffer, size, 1, 0)",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X240",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 42,
+   "kind": "op",
+   "original": "let read = getxattr(url.path, name, &buffer, size, 0, 0)",
+   "mutated": "let read = getxattr(url.path, name, &buffer, size, 0, 1)",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X241",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return read >= 0 ? Data(buffer.prefix(read)) : nil",
+   "mutated": "return read > 0 ? Data(buffer.prefix(read)) : nil",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X242",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return read >= 0 ? Data(buffer.prefix(read)) : nil",
+   "mutated": "return read >= 0 ? Data(buffer.suffix(read)) : nil",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X243",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 43,
+   "kind": "op",
+   "original": "return read >= 0 ? Data(buffer.prefix(read)) : nil",
+   "mutated": "return read >= 1 ? Data(buffer.prefix(read)) : nil",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X244",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 48,
+   "kind": "delete",
+   "original": "try operation()",
+   "mutated": "<statement deleted>",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X245",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 59,
+   "kind": "string",
+   "original": ".sysInt001, \"File system operation failed\",",
+   "mutated": ".sysInt001, \"File system operation failed~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X246",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/ErrorPresenterPort.swift",
+   "line": 13,
+   "kind": "delete",
+   "original": "self.id = id",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X247",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/ErrorPresenterPort.swift",
+   "line": 14,
+   "kind": "delete",
+   "original": "self.code = code",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X248",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/ErrorPresenterPort.swift",
+   "line": 15,
+   "kind": "delete",
+   "original": "self.severity = severity",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X249",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/ErrorPresenterPort.swift",
+   "line": 16,
+   "kind": "delete",
+   "original": "self.message = message",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X250",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/ErrorPresenterPort.swift",
+   "line": 17,
+   "kind": "delete",
+   "original": "self.date = date",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X251",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift",
+   "line": 29,
+   "kind": "delete",
+   "original": "self.uti = uti",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X252",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift",
+   "line": 30,
+   "kind": "delete",
+   "original": "self.data = data",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X253",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift",
+   "line": 40,
+   "kind": "delete",
+   "original": "self.changeCount = changeCount",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X254",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift",
+   "line": 41,
+   "kind": "delete",
+   "original": "self.typeIdentifiers = typeIdentifiers",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X255",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift",
+   "line": 42,
+   "kind": "delete",
+   "original": "self.representations = representations",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X256",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift",
+   "line": 71,
+   "kind": "op",
+   "original": "func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]>",
+   "mutated": "func contentsOfDirectory(at url: URL) -> FlotsamResult<=[URL]>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) sers-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages -experimental-emit-module-separately -disable-cmo [2\u2009/\u20096] FlotsamBase error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X257",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 33,
+   "kind": "op",
+   "original": "guard candidate.utf8.count <= 255 else { return nil }",
+   "mutated": "guard candidate.utf8.count < 255 else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values"
+   ]
+  },
+  {
+   "id": "X258",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 33,
+   "kind": "op",
+   "original": "guard candidate.utf8.count <= 255 else { return nil }",
+   "mutated": "guard candidate.utf8.count <= 256 else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values"
+   ]
+  },
+  {
+   "id": "X259",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 33,
+   "kind": "negate-guard",
+   "original": "guard candidate.utf8.count <= 255 else { return nil }",
+   "mutated": "guard !(candidate.utf8.count <= 255) else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X260",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 34,
+   "kind": "op",
+   "original": "let labels = candidate.split(separator: \".\", omittingEmptySubsequences: false)",
+   "mutated": "let labels = candidate.split(separator: \".\", omittingEmptySubsequences: true)",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values"
+   ]
+  },
+  {
+   "id": "X261",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 34,
+   "kind": "string",
+   "original": "let labels = candidate.split(separator: \".\", omittingEmptySubsequences: false)",
+   "mutated": "let labels = candidate.split(separator: \".~\", omittingEmptySubsequences: false)",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) odes sharing a raw value fail the check\" started. \u25c7 Test \"OC-0019 CAP-LIM-001 shows a 10 MiB limit as '10 MB'\" started. Note: Some test targets reported failures:   - FlotsamBaseTests (Swift Testing) "
+   ]
+  },
+  {
+   "id": "X262",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "guard labels.count >= 2 else { return nil }",
+   "mutated": "guard labels.count > 2 else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values"
+   ]
+  },
+  {
+   "id": "X263",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 35,
+   "kind": "op",
+   "original": "guard labels.count >= 2 else { return nil }",
+   "mutated": "guard labels.count >= 3 else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values"
+   ]
+  },
+  {
+   "id": "X264",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 35,
+   "kind": "negate-guard",
+   "original": "guard labels.count >= 2 else { return nil }",
+   "mutated": "guard !(labels.count >= 2) else { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values",
+    "bundle identifier validation rejects paths, URLs,error: Process '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/swift/pm/swiftpm-testing-helper --test-bundle-path /private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Products/Debug/FlotsamBaseTests.xctest/Contents/MacOS/FlotsamBaseTests --filter FlotsamBaseTests /private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Products/Debug/FlotsamBaseTests.xctest/Contents/MacOS/FlotsamBaseTests --testing-library swift-testing' exited with unexpected signal code 5\n sentences, unicode and 256-byte values",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X265",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 36,
+   "kind": "string",
+   "original": "let allowed = Set(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-\")",
+   "mutated": "let allowed = Set(\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-~\")",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X266",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 37,
+   "kind": "op",
+   "original": "for label in labels where label.isEmpty || !label.allSatisfy({ allowed.contains($0) }) { return nil }",
+   "mutated": "for label in labels where label.isEmpty && !label.allSatisfy({ allowed.contains($0) }) { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values"
+   ]
+  },
+  {
+   "id": "X267",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 37,
+   "kind": "op",
+   "original": "for label in labels where label.isEmpty || !label.allSatisfy({ allowed.contains($0) }) { return nil }",
+   "mutated": "for label in labels where label.isEmpty == false || !label.allSatisfy({ allowed.contains($0) }) { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X268",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 37,
+   "kind": "drop-not",
+   "original": "for label in labels where label.isEmpty || !label.allSatisfy({ allowed.contains($0) }) { return nil }",
+   "mutated": "for label in labels where label.isEmpty || label.allSatisfy({ allowed.contains($0) }) { return nil }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0073 BundleIdentifier accepts reverse-DNS shapes and rejects text, URLs, paths, emails",
+    "OC-0073 BundleIdentifier length boundary is 255 bytes",
+    "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X269",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 38,
+   "kind": "delete",
+   "original": "value = candidate",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X270",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "kind": "string",
+   "original": "\"public.utf8-plain-text\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text\", \"public.plain-text\",",
+   "mutated": "\"public.utf8-plain-text~\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text\", \"public.plain-text\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "UTI allowlist is exact: suffixed, padded or case-changed identifiers are private"
+   ]
+  },
+  {
+   "id": "X271",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "kind": "string",
+   "original": "\"public.utf8-plain-text\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text\", \"public.plain-text\",",
+   "mutated": "\"public.utf8-plain-text\", \"public.utf16-plain-text~\", \"public.utf16-external-plain-text\", \"public.plain-text\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X272",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "kind": "string",
+   "original": "\"public.utf8-plain-text\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text\", \"public.plain-text\",",
+   "mutated": "\"public.utf8-plain-text\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text~\", \"public.plain-text\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X273",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "kind": "string",
+   "original": "\"public.utf8-plain-text\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text\", \"public.plain-text\",",
+   "mutated": "\"public.utf8-plain-text\", \"public.utf16-plain-text\", \"public.utf16-external-plain-text\", \"public.plain-text~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X274",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text~\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X275",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text\", \"public.html~\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X276",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text\", \"public.html\", \"public.rtf~\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X277",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url~\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X278",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url~\", \"public.png\", \"public.tiff\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X279",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png~\", \"public.tiff\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X280",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "kind": "string",
+   "original": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff\",",
+   "mutated": "\"public.text\", \"public.html\", \"public.rtf\", \"public.url\", \"public.file-url\", \"public.png\", \"public.tiff~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X281",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "kind": "string",
+   "original": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "mutated": "\"public.jpeg~\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X282",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "kind": "string",
+   "original": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "mutated": "\"public.jpeg\", \"public.heic~\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X283",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "kind": "string",
+   "original": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "mutated": "\"public.jpeg\", \"public.heic\", \"public.image~\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X284",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "kind": "string",
+   "original": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "mutated": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data~\", \"public.vcard\", \"public.folder\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X285",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "kind": "string",
+   "original": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "mutated": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard~\", \"public.folder\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X286",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "kind": "string",
+   "original": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder\",",
+   "mutated": "\"public.jpeg\", \"public.heic\", \"public.image\", \"public.data\", \"public.vcard\", \"public.folder~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X287",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 58,
+   "kind": "string",
+   "original": "\"com.apple.rtfd\", \"com.adobe.pdf\", \"NSStringPboardType\",",
+   "mutated": "\"com.apple.rtfd~\", \"com.adobe.pdf\", \"NSStringPboardType\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X288",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 58,
+   "kind": "string",
+   "original": "\"com.apple.rtfd\", \"com.adobe.pdf\", \"NSStringPboardType\",",
+   "mutated": "\"com.apple.rtfd\", \"com.adobe.pdf~\", \"NSStringPboardType\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X289",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 58,
+   "kind": "string",
+   "original": "\"com.apple.rtfd\", \"com.adobe.pdf\", \"NSStringPboardType\",",
+   "mutated": "\"com.apple.rtfd\", \"com.adobe.pdf\", \"NSStringPboardType~\",",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X290",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 105,
+   "kind": "op",
+   "original": "case .int, .bool, .bytes, .milliseconds, .kind, .outcome, .code, .permission: true",
+   "mutated": "case .int, .bool, .bytes, .milliseconds, .kind, .outcome, .code, .permission: false",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0036 item ids are private; counts, durations, booleans and codes are public",
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X291",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 107,
+   "kind": "op",
+   "original": "case .id, .bundleId: false",
+   "mutated": "case .id, .bundleId: true",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0036 item ids are private; counts, durations, booleans and codes are public",
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X292",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 134,
+   "kind": "op",
+   "original": "public var publicText: String { publicContext.isEmpty ? headline : \"\\(headline) \\(publicContext)\" }",
+   "mutated": "public var publicText: String { publicContext.isEmpty == false ? headline : \"\\(headline) \\(publicContext)\" }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0035 an error with no cause logs no cause text",
+    "hostile underlying domain and static message stay in privateText",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X293",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 138,
+   "kind": "op",
+   "original": "guard message != nil || cause != nil else { return privateContext }",
+   "mutated": "guard message == nil || cause != nil else { return privateContext }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0035 an error with no cause logs no cause text"
+   ]
+  },
+  {
+   "id": "X294",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 138,
+   "kind": "op",
+   "original": "guard message != nil || cause != nil else { return privateContext }",
+   "mutated": "guard message != nil || cause == nil else { return privateContext }",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X295",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 138,
+   "kind": "op",
+   "original": "guard message != nil || cause != nil else { return privateContext }",
+   "mutated": "guard message != nil && cause != nil else { return privateContext }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0035 an error with no cause logs no cause text"
+   ]
+  },
+  {
+   "id": "X296",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 138,
+   "kind": "negate-guard",
+   "original": "guard message != nil || cause != nil else { return privateContext }",
+   "mutated": "guard !(message != nil || cause != nil) else { return privateContext }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0035 an error with no cause logs no cause text",
+    "hostile underlying domain and static message stay in privateText",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X297",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 169,
+   "kind": "string",
+   "original": "public static let fallbackSubsystem = \"io.github.heilo27.Flotsam\"",
+   "mutated": "public static let fallbackSubsystem = \"io.github.heilo27.Flotsam~\"",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X298",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 175,
+   "kind": "delete",
+   "original": "Logger(subsystem: subsystem, category: category.rawValue)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X299",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 192,
+   "kind": "delete",
+   "original": "context",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X300",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 193,
+   "kind": "op",
+   "original": ".filter { $0.value.isPublic == isPublic }",
+   "mutated": ".filter { $0.value.isPublic != isPublic }",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0036 item ids are private; counts, durations, booleans and codes are public",
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields",
+    "OC-0071 a non-system UTI renders private",
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X301",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 195,
+   "kind": "op",
+   "original": ".sorted()",
+   "mutated": ".reversed().sorted()",
+   "result": "EQUIVALENT",
+   "proof": "sorted() over rendered Strings; equal elements are indistinguishable, so input order cannot change the output."
+  },
+  {
+   "id": "X302",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 196,
+   "kind": "string",
+   "original": ".joined(separator: \" \")",
+   "mutated": ".joined(separator: \" ~\")",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0036 item ids are private; counts, durations, booleans and codes are public",
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X303",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 198,
+   "kind": "op",
+   "original": "return (line(true), line(false))",
+   "mutated": "return (line(false), line(false))",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0036 item ids are private; counts, durations, booleans and codes are public",
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields",
+    "OC-0071 a non-system UTI renders private",
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X304",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 198,
+   "kind": "op",
+   "original": "return (line(true), line(false))",
+   "mutated": "return (line(true), line(true))",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text",
+    "OC-0036 item ids are private; counts, durations, booleans and codes are public",
+    "OC-0036 public part carries outcome, kind, size and system UTI; bundle id is private",
+    "OC-0037 OC-0038 OC-0039 each event has a stable name, category and only safe fields",
+    "OC-0071 a non-system UTI renders private",
+    "OC-0072 dyn. and near-miss identifiers are private; closed-list identifiers are public"
+   ]
+  },
+  {
+   "id": "X305",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 239,
+   "kind": "delete",
+   "original": "makeRecord(category: event.category, level: .info, headline: event.name, context: event.fields)",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+   ]
+  },
+  {
+   "id": "X306",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 244,
+   "kind": "delete",
+   "original": "sink.write(record(for: error, category: category))",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "OC-0032 OC-0013 the record's level and category follow the code's severity and module",
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X307",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 249,
+   "kind": "delete",
+   "original": "sink.write(record(for: event))",
+   "mutated": "<statement deleted>",
+   "result": "KILLED",
+   "killed_by": [
+    "ids, bundle ids and unknown pasteboard types never reach publicText"
+   ]
+  },
+  {
+   "id": "X308",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 265,
+   "kind": "string",
+   "original": "headline: \"trace\",",
+   "mutated": "headline: \"trace~\",",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X309",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/Signposts.swift",
+   "line": 24,
+   "kind": "delete",
+   "original": "Signposts.end(self)",
+   "mutated": "<statement deleted>",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X310",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/Signposts.swift",
+   "line": 31,
+   "kind": "string",
+   "original": "private static let signposter = OSSignposter(subsystem: FlotsamLog.subsystem, category: \"perf\")",
+   "mutated": "private static let signposter = OSSignposter(subsystem: FlotsamLog.subsystem, category: \"perf~\")",
+   "result": "SURVIVED",
+   "ticket": "TASK-379"
   }
+ ],
+ "survivors": [
+  {
+   "id": "X003",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 22,
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X004",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 23,
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X005",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 24,
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X006",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 25,
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X007",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 42,
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X008",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Settings/Settings.swift",
+   "line": 45,
+   "ticket": "TASK-375"
+  },
+  {
+   "id": "X014",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 31,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X017",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 42,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X019",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamCatalogue.swift",
+   "line": 45,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X024",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 8,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X034",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X036",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X037",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 35,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X040",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 36,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X043",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 62,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X053",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 68,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X054",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 68,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X058",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 71,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X059",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 71,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X060",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
+   "line": 71,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X068",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X069",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X070",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/MessageArgument.swift",
+   "line": 50,
+   "ticket": "TASK-374"
+  },
+  {
+   "id": "X083",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 43,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X084",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 43,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X085",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 44,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X086",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 44,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X087",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 45,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X088",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 45,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X089",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 46,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X090",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Model/Model.swift",
+   "line": 46,
+   "ticket": "TASK-376"
+  },
+  {
+   "id": "X098",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 23,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X101",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 30,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X102",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 30,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X103",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 31,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X104",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsReport.swift",
+   "line": 31,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X142",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Diagnostics/DiagnosticsSnapshotBuilder.swift",
+   "line": 51,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X155",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 56,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X166",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/ErrorCodeFormat.swift",
+   "line": 61,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X223",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X224",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X225",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X226",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X227",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Errors/FlotsamError.swift",
+   "line": 59,
+   "ticket": "TASK-377"
+  },
+  {
+   "id": "X228",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 5,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X230",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 15,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X232",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 39,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X233",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 39,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X234",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 39,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X235",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 40,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X236",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 40,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X239",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 42,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X240",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 42,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X241",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 43,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X242",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 43,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X243",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 43,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X244",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 48,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X245",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
+   "line": 59,
+   "ticket": "TASK-378"
+  },
+  {
+   "id": "X265",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 36,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X271",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X272",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X273",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 55,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X274",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X275",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X276",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X277",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X280",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 56,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X281",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X282",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X283",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X284",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X285",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X286",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 57,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X288",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 58,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X294",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 138,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X297",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 169,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X308",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/FlotsamLog.swift",
+   "line": 265,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X309",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/Signposts.swift",
+   "line": 24,
+   "ticket": "TASK-379"
+  },
+  {
+   "id": "X310",
+   "file": "Packages/FlotsamCore/Sources/FlotsamBase/Logging/Signposts.swift",
+   "line": 31,
+   "ticket": "TASK-379"
+  }
+ ],
+ "discarded_equivalent": [
+  {
+   "id": "X030",
+   "proof": "reduce(0) vs reduce(1) differs only when every app name is empty or none exist. Then limit 0 and limit 1 render identically (an empty name is never truncated, other args ignore the limit) and both exit on the first pass via nameLimit<=1."
+  },
+  {
+   "id": "X064",
+   "proof": "sorted() over unique Strings is a total order; the result is independent of input order, so reversed().sorted() == sorted()."
+  },
+  {
+   "id": "X075",
+   "proof": "max(1,ms) vs max(0,ms) differs only for ms<=0 (0 ms vs 1 ms); both format as '0 seconds' (verified with Duration.formatted on this OS: 0 and 1 both give '0 seconds', 500 gives '0 seconds')."
+  },
+  {
+   "id": "X099",
+   "proof": "Inside the inactive #elseif arch(x86_64) branch; not compiled on arm64, the only build platform (mutant has no effect on the built binary)."
+  },
+  {
+   "id": "X100",
+   "proof": "Inside the inactive #else branch of #if arch; not compiled on arm64."
+  },
+  {
+   "id": "X121",
+   "proof": "sorted() over unique dictionary keys (Strings); result independent of input order."
+  },
+  {
+   "id": "X176",
+   "proof": "count>=capacity: removeLast(count-capacity) removes 0 elements when count==capacity, a no-op; identical state."
+  },
+  {
+   "id": "X213",
+   "proof": "count>=capacity: removeFirst(count-capacity) removes 0 elements when count==capacity, a no-op; identical state."
+  },
+  {
+   "id": "X238",
+   "proof": "Buffer fill byte is overwritten by getxattr for the first `read` bytes and only buffer.prefix(read) is returned, so the initial fill is unobservable."
+  },
+  {
+   "id": "X301",
+   "proof": "sorted() over rendered Strings; equal elements are indistinguishable, so input order cannot change the output."
+  }
+ ]
 }
