@@ -37,7 +37,7 @@ public struct DataFolder: Sendable {
         }
         guard stem.hasPrefix("flotsam-v"), stem.hasSuffix(".sqlite") else { return false }
         let digits = stem.dropFirst("flotsam-v".count).dropLast(".sqlite".count)
-        return !digits.isEmpty && digits.allSatisfy { ("0"..."9").contains($0) } && Int(digits) != nil
+        return digits.allSatisfy { ("0"..."9").contains($0) } && Int(digits) != nil
     }
 
     /// Creates the folder and its subfolders (0700) and empties `tmp/`, whose contents are in-flight writes from a
