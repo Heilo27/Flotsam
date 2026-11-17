@@ -92,9 +92,9 @@ extension FlotsamDatabase {
     public func clearHistory(
         range: ClearRange, includeExempt: Bool, progress: (@Sendable (_ deleted: Int, _ total: Int) -> Void)? = nil
     ) async -> FlotsamResult<ClearOutcome> {
-        // One `clearHistory` interval spans the count, every delete batch and the scrub, because FR-007-16's 5 s budget
+        // One `retention.clearHistory` interval spans the count, every delete batch and the scrub, because FR-007-16's 5 s budget
         // is for the whole operation the user waits on, not for one step of it.
-        await FlotsamSignpost.measure("clearHistory") { () async -> FlotsamResult<ClearOutcome> in
+        await FlotsamSignpost.measure("retention.clearHistory") { () async -> FlotsamResult<ClearOutcome> in
             await performClearHistory(range: range, includeExempt: includeExempt, progress: progress)
         }
     }
