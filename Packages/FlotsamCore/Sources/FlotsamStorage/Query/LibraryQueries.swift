@@ -122,7 +122,7 @@ extension FlotsamDatabase {
 
     // MARK: Reading
 
-    private static func count(_ db: Database, selection: Selection) throws -> Int {
+    static func count(_ db: Database, selection: Selection) throws -> Int {
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM item WHERE \(selection.sql)", arguments: selection.arguments) ?? 0
     }
 
