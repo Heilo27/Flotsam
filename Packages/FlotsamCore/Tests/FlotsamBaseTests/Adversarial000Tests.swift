@@ -488,8 +488,8 @@ private enum AdvLintHarness {
         return url
     }
 
-    /// Exit status of the lint on a tree containing only `source`.
-    static func exitStatus(for source: String) async throws -> Int32 {
+    /// Exit status of the lint on a tree containing only `source`, written to `relativePath` under Sources/.
+    static func exitStatus(for source: String, at relativePath: String = "FlotsamBase/Fixture.swift") async throws -> Int32 {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("flotsam-8a-lint-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
@@ -501,7 +501,9 @@ private enum AdvLintHarness {
             to: root.appendingPathComponent("bin/check-architecture.sh")
         )
         try Data("{\"strings\":{}}".utf8).write(to: base.appendingPathComponent("Resources/Localizable.xcstrings"))
-        try Data((source + "\n").utf8).write(to: base.appendingPathComponent("Fixture.swift"))
+        let fixture = root.appendingPathComponent("Packages/FlotsamCore/Sources").appendingPathComponent(relativePath)
+        try fm.createDirectory(at: fixture.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data((source + "\n").utf8).write(to: fixture)
         try Data().write(to: root.appendingPathComponent("Packages/FlotsamCore/Package.swift"))
 
         return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path]).status
@@ -552,5 +554,223 @@ struct Adversarial000LintTests {
     ])
     func falsePositives(source: String) async throws {
         #expect(try await AdvLintHarness.exitStatus(for: source) == 0, "\(source.debugDescription)")
+    }
+}
+
+// MARK: - TASK-351: every Swift-reading rule goes through the strip pass
+
+/// Where the LOGPRIVACY rule looks (FR-000-10).
+private let logFilePath = "FlotsamBase/Logging/FlotsamLog.swift"
+
+/// One banned token wrapped in each comment and string form. Plain-string form escapes quotes so the fixture is valid Swift.
+private func hiddenForms(of token: String) -> [String] {
+    let escaped = token.replacingOccurrences(of: "\"", with: "\\\"")
+    return [
+        "// \(token)\nlet ok = 1",
+        "/// \(token)\nlet ok = 1",
+        "/* \(token) */\nlet ok = 1",
+        "/* a /* b */\n\(token)\n*/\nlet ok = 1",
+        "let s = \"\(escaped)\"",
+        "let s = ##\"\(token) \"# \"##",
+        "let s = \"\"\"\n\(token)\n\"\"\"",
+        "let s = #\"\"\"\n\(token)\n\"\"\"#",
+    ]
+}
+
+private let strippedTokens = [
+    "fatalError(\"x\")", "e.localizedDescription", "Logger(subsystem: \"a\", category: \"b\")", "Text(\"hello\")",
+    "import Sentry", "try! f()", "UserDefaults.standard", "URLSession.shared",
+]
+
+@Suite("8A TASK-351 strip pass")
+struct Adversarial000Task351Tests {
+    // OC: FR-000-02 / TASK-351. Mutation: running the FATAL/LOCDESC/LOGGER/USTRING/NETWORK/USERDEFAULTS/SDKIMPORT rules on the raw line
+    // (the pre-d998813 script) turns every row red. Control: the same token as bare code exits 1, so a lint that always exits 0 fails here.
+    @Test("a banned token in any comment or string form passes; the same token as code fails",
+          arguments: strippedTokens)
+    func tokensHiddenInCommentsAndStringsPass(token: String) async throws {
+        // given the token bare, when linted, then it fails (control)
+        #expect(try await AdvLintHarness.exitStatus(for: token) == 1, "control \(token.debugDescription)")
+        // given the token in each comment/string form, when linted, then every one passes
+        for source in hiddenForms(of: token) {
+            #expect(try await AdvLintHarness.exitStatus(for: source) == 0, "\(source.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-02 / TASK-351. Mutation: blanking the whole string literal (dropping the interpolation code) turns these green->red.
+    @Test("a banned expression inside an interpolation is still code and fails", arguments: [
+        "fatalError(\"x\")", "e.localizedDescription", "Logger(subsystem: \"a\", category: \"b\")", "os_log(\"x\")",
+        "URLSession.shared", "UserDefaults.standard", "d!", "try! f()",
+    ])
+    func interpolationCodeIsStillChecked(expression: String) async throws {
+        // given the expression inside each interpolation form, when linted, then it fails
+        let sources = [
+            "let s = \"a \\(\(expression)) b\"",
+            "let s = \"\"\"\nline \\(\(expression))\n\"\"\"",
+            "let s = #\"a \\#(\(expression)) b\"#",
+            "let s = \"a \\(\"b \\(\(expression))\")\"",
+            "let s = \"\"\"\n\\(\n\(expression)\n)\n\"\"\"",
+        ]
+        for source in sources {
+            #expect(try await AdvLintHarness.exitStatus(for: source) == 1, "\(source.debugDescription)")
+        }
+        // given a raw string where \( is plain text, when linted, then it passes (negative)
+        #expect(try await AdvLintHarness.exitStatus(for: "let s = #\"\\(\(expression))\"#") == 0)
+    }
+
+    // OC: FR-000-02 / TASK-351. Mutation: a strip pass that mis-tracks a delimiter (an unclosed comment or string state leaking
+    // past its closer) hides the fatalError on each row; a lint that does not strip at all fails the first row of the next test.
+    @Test("real code after a comment or string closer on the same or a later line fails", arguments: [
+        "/* c */ fatalError(\"x\")",
+        "/* a /* b */ still comment */ fatalError(\"x\")",
+        "let s = \"x\"; fatalError(\"x\")",
+        "let s = \"//\"; fatalError(\"x\")",
+        "let s = \"/*\"\nfatalError(\"x\")",
+        "// it's \"\nfatalError(\"x\")",
+        "// /*\nfatalError(\"x\")",
+        "/* \" */ fatalError(\"x\")",
+        "/* // */ fatalError(\"x\")",
+        "/* \"\"\" */ fatalError(\"x\")",
+        "let s = \"a\\\\\"; fatalError(\"x\")",
+        "let s = \"\"\"\nabc\n\"\"\"; fatalError(\"x\")",
+        "let s = \"a \\(f(\")\")) b\"; fatalError(\"x\")",
+        "public func f(\n    a: String = \"(\",\n    b: Int\n) throws {}",
+    ])
+    func codeAfterCloserIsStillChecked(source: String) async throws {
+        // given code after a closer, when linted, then it fails
+        #expect(try await AdvLintHarness.exitStatus(for: source) == 1, "\(source.debugDescription)")
+    }
+
+    @Test("text that only looks like code inside comments and strings passes", arguments: [
+        "/* a /* b */ fatalError(\"x\") */\nlet a = 1",
+        "let s = \"a\\\" fatalError(\\\"x\\\") b\"",
+        "let s = \"\"\"\nsay \"try! x\" and \"\"fatalError(\"x\")\"\"\n\"\"\"",
+        "let s = \"\"\"\nabc \\\nfatalError(\"x\")\n\"\"\"",
+        "// import Sentry\n/* import GRDB */\nimport Foundation",
+    ])
+    func lookalikesPass(source: String) async throws {
+        // given code-looking text in comments/strings, when linted, then it passes
+        #expect(try await AdvLintHarness.exitStatus(for: source) == 0, "\(source.debugDescription)")
+    }
+
+    // OC: FR-000-04 / 8A ruling "fatal-ok on the same line". Mutation: reading the annotation from the raw line (not the comment text)
+    // lets a `fatal-ok:` string literal waive the rule, turning the string rows red.
+    @Test("fatal-ok waives only from a comment on the same line", arguments: [
+        ("func f() { fatalError(\"x\") } // fatal-ok: invariant", Int32(0)),
+        ("precondition(x) // fatal-ok: y", Int32(0)),
+        ("func f() { fatalError(\"fatal-ok: reason\") }", Int32(1)),
+        ("let s = \"fatal-ok:\"; fatalError(\"x\")", Int32(1)),
+        ("func f() { fatalError(#\"fatal-ok: r\"#) }", Int32(1)),
+        ("let s = \"\"\"\nfatal-ok: why\n\"\"\"\nfatalError(\"x\")", Int32(1)),
+        ("// fatal-ok: x\nfatalError(\"x\")", Int32(1)),
+        ("fatalError(\"x\")", Int32(1)),
+    ])
+    func fatalOkOnlyFromSameLineComment(source: String, expected: Int32) async throws {
+        // given a fatalError with or without an annotation, when linted, then only a same-line comment annotation passes
+        #expect(try await AdvLintHarness.exitStatus(for: source) == expected, "\(source.debugDescription)")
+    }
+
+    // OC: FR-000-10 / TASK-351. Mutation: reading `privacy:` from the raw line lets a string or comment mention waive an unqualified interpolation.
+    @Test("log privacy: only a real qualifier in code waives it", arguments: [
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v)\")\n}", Int32(1)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v, privacy: .public)\")\n}", Int32(0)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\n    \"a \\(v)\"\n  )\n}", Int32(1)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\"privacy: \\(v)\")\n}", Int32(1)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v)\") // privacy: .public\n}", Int32(1)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\n    // privacy: .public\n    \"a \\(v)\"\n  )\n}", Int32(1)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\"\"\"\n  x \\(v)\n  \"\"\")\n}", Int32(1)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(\"a\") // \\(v)\n}", Int32(0)),
+        ("func f(v: Int, logger: Logger) {\n  logger.info(#\"a \\(v)\"#)\n}", Int32(0)),
+    ])
+    func logPrivacyReadsCodeOnly(source: String, expected: Int32) async throws {
+        // given a Logger call in FlotsamLog.swift, when linted, then only an unqualified interpolation in code fails
+        #expect(try await AdvLintHarness.exitStatus(for: source, at: logFilePath) == expected, "\(source.debugDescription)")
+    }
+}
+
+// MARK: - TASK-351 breaks found by blind verification (known issues, one ticket each)
+
+/// Each test pins a defect with `withKnownIssue`: the suite stays green while the lint is wrong, and goes red the moment the lint
+/// is fixed ("known issue did not occur"), which is the cue to delete the marker (the ticket's last acceptance criterion).
+/// The status is computed outside the marker so a harness failure is never swallowed as the known issue.
+@Suite("8A TASK-351 known lint breaks")
+struct Adversarial000Task351BreakTests {
+    /// Asserts the control exits 1 for real, then that each shape is (wrongly) not as expected, as a known issue.
+    private func pin(_ shapes: [String], controls: [String], expected: Int32, at path: String = "FlotsamBase/Fixture.swift",
+                     ticket: String) async throws {
+        for control in controls {
+            #expect(try await AdvLintHarness.exitStatus(for: control, at: path) == 1, "control \(control.debugDescription)")
+        }
+        for shape in shapes {
+            let status = try await AdvLintHarness.exitStatus(for: shape, at: path)
+            withKnownIssue("\(ticket): \(shape.debugDescription)") {
+                #expect(status == expected, "\(shape.debugDescription)")
+            }
+        }
+    }
+
+    // OC: FR-000-02. TASK-353 (regression from the strip pass). Mutation that turns it red: lex `/.../` regex literals in san_line.
+    @Test("TASK-353: a regex literal containing a quote hides the rest of the line")
+    func regexLiteralQuote() async throws {
+        // given a regex literal with a quote followed by fatalError, when linted, then it should fail (it exits 0)
+        try await pin(["let r = /\"/; fatalError(\"x\")"], controls: ["let r = 1; fatalError(\"x\")"], expected: 1, ticket: "TASK-353")
+    }
+
+    // OC: FR-000-04 / FR-000-09. TASK-354. Mutation: allow `[ \t]*` and a newline between the name and `(` in FATAL/LOGGER.
+    @Test("TASK-354: a space or newline before the paren slips past FATAL and LOGGER")
+    func spacedCallShapes() async throws {
+        try await pin([
+            "fatalError (\"x\")", "precondition (false)", "let l = Logger (subsystem: \"a\", category: \"b\")", "os_log (\"x\")",
+            "log.debug (\"x\")", "fatalError\n(\"x\")", "let l = Logger\n(subsystem: \"a\", category: \"b\")", "os_log\n(\"x\")",
+            "log.debug\n(\"x\")", "`fatalError`(\"x\")",
+        ], controls: [
+            "fatalError(\"x\")", "precondition(false)", "let l = Logger(subsystem: \"a\", category: \"b\")", "os_log(\"x\")", "log.debug(\"x\")",
+        ], expected: 1, ticket: "TASK-354")
+    }
+
+    // OC: FR-000-15 / ADR-0001. TASK-355. Mutation: match imports on the stripped line with optional attributes/access modifiers.
+    @Test("TASK-355: attributed, access-level, indented and same-line imports bypass SDK and graph rules")
+    func importShapes() async throws {
+        try await pin([
+            "@preconcurrency import Sentry", "public import Sentry", "internal import Sentry", "@_exported import Sentry",
+            "import Foundation; import Sentry", "import\nSentry",
+            "@preconcurrency import FlotsamStorage", "public import FlotsamStorage", "@_exported import FlotsamStorage",
+            "#if canImport(FlotsamStorage)\n    import FlotsamStorage\n#endif", "import Foundation; import FlotsamStorage",
+        ], controls: ["import Sentry", "import FlotsamStorage", "@testable import Sentry"], expected: 1, ticket: "TASK-355")
+    }
+
+    // OC: FR-000-10. TASK-356. Mutation: count interpolations against qualifiers per line instead of testing for any `privacy:`.
+    @Test("TASK-356: one privacy: qualifier excuses every interpolation on the line")
+    func logPrivacyPerInterpolation() async throws {
+        try await pin(
+            ["func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v, privacy: .public) b \\(v)\")\n}"],
+            controls: ["func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v)\")\n}"],
+            expected: 1, at: logFilePath, ticket: "TASK-356")
+    }
+
+    // OC: FR-000-10. TASK-357. Mutation: reset `inlog` when a one-line call's parens balance.
+    @Test("TASK-357: an interpolation after a one-line logger call is reported as a log message")
+    func logPrivacyLatch() async throws {
+        try await pin(
+            ["func f(v: Int, logger: Logger) {\n  logger.info(\"a\")\n  let s = \"b \\(v)\"\n}"],
+            controls: ["func f(v: Int, logger: Logger) {\n  logger.info(\"a\")\n  logger.info(\"b \\(v)\")\n}"],
+            expected: 0, at: logFilePath, ticket: "TASK-357")
+    }
+
+    // OC: FR-000-04 / ADR-0009. TASK-358. Mutation: add a left identifier boundary to FATAL, USERDEFAULTS and os_log/.debug.
+    @Test("TASK-358: identifiers that merely contain a banned name fail the lint")
+    func identifierBoundaries() async throws {
+        try await pin([
+            "func myfatalError(_ s: String) {}", "notprecondition(1)", "let x = MyUserDefaultsLike()",
+        ], controls: ["fatalError(\"x\")", "precondition(false)", "let d = UserDefaults.standard"], expected: 0, ticket: "TASK-358")
+    }
+
+    // OC: FR-000-05. TASK-359. Mutation: let USTRING tolerate whitespace/newline before the opening quote and cover verbatim/LocalizedStringKey.
+    @Test("TASK-359: user-visible literals split over lines or spaced slip past USTRING")
+    func userStringShapes() async throws {
+        try await pin([
+            "let v = Text(\n\"hello\")", "Button(\n    \"Save\"\n) {}", "x.title =\n    \"hello\"", "v.help(\n\"hi\")",
+            "let v = Text (\"hello\")", "let v = Text(verbatim: \"hello\")", "let v = Text(LocalizedStringKey(\"hello\"))",
+        ], controls: ["let v = Text(\"hello\")", "v.help(\"hi\")", "x.title = \"hello\""], expected: 1, ticket: "TASK-359")
     }
 }
