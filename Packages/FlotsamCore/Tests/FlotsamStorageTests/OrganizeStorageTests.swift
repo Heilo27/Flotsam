@@ -235,6 +235,17 @@ private func failure<T>(_ result: FlotsamResult<T>) -> ErrorCode? {
         #expect(try await store.database.setNote("x", for: Store.id(99)).get() == false)
     }
 
+    @Test("FR-004-06 the note reads back exactly as stored; none and a missing item read as nil")
+    func noteReadBack() async throws {
+        let store = try await Store.make()
+        defer { store.cleanUp() }
+        try await store.insert(Spec(n: 1))
+        #expect(try await store.database.note(of: Store.id(1)).get() == nil)
+        _ = try await store.database.setNote("  two\nlines ", for: Store.id(1)).get()
+        #expect(try await store.database.note(of: Store.id(1)).get() == "  two\nlines ")
+        #expect(try await store.database.note(of: Store.id(99)).get() == nil)
+    }
+
     @Test("FR-004-06 2,000 characters are accepted, 2,001 are ORG-VAL-002 and leave the note as it was")
     func noteCeiling() async throws {
         let store = try await Store.make()

@@ -27,4 +27,16 @@ extension FlotsamDatabase {
         if case .success(true) = result { publishOrganizeChange() }
         return result
     }
+
+    /// The item's note for the popover and the ungroup confirmation; nil when it has none or the item is gone.
+    public func note(of id: UUID) async -> FlotsamResult<String?> {
+        do {
+            let note = try await pool.read { db in
+                try String.fetchOne(db, sql: "SELECT note FROM item WHERE id = ?", arguments: [id.uuidString])
+            }
+            return .success(note)
+        } catch {
+            return .failure(Self.readFailure(error))
+        }
+    }
 }

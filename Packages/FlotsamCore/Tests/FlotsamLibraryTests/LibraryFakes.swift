@@ -82,7 +82,11 @@ final class FakePreferences: LibraryPreferences, @unchecked Sendable {
         get { lock.withLock { _size } }
         set { lock.withLock { _size = newValue } }
     }
-    var sort: LibrarySort { .recent }
+    private var _sort: LibrarySort = .recent
+    var sort: LibrarySort {
+        get { lock.withLock { _sort } }
+        set { lock.withLock { _sort = newValue } }
+    }
 }
 
 @MainActor
