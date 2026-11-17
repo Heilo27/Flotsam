@@ -42,6 +42,21 @@ public enum LibraryText {
     /// "and 3 more": the file members past the preview's limit.
     public static func previewMore(_ count: Int) -> String { format("ui.library.previewMore", count) }
 
+    // MARK: Organize (FRD-004)
+
+    public static func sortName(_ sort: LibrarySort) -> String { string("ui.organize.sort" + sort.rawValue.prefix(1).uppercased() + sort.rawValue.dropFirst()) }
+
+    public static func confirmDeleteTag(name: String, itemCount: Int) -> String {
+        format("ui.organize.confirmDeleteTag", name, itemCount)
+    }
+
+    public static func confirmDelete(count: Int) -> String {
+        count == 1 ? string("ui.organize.confirmDeleteOne") : format("ui.organize.confirmDelete", count)
+    }
+
+    public static let confirmUngroup = "ui.organize.confirmUngroup"
+    public static let editFormattingRemoved = "ui.organize.editFormattingRemoved"
+
     public static func selectedCount(_ count: Int) -> String { format("ui.library.footerSelected", count) }
 
     /// "Files", "Rich Text": the plural type names of the sidebar (distinct from `KindLabel`, which is the singular used

@@ -1891,6 +1891,96 @@
         }
       }
     },
+    "ui.organize.confirmDelete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %lld items permanently? This cannot be undone."
+          }
+        }
+      }
+    },
+    "ui.organize.confirmDeleteOne" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this item permanently? This cannot be undone."
+          }
+        }
+      }
+    },
+    "ui.organize.confirmDeleteTag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove tag '%@' from %lld items?"
+          }
+        }
+      }
+    },
+    "ui.organize.confirmUngroup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungroup this bundle? Its note, pin, trigger and hotkey are not carried over to the new items."
+          }
+        }
+      }
+    },
+    "ui.organize.editFormattingRemoved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving removes the formatting. Only plain text is kept."
+          }
+        }
+      }
+    },
+    "ui.organize.sortAlphabetical" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A to Z"
+          }
+        }
+      }
+    },
+    "ui.organize.sortMostUsed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most Used"
+          }
+        }
+      }
+    },
+    "ui.organize.sortOldest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oldest"
+          }
+        }
+      }
+    },
+    "ui.organize.sortRecent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent"
+          }
+        }
+      }
+    },
     "ui.settings.addApp" : {
       "localizations" : {
         "en" : {
