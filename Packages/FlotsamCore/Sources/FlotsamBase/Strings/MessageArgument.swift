@@ -33,9 +33,9 @@ public enum MessageArgument: Sendable, Equatable {
         }
     }
 
-    /// Human-readable size such as "25 MB". One formatter so a limit reads the same in every message (ADR-0009).
+    /// Human-readable size in binary units (10 MiB reads "10 MB", per FR-007-06). One formatter so a limit reads the same in every message (ADR-0009).
     public static func formatBytes(_ bytes: Int) -> String {
-        ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+        ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory)
     }
 
     /// Human-readable duration such as "5 seconds", localized.
