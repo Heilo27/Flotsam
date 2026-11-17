@@ -33,7 +33,7 @@ Give users light-weight control over history: keep what matters, label it, annot
 - **FR-004-05** Tags are searchable and filterable (FRD-003 FR-003-09, FR-004-10). Tags have no effect on retention (a tagged, unpinned item expires normally).
 
 **Notes**
-- **FR-004-06** Note. One plain-text note per item, at most 2,000 characters (`ORG-VAL-002`), edited in a popover (⌘N, context menu); Return inserts a newline, ⌘Return saves, Esc cancels without saving. An empty note removes it. Notes are searchable (FRD-003 FR-003-09). Notes have no effect on retention.
+- **FR-004-06** Note. One plain-text note per item, at most 2,000 characters (`ORG-VAL-002`), edited in a popover (⌘N, context menu); Return inserts a newline, ⌘Return saves, Esc cancels without saving. Only a zero-length note removes it; a note of spaces or newlines is stored exactly as typed. Notes are searchable (FRD-003 FR-003-09). Notes have no effect on retention.
 
 **Edit text**
 - **FR-004-07** Editable kinds: `text`, `richText`, `link`, `color`, `phone`, `email`. Other kinds → `ORG-VAL-003`. Editing opens an in-panel editor (⌘E, context menu) showing the plain text; ⌘Return saves, Esc cancels. The saved text must contain a non-whitespace character (`ORG-VAL-003`) and be at most the text ceiling (FRD-007 FR-007-06; `ORG-LIM-003`). On save: the plain text is replaced; stored rich representations (RTF, HTML) are removed (the editor shows the notice `organize.edit.formattingRemoved` for richText items); the kind is re-detected with FR-001-09; the `contentKey` is recomputed (FR-001-15); `updatedAt` is set. `createdAt`, `lastCopiedAt`, tags, note, pin and shortcuts are unchanged. A trigger or hotkey on the item uses the new text from then on.
