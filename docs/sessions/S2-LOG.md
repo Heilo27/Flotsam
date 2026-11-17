@@ -229,3 +229,41 @@ Rebased onto `main` d7d11d9; part 1 is now a8c525e.
   - `shelf.empty` should be `ui.shelf.empty`.
   - FR-006-18 needs a `LogEvent.shelf` extension.
   - The delete-confirm text is FRD-004's and has no key.
+
+---
+
+## 2026-11-17: A1+A2 on main @ 97b5a14
+
+**Verdict: pass. A1 green (no failures, no load flake this time); A2 capture and concealed filter verified; paste-back untested (no AX grant). No new defects.**
+
+Machine: macOS 27.3, Xcode 27.0, Swift 6.4. Fresh clone, detached at 97b5a14. Load average was 12 to 22 during the run (another build agent active).
+
+**A1 commands**
+- `bin/bootstrap.sh`: OK (GRDB 7.12.0).
+- `swift test` (parallel, no scratch path, no workarounds), run in `Packages/FlotsamCore`: **0 failures, exit 0**. Swift Testing runs: 292 tests in 45 suites with 8 known issues (this matches the S1 figure exactly), 307 in 38 with 1 known issue, 94 in 8, 56 in 9, 21 in 2, 10 in 2, and four 1-test runs. That is 784 tests in total, 9 known issues. The XCTest bundle: 6 tests, 0 failures.
+- OC-7132 (`Unmapped007TimingTests.swift:151`) **passed** in the full run, so no solo re-run was needed.
+- `bin/check-architecture.sh`: **pass** ("architecture checks passed").
+- `bin/build.sh`: **BUILD SUCCEEDED**. The only app `warning:` line is the AppIntents metadata skip.
+- Test build: the same 14 "no calls to throwing functions occur within 'try' expression" warnings as before (8 in `Tests/FlotsamStorageTests/DiskGuardIngestTests.swift`, 6 from `#expect` expansions). Still open for S1.
+
+**A2 launch smoke** (Debug app; database `~/Library/Application Support/Flotsam/flotsam.sqlite`, opened read-only; 10 items before the run)
+- Launch: alive at 8 s, 0.0 % CPU, RSS 88 MB. Menu bar item "Flotsam, capturing" is present. Menu: Open Library, Save Clipboard, Toggle Shelf, Pause Capture, Notices, Settings…, Show Setup Guide…, Quit Flotsam.
+- Captures, each stored exactly once (copyCount 1):
+  - text → `text`
+  - URL → `link`
+  - image (71×48 PNG) → `image`, with one representation. Copying it three times gave one row with copyCount 3.
+  - file (`public.file-url`) → `file`, one `bundleMember` row with the path. Copying it again gave copyCount 2, still one item.
+- Re-copying the same text gave one row with copyCount 2.
+- Concealed: a `org.nspasteboard.ConcealedType` copy left the item count unchanged (14 before, 14 after), and 0 hits for the secret string in the database and the data folder (grep of the whole data folder; SQL `LIKE` on `plainText` also 0).
+- FRD-004 Library: opened from the menu bar, shows 17 items, search field, All / Pinned (0), the Types sidebar (Text, Rich Text, Links, Images, Files) and the Apps sidebar. Counts agree with the database (text 6, richText 1, link 2, image 4, file 4). Rows show kind icon, title, source and relative age ("26s ago", "1m ago"). The footer reads "17 items" and "Press ⌘V to paste". Concealed items absent. Not exercised: search, pin, delete, preview, the keyboard jump to the last item.
+- Quit: clean (`quit` via Apple Events, process gone in under 4 s). `PRAGMA integrity_check` ok. No `DiagnosticReports/Flotsam*`.
+- **Paste-back: untested (no AX grant** for the Flotsam binary).
+
+**Observations (not defects)**
+- On launch Flotsam captured whatever was already on the clipboard (a rich-text item). This is expected capture-on-start behaviour; noted because the data folder is shared with earlier runs.
+- The source app for items written by my harness shows as "UserNotificationCenter" (the frontmost app at the time), not the writing process. This is expected for a headless pasteboard writer.
+- Harness traps (not Flotsam): a pasteboard tool that crashes on a missing argument leaves the old clipboard in place and looks like a missed capture. Check the tool's exit status before blaming the app.
+
+**Defects:** none.
+
+Clipboard: the prior contents (one item, `public.rtf` and `public.utf8-plain-text`) were saved before the run and restored after the app quit; a byte comparison of the saved and restored types and data matched.
