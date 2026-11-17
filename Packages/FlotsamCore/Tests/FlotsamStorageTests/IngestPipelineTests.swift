@@ -12,7 +12,7 @@ import FlotsamBase
 // exists in this package yet, so the limit and the count are asserted where Storage hands them over: the error code
 // and its `byteSize` / `count` context.
 
-@Suite struct IngestPipelineTests {
+@Suite(.timeLimit(.minutes(1))) struct IngestPipelineTests {
     private let t0: Int64 = 1_700_000_000_000
 
     private func failure(_ result: FlotsamResult<IngestResult>) -> FlotsamError? {

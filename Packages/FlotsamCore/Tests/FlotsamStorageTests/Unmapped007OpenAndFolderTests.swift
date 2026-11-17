@@ -93,7 +93,7 @@ enum Unmapped007NetworkScan {
 
 private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
 
-@Suite struct Unmapped007OpenAndFolderTests {
+@Suite(.timeLimit(.minutes(1))) struct Unmapped007OpenAndFolderTests {
     private func code(_ result: FlotsamResult<IngestResult>) -> ErrorCode? {
         if case .failure(let error) = result { return error.code }
         return nil
