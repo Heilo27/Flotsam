@@ -202,3 +202,20 @@ Rebased onto `main` d7d11d9; part 1 is now a8c525e.
   - **D4 (Major):** `LibraryPresentation.relativeTime` (~line 47). `RelativeDateTimeFormatter` gives "yesterday" and "10 days ago". OC-3019 wants "Yesterday", and an absolute date after 7 days.
   - **D5 (Major):** `ItemRow` / `LibraryRowPresentation` have no missing-file state, so OC-3020's "Missing" badge can't be shown.
   - **D6 (Minor):** `LibraryPreview.memberLimit = 10`, but the FRD and OC-3060 say 20.
+
+### C1 FRD-002 Screenshot Pickup on `s2/frd002` @ 54e69b6 (rebased onto main f190da8, compiles, green except one known flake)
+- Commands:
+  - `swift test --package-path Packages/FlotsamCore`: 1 failure in the full run, the timing flake OC-7132 (`Unmapped007TimingTests.swift:151`, `slowest < 1.0`). It is not FRD-002 code. A filtered rerun (`--filter Unmapped007TimingTests`) passed 5/5, with OC-7132 at 1.036 s.
+  - FlotsamScreenshots: 55/55 pass (was 5 failing).
+  - `bin/check-architecture.sh`: pass.
+  - `bin/build.sh`: BUILD SUCCEEDED.
+- Root-cause fixes (FRD-002 FR-002-07/09/12 and the SSP-IO-002 row updated in the same commit):
+  - `/var` vs `/private/var` path forms made the reconcile scan and FSEvents miss each other's dedupe, so files were imported twice. `ScreenshotFolderScanner.scan` now gives each file one path form.
+  - The watermark window re-queued files before their retry budget was spent, so they never ran out. The budget is now spent first, and an exhausted file is marked seen; only "Import recent screenshots" brings it back.
+- FRs: FR-002-01..13 and FR-002-15 implemented. FR-002-14 (p95 time-to-queryable) has no measurement; only the in-flight=2 cap is enforced.
+- Not run: the real `FSEventsFolderSource` has no automated test; the fakes cover the watcher.
+- History note: e255eb4 ("WIP, NOT COMPILED") is still in the branch history. HEAD compiles.
+- Watcher test files are now tracked. Two mechanical compile fixes; no expectation weakened.
+- Still open from before: the 500-file backfill takes ~125 s and needs a spec ruling.
+
+### C2 FRD-006 Shelf on `s2/frd006`: started from origin/main f190da8 (in progress)
