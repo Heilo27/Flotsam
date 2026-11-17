@@ -221,6 +221,46 @@ import FlotsamBase
         #expect(try rig.store.count("representation") == 10)
     }
 
+    /// OC-7033, OC-7015. Given a store that holds no row for a key, when four identical copies of that key race
+    /// through ingest at once (repeated over eight keys so the interleaving actually happens), then each key ends with
+    /// exactly one row whose copyCount is 4, exactly one call reported created and three bumped, and no second row
+    /// is written even though contentKey has no unique constraint (OC-7015). Goes red if the in-transaction re-check
+    /// before the insert is removed: every racer that passed step 1 inserts its own row.
+    @Test("OC-7033 OC-7015 racing identical copies leave one row per key with every copy counted")
+    func oc7033_racingCopiesLeaveOneRowPerKey() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let ingest = rig.ingest
+
+        var created = 0
+        var bumped = 0
+        for round in 0..<8 {
+            let candidate = rig.text("MARK-R7033-\(round)", "race \(round)")
+            let outcomes = await withTaskGroup(of: IngestOutcome?.self) { group in
+                for _ in 0..<4 { group.addTask { try? await ingest.ingest(candidate).get().outcome } }
+                var all: [IngestOutcome?] = []
+                for await outcome in group { all.append(outcome) }
+                return all
+            }
+            #expect(outcomes.compactMap { $0 }.count == 4)
+            for case .some(let outcome) in outcomes {
+                if case .created = outcome { created += 1 } else { bumped += 1 }
+            }
+        }
+
+        #expect(created == 8)
+        #expect(bumped == 24)
+        let keys = try await rig.store.reader().read {
+            try String.fetchAll($0, sql: "SELECT contentKey FROM item WHERE contentKey LIKE 'MARK-R7033-%' ORDER BY contentKey")
+        }
+        let counts = try await rig.store.reader().read {
+            try Int.fetchAll($0, sql: "SELECT copyCount FROM item WHERE contentKey LIKE 'MARK-R7033-%' ORDER BY contentKey")
+        }
+        #expect(keys == (0..<8).map { "MARK-R7033-\($0)" })
+        #expect(counts == [Int](repeating: 4, count: 8))
+        #expect(try rig.itemCount() == 8)
+    }
+
     /// OC-7028. Given item I (copyCount 3, pinned, tag, note, pasteCount 2, lastUsedAt U) and a newer item, when
     /// I's text is copied again, then no item is added, lastCopiedAt is now, copyCount 4, everything else is
     /// unchanged, and I is first in Recent.
