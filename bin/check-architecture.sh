@@ -193,12 +193,18 @@ function scan_imports(   rest, off, p, L, tail, mod) {
 }
 # FR-000-10: every interpolation inside a Logger call carries an explicit privacy: qualifier, so the policy is visible at the
 # call site. A call is tracked by its paren depth from the "(" after logger.<level> to the matching ")" (one line or many),
-# and each top-level \( ... ) inside it is judged on its own text, possibly spread over lines. Interpolations outside a log
-# call (plain string building) are not log messages and are not checked.
-function check_log_privacy(   L, t, n, i, c, rest, cd, ip, idp, body, ist) {
-  cd = 0; ip = 0
+# and each top-level \( ... ) inside it is judged on its own text, possibly spread over lines. The "(" may sit on a later line
+# than the method name (pend). Interpolations outside a log call (plain string building) are not log messages and are not checked.
+function check_log_privacy(   L, t, n, i, c, rest, cd, ip, idp, body, ist, pend, q) {
+  cd = 0; ip = 0; pend = 0
   for (L = 1; L <= nl; L++) {
     t = san[L]; n = length(t); i = 1
+    if (pend) {
+      match(t, /^[ \t]*/); q = RLENGTH + 1
+      if (q > n) continue
+      pend = 0
+      if (substr(t, q, 1) == "(") { cd = 1; i = q + 1 }
+    }
     while (i <= n) {
       c = substr(t, i, 1)
       if (ip) {
@@ -212,7 +218,11 @@ function check_log_privacy(   L, t, n, i, c, rest, cd, ip, idp, body, ist) {
       if (cd == 0) {
         rest = substr(t, i)
         if (!match(rest, LOGCALL)) break
-        i += RSTART + RLENGTH - 1; cd = 1; continue
+        i += RSTART + RLENGTH - 1
+        match(substr(t, i), /^[ \t]*/); q = i + RLENGTH
+        if (q > n) { pend = 1; break }
+        if (substr(t, q, 1) == "(") { cd = 1; i = q + 1 } else i = q
+        continue
       }
       if (c == "\\" && substr(t, i + 1, 1) == "(") { ip = 1; idp = 1; body = ""; ist = L; i += 2; continue }
       if (c == "(") cd++
@@ -306,7 +316,7 @@ function finish(   L, t) {
   # FR-000-09: one logging entry point (Logging/FlotsamLog.swift, filtered by the shell).
   scan_all("LOGGER", "Logger`?[ \t\n]*\\(", 1, 0)
   scan_all("LOGGER", "os_log`?[ \t\n]*\\(", 1, 0)
-  scan_all("LOGGER", "\\.debug`?[ \t\n]*\\(", 0, 0)
+  scan_all("LOGGER", "\\.`?debug`?[ \t\n]*\\(", 0, 0)
   # FR-000-05: a literal handed to a view or an AppKit text property bypasses the String Catalog. Heuristic by design: it
   # catches the common SwiftUI and AppKit entry points (also Text(verbatim: "..."), a literal split over lines, a space before
   # the paren, LocalizedStringKey("...")); Text(name) and catalogue lookups are not literals. Code review and the catalogue
@@ -331,7 +341,9 @@ BEGIN {
   for (k in DECL) START[k] = 1
   for (k in MODS) START[k] = 1
   split("if guard for while switch return throw defer do try", a, " "); for (k in a) START[a[k]] = 1
-  LOGCALL = "(logger|Logger\\(.*\\))[^\"]*\\.(log|info|notice|error|fault|debug)[ \t]*\\("
+  # os Logger levels; a receiver named logger, log (with a left boundary: catalog.info( is not a log call) or Logger(...); the
+  # method name may be backticked. It ends after the name: the "(" is found by check_log_privacy (it may be on the next line).
+  LOGCALL = "((^|[^A-Za-z0-9_$])_?log|logger|Logger\\(.*\\))[^\"]*\\.`?(log|info|notice|error|fault|debug|trace|warning|critical)`?"
 }
 FNR == 1 { if (fname != "") finish(); fname = FILENAME; sp = 0; prevcode = ""; mk[0] = "C"; ip[0] = 0; split("", seen); split("", san); split("", orig); split("", lcm) }
 { nl = FNR; orig[FNR] = $0; san[FNR] = (yaml ? yaml_line($0) : san_line($0)); lcm[FNR] = lcom }

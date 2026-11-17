@@ -883,9 +883,7 @@ struct Adversarial000KillCheckPins {
         for shape in shapes {
             // given an unqualified interpolation in FlotsamLog.swift, when linted, then it should fail (today it exits 0)
             let code = try await status(shape, at: logFilePath)
-            withKnownIssue("LOGCALL does not recognise this call shape: \(shape.debugDescription)") {
-                #expect(code == 1)
-            }
+            #expect(code == 1, "\(shape.debugDescription)")
         }
     }
 
@@ -893,9 +891,7 @@ struct Adversarial000KillCheckPins {
     @Test("KNOWN: log.`debug`(...) outside FlotsamLog.swift passes LOGGER")
     func backtickedDebugMiss() async throws {
         let backticked = try await status("log.`debug`(\"x\")")
-        withKnownIssue("the .debug pattern does not allow a backtick between the dot and the name") {
-            #expect(backticked == 1)
-        }
+        #expect(backticked == 1)
         #expect(try await status("log.debug(\"x\")") == 1)
     }
 
