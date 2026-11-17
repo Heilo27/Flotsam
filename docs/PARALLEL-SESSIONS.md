@@ -64,7 +64,7 @@ S2 marks each task here: `[S2: claimed <date>]` when it starts and `[S2: done <d
 
 Re-run this whenever `main` moves or a builder branch is marked `ready`:
 
-- **A1** `main` health: **[S2: done 2026-11-17 @ 3878487; defects D1, D2 in `s2/log`] [S2: A1+A2 re-run claimed 2026-11-17 on `main` @ d7d11d9: confirm D1/D2 on 6.2.4, copy checks]**
+- **A1** `main` health: **[S2: done 2026-11-17 @ 3878487; defects D1, D2 in `s2/log`] [S2: A1+A2 re-run done 2026-11-17 @ d7d11d9: pass, D1/D2 fixed on 6.2.4, capture + concealed filter verified, paste-back untested (no AX grant); `s2/log` 5d18ff4]**
   - clean clone, `bin/bootstrap.sh`;
   - full `swift test` (no scratch path, so the lint harness runs too);
   - `bin/check-architecture.sh`;
