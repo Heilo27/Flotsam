@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import GRDB
 import Testing
@@ -247,10 +248,16 @@ private let tenMinMs: Int64 = 10 * 60_000
         return names.sorted()
     }
 
+    private func sha256(_ url: URL) throws -> String {
+        SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
+    }
+
     /// OC-7110 / OC-7111. Given a real database whose file still opens (header and schema intact) but one non-root table
-    /// leaf page has its rows out of order so PRAGMA quick_check reports rows, when the database opens, then the damaged file is moved
-    /// into one corrupt-<timestamp>/ folder byte-for-byte, a fresh empty version-1 database is created, and the open notice
-    /// is STO-DB-002.
+    /// leaf page has its rows out of order so PRAGMA quick_check reports rows, with a -wal and a -shm beside it, when the
+    /// database opens, then the database file and the -wal move into one corrupt-<timestamp>/ folder with the SHA-256 they
+    /// had before the open (FR-007-13, TASK-370), the -shm moves with them, a fresh empty version-1 database is created,
+    /// and the open notice is STO-DB-002. The -shm is SQLite's wal-index, rebuilt from the -wal and updated in place by
+    /// every connection, so only its presence is asserted.
     @Test("OC-7110 a database that opens but fails quick_check is quarantined and replaced")
     func oc7110_quickCheckFailureIsQuarantined() async throws {
         // given 400 rows spread over many pages, closed and checkpointed
@@ -289,18 +296,23 @@ private let tenMinMs: Int64 = 10 * 60_000
         #expect(!check.isEmpty)
         try probe.close()
 
+        // and a -wal (no valid header, so SQLite reads it as empty) and a -shm sit beside it; the hashes are taken last
+        let wal = root.appendingPathComponent("flotsam.sqlite-wal")
+        try Data(repeating: 0xAB, count: 64).write(to: wal)
+        try Data(repeating: 0xCD, count: 32_768).write(to: root.appendingPathComponent("flotsam.sqlite-shm"))
+        let databaseHash = try sha256(file)
+        let walHash = try sha256(wal)
+
         // when the database opens
         let database = try await FlotsamDatabase.open(folder: root).get()
 
-        // then the damaged bytes are preserved in one quarantine folder and a fresh database is live
+        // then the damaged bytes are preserved exactly in one quarantine folder and a fresh database is live
         let folders = quarantined(root)
         #expect(folders.count == 1)
-        let preserved = try #require(folders.first).appendingPathComponent("flotsam.sqlite")
-        // (opening the file to judge it rewrites some of its pages, so the check is that every one of the 400 rows' text is
-        // still in the moved file, not that the whole file is bit-identical)
-        let kept = try Data(contentsOf: preserved)
-        let missing = (1...400).filter { kept.range(of: Data("m96-row-\($0)-".utf8)) == nil }
-        #expect(missing.isEmpty)
+        let folder = try #require(folders.first)
+        #expect(try sha256(folder.appendingPathComponent("flotsam.sqlite")) == databaseHash)
+        #expect(try sha256(folder.appendingPathComponent("flotsam.sqlite-wal")) == walHash)
+        #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent("flotsam.sqlite-shm").path))
         #expect(database.openNotice?.code == .stoDb002)
         let diagnostics = try await database.diagnostics().get()
         #expect(diagnostics.userVersion == 1)
