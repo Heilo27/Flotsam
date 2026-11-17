@@ -11,8 +11,14 @@ public enum FlotsamCatalogue {
     /// The catalogue in the source tree, located relative to this file. `swift test` and a source checkout have it;
     /// a built app does not, because SwiftPM compiles the catalogue into `.strings` files, so the app reads text
     /// through `FlotsamStrings`, never through this reader.
-    public static func shippedURL(file: String = #filePath) -> URL {
-        URL(fileURLWithPath: file)
+    ///
+    /// Why `file` is optional and `#filePath` is spelled inside the body: a `#filePath` default argument is expanded
+    /// in the CALLER's file, so any caller outside `Strings/` (tests, other modules, the `englishStrings(at:)`
+    /// default) resolved to the wrong directory. Resolving `#filePath` in the body anchors the default to this
+    /// production source file for every caller. `file` stays as an override for a caller that must point at a
+    /// different anchor file.
+    public static func shippedURL(file: String? = nil) -> URL {
+        URL(fileURLWithPath: file ?? #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Resources/Localizable.xcstrings")
     }
