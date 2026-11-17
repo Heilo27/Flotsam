@@ -489,7 +489,9 @@ private enum AdvLintHarness {
     }
 
     /// Exit status of the lint on a tree containing only `source`, written to `relativePath` under Sources/.
-    static func exitStatus(for source: String, at relativePath: String = "FlotsamBase/Fixture.swift") async throws -> Int32 {
+    /// `extraFiles` maps a path relative to the tree root (e.g. "project.yml") to its contents; Package.swift may be overridden the same way.
+    static func exitStatus(for source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
+                           extraFiles: [String: String] = [:]) async throws -> Int32 {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("flotsam-8a-lint-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
@@ -505,6 +507,11 @@ private enum AdvLintHarness {
         try fm.createDirectory(at: fixture.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data((source + "\n").utf8).write(to: fixture)
         try Data().write(to: root.appendingPathComponent("Packages/FlotsamCore/Package.swift"))
+        for (path, contents) in extraFiles {
+            let url = root.appendingPathComponent(path)
+            try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data((contents + "\n").utf8).write(to: url)
+        }
 
         return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path]).status
     }
@@ -768,5 +775,146 @@ struct Adversarial000Task351BreakTests {
             "let v = Text(\n\"hello\")", "Button(\n    \"Save\"\n) {}", "x.title =\n    \"hello\"", "v.help(\n\"hi\")",
             "let v = Text (\"hello\")", "let v = Text(verbatim: \"hello\")", "let v = Text(LocalizedStringKey(\"hello\"))",
         ], controls: ["let v = Text(\"hello\")", "v.help(\"hi\")", "x.title = \"hello\""], expected: 1, ticket: "TASK-359")
+    }
+}
+
+
+// MARK: - Kill-check pins and known issues found verifying TASK-353...359 (Worf, 2026-11-17)
+
+/// Each passing test below was added because a mutant of the lint (named on the test) survived the seven TASK-353...359 tests.
+/// The known-issue tests pin defects that are still present; each goes red the moment its defect is fixed, which is the cue to
+/// remove the `withKnownIssue` wrapper.
+@Suite("8A TASK-353..359 kill-check pins")
+struct Adversarial000KillCheckPins {
+    private func status(_ source: String, at path: String = "FlotsamBase/Fixture.swift", extra: [String: String] = [:]) async throws -> Int32 {
+        try await AdvLintHarness.exitStatus(for: source, at: path, extraFiles: extra)
+    }
+
+    // OC: FR-000-02. TASK-353. Mutant that turns it red: stop lexing `#/ ... /#` raw regex literals in san_line.
+    @Test("TASK-353: a raw #/ /# regex literal containing a quote does not hide the rest of the line")
+    func rawRegexLiteralQuote() async throws {
+        // given a raw regex literal holding a quote, when it is followed by fatalError, then the lint fails; the same literal alone passes
+        #expect(try await status("let r = #/\"/#; fatalError(\"x\")") == 1)
+        #expect(try await status("let r = #/\"/#; let s = 1") == 0)
+    }
+
+    // OC: FR-000-04. TASK-354. Mutant: drop preconditionFailure from the FATAL alternation (precondition( does not match preconditionFailure().
+    @Test("TASK-354: preconditionFailure, spaced or split over a line, fails FATAL; a longer identifier and a waiver pass")
+    func preconditionFailureShapes() async throws {
+        // given preconditionFailure calls, when linted, then they fail; given an identifier that merely starts with it, or a waiver, then pass
+        for shape in ["preconditionFailure(\"x\")", "preconditionFailure (\"x\")", "preconditionFailure\n(\"x\")"] {
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+        #expect(try await status("let preconditionFailureCount = 1") == 0)
+        #expect(try await status("preconditionFailure(\"x\") // fatal-ok: unreachable by construction") == 0)
+    }
+
+    // OC: FR-000-15 / ADR-0001. TASK-355. Mutant: stop skipping the import kind keyword (import struct Foo.Bar), so the module reads as `struct`.
+    @Test("TASK-355: import with a kind keyword still names its module")
+    func importKindKeyword() async throws {
+        // given kind-keyword imports of a banned SDK and of a module the target may not import, when linted, then they fail; Foundation passes
+        for shape in ["import func Sentry.capture", "import struct Sentry.Scope", "import struct FlotsamStorage.Thing", "import class FlotsamStorage.X"] {
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+        #expect(try await status("import struct Foundation.Date") == 0)
+    }
+
+    // OC: FR-000-15. TASK-355. Mutant: MANIFEST rule reads the raw line instead of the strip-pass text, so comments in manifests fail.
+    @Test("TASK-355: an SDK name in a manifest fails; the same name in a comment passes")
+    func manifestSdkNames() async throws {
+        // given project.yml declaring Sentry, when linted, then it fails; given Sentry only in # comments (own line or trailing), then it passes
+        let declared = "packages:\n  Sentry:\n    url: https://example.test/x"
+        #expect(try await status("let ok = 1", extra: ["project.yml": declared]) == 1)
+        #expect(try await status("let ok = 1", extra: ["project.yml": "# we never ship Sentry\nname: Flotsam"]) == 0)
+        #expect(try await status("let ok = 1", extra: ["project.yml": "name: Flotsam # not Sentry"]) == 0)
+        // given Package.swift with a Sentry comment, then it passes; given a Sentry string (the url) in a non-comment, then it fails
+        let pkgComment = "// import Sentry is banned\nlet package = 1"
+        #expect(try await status("let ok = 1", extra: ["Packages/FlotsamCore/Package.swift": pkgComment]) == 0)
+        let pkgUrl = "let deps = [\"https://github.com/getsentry/sentry-cocoa\"]"
+        #expect(try await status("let ok = 1", extra: ["Packages/FlotsamCore/Package.swift": pkgUrl]) == 1)
+    }
+
+    // OC: FR-000-09 / ADR-0009. TASK-358. Mutant: drop the left identifier boundary from the LOGGER os_log and Logger patterns.
+    @Test("TASK-358: identifiers ending in Logger or os_log do not fail LOGGER; the real calls do")
+    func loggerLeftBoundary() async throws {
+        // given my_os_log( and MyLogger(, when linted, then they pass; given os_log( and Logger(, then they fail
+        #expect(try await status("my_os_log(\"x\")") == 0)
+        #expect(try await status("let l = MyLogger(subsystem: \"a\")") == 0)
+        #expect(try await status("os_log(\"x\")") == 1)
+        #expect(try await status("let l = Logger(subsystem: \"a\", category: \"b\")") == 1)
+    }
+
+    // OC: FR-000-05. TASK-359. Mutants: drop the whitespace allowance before `(` on .help, and the newline allowance after `withTitle:`.
+    @Test("TASK-359: .help spaced before the paren and withTitle: split over a line fail USTRING; a non-literal passes")
+    func userStringHelpAndWithTitle() async throws {
+        // given a literal passed through those two shapes, when linted, then it fails; given a similarly named method or a variable, then it passes
+        #expect(try await status("v.help (\"hi\")") == 1)
+        #expect(try await status("a.addButton(withTitle:\n\"Quit\")") == 1)
+        #expect(try await status("a.addButton(withTitle: \"Quit\")") == 1)
+        #expect(try await status("v.helper (\"hi\")") == 0)
+        #expect(try await status("a.addButton(withTitle: key)") == 0)
+    }
+
+    // MARK: known issues, still present
+
+    // OC: FR-000-02. Defect: a line that STARTS with `/` (a division continued from the line above) opens a regex literal that
+    // closes at the next `/` on that line, hiding any banned call between the two slashes. Regression of the TASK-353 fix.
+    @Test("KNOWN: a continued-division line starting with / hides a banned call before the second slash")
+    func divisionAtLineStartHidesViolation() async throws {
+        // given fatalError between two slashes on a line that starts with `/`, when linted, then it should fail (today it exits 0)
+        let hidden = try await status("let r = total\n    /n + g(fatalError(\"x\"))/2")
+        withKnownIssue("lint treats a line-start / as a regex opener; fatalError between the slashes is stripped") {
+            #expect(hidden == 1)
+        }
+        // control: the same body without the slashes fails, so the shape above is the only thing hiding it
+        #expect(try await status("let r = total\n    + g(fatalError(\"x\"))") == 1)
+    }
+
+    // OC: FR-000-10. Defect: LOGCALL knows only log/info/notice/error/fault/debug on a receiver named logger, with no newline before `(`.
+    @Test("KNOWN: LOGPRIVACY misses .trace/.warning/.critical, a receiver named log, and a newline before the paren")
+    func logPrivacyCallShapeGaps() async throws {
+        let shapes = [
+            "func f(v: Int, logger: Logger) {\n  logger.warning(\"a \\(v)\")\n}",
+            "func f(v: Int, logger: Logger) {\n  logger.trace(\"a \\(v)\")\n}",
+            "func f(v: Int, logger: Logger) {\n  logger.critical(\"a \\(v)\")\n}",
+            "func f(v: Int, log: Logger) {\n  log.info(\"a \\(v)\")\n}",
+            "func f(v: Int, logger: Logger) {\n  logger.info\n  (\"a \\(v)\")\n}",
+        ]
+        // control: the recognised shape fails
+        #expect(try await status("func f(v: Int, logger: Logger) {\n  logger.info(\"a \\(v)\")\n}", at: logFilePath) == 1)
+        for shape in shapes {
+            // given an unqualified interpolation in FlotsamLog.swift, when linted, then it should fail (today it exits 0)
+            let code = try await status(shape, at: logFilePath)
+            withKnownIssue("LOGCALL does not recognise this call shape: \(shape.debugDescription)") {
+                #expect(code == 1)
+            }
+        }
+    }
+
+    // OC: FR-000-09. Defect: a backticked method name slips past the `.debug(` pattern in LOGGER.
+    @Test("KNOWN: log.`debug`(...) outside FlotsamLog.swift passes LOGGER")
+    func backtickedDebugMiss() async throws {
+        let backticked = try await status("log.`debug`(\"x\")")
+        withKnownIssue("the .debug pattern does not allow a backtick between the dot and the name") {
+            #expect(backticked == 1)
+        }
+        #expect(try await status("log.debug(\"x\")") == 1)
+    }
+
+    // OC: FR-000-05 / FR-000-04. Defect: USTRING view names have no left identifier boundary, and NETWORK is a bare substring match,
+    // so a type that merely contains Text/Button/URLSession fails the lint. False positives only; no violation can pass because of it.
+    @Test("KNOWN: identifiers that contain a view or network name fail the lint")
+    func missingLeftBoundaryFalsePositives() async throws {
+        let shapes = ["let v = MyText(\"hello\")", "let v = AppButton(\"Save\")", "let myURLSessionHelper = 1"]
+        // control: the real shapes fail
+        #expect(try await status("let v = Text(\"hello\")") == 1)
+        #expect(try await status("let s = URLSession.shared") == 1)
+        for shape in shapes {
+            // given an identifier that only contains the banned name, when linted, then it should pass (today it exits 1)
+            let code = try await status(shape)
+            withKnownIssue("no left boundary on this rule: \(shape.debugDescription)") {
+                #expect(code == 0)
+            }
+        }
     }
 }
