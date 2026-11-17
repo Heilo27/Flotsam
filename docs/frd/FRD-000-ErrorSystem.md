@@ -165,7 +165,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | STO-DB-001 | Error | Flotsam couldn't save your history. Free up disk space and try again. | roll back; surface per FR-000-08 |
 | STO-DB-002 | Error | Your history database was damaged. A fresh one was created and the old file was kept in the data folder. | move aside, recreate; Notice |
-| STO-DB-003 | Fatal | Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder. | alert, quit |
+| STO-DB-003 | Fatal | Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder. | alert, quit |
 | STO-DB-004 | Error | Couldn't read your history. Try again. | propagate |
 | STO-IO-001 | Error | Flotsam couldn't write to its data folder. Check free disk space. | operation aborted |
 | STO-IO-002 | Fatal | Flotsam can't create its data folder, so it can't run. | alert, quit |
@@ -206,3 +206,6 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 
 ## 10. Out of Scope
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
+
+## 11. Change Log
+- 2026-11-16: STO-DB-003 copy cut from three sentences to two (the 1-2 sentence rule): "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder."

@@ -95,7 +95,7 @@
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your history database was damaged. A fresh one was created and the old file was kept in the data folder." } } }
     },
     "error.STO-DB-003" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder." } } }
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder." } } }
     },
     "error.STO-DB-004" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't read your history. Try again." } } }

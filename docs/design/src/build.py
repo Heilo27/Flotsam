@@ -299,6 +299,6 @@ sheet('08-menubar-feedback','Menu bar and feedback',[
  wrap('Notices submenu',bd(''.join(NOT))),
  wrap('HUD (top-centre of pointer screen, 2.5 s)',bd('<div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start">'+hud('paste','g','Pasted “Dinner at 7? I booked…”')+hud('pause','w','Recording paused')+hud('warn','w','Pasting is off. Press ⌘V to paste.')+hud('xc','e','Couldn’t read the clipboard. Copy it again.')+'</div>')),
  wrap('Inline validation (field level)',bd('<div class="pop nocaret" style="width:300px"><div class="field bad"><span>;sig</span></div><div class="err-inline">'+ic('warn')+'<span>Trigger text is already used by “Email sign-off.” Choose different text.</span></div></div>')),
- wrap('Fatal alert (database cannot open)',bd(alert('Flotsam can’t open its history','Flotsam can’t open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder.',[('Quit Flotsam','pri'),('Show Folder','')]))),
+ wrap('Fatal alert (database cannot open)',bd(alert('Flotsam can’t open its history','Flotsam can’t open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder.',[('Quit Flotsam','pri'),('Show Folder','')]))),
 ])
 print('ok')
