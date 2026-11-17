@@ -141,8 +141,9 @@ import FlotsamBase
         let s = try await Store.make()
         defer { s.cleanUp() }
         try await s.insert(Spec(n: 1, ageMs: 40 * dayMs, pinned: true))
+        let unpinnedAt = s.clock.millis
         _ = try await s.database.applyExemptionEdit(.setPinned(false), to: Store.id(1)).get()
-        #expect(try s.exemptReleasedAt(1) != nil)
+        #expect(try s.exemptReleasedAt(1) == unpinnedAt)
 
         s.clock.advance(ms: 2 * hourMs)
         _ = try await s.database.applyExemptionEdit(.setPinned(true), to: Store.id(1)).get()
@@ -289,8 +290,10 @@ import FlotsamBase
         let outcome = try await s.database.enforceImageBudget(.mib500, protecting: Store.id(1)).get()
 
         #expect(try s.presentIds().contains(1))
-        #expect(outcome.evictedCount >= 1)
-        #expect(try s.sumRepresentationBytes() <= 450 * mib)
+        // 495 + 20 = 515 MiB against a 450 MiB target: the oldest unprotected image (99 MiB) takes it to 416 MiB, so exactly one goes.
+        #expect(outcome.evictedCount == 1)
+        #expect(try s.presentIds() == [1, 3, 4, 5, 6])
+        #expect(try s.sumRepresentationBytes() == 416 * mib)
         #expect(s.exists(s.blobURL(1, 1)))
     }
 
