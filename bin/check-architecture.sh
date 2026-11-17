@@ -11,48 +11,23 @@ fail() {
   failures=$((failures + n))
 }
 
-# Return the import lines of one target as "file:module".
-imports_of() { grep -rhoE '^(@testable )?import [A-Za-z0-9_]+' "$SRC/$1" 2>/dev/null | awk '{print $NF}' | sort -u; }
+# Crash/analytics/logging SDK names (FR-000-15); used by the source-import rule in the awk pass and the manifest rule below.
+SDKS='Sentry|Crashlytics|Firebase|Mixpanel|Amplitude|Bugsnag|PostHog|TelemetryDeck|AppCenter|Datadog|NewRelic|Segment|Rollbar|Instabug|Countly|Flurry|Heap|Smartlook|LogRocket|Embrace|Honeycomb|Raygun|PLCrashReporter|CocoaLumberjack|SwiftyBeaver'
+LOG_FILE="$SRC/FlotsamBase/Logging/FlotsamLog.swift"
 
-# Allowed imports per target (ADR-0001 table). Portable to bash 3.2 (macOS default): no associative arrays.
-allowed_for() {
-  case "$1" in
-    FlotsamBase) echo "Foundation os" ;;
-    FlotsamStorage) echo "Foundation FlotsamBase GRDB" ;;
-    FlotsamPayload) echo "Foundation FlotsamBase" ;;
-    FlotsamPaste) echo "Foundation FlotsamBase FlotsamStorage" ;;
-    FlotsamCapture|FlotsamScreenshots|FlotsamShelf) echo "Foundation FlotsamBase FlotsamStorage FlotsamPayload" ;;
-    FlotsamLibrary|FlotsamShortcuts|FlotsamTriggers) echo "Foundation FlotsamBase FlotsamStorage FlotsamPaste" ;;
-    *) echo "" ;;
-  esac
-}
-for dir in "$SRC"/Flotsam*; do
-  target=$(basename "$dir")
-  allowed=$(allowed_for "$target")
-  [ -z "$allowed" ] && { fail "unknown target $target: add it to allowed_for and ADR-0001"; continue; }
-  for module in $(imports_of "$target"); do
-    case " $allowed " in *" $module "*) ;; *) fail "$target imports $module (allowed: $allowed)";; esac
-  done
-done
-
-# Only Storage may touch GRDB or SQLite.
-hits=$(grep -rlE 'import (GRDB|SQLite3)' "$SRC" | grep -v "$SRC/FlotsamStorage/")
-[ -n "$hits" ] && fail "GRDB/SQLite3 imported outside Storage" "$hits"
-
-# Zero network in v1.0.
-hits=$(grep -rnE 'URLSession|NWConnection|NWPathMonitor|WKWebView|CFNetwork|Sparkle' "$SRC" App 2>/dev/null)
-[ -n "$hits" ] && fail "network API referenced" "$hits"
-
-# FR-000-02 / FR-000-09 / AC-000-01: no print/NSLog/dump/debugPrint, no try!, no force-cast, no force-unwrap, no thrown
-# errors across a module boundary. These need to read Swift, not lines, so one awk pass (SWIFT_LINT_AWK below) first
-# strips comments (nested too) and string literals (plain, multi-line, raw; interpolations are kept as code), then runs
-# the rules on what is left. Hits are "KIND<TAB>file:line:original line". fatalError and the other grep rules below
-# still only skip whole-line // comments.
-NOT_COMMENT='^[^:]+:[0-9]+:[[:space:]]*//'
+# Every rule that reads Swift source (as opposed to manifests, the catalogue, or import-graph bookkeeping) runs in ONE awk
+# pass (SWIFT_LINT_AWK below). It first strips comments (nested too) and string literals (plain, multi-line, raw;
+# interpolations are kept as code), then runs the rules on what is left, so a token inside a comment or a string is never a
+# violation. Rules covered: FR-000-02 / FR-000-09 / AC-000-01 (print/NSLog/dump/debugPrint, try!, as!, force-unwrap, thrown
+# errors across a module boundary, fatalError, localizedDescription, Logger/os_log/.debug, the log privacy qualifier),
+# FR-000-05 (user-facing literals; it needs only the fact that a literal starts there, which the stripper keeps as "0),
+# plus the network, UserDefaults, GRDB and SDK-import bans. Hits are "KIND<TAB>file:line:original line".
 IFS= read -r -d '' SWIFT_LINT_AWK <<'AWK_EOF'
-# Swift source linter for FR-000-02 / FR-000-09. Prints "KIND<TAB>file:line:original line" per violation.
+# Swift source linter (see the rule list above the heredoc). Prints "KIND<TAB>file:line:original line" per violation.
 # Pass 1 (san_line) turns each file into code-only text: comments (line, block, nested) become nothing, every string
-# literal (plain, multi-line, raw) becomes the single token 0, and only the code inside \( ) interpolations is kept.
+# literal (plain, multi-line, raw) becomes the two characters "0 (a literal starts here), and only the code inside \( )
+# interpolations is kept (re-emitted as \( so the log privacy rule can see them). Comment text is kept apart (lcom) so the
+# fatal-ok: annotation, which lives in a comment, can still be read.
 # Line numbers are preserved. Pass 2 runs the rules on that text; throws detection (scan_decls) is a small
 # declaration scanner so it sees multi-line signatures, default arguments, accessors, and members that inherit
 # public from a protocol or extension.
@@ -61,10 +36,11 @@ function hashes_follow(s, p, h,   k) {
   return 1
 }
 function san_line(s,   n, i, c, two, out, h, j, k, m) {
-  out = ""; n = length(s); i = 1
+  out = ""; lcom = ""; n = length(s); i = 1
   while (i <= n) {
     c = substr(s, i, 1); m = mk[sp]
     if (m == "B") {
+      lcom = lcom c
       two = substr(s, i, 2)
       if (two == "/*") { bc[sp]++; i += 2 }
       else if (two == "*/") { bc[sp]--; i += 2; if (bc[sp] == 0) { sp--; out = out " " } }
@@ -75,7 +51,7 @@ function san_line(s,   n, i, c, two, out, h, j, k, m) {
       h = hh[sp]
       if (c == "\\" && hashes_follow(s, i + 1, h)) {
         j = i + 1 + h
-        if (substr(s, j, 1) == "(") { sp++; mk[sp] = "C"; ip[sp] = 1; pd[sp] = 0; out = out "("; i = j + 1 }
+        if (substr(s, j, 1) == "(") { sp++; mk[sp] = "C"; ip[sp] = 1; pd[sp] = 0; out = out "\\("; i = j + 1 }
         else i = j + 1
         continue
       }
@@ -84,13 +60,13 @@ function san_line(s,   n, i, c, two, out, h, j, k, m) {
       i++; continue
     }
     two = substr(s, i, 2)
-    if (two == "//") break
+    if (two == "//") { lcom = lcom substr(s, i); break }
     if (two == "/*") { sp++; mk[sp] = "B"; bc[sp] = 1; i += 2; continue }
     if (c == "#" || c == "\"") {
       h = 0; j = i
       while (substr(s, j, 1) == "#") { h++; j++ }
       if (substr(s, j, 1) == "\"") {
-        sp++; hh[sp] = h; out = out "0"
+        sp++; hh[sp] = h; out = out "\"0"
         if (substr(s, j, 3) == "\"\"\"") { mk[sp] = "M"; i = j + 3 } else { mk[sp] = "S"; i = j + 1 }
         continue
       }
@@ -177,12 +153,40 @@ function finish(   L, t) {
         t ~ /(^|[^A-Za-z0-9_$.])(Swift|Foundation)[ \t]*\.[ \t]*(print|NSLog|dump|debugPrint)[ \t]*\(/ || \
         t ~ /(^|[^A-Za-z0-9_$])try!/) hit("BANNED", L)
     if (t ~ /(^|[^A-Za-z0-9_$])as!/) hit("FORCECAST", L)
+    # Only the two Fatal codes (FR-000-04) and unreachable programmer-error invariants may stop the process; the latter
+    # must say why in a comment on the same line with 'fatal-ok:'.
+    if (t ~ /(fatalError|preconditionFailure|precondition)\(/ && lcm[L] !~ /fatal-ok:/) hit("FATAL", L)
+    # localizedDescription can embed file paths (FR-000-01, FR-000-10); UnderlyingErrorInfo is the only way to carry a cause.
+    if (t ~ /localizedDescription/) hit("LOCDESC", L)
+    # FR-000-09: one logging entry point (Logging/FlotsamLog.swift, filtered by the shell).
+    if (t ~ /(^|[^A-Za-z0-9_])Logger\(|os_log\(|\.debug\(/) hit("LOGGER", L)
+    # FR-000-05: a literal handed to a view or an AppKit text property bypasses the String Catalog. Heuristic by design:
+    # it catches the common SwiftUI and AppKit entry points; code review and the catalogue test cover the rest.
+    if (t ~ /(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup)\("|\.(help|navigationTitle|accessibilityLabel|accessibilityHint|badge|confirmationDialog|alert)\("|\.(messageText|informativeText|title|stringValue|toolTip|placeholderString|label) = "|withTitle: "/) hit("USTRING", L)
+    # Zero network in v1.0; UserDefaults only behind the SettingsStore adapter (ADR-0009); GRDB/SQLite only in Storage.
+    if (t ~ /URLSession|NWConnection|NWPathMonitor|WKWebView|CFNetwork|Sparkle/) hit("NETWORK", L)
+    if (t ~ /UserDefaults/) hit("USERDEFAULTS", L)
+    if (t ~ /^(@testable )?import [A-Za-z0-9_]+/) hit("IMPORT", L)
+    if (t ~ /import[ \t]+(GRDB|SQLite3)/) hit("GRDBIMPORT", L)
+    if (t ~ ("^[ \t]*(@testable[ \t]+)?import[ \t]+(" sdks ")")) hit("SDKIMPORT", L)
     # Drop the try! / as! tokens (their own rules report them), then flag a ! that follows an identifier char, ) or ]
     # and is not the start of !=.
     gsub(/(^|[^A-Za-z0-9_$])try!/, " try ", t); gsub(/(^|[^A-Za-z0-9_$])as!/, " as ", t)
     if (t ~ /[]A-Za-z0-9_)]!([^=]|$)/) hit("UNWRAP", L)
   }
   scan_decls(nl)
+  # FR-000-10: every interpolation inside a Logger call carries an explicit privacy: qualifier, so the policy is visible
+  # at the call site. Tracks the span from a logger call to its closing ")" line; interpolations elsewhere (plain string
+  # building) are not log messages and are not checked.
+  if (fname == privfile) {
+    inlog = 0
+    for (L = 1; L <= nl; L++) {
+      t = san[L]
+      if (t ~ /(logger|Logger\(.*\))[^"]*\.(log|info|notice|error|fault|debug)\(/) inlog = 1
+      if (inlog && t ~ /\\\(/ && t !~ /privacy:/) hit("LOGPRIVACY", L)
+      if (inlog && t ~ /^[ \t]*\)[ \t]*$/) inlog = 0
+    }
+  }
 }
 BEGIN {
   split("public package open", a, " "); for (k in a) PUB[a[k]] = 1
@@ -196,12 +200,38 @@ BEGIN {
   for (k in MODS) START[k] = 1
   split("if guard for while switch return throw defer do try", a, " "); for (k in a) START[a[k]] = 1
 }
-FNR == 1 { if (fname != "") finish(); fname = FILENAME; sp = 0; mk[0] = "C"; ip[0] = 0; split("", seen); split("", san); split("", orig) }
-{ nl = FNR; orig[FNR] = $0; san[FNR] = san_line($0) }
+FNR == 1 { if (fname != "") finish(); fname = FILENAME; sp = 0; mk[0] = "C"; ip[0] = 0; split("", seen); split("", san); split("", orig); split("", lcm) }
+{ nl = FNR; orig[FNR] = $0; san[FNR] = san_line($0); lcm[FNR] = lcom }
 END { if (fname != "") finish() }
 AWK_EOF
-swift_lint=$(find "$SRC" App -name '*.swift' -print0 2>/dev/null | sort -z | LC_ALL=C xargs -0 awk "$SWIFT_LINT_AWK")
-lint_hits() { printf '%s\n' "$swift_lint" | awk -F'\t' -v kinds="$1" 'BEGIN { n = split(kinds, k, " "); for (i = 1; i <= n; i++) want[k[i]] = 1 } ($1 in want) { print $2 }'; }
+swift_lint=$(find "$SRC" App -name '*.swift' -print0 2>/dev/null | sort -z | LC_ALL=C xargs -0 awk -v sdks="$SDKS" -v privfile="$LOG_FILE" "$SWIFT_LINT_AWK")
+lint_hits() { printf '%s\n' "$swift_lint" | awk -v kinds="$1" 'BEGIN { n = split(kinds, k, " "); for (i = 1; i <= n; i++) want[k[i]] = 1 } { t = index($0, "\t"); if (t > 0 && (substr($0, 1, t - 1) in want)) print substr($0, t + 1) }'; }
+
+# Return the modules one target imports (import lines at column 0, as read by the awk pass, so commented-out and quoted
+# imports do not count).
+imports_of() { lint_hits IMPORT | grep "^$SRC/$1/" | sed -E 's/^[^:]*:[0-9]+:(@testable )?import ([A-Za-z0-9_]+).*/\2/' | sort -u; }
+
+# Allowed imports per target (ADR-0001 table). Portable to bash 3.2 (macOS default): no associative arrays.
+allowed_for() {
+  case "$1" in
+    FlotsamBase) echo "Foundation os" ;;
+    FlotsamStorage) echo "Foundation FlotsamBase GRDB" ;;
+    FlotsamPayload) echo "Foundation FlotsamBase" ;;
+    FlotsamPaste) echo "Foundation FlotsamBase FlotsamStorage" ;;
+    FlotsamCapture|FlotsamScreenshots|FlotsamShelf) echo "Foundation FlotsamBase FlotsamStorage FlotsamPayload" ;;
+    FlotsamLibrary|FlotsamShortcuts|FlotsamTriggers) echo "Foundation FlotsamBase FlotsamStorage FlotsamPaste" ;;
+    *) echo "" ;;
+  esac
+}
+for dir in "$SRC"/Flotsam*; do
+  target=$(basename "$dir")
+  allowed=$(allowed_for "$target")
+  [ -z "$allowed" ] && { fail "unknown target $target: add it to allowed_for and ADR-0001"; continue; }
+  for module in $(imports_of "$target"); do
+    case " $allowed " in *" $module "*) ;; *) fail "$target imports $module (allowed: $allowed)";; esac
+  done
+done
+
 hits=$(lint_hits BANNED)
 [ -n "$hits" ] && fail "print/NSLog/dump/try! used" "$hits"
 hits=$(lint_hits THROWS)
@@ -210,18 +240,18 @@ hits=$(lint_hits FORCECAST)
 [ -n "$hits" ] && fail "force cast (as!) used" "$hits"
 hits=$(lint_hits UNWRAP)
 [ -n "$hits" ] && fail "force unwrap (!) used" "$hits"
-# Only the two Fatal codes (FR-000-04) and unreachable programmer-error invariants may stop the process; the latter
-# must say why on the same line with 'fatal-ok:'.
-hits=$(grep -rnE '(fatalError|preconditionFailure|precondition)\(' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT" | grep -v 'fatal-ok:')
+hits=$(lint_hits FATAL)
 [ -n "$hits" ] && fail "fatalError/precondition without a 'fatal-ok: <reason>' annotation" "$hits"
-# localizedDescription can embed file paths (FR-000-01, FR-000-10); UnderlyingErrorInfo is the only way to carry a cause.
-hits=$(grep -rn 'localizedDescription' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+hits=$(lint_hits LOCDESC)
 [ -n "$hits" ] && fail "localizedDescription used (use UnderlyingErrorInfo)" "$hits"
+hits=$(lint_hits NETWORK)
+[ -n "$hits" ] && fail "network API referenced" "$hits"
+hits=$(lint_hits GRDBIMPORT | grep "^$SRC/" | grep -v "^$SRC/FlotsamStorage/")
+[ -n "$hits" ] && fail "GRDB/SQLite3 imported outside Storage" "$hits"
 
-# FR-000-05: the String Catalog is the only home for user-facing text. A literal handed to a view or an AppKit text
-# property bypasses it (and the 140-character and interpolation checks), so it fails the build. Heuristic by design:
-# it catches the common SwiftUI and AppKit entry points; code review and the catalogue test cover the rest.
-hits=$(grep -rnE '(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup)\("|\.(help|navigationTitle|accessibilityLabel|accessibilityHint|badge|confirmationDialog|alert)\("|\.(messageText|informativeText|title|stringValue|toolTip|placeholderString|label) = "|withTitle: "' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+# FR-000-05: the String Catalog is the only home for user-facing text (the USTRING rule in the awk pass); the keys in it
+# must follow the naming scheme.
+hits=$(lint_hits USTRING)
 [ -n "$hits" ] && fail "user-facing string literal outside the catalogue (use FlotsamStrings.text(forKey:))" "$hits"
 # Catalogue keys are 'error.<code>' or 'ui.<screen>.<name>' (FR-000-05).
 CATALOGUE="$SRC/FlotsamBase/Resources/Localizable.xcstrings"
@@ -229,21 +259,14 @@ hits=$(grep -E '^    "[^"]+" : \{' "$CATALOGUE" | sed -E 's/^    "([^"]+)".*/\1/
 [ -n "$hits" ] && fail "catalogue key does not match error.<code> or ui.<screen>.<name>" "$hits"
 
 # UserDefaults only behind SettingsStore adapters (ADR-0009): Base/Ports/Adapters.swift is the single adapter.
-hits=$(grep -rn 'UserDefaults' "$SRC" App 2>/dev/null | grep -v 'Ports/Adapters.swift')
+hits=$(lint_hits USERDEFAULTS | grep -v '^[^:]*Ports/Adapters\.swift:')
 [ -n "$hits" ] && fail "UserDefaults used outside Ports/Adapters.swift" "$hits"
 
 # FR-000-09: one logging entry point. Logger, os_log and .debug( live only in Logging/FlotsamLog.swift, so categories,
 # levels and the privacy policy (FR-000-10) cannot be bypassed by a call site that builds its own Logger.
-hits=$(grep -rnE '\bLogger\(|os_log\(|\.debug\(' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT" | grep -v 'FlotsamBase/Logging/FlotsamLog.swift')
+hits=$(lint_hits LOGGER | grep -v "^$LOG_FILE:")
 [ -n "$hits" ] && fail "Logger/os_log/.debug used outside Logging/FlotsamLog.swift (use FlotsamLog)" "$hits"
-# FR-000-10: every interpolation inside a Logger call carries an explicit privacy: qualifier, so the policy is visible
-# at the call site. awk tracks the span from a logger call to its closing ")" line; interpolations elsewhere (plain
-# string building) are not log messages and are not checked.
-hits=$(awk '
-  /(logger|Logger\(.*\))[^"]*\.(log|info|notice|error|fault|debug)\(/ { inlog = 1 }
-  inlog && /\\\(/ && !/privacy:/ { print FILENAME ":" NR ": " $0 }
-  inlog && /^[[:space:]]*\)[[:space:]]*$/ { inlog = 0 }
-' "$SRC/FlotsamBase/Logging/FlotsamLog.swift")
+hits=$(lint_hits LOGPRIVACY)
 [ -n "$hits" ] && fail "Logger interpolation without a privacy: qualifier in FlotsamLog.swift" "$hits"
 
 # Third-party packages: GRDB only (ADR-0010).
@@ -252,10 +275,9 @@ hits=$(grep -hE '\.package\(url:' Packages/FlotsamCore/Package.swift | grep -v '
 
 # FR-000-15: no crash reporter, analytics or remote-logging SDK (anti-truth A1). The package allowlist above covers
 # SwiftPM; this also catches an SDK declared in project.yml (the App target) or imported in source.
-SDKS='Sentry|Crashlytics|Firebase|Mixpanel|Amplitude|Bugsnag|PostHog|TelemetryDeck|AppCenter|Datadog|NewRelic|Segment|Rollbar|Instabug|Countly|Flurry|Heap|Smartlook|LogRocket|Embrace|Honeycomb|Raygun|PLCrashReporter|CocoaLumberjack|SwiftyBeaver'
 hits=$(grep -rnEi "($SDKS)" Packages/FlotsamCore/Package.swift project.yml 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#')
 [ -n "$hits" ] && fail "crash/analytics/logging SDK referenced in a manifest" "$hits"
-hits=$(grep -rnE "^(@testable )?import ($SDKS)" "$SRC" App --include='*.swift' 2>/dev/null)
+hits=$(lint_hits SDKIMPORT)
 [ -n "$hits" ] && fail "crash/analytics/logging SDK imported" "$hits"
 
 if [ "$failures" -eq 0 ]; then echo "architecture checks passed"; else echo "$failures violation(s)"; exit 1; fi
