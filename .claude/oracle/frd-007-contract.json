@@ -523,11 +523,12 @@
       "id": "OC-7052",
       "requirement": "FR-007-08",
       "given": "Preset Efficient",
-      "when": "A 2000 x 1000 PNG (longest edge below 2560) is copied",
-      "then": "Stored blob is byte-identical to the source (not downscaled, not re-encoded)",
+      "when": "A 2000 x 1000 opaque PNG (longest edge below 2560) is copied",
+      "then": "Stored blob is JPEG quality 0.85 at 2000 x 1000 (re-encoded, not downscaled); a 2000 x 1000 PNG with transparency is stored byte-identical",
       "class": "create",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-16 Friday ruling: FR-007-08 Efficient re-encodes every opaque PNG/TIFF (decision 5)"
     },
     {
       "id": "OC-7053",
