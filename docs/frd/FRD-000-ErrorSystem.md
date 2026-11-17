@@ -24,7 +24,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 **Error type**
 - **FR-000-01** Every fallible operation returns `Result<T, FlotsamError>`. `FlotsamError` is a `Sendable` value type with: `code` (an `ErrorCode` enum case, §FR-000-03), `severity` (derived from the code, not caller-supplied), `internalMessage` (static string literal, English, no interpolation of user data), `context` (`[LogKey: LogSafeValue]`), `underlying` (optional `UnderlyingErrorInfo` = domain string + integer code only; never `localizedDescription`, which can embed file paths).
 - **FR-000-02** No error crosses a module boundary as a thrown `Error`, `NSError` or `String`. Force-try, force-unwrap and `fatalError` on external data (pasteboard, files, database rows, defaults) are forbidden; `fatalError` is allowed only for the two Fatal codes in FR-000-04 and for programmer-error invariants that cannot be reached from external input.
-- **FR-000-03** Code format: `<MOD>-<CAT>-<NNN>`. Modules: `SYS` core, `CAP` capture (FRD-001), `SSP` screenshot pickup (FRD-002), `LIB` library (FRD-003), `ORG` organize (FRD-004), `TRG` shortcuts and triggers (FRD-005), `SHF` shelf (FRD-006), `STO` storage and retention (FRD-007), `SET` settings, onboarding, permissions (FRD-008). Categories: `PRM` permission, `IO` file or disk, `DB` database, `VAL` validation of user input or external data, `LIM` size or count limit, `OS` system API failure, `POL` expected skip by policy (always Info), `DAT` data-state inconsistency, `INT` internal. Numbers are three digits, per module+category, never reused or renumbered; a retired code stays in §7 marked `retired`.
+- **FR-000-03** Code format: `<MOD>-<CAT>-<NNN>`. Modules: `SYS` core, `CAP` capture (FRD-001), `SSP` screenshot pickup (FRD-002), `LIB` library (FRD-003), `ORG` organize (FRD-004), `TRG` shortcuts and triggers (FRD-005), `SHF` shelf (FRD-006), `STO` storage and retention (FRD-007), `SET` settings, onboarding, permissions (FRD-008). Categories: `PRM` permission, `IO` file or disk, `DB` database, `VAL` validation of user input or external data, `LIM` size or count limit, `OS` system API failure, `POL` expected skip by policy (always Info), `DAT` data-state inconsistency, `INT` internal. Numbers are three digits, per module+category, never reused or renumbered; a retired code stays in §7 marked `retired`, is removed from the code enumeration so it cannot be raised, and has no catalogue text.
 
 **Severity and recovery**
 - **FR-000-04** Four severities, fixed per code in §7:
@@ -66,7 +66,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 | Every Warning / Error / Fatal raised | `FlotsamLog.log(error)` via `ErrorReporter` | FR-000-08 | TASK-027 | [x] |
 
 **Diagnostics**
-- **FR-000-13** An in-memory ring buffer holds the last 100 raised Warning, Error and Fatal errors (code, severity, timestamp). Info codes are logged but never recorded, so a high-frequency Info skip cannot evict real failures. It is never written to disk and is cleared on quit.
+- **FR-000-13** An in-memory ring buffer holds the last 100 raised Warning, Error and Fatal errors (code, severity, timestamp). Info codes are logged but never recorded, so a high-frequency Info skip cannot evict real failures. Throttled occurrences are still recorded: the FR-000-08 throttle limits surfacing only. It is never written to disk and is cleared on quit.
 - **FR-000-14** Settings › About › "Copy Diagnostics" builds a plain-text report on user action only: app version and build, macOS version, CPU architecture, permission states (Accessibility, Input Monitoring, screenshot folder access, pasteboard access), setting values that are not content (retention preset, budget preset, toggle states; never ignored-app lists), item counts by kind, database and blob byte sizes, and the ring buffer. It is copied to the clipboard marked with the pasteboard types in FR-001-03 so Flotsam does not capture its own report. It is never sent anywhere.
   *Ownership.* FRD-000 owns the snapshot builder (`DiagnosticsSnapshotBuilder`), the renderer and the copier, so a complete, redacted report can be produced from current state. The Settings › About "Copy Diagnostics" button and its "Diagnostics copied" HUD are owned by FRD-008 FR-008-09 (TASK-097, with tests in TASK-098); that ticket calls `DiagnosticsSnapshotBuilder.report()` and `DiagnosticsCopier.copy`. Permission states, item counts and file sizes come through `DiagnosticsDataSource`, which Capture, Shortcuts and Storage implement in their own tickets. AC-000-06 is verified end to end once TASK-097 lands.
 - **FR-000-15** No third-party crash reporting, analytics or logging service is linked (A4). macOS-generated crash reports are the only crash data.
@@ -84,7 +84,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 This FRD defines the mechanism; its own failure modes: catalogue key missing at runtime → show `error.SYS-INT-001` text and log `SYS-INT-001` (unit test FR-000-07 prevents this shipping).
 
 ## 7. Error Catalogue (all codes, grouped by module)
-Columns: code · severity · user message (catalogue text) · recovery. `{n}` = count, `{limit}` = size. Info rows have no user message.
+Columns: code · severity · user message (catalogue text) · recovery. `{n}` = count, `{limit}` = size. Info and retired rows have no user message.
 
 **SYS**
 | Code | Sev | User message | Recovery |
@@ -199,7 +199,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | HUD | transient floating label | top-centre of pointer's screen | message text, 2.5 s, no focus, VoiceOver announces |
 | Menu-bar badge dot | icon overlay | menu-bar icon | shown while unacknowledged Warning/Error Notices exist |
-| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so the code follows the message on the same line); "Dismiss all" |
+| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so each row reads "message · CODE" on one line); "Dismiss all" |
 | Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder" (nearest existing ancestor if the folder is missing), "Quit" |
 | Copy Diagnostics button | button | Settings › About | builds and copies report; confirms with HUD "Diagnostics copied" |
 | Inline validation text | label | beside the invalid field | catalogue message, red text plus icon, role alert for VoiceOver |
