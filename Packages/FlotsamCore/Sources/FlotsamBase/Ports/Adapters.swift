@@ -112,3 +112,8 @@ public struct UserDefaultsStore: KeyValueStore {
     public func setString(_ value: String, forKey key: String) { defaults.set(value, forKey: key) }
     public func removeValue(forKey key: String) { defaults.removeObject(forKey: key) }
 }
+
+extension KeyValueStore where Self == UserDefaultsStore {
+    /// The app's settings store, named so callers outside this file never spell the UserDefaults type (ADR-0009).
+    public static var standard: UserDefaultsStore { UserDefaultsStore() }
+}

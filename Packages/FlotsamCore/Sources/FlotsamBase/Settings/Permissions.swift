@@ -16,6 +16,12 @@ public protocol PermissionProbe: Sendable {
     func openSystemSettings(_ kind: PermissionKind)
 }
 
+extension PermissionProbe {
+    /// The Accessibility question FRD-003 (paste) asks. One protocol serves both FRDs (Rule 9): FRD-003's own
+    /// two-line `PermissionProbe` declaration is replaced by this one when the branches merge.
+    public var isAccessibilityTrusted: Bool { isGranted(.accessibility) }
+}
+
 /// What choosing a Library item does, given Accessibility (FR-008-14).
 public enum PasteOutcome: Equatable, Sendable {
     /// Write to the pasteboard, then synthesise the paste keystroke.
