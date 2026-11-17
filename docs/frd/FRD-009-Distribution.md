@@ -18,8 +18,8 @@ A person downloads one file from GitHub Releases, drags Flotsam to Applications,
 - **FR-009-03** Notarization. The DMG is submitted with `notarytool --wait` and the ticket is stapled, so it opens offline. A rejected submission fails the release.
 - **FR-009-04** Credentials. No identity, team ID, Apple ID or password is committed. The identity comes from the keychain (or `FLOTSAM_SIGN_IDENTITY`); notary access from a `notarytool` keychain profile or `APPLE_ID`/`APPLE_TEAM_ID`/`APPLE_APP_PASSWORD`.
 - **FR-009-05** Ad-hoc fallback. Without a Developer ID certificate or notary credentials the script still builds an ad-hoc-signed DMG, prints every missing item, and states it is not distributable. It never publishes.
-- **FR-009-06** Versioning. `project.yml` is the only home of the version (`CFBundleShortVersionString`) and build (`CFBundleVersion`). A new version resets the build to 1; the build increases only within a version.
-- **FR-009-07** Checksum. `Flotsam-<version>.dmg.sha256` (SHA-256) is produced next to the DMG and uploaded with it.
+- **FR-009-06** Versioning. `project.yml` is the only home of the version (`CFBundleShortVersionString`) and build (`CFBundleVersion`). A new version resets the build to 1; the build increases only within a version. If either value cannot be read, the release fails before building.
+- **FR-009-07** Checksum. `Flotsam-<version>.dmg.sha256` (SHA-256) is produced next to the DMG and uploaded with it. `dist/` holds only the current release: older DMGs and checksums are removed on each run.
 - **FR-009-08** No updater. The app target contains no updater and no network code (verified by FRD-008 AC-008-13).
 - **FR-009-09** Publishing. Tagging and creating the GitHub Release are manual, by the maintainer, after the script succeeds. The script does neither.
 - **FR-009-10** Tools. Only Xcode tools, `hdiutil`, `shasum` and xcodegen (ADR-0012); no new dependency (ADR-0010).
