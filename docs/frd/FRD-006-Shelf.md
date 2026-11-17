@@ -33,7 +33,7 @@ A small panel at a screen edge (or under the menu-bar icon) that shows pinned an
 - **FR-006-05** Placement and geometry. Edge placements attach to the chosen edge of the screen that contains the edge zone that was triggered (for hotkey or menu reveal, the screen containing the pointer), inside that screen's `visibleFrame` so the Dock and menu bar are not covered. Left and right: 280 pt wide, height = content height capped to the visible height minus 40 pt, minimum 160 pt, vertically centred. Bottom: 140 pt tall, width = content width capped to 80 % of the visible width, horizontally centred. `menuBar`: 280 pt wide, anchored under the menu-bar icon (clamped to the screen), height as for left and right. The panel slides in over 150 ms from its edge and out over 120 ms; with Reduce Motion on it fades (100 ms) instead of sliding. The Shelf's size and position are not user-adjustable in v1.
 
 **Contents**
-- **FR-006-06** Contents and order. Two sections, in order: Pinned (all pinned items, up to 20, ordered by `lastCopiedAt` descending), then Recent (the 20 most recent unpinned items by `lastCopiedAt`, descending). A section with no items is hidden; with neither, the empty state shows the catalogue text `shelf.empty`. The Shelf ignores the Library's filter and sort. The list is read when the Shelf is about to show (FR-001-02 `captureNow` runs first) and refreshes live while visible within 200 ms of any capture, pin, edit or delete.
+- **FR-006-06** Contents and order. Two sections, in order: Pinned (all pinned items, up to 20, ordered by `lastCopiedAt` descending), then Recent (the 20 most recent unpinned items by `lastCopiedAt`, descending). Pinned is read with the pinned filter; Recent is read from the first 200-row page of the unfiltered query with pinned items removed, so Recent holds fewer than 20 only if pinned items fill that page. A section with no items is hidden; with neither, the empty state shows the catalogue text `ui.shelf.empty`. The Shelf ignores the Library's filter and sort. The list is read when the Shelf is about to show (FR-001-02 `captureNow` runs first) and refreshes live while visible within 200 ms of any capture, pin, edit or delete.
 - **FR-006-07** Cards. Each item is a card: for `image` and `screenshot` a thumbnail (FRD-007 FR-007-07, shared cache with the Library, FRD-003 FR-003-13); for `file`, `folder` and `bundle` the file icon (bundle: stacked icon with a member count); for text-bearing kinds the first three lines of text (up to 120 characters) with the kind icon; for `color` a swatch with the value; a pin badge on pinned items; the source app icon, small, in a corner. Vertical placements stack cards 64 pt tall; the bottom placement lays cards out as a horizontal strip 112 pt wide. Cards show no timestamps, notes or tags. Missing file members show the Missing badge as the Library does (FRD-003).
 
 **Interaction**
@@ -61,7 +61,7 @@ A small panel at a screen edge (or under the menu-bar icon) that shows pinned an
 - Reads items, pinned flag, thumbnails and `lastCopiedAt` (FRD-007); writes only through ingest (drops), `pasteCount`/`lastUsedAt` (drag-out and paste) and FRD-004 actions (pin, delete).
 - Settings (registry in FRD-008): `shelf.enabled` (bool, default true), `shelf.placement` (enum, default `rightEdge`), `shelf.revealOnEdgeHover` (bool, default false).
 - Constants (one home, here): edge zone 4 pt by 60 %; dwell 300 ms (drag) and 500 ms (hover); hide delay 600 ms; sections 20 and 20; card height 64 pt; width 280 pt; bottom height 140 pt.
-- Catalogue strings: `shelf.empty`, drop-zone label, close button, menu item titles.
+- Catalogue strings: `ui.shelf.empty`, `ui.shelf.drop` (drop-zone label), `ui.shelf.close`, `ui.shelf.sectionRecent`, `ui.shelf.menuPin`, `ui.shelf.menuUnpin`, `ui.shelf.menuDelete`, `ui.shelf.missing`. Paste, Paste as Plain Text, Copy and the Pinned label reuse the Library's keys; the Delete confirmation text is FRD-004's.
 
 ## 5. Business Rules
 - Dragging out never moves, renames or deletes an original file; the allowed operation is copy.
@@ -112,7 +112,7 @@ A small panel at a screen edge (or under the menu-bar icon) that shows pinned an
 | Cards | draggable cells | panel | FR-006-07, -09, -10 |
 | Drop-zone highlight | border and tint | panel | FR-006-12 |
 | Close button | icon button | sticky panel corner | hides a sticky Shelf |
-| Empty state | text | panel | `shelf.empty` |
+| Empty state | text | panel | `ui.shelf.empty` |
 | Context menu | menu | card | FR-006-09 |
 | Menu bar items "Toggle Shelf" and drop acceptance on the icon | menu item, drop target | menu bar (FRD-008) | FR-006-01, -03 |
 | Settings controls (enable, placement, hover reveal) | switch, popup, switch | Settings › General (FRD-008) | keys in FR-006-01 |
