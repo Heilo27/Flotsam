@@ -5,6 +5,7 @@ import FlotsamLibrary
 import FlotsamPaste
 import FlotsamShortcuts
 import FlotsamStorage
+import FlotsamTriggers
 import Foundation
 
 /// Composition root: builds the long-lived objects once at launch. Failure here is the Fatal path
@@ -24,7 +25,7 @@ final class AppContainer {
     /// What the menu and onboarding can trigger. Each owning FRD fills its own closure; a nil one disables its menu row.
     var actions = AppActions()
     /// Retained for the life of the app; the poll timer only holds it weakly.
-    private(set) var capture: ClipboardCapture?
+    private(set) var capture: FlotsamCapture.ClipboardCapture?
     /// The Library panel (FR-003-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var library: LibraryPanelController?
     /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
@@ -33,6 +34,12 @@ final class AppContainer {
     private var unsubscribeShortcuts: (@Sendable () -> Void)?
     private var unsubscribeItemEvents: (@Sendable () -> Void)?
     private var itemHotkeyAction: ItemHotkeyAction?
+    /// The typed-trigger engine (FR-005-10). Nil until the database has opened. Retained: its loops run until `stop()`.
+    private(set) var triggerEngine: TriggerEngine?
+    /// Asks the tap thread to clear the typed word (FR-005-11): shared by the tap adapter, the keyboard environment and
+    /// the wake and session observers below, so every "the word is no longer trustworthy" event takes one path.
+    private let triggerReset = TriggerResetSignal()
+    private var unsubscribeTriggerSetting: (@Sendable () -> Void)?
     /// One resync reads the item bindings at a time; a change that arrives meanwhile queues exactly one more.
     private var itemSyncRunning = false
     private var itemSyncPending = false
@@ -103,7 +110,7 @@ final class AppContainer {
     /// check (FR-001-02 b, c); the launch check runs inside `start()` (FR-001-02 d).
     private func startCapture(database: FlotsamDatabase) {
         let settings = settings
-        let capture = ClipboardCapture(
+        let capture = FlotsamCapture.ClipboardCapture(
             pasteboard: SystemPasteboard(), sourceApps: SystemSourceApps(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
@@ -132,9 +139,11 @@ final class AppContainer {
         let reporter = reporter
         let probe = permissions
         let frontmost = WorkspaceFrontmostAppProvider()
+        let keys = CGEventKeyPoster()
+        let pasteboard = SystemPasteboard()
         let paster = PasteService(
-            store: database, pasteboard: SystemPasteboard(), files: LocalFileSystem(), frontmost: frontmost,
-            accessibility: probe, keys: CGEventKeyPoster(), clock: SystemClock(), ownWrites: ownWrites)
+            store: database, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
+            accessibility: probe, keys: keys, clock: SystemClock(), ownWrites: ownWrites)
 
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
@@ -156,6 +165,57 @@ final class AppContainer {
 
         startShortcuts(openLibrary: { [weak controller] in controller?.toggle() })
         startItemHotkeys(database: database, paster: paster, frontmost: frontmost)
+        startTriggers(database: database, paster: paster, pasteboard: pasteboard, keys: keys)
+    }
+
+    /// FRD-005 typed triggers: builds the engine over the adapters and starts it. Starting never installs a tap by
+    /// itself and never prompts (FR-005-10): the engine installs one only when triggers are on, an item has a trigger and
+    /// both permissions are already granted. The prompts come from `userDidSaveTrigger()` and `userDidEnableTriggers()`.
+    private func startTriggers(
+        database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster
+    ) {
+        let clock = SystemClock()
+        let keyboard = SystemKeyboardEnvironment(resetSignal: triggerReset)
+        let snapshot = TriggerSnapshotStore()
+        let ownBundleId = Bundle.main.bundleIdentifier ?? FlotsamLog.fallbackSubsystem
+        let expander = TriggerExpander(
+            store: database, pasteboard: pasteboard, files: LocalFileSystem(), codec: AppKitRichTextCodec(),
+            preserver: ClipboardPreserver(pasteboard: pasteboard, ownWrites: ownWrites, clock: clock),
+            ownWrites: ownWrites, paste: paster, keys: keys, keyboard: keyboard, snapshot: snapshot,
+            permissions: permissions, reporter: reporter, clock: clock, ownBundleId: ownBundleId)
+        let engine = TriggerEngine(
+            source: EventTapKeySource(resetSignal: triggerReset), snapshot: snapshot, bindings: database,
+            settings: settings, bus: database.events, expander: expander, keyboard: keyboard,
+            permissions: permissions, reporter: reporter, clock: clock, resetSignal: triggerReset,
+            ownBundleId: ownBundleId)
+        triggerEngine = engine
+        Task { await engine.start() }
+
+        // The permission prompt appears when the user turns triggers on, never at launch (FR-005-10).
+        let settings = settings
+        unsubscribeTriggerSetting = settings.subscribe { change in
+            guard change.name == SettingKeys.triggersEnabled.name else { return }
+            Task { @MainActor in
+                if settings.value(SettingKeys.triggersEnabled) { await engine.userDidEnableTriggers() }
+            }
+        }
+
+        // Waking, or this session coming back after fast user switching, drops the typed word and re-verifies the tap
+        // at once instead of at the next watchdog tick (FR-005-19). Stopping happens in `stopTriggers()`.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
+            observers.append(
+                workspace.addObserver(forName: name, object: nil, queue: .main) { _ in
+                    Task { @MainActor in await engine.systemDidResume() }
+                })
+        }
+    }
+
+    /// Quit: removes the tap and stops the engine's loops (FR-005-03, FR-005-10).
+    func stopTriggers() {
+        unsubscribeTriggerSetting?()
+        unsubscribeTriggerSetting = nil
+        triggerEngine?.stop()
     }
 
     /// Item hotkeys (FR-005-05): bound from the stored bindings at launch, re-synced when items change or go (FR-005-22),
