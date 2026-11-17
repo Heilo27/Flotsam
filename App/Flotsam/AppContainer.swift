@@ -144,6 +144,13 @@ final class AppContainer {
         let paster = PasteService(
             store: database, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
             accessibility: probe, keys: keys, clock: SystemClock(), ownWrites: ownWrites)
+        // One snapshot-expand-write-restore home for item hotkeys and typed triggers (FR-005-16, FR-005-17).
+        let clock = SystemClock()
+        let files = LocalFileSystem()
+        let codec = AppKitRichTextCodec()
+        let preserver = ClipboardPreserver(pasteboard: pasteboard, ownWrites: ownWrites, clock: clock)
+        let expansion = PasteExpansion(
+            pasteboard: pasteboard, files: files, codec: codec, preserver: preserver, ownWrites: ownWrites, clock: clock)
 
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
@@ -164,23 +171,25 @@ final class AppContainer {
         actions.openLibrary = { [weak controller] in controller?.toggle() }
 
         startShortcuts(openLibrary: { [weak controller] in controller?.toggle() })
-        startItemHotkeys(database: database, paster: paster, frontmost: frontmost)
-        startTriggers(database: database, paster: paster, pasteboard: pasteboard, keys: keys)
+        startItemHotkeys(database: database, paster: paster, expansion: expansion, frontmost: frontmost)
+        startTriggers(
+            database: database, paster: paster, pasteboard: pasteboard, keys: keys, files: files, codec: codec,
+            preserver: preserver)
     }
 
     /// FRD-005 typed triggers: builds the engine over the adapters and starts it. Starting never installs a tap by
     /// itself and never prompts (FR-005-10): the engine installs one only when triggers are on, an item has a trigger and
     /// both permissions are already granted. The prompts come from `userDidSaveTrigger()` and `userDidEnableTriggers()`.
     private func startTriggers(
-        database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster
+        database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster,
+        files: LocalFileSystem, codec: AppKitRichTextCodec, preserver: ClipboardPreserver
     ) {
         let clock = SystemClock()
         let keyboard = SystemKeyboardEnvironment(resetSignal: triggerReset)
         let snapshot = TriggerSnapshotStore()
         let ownBundleId = Bundle.main.bundleIdentifier ?? FlotsamLog.fallbackSubsystem
         let expander = TriggerExpander(
-            store: database, pasteboard: pasteboard, files: LocalFileSystem(), codec: AppKitRichTextCodec(),
-            preserver: ClipboardPreserver(pasteboard: pasteboard, ownWrites: ownWrites, clock: clock),
+            store: database, pasteboard: pasteboard, files: files, codec: codec, preserver: preserver,
             ownWrites: ownWrites, paste: paster, keys: keys, keyboard: keyboard, snapshot: snapshot,
             permissions: permissions, reporter: reporter, clock: clock, ownBundleId: ownBundleId)
         let engine = TriggerEngine(
@@ -220,10 +229,12 @@ final class AppContainer {
 
     /// Item hotkeys (FR-005-05): bound from the stored bindings at launch, re-synced when items change or go (FR-005-22),
     /// and off while any Flotsam window (the Library panel, Settings) is key.
-    private func startItemHotkeys(database: FlotsamDatabase, paster: PasteService, frontmost: any FrontmostAppProvider) {
+    private func startItemHotkeys(
+        database: FlotsamDatabase, paster: PasteService, expansion: PasteExpansion, frontmost: any FrontmostAppProvider
+    ) {
         let reporter = reporter
         itemHotkeyAction = ItemHotkeyAction(
-            paster: paster, frontmost: frontmost,
+            paster: paster, expansion: expansion, frontmost: frontmost,
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } })
         syncItemHotkeys(database: database)
 

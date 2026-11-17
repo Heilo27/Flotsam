@@ -26,11 +26,7 @@ public enum ExpansionOutcome: Sendable, Equatable {
 @MainActor
 public final class TriggerExpander {
     private let store: any PasteItemStore
-    private let pasteboard: any PasteboardPort
-    private let files: any FileSystemPort
-    private let codec: any RichTextCodec
-    private let preserver: ClipboardPreserver
-    private let ownWrites: OwnWriteLedger
+    private let expansion: PasteExpansion
     private let paste: PasteService
     private let keys: any TriggerKeyPoster
     private let keyboard: any KeyboardEnvironment
@@ -40,8 +36,6 @@ public final class TriggerExpander {
     private let clock: any WallClock
     private let sink: any LogSink
     private let ownBundleId: String
-    private let calendar: Calendar
-    private let locale: Locale
 
     public init(
         store: any PasteItemStore, pasteboard: any PasteboardPort, files: any FileSystemPort,
@@ -51,11 +45,9 @@ public final class TriggerExpander {
         calendar: Calendar = .current, locale: Locale = .current, sink: any LogSink = OSLogSink()
     ) {
         self.store = store
-        self.pasteboard = pasteboard
-        self.files = files
-        self.codec = codec
-        self.preserver = preserver
-        self.ownWrites = ownWrites
+        self.expansion = PasteExpansion(
+            pasteboard: pasteboard, files: files, codec: codec, preserver: preserver, ownWrites: ownWrites,
+            clock: clock, calendar: calendar, locale: locale)
         self.paste = paste
         self.keys = keys
         self.keyboard = keyboard
@@ -64,16 +56,11 @@ public final class TriggerExpander {
         self.reporter = reporter
         self.clock = clock
         self.ownBundleId = ownBundleId
-        self.calendar = calendar
-        self.locale = locale
         self.sink = sink
     }
 
     /// What steps 1 to 6 leave for steps 7 and 8.
-    private struct Staged {
-        let capture: ClipboardCapture
-        let writeChangeCount: Int
-    }
+    private typealias Staged = PasteExpansion.Staged
 
     /// `ExpansionOutcome` is not an `Error`, so `Result` does not fit.
     private enum Stage {
@@ -99,7 +86,7 @@ public final class TriggerExpander {
             FlotsamLog.log(error, category: .triggers, sink: sink)
         }
         // Step 8.
-        _ = await preserver.restore(ready.capture, writeChangeCount: ready.writeChangeCount)
+        await expansion.finish(ready)
         return .expanded
     }
 
@@ -116,22 +103,10 @@ public final class TriggerExpander {
         // Step 2.
         if let aborted = await recheck(match) { return .ended(aborted) }
 
-        // Step 3, then step 1's variables and step 4's payload.
-        let capture = preserver.capture()
-        let context = TemplateContext(
-            now: clock.now(), calendar: calendar, locale: locale, clipboardText: capture.plainText)
-        let representations: [PasteboardRepresentation]
-        switch TemplatedPayload.representations(
-            for: content, itemId: match.itemId, context: context, codec: codec, files: files)
-        {
-        case .success(let built): representations = built
-        case .failure(let error): return .ended(await abortBeforeDelete(match, cause: error))
-        }
-
-        // Step 4. The ledger adds the own-write markers to the same write and records the change count (FR-001-03).
-        let writeChangeCount: Int
-        switch ownWrites.write(representations, to: pasteboard) {
-        case .success(let count): writeChangeCount = count
+        // Steps 3 and 4, with step 1's variables: snapshot, expand against it, write with own-write markers (FR-001-03).
+        let staged: Staged
+        switch expansion.stage(content: content, itemId: match.itemId) {
+        case .success(let value): staged = value
         case .failure(let error): return .ended(await abortBeforeDelete(match, cause: error))
         }
 
@@ -146,7 +121,7 @@ public final class TriggerExpander {
         if case .failure(let error) = await paste.postPaste(target: match.app) {
             return .ended(await abortAfterDelete(match, cause: error))
         }
-        return .pasted(Staged(capture: capture, writeChangeCount: writeChangeCount))
+        return .pasted(staged)
     }
 
     /// Step 2: the world may have changed between the boundary key and now. `nil` means carry on.
