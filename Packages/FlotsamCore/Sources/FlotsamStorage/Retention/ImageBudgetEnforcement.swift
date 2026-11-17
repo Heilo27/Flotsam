@@ -37,17 +37,19 @@ extension FlotsamDatabase {
     /// `lastCopiedAt` first until the total is at most 90 % of the budget. `protecting` is the item that was just
     /// ingested: evicting the thing the user just copied would make the copy appear to vanish.
     ///
-    /// Exempt items (FR-007-10) are never candidates. If they and `protecting` alone still exceed the budget, that
-    /// is surfaced as `STO-LIM-001` rather than solved by deleting what the user pinned.
+    /// Exempt items and items inside the 24 h release grace (FR-007-10) are never candidates, the same exemption the
+    /// time sweep honours: an image un-pinned an hour ago must not be evicted just because the budget is full. If
+    /// they and `protecting` alone still exceed the budget, that is surfaced as `STO-LIM-001` rather than solved by deleting what the user pinned.
     ///
     /// Deletion goes through `delete(ids:)` in batches, so each transaction holds the writer briefly and blobs,
     /// thumbnails and `itemsDeleted` are handled in one place.
     public func enforceImageBudget(_ budget: ImageBudget, protecting: UUID? = nil) async -> FlotsamResult<BudgetOutcome> {
         guard let limit = budget.limitBytes else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
 
+        let now = clock.now().epochMillis
         let planned: BudgetPlan
         do {
-            planned = try await pool.read { db in try Self.planBudgetEviction(db, limit: limit, protecting: protecting) }
+            planned = try await pool.read { db in try Self.planBudgetEviction(db, limit: limit, protecting: protecting, now: now) }
         } catch {
             return .failure(Self.readFailure(error))
         }
@@ -80,13 +82,13 @@ extension FlotsamDatabase {
     }
 
     /// The one place the eviction choice is made, so the confirmation count and the real pass cannot disagree.
-    private static func planBudgetEviction(_ db: Database, limit: Int64, protecting: UUID?) throws -> BudgetPlan {
+    private static func planBudgetEviction(_ db: Database, limit: Int64, protecting: UUID?, now: Int64) throws -> BudgetPlan {
         let total = try imageBytes(db)
         guard total > limit else { return BudgetPlan(total: total, evict: [], remainingAfterEviction: total) }
         let target = limit * evictionTargetPercent / 100
         var remaining = total
         var chosen: [UUID] = []
-        for candidate in try evictionCandidates(db, protecting: protecting) where remaining > target {
+        for candidate in try evictionCandidates(db, protecting: protecting, now: now) where remaining > target {
             chosen.append(candidate.id)
             remaining -= candidate.bytes
         }
@@ -98,9 +100,10 @@ extension FlotsamDatabase {
     /// number the user confirms is the number removed. Count 0 means the caller applies the setting without asking.
     public func imageBudgetEvictionPreview(_ budget: ImageBudget) async -> FlotsamResult<DeletionPreview> {
         guard let limit = budget.limitBytes else { return .success(.none) }
+        let now = clock.now().epochMillis
         do {
             return .success(try await pool.read { db in
-                let plan = try Self.planBudgetEviction(db, limit: limit, protecting: nil)
+                let plan = try Self.planBudgetEviction(db, limit: limit, protecting: nil, now: now)
                 return DeletionPreview(count: plan.evict.count, bytes: plan.total - plan.remainingAfterEviction)
             })
         } catch {
@@ -124,18 +127,19 @@ extension FlotsamDatabase {
         let bytes: Int64
     }
 
-    /// Non-exempt image items, oldest first, each with its own stored bytes: one query, no per-item look-ups.
-    private static func evictionCandidates(_ db: Database, protecting: UUID?) throws -> [ImageCandidate] {
+    /// Evictable image items (not exempt, out of grace), oldest first, each with its own stored bytes: one query,
+    /// no per-item look-ups.
+    private static func evictionCandidates(_ db: Database, protecting: UUID?, now: Int64) throws -> [ImageCandidate] {
         try Row.fetchAll(
             db,
             sql: """
                 SELECT item.id AS id, SUM(representation.byteSize) AS bytes
                 FROM item JOIN representation ON representation.itemId = item.id
-                WHERE item.kind IN ('image', 'screenshot') AND \(Exemption.notExemptSQL) AND item.id != ?
+                WHERE item.kind IN ('image', 'screenshot') AND \(Exemption.autoDeletableSQL) AND item.id != ?
                 GROUP BY item.id
                 ORDER BY item.lastCopiedAt ASC, item.id ASC
                 """,
-            arguments: [protecting?.uuidString ?? ""]
+            arguments: [Exemption.graceCutoff(now: now), protecting?.uuidString ?? ""]
         ).compactMap { row in
             (UUID(uuidString: row["id"])).map { ImageCandidate(id: $0, bytes: row["bytes"]) }
         }

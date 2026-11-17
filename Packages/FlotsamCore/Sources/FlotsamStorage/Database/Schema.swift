@@ -87,12 +87,3 @@ enum Schema {
             """)
     }
 }
-
-/// The one definition of "exempt" (FR-007-10), as a SQL predicate. Retention, budget eviction and Clear History all
-/// splice this in, so they cannot disagree about which items are protected.
-enum Exemption {
-    static let sqlPredicate = "(pinned = 1 OR \"trigger\" IS NOT NULL OR hotkeyCode IS NOT NULL)"
-    static let notExemptSQL = "(pinned = 0 AND \"trigger\" IS NULL AND hotkeyCode IS NULL)"
-    /// After an exemption is released, the item stays safe from sweeps for this long (FR-007-10).
-    static let graceMillis: Int64 = 24 * 60 * 60 * 1000
-}

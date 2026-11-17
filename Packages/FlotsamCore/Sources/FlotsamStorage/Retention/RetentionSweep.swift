@@ -27,20 +27,16 @@ extension FlotsamDatabase {
     /// Deletions per transaction, so the single writer is never held for long (FR-007-09: at most 500, about 50 ms).
     private static let sweepBatchSize = 500
 
-    /// Eligible = not exempt, `lastCopiedAt` older than the preset (so re-copying renews an item), and not within
-    /// 24 h of an exemption being released (FR-007-10). One predicate for the sweep and its preview, so the count
-    /// the user confirms is the count deleted.
+    /// Eligible = deletable as far as exemption and its 24 h grace go (`Exemption.autoDeletableSQL`, FR-007-10) and
+    /// `lastCopiedAt` older than the preset (so re-copying renews an item). One predicate for the sweep and its
+    /// preview, so the count the user confirms is the count deleted. Placeholders: grace cutoff, then age cutoff.
     private static func eligibleSQL() -> String {
-        """
-        \(Exemption.notExemptSQL)
-        AND lastCopiedAt < ?
-        AND (exemptReleasedAt IS NULL OR exemptReleasedAt < ?)
-        """
+        "\(Exemption.autoDeletableSQL) AND lastCopiedAt < ?"
     }
 
     private func eligibleArguments(_ period: Int64) -> StatementArguments {
         let now = clock.now().epochMillis
-        return [now - period, now - Exemption.graceMillis]
+        return [Exemption.graceCutoff(now: now), now - period]
     }
 
     /// What a sweep under `preset` would delete right now, for the shorter-preset confirmation (FR-007-09). Deletes
