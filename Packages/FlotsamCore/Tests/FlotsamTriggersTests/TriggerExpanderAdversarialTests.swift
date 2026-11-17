@@ -98,7 +98,7 @@ import Testing
     @Test func preserverClassifiesTheCapBoundaryAsHeldThenTooLarge() {
         // Same boundary, read straight off `capture()` so the verdict does not depend on the restore path.
         let clock = ManualClock()
-        for (bytes, expected) in [(0, ClipboardCapture.Disposition.held), (1, .held), (Self.cap, .held), (Self.cap + 1, .tooLarge)] {
+        for (bytes, expected) in [(0, HeldClipboard.Disposition.held), (1, .held), (Self.cap, .held), (Self.cap + 1, .tooLarge)] {
             let pasteboard = ExpansionPasteboard()
             _ = pasteboard.write([blob(bytes: bytes)])
             let preserver = ClipboardPreserver(pasteboard: pasteboard, ownWrites: OwnWriteLedger(), clock: clock)
@@ -160,7 +160,7 @@ import Testing
     @Test func restoreRequiresTheChangeCountToMatchExactly() async {
         // Direct on `restore`: matching count restores; one higher or one lower does not. Red for `==` -> `<=` or `>=`.
         let clock = ManualClock()
-        func rig() -> (ExpansionPasteboard, ClipboardPreserver, OwnWriteLedger, ClipboardCapture, Int) {
+        func rig() -> (ExpansionPasteboard, ClipboardPreserver, OwnWriteLedger, HeldClipboard, Int) {
             let pasteboard = ExpansionPasteboard(plainText: "prev")
             let ledger = OwnWriteLedger()
             let preserver = ClipboardPreserver(pasteboard: pasteboard, ownWrites: ledger, clock: clock)
