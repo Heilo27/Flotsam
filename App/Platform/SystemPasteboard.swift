@@ -33,19 +33,37 @@ struct SystemPasteboard: PasteboardPort {
                 representations.append(.init(uti: uti, data: data))
             }
         }
+        // The owner may have rewritten the board while it was being read; the bytes would then mix two copies (FR-001-22).
+        guard pasteboard.changeCount == before else {
+            return .failure(FlotsamError(.capOs001, "Pasteboard changed while it was being read"))
+        }
         return .success(PasteboardSnapshot(
             changeCount: before, typeIdentifiers: currentTypeIdentifiers(), representations: representations))
     }
 
+    /// Several `public.file-url` representations (a bundle) cannot share one `NSPasteboardItem`: a second `setData`
+    /// for the same type replaces the first. So each file URL gets its own item, and every other representation
+    /// (text, markers) rides on the first item.
     func write(_ representations: [PasteboardRepresentation]) -> FlotsamResult<Int> {
-        let item = NSPasteboardItem()
-        for representation in representations {
-            item.setData(representation.data, forType: NSPasteboard.PasteboardType(representation.uti))
+        let fileURLType = NSPasteboard.PasteboardType.fileURL.rawValue
+        var items: [NSPasteboardItem] = []
+        for file in representations where file.uti == fileURLType {
+            let item = NSPasteboardItem()
+            guard item.setData(file.data, forType: .fileURL) else { return .failure(Self.writeFailure) }
+            items.append(item)
         }
+        if items.isEmpty { items.append(NSPasteboardItem()) }
+        for representation in representations where representation.uti != fileURLType {
+            guard items[0].setData(representation.data, forType: NSPasteboard.PasteboardType(representation.uti)) else {
+                return .failure(Self.writeFailure)
+            }
+        }
+
         pasteboard.clearContents()
-        guard pasteboard.writeObjects([item]) else {
-            return .failure(FlotsamError(.capOs001, "pasteboard write failed"))
-        }
+        guard pasteboard.writeObjects(items) else { return .failure(Self.writeFailure) }
+        // Read after the write: this is the count the own-write ledger records (FR-001-03).
         return .success(pasteboard.changeCount)
     }
+
+    private static let writeFailure = FlotsamError(.libOs001, "The pasteboard refused the write")
 }

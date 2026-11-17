@@ -43,7 +43,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
   | ⇧Return | copy to clipboard only, close |
   | ⌘1 ... ⌘9 | paste the Nth visible row (as numbered by badges) and close |
   | Space (search field empty) / ⌘Y | toggle preview |
-  | Esc | first press: clear search if non-empty; else close preview if open; else close panel |
+  | Esc | first press that applies: clear search if non-empty; else close preview if open; else, with several rows selected, reduce the selection to one row (the cursor row); else close panel |
   | ⌥↑ / ⌥↓ | previous / next sidebar filter |
   | ⌘G | toggle list and grid |
   | ⌘R | reveal in Finder (file, folder, bundle member, screenshot) |
@@ -61,7 +61,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 **Search**
 - **FR-003-09** Search semantics. The query is split on whitespace into tokens; an item matches when every token matches (AND). A token matches as a case-insensitive, diacritic-insensitive substring of any searchable field: plain text (first 10,000 characters), link URL, note, tag names, source app name, file and folder names of files and bundle members, kind label, and the screenshot original file name. Results keep the active sort order (FRD-004); there is no relevance ranking. Searching runs within the active sidebar filter.
 - **FR-003-10** Search performance. Typing a character to updated results: p95 ≤ 100 ms with 10,000 items (`library.search` signpost). Queries are cancelled and replaced as typing continues, so only the latest result renders.
-- **FR-003-11** Result count and empty states. The footer shows "{n} items" for the current filter and query. No items at all shows the empty state (catalogue key `library.empty`); no matches shows `library.noResults`. Neither shows an error.
+- **FR-003-11** Result count and empty states. The footer shows "{n} items" for the current filter and query. No items at all shows the empty state (catalogue keys `ui.library.emptyTitle`, `ui.library.emptyBody`); no matches shows `ui.library.noResultsTitle`, `ui.library.noResultsBody`. Neither shows an error.
 
 **Sidebar**
 - **FR-003-12** Sidebar sections, top to bottom: All, Pinned; Types (Text, Rich Text, Links, Colors, Phone Numbers, Emails, Images, Screenshots, Files, Folders, Bundles); Tags (colour dot and name, alphabetical); Apps (source apps with icons, ordered by item count, top 15). Each row shows an item count. Exactly one row is selected at a time; the selection is the single filter defined in FRD-004 FR-004-10. A row with count zero is shown dimmed except in Types, where empty types are hidden.
@@ -73,7 +73,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 **Paste-back**
 - **FR-003-15** Paste sequence. On Return, ⌥Return, ⇧Return or ⌘1 to ⌘9: (1) if the item references files, resolve bookmarks and drop members that no longer exist; none left → `LIB-DAT-001`, no paste, panel stays open; (2) write the item to the general pasteboard: every stored representation for text-bearing kinds (plain text only for ⌥Return); the stored image data for image and screenshot kinds (written through `NSImage` so the system supplies standard image types); every existing member as a file URL for file, folder and bundle kinds; (3) mark the write as Flotsam's own (FR-001-03); (4) increment the item's `pasteCount` and set `lastUsedAt` (FRD-007); (5) hide the panel; (6) for paste actions only: wait until the panel is no longer visible plus a settle delay of 40 ms, confirm the frontmost application is still the recorded target, then post ⌘V (key code 9 with the Command flag, key down then key up) to the session event tap. ⇧Return performs steps 1 to 5 only.
 - **FR-003-16** Target app mismatch or post failure. If the frontmost application is not the recorded target after 250 ms, or the event cannot be posted, the item stays on the pasteboard, nothing is pasted, and `LIB-OS-001` shows a HUD. A pasted item is never re-written after the event is posted.
-- **FR-003-17** Accessibility denied. When `AXIsProcessTrusted()` is false, paste actions perform steps 1 to 5 of FR-003-15 only (same as ⇧Return) and show the HUD `SET-PRM-001`; the HUD throttle (FR-000-08) may suppress repeats, so the footer hint bar also shows, while permission is missing, the persistent text `library.footer.copyOnly` ("Press ⌘V to paste"), and the panel closes after Return as usual. Everything else in the Library works without Accessibility.
+- **FR-003-17** Accessibility denied. When `AXIsProcessTrusted()` is false, paste actions perform steps 1 to 5 of FR-003-15 only (same as ⇧Return) and show the HUD `SET-PRM-001`; the HUD throttle (FR-000-08) may suppress repeats, so the footer hint bar also shows, while permission is missing, the persistent text `ui.library.footerCopyOnly` ("Press ⌘V to paste"), and the panel closes after Return as usual. Everything else in the Library works without Accessibility.
 - **FR-003-19** Latency. Return to ⌘V posted: p95 ≤ 150 ms (`paste.back` signpost), excluding the target app's own handling. Task falsifier (TRUTHS P1): hotkey to pasted, for a clip from yesterday located by typing, has a median ≤ 3 s in the timed dogfood task.
 
 **Hints, data errors, accessibility**
@@ -110,7 +110,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 - **AC-003-04** (FR-003-05) Given 10,000 items and a scripted hotkey press, then p95 time to visible and focused over 50 runs is ≤ 150 ms.
 - **AC-003-05** (FR-003-07) Given a seeded library with one item of each kind, then each row's primary line follows FR-003-07 and the first nine rows show ⌘1 to ⌘9 badges.
 - **AC-003-06** (FR-003-08) Given the panel is open, then each key in the table performs its action; with a non-empty query, Space types a space and does not toggle preview; ⌘Y toggles preview regardless.
-- **AC-003-07** (FR-003-08) Given the query is "x" and Esc is pressed three times with preview open, then the first clears the query, the second closes preview, the third closes the panel.
+- **AC-003-07** (FR-003-08) Given the query is "x" and Esc is pressed three times with preview open, then the first clears the query, the second closes preview, the third closes the panel. With three rows selected and an empty query and no preview, the first Esc leaves only the cursor row selected and the second closes the panel.
 - **AC-003-08** (FR-003-09) Given items "Résumé draft", note "for Anna", tagged "work", from Safari, then queries `resume`, `anna`, `work`, `safari draft` each match it, and `resume zzz` does not.
 - **AC-003-09** (FR-003-10) Given 10,000 items, then p95 latency from keystroke to results is ≤ 100 ms over 100 queries.
 - **AC-003-10** (FR-003-15) Given Accessibility is granted and a text field is focused in Notes, Terminal, Safari, Xcode and VS Code, when Return is pressed on a text item, then the text is pasted in each; ⌥Return on a rich item pastes plain text in Notes.

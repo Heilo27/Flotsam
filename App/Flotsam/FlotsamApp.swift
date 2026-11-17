@@ -10,6 +10,8 @@ struct FlotsamApp: App {
     var body: some Scene {
         MenuBarExtra {
             Text(verbatim: FlotsamStrings.text(forKey: "ui.menu.status") ?? "")
+            Button(FlotsamStrings.text(forKey: "ui.menu.openLibrary") ?? "") { container.library?.toggle() }
+                .disabled(container.library == nil)
             Divider()
             noticesMenu
             Divider()

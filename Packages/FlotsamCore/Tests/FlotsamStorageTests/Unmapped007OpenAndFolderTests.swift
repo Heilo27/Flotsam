@@ -389,10 +389,11 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
 
     // MARK: OC-7041
 
-    /// OC-7041, the registry half. Every setting key declared anywhere in `Sources/` is one of the four FR-008 keys;
+    /// OC-7041, the registry half. Every setting key declared anywhere in `Sources/` is a row of the FR-008-01 table;
     /// none is a ceiling. Red if a text, rich, image or bundle-member ceiling key is added. (Settings controls are UI.)
-    @Test("OC-7041 the settings registry declares exactly four keys and none is a ceiling")
-    func oc7041_registryHoldsOnlyTheFourKeys() throws {
+    /// FRD-008 completed the registry (the four FRD-007 keys were its skeleton), so the expected list is the full table.
+    @Test("OC-7041 the settings registry declares exactly the FR-008-01 keys and none is a ceiling")
+    func oc7041_registryHoldsOnlyTheFR00801Keys() throws {
         // given every Swift file under Sources/
         let files = unmapped007SourceFiles()
         try #require(files.count > 20, "the scan must see the product's sources: \(files.count) files")
@@ -407,8 +408,14 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
             }
         }
 
-        // then there are exactly four, and they are the ones Settings documents
-        #expect(names.sorted() == ["capture.mode", "storage.imageBudget", "storage.imageQuality", "storage.retention"])
+        // then they are exactly the rows of the FR-008-01 table
+        #expect(names.sorted() == [
+            "capture.mode", "library.panelSize", "library.sort", "library.viewMode", "onboarding.completed",
+            "privacy.ignoredApps", "screenshots.enabled", "screenshots.folderOverride", "settings.lastPane",
+            "shelf.enabled", "shelf.placement", "shelf.revealOnEdgeHover", "shortcuts.openLibrary",
+            "shortcuts.saveClipboard", "shortcuts.toggleShelf", "storage.imageBudget", "storage.imageQuality",
+            "storage.retention", "triggers.enabled", "triggers.excludedApps",
+        ])
         #expect(names.allSatisfy { !$0.lowercased().contains("ceiling") && !$0.lowercased().contains("limit") })
     }
 
