@@ -4,11 +4,26 @@ import Foundation
 /// wording, translation and the 140-character budget are checked in one file instead of scattered across views.
 public enum FlotsamStrings {
     /// Returns the catalogue text for `key`, or nil when the key is absent.
+    ///
+    /// Reads the compiled `.strings` table first (what Xcode and recent SwiftPM produce). When that table has no such
+    /// key, reads the English value from the raw `Localizable.xcstrings` in the same bundle: SwiftPM before 6.4
+    /// copies the catalogue into the bundle without compiling it, so `swift test` on those toolchains would
+    /// otherwise see every key as absent. Both paths read the one catalogue file, so no string has a second home.
     public static func text(forKey key: String) -> String? {
         let missingMarker = "\u{0}missing"
         let value = Bundle.module.localizedString(forKey: key, value: missingMarker, table: nil)
-        return value == missingMarker ? nil : value
+        return value == missingMarker ? rawCatalogue[key] : value
     }
+
+    /// English values from the raw catalogue file bundled with this module; empty when the file is not in the bundle
+    /// (the compiled table is then the only source) or cannot be read, so a key then reads as absent.
+    private static let rawCatalogue: [String: String] = {
+        guard let url = Bundle.module.url(forResource: "Localizable", withExtension: "xcstrings") else { return [:] }
+        switch FlotsamCatalogue.englishStrings(at: url) {
+        case .success(let strings): return strings
+        case .failure: return [:]
+        }
+    }()
 
     /// User-facing message for an error code, with `arguments` filling the catalogue placeholders in order
     /// (`%lld` for a count, `%@` for a size, duration, permission or app name).

@@ -27,7 +27,10 @@ final class SettingsWindowController {
 
     private func makeWindow() -> NSWindow {
         let tabs = SettingsTabViewController(model: model)
+        // A window titled from its content controller shows "Untitled" while that controller has no title, so both carry it.
+        tabs.title = SettingsString.window.text
         let window = SettingsWindow(contentViewController: tabs)
+        window.title = SettingsString.window.text
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         window.setFrameAutosaveName("")

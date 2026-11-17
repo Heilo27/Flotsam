@@ -215,7 +215,8 @@ import FlotsamBase
 
     /// Offset of the start-of-scan marker (FF DA), where the entropy-coded data begins.
     private func startOfScan(_ bytes: [UInt8]) -> Int {
-        (0..<(bytes.count - 1)).first { bytes[$0] == 0xFF && bytes[$0 + 1] == 0xDA } ?? 0
+        // The explicit closure parameter type keeps Swift 6.2's type checker from timing out on this expression.
+        (0..<(bytes.count - 1)).first { (index: Int) -> Bool in bytes[index] == 0xFF && bytes[index + 1] == 0xDA } ?? 0
     }
 
     private func randomBytes(_ count: Int, seed: UInt64) -> [UInt8] {
