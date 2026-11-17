@@ -7,7 +7,7 @@ import Foundation
 public struct LibraryRowPresentation: Equatable, Identifiable {
     public static let maximumTagChips = 3
     /// VoiceOver reads at most this many characters of the primary line (FR-003-21).
-    public static let accessibilityPrimaryLimit = 100
+    public static let accessibilityPrimaryLimit = ItemSpeech.primaryLimit
 
     public let id: UUID
     public let kind: ItemKind
@@ -36,22 +36,10 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
         let overflow = row.tagNames.count - Self.maximumTagChips
         tagOverflow = overflow > 0 ? LibraryText.format("ui.library.tagOverflow", overflow) : nil
 
-        let relative = Self.relativeTime(row.lastCopiedAt, now: now)
+        let relative = ItemSpeech.relativeTime(row.lastCopiedAt, now: now)
         secondaryText = [row.sourceName, relative].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
 
-        var spoken = [KindLabel.text(for: row.kind), String(row.primaryLine.prefix(Self.accessibilityPrimaryLimit))]
-        if let source = row.sourceName, !source.isEmpty { spoken.append(LibraryText.format("ui.library.fromApp", source)) }
-        spoken.append(relative)
-        if row.isPinned { spoken.append(LibraryText.string("ui.library.pinned")) }
-        accessibilityLabel = spoken.joined(separator: ", ")
-    }
-
-    /// "2 min ago", "yesterday". A copy time slightly in the future (clock skew) reads as now, never as "in 1 min".
-    static func relativeTime(_ date: Date, now: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        formatter.dateTimeStyle = .named
-        return formatter.localizedString(for: min(date, now), relativeTo: now)
+        accessibilityLabel = ItemSpeech.label(for: row, now: now)
     }
 }
 

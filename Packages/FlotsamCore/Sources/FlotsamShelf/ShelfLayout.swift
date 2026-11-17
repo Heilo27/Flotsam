@@ -36,6 +36,9 @@ public enum ShelfLayout {
     public static let cardSpacing: CGFloat = 4
     public static let sectionHeaderHeight: CGFloat = 24
     public static let contentPadding: CGFloat = 8
+    /// A text card shows the first three lines, at most 120 characters (FR-006-07).
+    public static let cardTextLineLimit = 3
+    public static let cardTextCharacterLimit = 120
 
     // MARK: Motion (FR-006-05)
 
