@@ -20,4 +20,9 @@ public enum FlotsamSignpost {
         defer { signposter.endInterval(name, state) }
         return try await work()
     }
+
+    /// A point-in-time event inside an open interval (for example one batch inside `retention.sweep`).
+    public static func event(_ name: StaticString) {
+        signposter.emitEvent(name)
+    }
 }

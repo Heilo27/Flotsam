@@ -45,26 +45,15 @@ extension FlotsamDatabase {
     public func enforceImageBudget(_ budget: ImageBudget, protecting: UUID? = nil) async -> FlotsamResult<BudgetOutcome> {
         guard let limit = budget.limitBytes else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
 
-        let plan: [ImageCandidate]
-        let total: Int64
+        let planned: BudgetPlan
         do {
-            (total, plan) = try await pool.read { db in
-                let total = try Self.imageBytes(db)
-                guard total > limit else { return (total, []) }
-                return (total, try Self.evictionCandidates(db, protecting: protecting))
-            }
+            planned = try await pool.read { db in try Self.planBudgetEviction(db, limit: limit, protecting: protecting) }
         } catch {
             return .failure(Self.readFailure(error))
         }
-        guard total > limit else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
-
-        let target = limit * Self.evictionTargetPercent / 100
-        var remaining = total
-        var chosen: [UUID] = []
-        for candidate in plan where remaining > target {
-            chosen.append(candidate.id)
-            remaining -= candidate.bytes
-        }
+        guard planned.total > limit else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
+        let chosen = planned.evict
+        let remaining = planned.remainingAfterEviction
 
         var evicted = 0
         for batch in chosen.chunked(into: Self.evictionBatchSize) {
@@ -81,6 +70,42 @@ extension FlotsamDatabase {
         // Still over after every candidate went: what is left is exempt or protected.
         let notice = remaining > limit ? await budgetNoticeIfDue() : nil
         return .success(BudgetOutcome(evictedCount: evicted, notice: notice))
+    }
+
+    /// What a budget pass would delete, decided but not yet done.
+    private struct BudgetPlan: Sendable {
+        let total: Int64
+        let evict: [UUID]
+        let remainingAfterEviction: Int64
+    }
+
+    /// The one place the eviction choice is made, so the confirmation count and the real pass cannot disagree.
+    private static func planBudgetEviction(_ db: Database, limit: Int64, protecting: UUID?) throws -> BudgetPlan {
+        let total = try imageBytes(db)
+        guard total > limit else { return BudgetPlan(total: total, evict: [], remainingAfterEviction: total) }
+        let target = limit * evictionTargetPercent / 100
+        var remaining = total
+        var chosen: [UUID] = []
+        for candidate in try evictionCandidates(db, protecting: protecting) where remaining > target {
+            chosen.append(candidate.id)
+            remaining -= candidate.bytes
+        }
+        return BudgetPlan(total: total, evict: chosen, remainingAfterEviction: remaining)
+    }
+
+    /// What `enforceImageBudget` would delete under `budget`, for the lower-budget confirmation (FR-007-09:
+    /// "removes {count} older images ({size})"). Deletes nothing. It runs the same planner as enforcement, so the
+    /// number the user confirms is the number removed. Count 0 means the caller applies the setting without asking.
+    public func imageBudgetEvictionPreview(_ budget: ImageBudget) async -> FlotsamResult<DeletionPreview> {
+        guard let limit = budget.limitBytes else { return .success(.none) }
+        do {
+            return .success(try await pool.read { db in
+                let plan = try Self.planBudgetEviction(db, limit: limit, protecting: nil)
+                return DeletionPreview(count: plan.evict.count, bytes: plan.total - plan.remainingAfterEviction)
+            })
+        } catch {
+            return .failure(Self.readFailure(error))
+        }
     }
 
     /// How many bytes of images are stored, for the retention confirmation as well as enforcement.
