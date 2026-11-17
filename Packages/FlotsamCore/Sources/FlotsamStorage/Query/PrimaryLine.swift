@@ -30,7 +30,7 @@ enum PrimaryLine {
         case .file, .folder:
             return memberNames.first ?? trimmed
         case .bundle:
-            let count = String(format: FlotsamStrings.text(forKey: "row.bundleCount") ?? "%lld items", memberCount)
+            let count = String(format: FlotsamStrings.text(forKey: "ui.row.bundleCount") ?? "%lld items", memberCount)
             let names = memberNames.prefix(bundleNameLimit).joined(separator: ", ")
             return names.isEmpty ? count : "\(count) · \(names)"
         }

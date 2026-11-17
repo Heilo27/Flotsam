@@ -35,16 +35,25 @@ public final class FlotsamDatabase: Sendable {
     /// `STO-DB-002` when this launch found the file damaged, moved it aside and started fresh (FR-007-13). The app
     /// raises it as a Notice; Storage cannot, it has no UI.
     public let openNotice: FlotsamError?
+    /// Where this database's log records go (FR-000-09). The production sink writes to `os.Logger`; a test injects a
+    /// recording one, because `os.Logger` has no readback that shows the redacted (`.private`) parts of a line.
+    let logSink: any LogSink
 
     private init(
         pool: DatabasePool, folder: DataFolder, fileSystem: any FileSystemPort, clock: any WallClock,
-        notice: FlotsamError?
+        notice: FlotsamError?, logSink: any LogSink
     ) {
         self.pool = pool
         self.folder = folder
         self.fileSystem = fileSystem
         self.clock = clock
         self.openNotice = notice
+        self.logSink = logSink
+    }
+
+    /// The one way Storage logs an error: category `storage`, through this database's sink (FR-000-09, FR-000-10).
+    func report(_ error: FlotsamError) {
+        FlotsamLog.log(error, category: .storage, sink: logSink)
     }
 
     /// Blob files for this database's folder (FR-007-04). A value built on demand: it holds no state of its own.
@@ -53,9 +62,10 @@ public final class FlotsamDatabase: Sendable {
     /// Creates the data folder (0700), opens the pool with the FR-007-02 pragmas, migrates and integrity-checks.
     /// Folder failure is `STO-IO-002`; any other database failure is `STO-DB-003` (both Fatal, FR-000-04).
     public static func open(
-        folder: URL, fileSystem: any FileSystemPort = LocalFileSystem(), clock: any WallClock = SystemClock()
+        folder: URL, fileSystem: any FileSystemPort = LocalFileSystem(), clock: any WallClock = SystemClock(),
+        logSink: any LogSink = OSLogSink()
     ) async -> FlotsamResult<FlotsamDatabase> {
-        await open(folder: folder, fileSystem: fileSystem, clock: clock, migrations: Migrations.all)
+        await open(folder: folder, fileSystem: fileSystem, clock: clock, logSink: logSink, migrations: Migrations.all)
     }
 
     private enum Attempt {
@@ -66,7 +76,8 @@ public final class FlotsamDatabase: Sendable {
 
     /// Internal so tests can simulate a later release's migrations against an existing file.
     static func open(
-        folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(), migrations: [Migration]
+        folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(),
+        logSink: any LogSink = OSLogSink(), migrations: [Migration]
     ) async -> FlotsamResult<FlotsamDatabase> {
         let layout = DataFolder(root: root)
         if case .failure(let error) = layout.prepare(fileSystem: fileSystem) { return .failure(error) }
@@ -78,7 +89,7 @@ public final class FlotsamDatabase: Sendable {
             switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations) {
             case .opened(let pool):
                 layout.restrictDatabaseFilePermissions()
-                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice))
+                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink))
             case .failed(let error):
                 return .failure(error)
             case .damaged:

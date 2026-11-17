@@ -105,7 +105,7 @@ extension FlotsamDatabase {
                 try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM item WHERE id = ?)", arguments: [itemId.uuidString]) ?? false
             }
         } catch {
-            FlotsamLog.log(Self.readFailure(error), category: .storage)
+            report(Self.readFailure(error))
             return true  // unknown: keep the thumbnail, it is regenerable and reconcile sweeps orphans
         }
     }
@@ -115,7 +115,7 @@ extension FlotsamDatabase {
     private func renderThumbnail(_ source: Data, itemId: UUID, size: ThumbnailSize) async -> Data? {
         guard let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue) else { return nil }
         if case .failure(let error) = blobs.writeAtomically(jpeg, to: folder.thumbnailURL(itemId: itemId, edge: size.rawValue)) {
-            FlotsamLog.log(error, category: .storage)
+            report(error)
         }
         return jpeg
     }

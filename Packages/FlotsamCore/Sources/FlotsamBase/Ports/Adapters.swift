@@ -2,8 +2,6 @@ import Foundation
 
 /// `FileManager`-backed `FileSystemPort`. Foundation only, so it lives in Base.
 public struct LocalFileSystem: FileSystemPort {
-    private static let domain = "FlotsamFileSystem"
-
     public init() {}
 
     public func fileExists(at url: URL) -> Bool {
@@ -50,8 +48,9 @@ public struct LocalFileSystem: FileSystemPort {
         defer { close(descriptor) }
         var offset = 0
         while offset < data.count {
-            let written = data.withUnsafeBytes { buffer in
-                write(descriptor, buffer.baseAddress!.advanced(by: offset), data.count - offset)
+            let written = data.withUnsafeBytes { buffer -> Int in
+                guard let base = buffer.baseAddress else { return 0 }
+                return write(descriptor, base.advanced(by: offset), data.count - offset)
             }
             if written < 0 {
                 if errno == EINTR { continue }

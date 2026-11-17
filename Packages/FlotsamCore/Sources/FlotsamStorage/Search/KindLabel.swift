@@ -4,6 +4,6 @@ import FlotsamBase
 /// Library sidebar and rows read it here, so typing "image" finds exactly the items the UI calls images.
 public enum KindLabel {
     public static func text(for kind: ItemKind) -> String {
-        FlotsamStrings.text(forKey: "kind.\(kind.rawValue)") ?? kind.rawValue
+        FlotsamStrings.text(forKey: "ui.kind.\(kind.rawValue)") ?? kind.rawValue
     }
 }

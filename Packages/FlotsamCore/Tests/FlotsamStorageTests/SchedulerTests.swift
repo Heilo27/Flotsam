@@ -35,7 +35,7 @@ final class GatedClock: WallClock, @unchecked Sendable {
 
     func now() -> Date { base.now() }
 
-    func sleep(for duration: Duration) async throws {
+    func sleep(for duration: Duration) async {
         let id = UUID()
         await withTaskCancellationHandler {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
@@ -97,8 +97,9 @@ func makeGatedStore() async throws -> (store: Store, clock: GatedClock) {
     let manual = ManualClock()
     let gated = GatedClock(manual)
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-8t-sched-\(UUID().uuidString)")
-    let database = try await FlotsamDatabase.open(folder: root, fileSystem: LocalFileSystem(), clock: gated).get()
-    return (Store(root: root, clock: manual, database: database), gated)
+    let logs = RecordingLogSink()
+    let database = try await FlotsamDatabase.open(folder: root, fileSystem: LocalFileSystem(), clock: gated, logSink: logs).get()
+    return (Store(root: root, clock: manual, database: database, logs: logs), gated)
 }
 
 /// Lets anything that would wrongly run get its chance. Used only to prove an absence.

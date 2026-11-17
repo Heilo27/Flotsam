@@ -66,8 +66,7 @@ extension FlotsamDatabase {
             }
         }
         if evicted > 0 {
-            FlotsamLog.log(
-                FlotsamError(.stoPol001, "Image budget eviction", context: [.count: .int(evicted)]), category: .storage)
+            report(FlotsamError(.stoPol001, "Image budget eviction", context: [.count: .int(evicted)]))
         }
 
         // Still over after every candidate went: what is left is exempt or protected.

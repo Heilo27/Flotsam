@@ -28,14 +28,11 @@ public actor RetentionScheduler {
         guard loop == nil else { return }
         let clock = database.clock
         loop = Task { [weak self] in
-            do {
-                try await clock.sleep(for: Self.launchDelay)
-                while !Task.isCancelled {
-                    await self?.sweepNow()
-                    try await clock.sleep(for: Self.interval)
-                }
-            } catch {
-                // Cancelled while sleeping: stop() was called.
+            // The clock port's sleep never throws: on cancellation it returns early, so stop() is observed here.
+            await clock.sleep(for: Self.launchDelay)
+            while !Task.isCancelled {
+                await self?.sweepNow()
+                await clock.sleep(for: Self.interval)
             }
         }
     }
@@ -57,7 +54,7 @@ public actor RetentionScheduler {
         case .success(let outcome):
             if let notice = outcome.budget.notice { onNotice(notice) }
         case .failure(let error):
-            FlotsamLog.log(error, category: .storage)
+            database.report(error)
         }
     }
 }

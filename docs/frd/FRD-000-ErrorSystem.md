@@ -24,32 +24,51 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 **Error type**
 - **FR-000-01** Every fallible operation returns `Result<T, FlotsamError>`. `FlotsamError` is a `Sendable` value type with: `code` (an `ErrorCode` enum case, §FR-000-03), `severity` (derived from the code, not caller-supplied), `internalMessage` (static string literal, English, no interpolation of user data), `context` (`[LogKey: LogSafeValue]`), `underlying` (optional `UnderlyingErrorInfo` = domain string + integer code only; never `localizedDescription`, which can embed file paths).
 - **FR-000-02** No error crosses a module boundary as a thrown `Error`, `NSError` or `String`. Force-try, force-unwrap and `fatalError` on external data (pasteboard, files, database rows, defaults) are forbidden; `fatalError` is allowed only for the two Fatal codes in FR-000-04 and for programmer-error invariants that cannot be reached from external input.
-- **FR-000-03** Code format: `<MOD>-<CAT>-<NNN>`. Modules: `SYS` core, `CAP` capture (FRD-001), `SSP` screenshot pickup (FRD-002), `LIB` library (FRD-003), `ORG` organize (FRD-004), `TRG` shortcuts and triggers (FRD-005), `SHF` shelf (FRD-006), `STO` storage and retention (FRD-007), `SET` settings, onboarding, permissions (FRD-008). Categories: `PRM` permission, `IO` file or disk, `DB` database, `VAL` validation of user input or external data, `LIM` size or count limit, `OS` system API failure, `POL` expected skip by policy (always Info), `DAT` data-state inconsistency, `INT` internal. Numbers are three digits, per module+category, never reused or renumbered; a retired code stays in §7 marked `retired`.
+- **FR-000-03** Code format: `<MOD>-<CAT>-<NNN>`. Modules: `SYS` core, `CAP` capture (FRD-001), `SSP` screenshot pickup (FRD-002), `LIB` library (FRD-003), `ORG` organize (FRD-004), `TRG` shortcuts and triggers (FRD-005), `SHF` shelf (FRD-006), `STO` storage and retention (FRD-007), `SET` settings, onboarding, permissions (FRD-008). Categories: `PRM` permission, `IO` file or disk, `DB` database, `VAL` validation of user input or external data, `LIM` size or count limit, `OS` system API failure, `POL` expected skip by policy (always Info), `DAT` data-state inconsistency, `INT` internal. Numbers are three digits, per module+category, never reused or renumbered; a retired code stays in §7 marked `retired`, is removed from the code enumeration so it cannot be raised, and has no catalogue text.
 
 **Severity and recovery**
 - **FR-000-04** Four severities, fixed per code in §7:
-  - **Fatal** — Flotsam cannot run safely. Show a modal alert with the user message, a "Reveal Data Folder" button and a "Quit" button, then terminate. Closed list: `STO-IO-002`, `STO-DB-003`. No other code may be Fatal.
+  - **Fatal** — Flotsam cannot run safely. Show a modal alert with the user message, a "Reveal Data Folder" button and a "Quit" button, then terminate. If the data folder does not exist (`STO-IO-002`), "Reveal Data Folder" reveals its nearest existing ancestor and never creates the folder. Closed list: `STO-IO-002`, `STO-DB-003`. No other code may be Fatal.
   - **Error** — the user's action or a background save failed. Propagate to the caller, surface per FR-000-08, never crash.
   - **Warning** — the app is degraded but working (permission off, limit hit, fallback active). Log at notice, continue, surface per FR-000-08.
-  - **Info** — an expected, policy-driven or benign skip (for example a concealed pasteboard item). Log only; never shown to the user.
+  - **Info** — an expected, policy-driven or benign skip (for example a concealed pasteboard item). Log only; never shown to the user and never recorded in the ring buffer (FR-000-13).
 
 **Catalogue and strings**
-- **FR-000-05** One catalogue: the Xcode String Catalog `Localizable.xcstrings`. Every user-facing string in the app (errors and normal UI) is a catalogue key; no user-facing string literal appears in a view or model. Error messages use keys `error.<code>` (for example `error.SET-PRM-001`). Source language English; plural and count variations use catalogue variations, not string concatenation.
-- **FR-000-06** Message style: one or two sentences, ≤ 140 characters, states what happened then what to do, no jargon, no blame, no error code inline. A message may interpolate only: counts, byte sizes, durations, permission names, and the display name of an app. It may never interpolate clip text, URLs, file or folder names, notes, tags, trigger strings or search queries.
+- **FR-000-05** One catalogue: the Xcode String Catalog `Localizable.xcstrings`. Every user-facing string in the app (errors and normal UI) is a catalogue key; no user-facing string literal appears in a view or model. Error messages use keys `error.<code>` (for example `error.SET-PRM-001`). Source language English; plural and count variations use catalogue variations, not string concatenation. Each code's argument kinds (a count fills `%lld`, text fills `%@`) must match its message's format specifiers; a consistency check fails the tests on a mismatch. Showing a message never crashes: if the arguments do not fit the message, the user sees the SYS-INT-001 text instead.
+- **FR-000-06** Message style: one or two sentences, ≤ 140 characters, states what happened then what to do, no jargon, no blame, no error code inline. A message may interpolate only: counts, byte sizes, durations, permission names, and the display name of an app. It may never interpolate clip text, URLs, file or folder names, notes, tags, trigger strings or search queries. The 140-character limit holds whatever is interpolated: a long app name is cut with "…" so the whole message fits. A negative count, size or duration shows as 0, and zero shows in digits ("0 KB"), never as a word.
 - **FR-000-07** The §7 table is the specification of the catalogue. A unit test enumerates every `ErrorCode` and fails if any code lacks a catalogue key (Warning/Error/Fatal), has a duplicate raw value, has a catalogue key with no code, or has a message over 140 characters.
 
 **Surfaces**
-- **FR-000-08** Surfacing rule. (a) User-initiated action fails (paste, hotkey, edit, drop, expansion): show a HUD — a small non-activating floating label, top-centre of the screen with the pointer, 2.5 s, no focus change. (b) Background failure (capture, screenshot pickup, retention): add a dot badge to the menu-bar icon and append to the Notices list (menu bar › Notices, newest 10 kept in memory, cleared on "Dismiss all" or quit). (c) Fatal: modal alert (FR-000-04). Throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall; throttled occurrences are still logged.
+- **FR-000-08** Surfacing rule. (a) User-initiated action fails (paste, hotkey, edit, drop, expansion): show a HUD — a small non-activating floating label, top-centre of the screen with the pointer, 2.5 s, no focus change. (b) Background failure (capture, screenshot pickup, retention): add a dot badge to the menu-bar icon and append to the Notices list (menu bar › Notices, newest 10 kept in memory, cleared on "Dismiss all" or quit). (c) Fatal: modal alert (FR-000-04). Throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall; throttled occurrences are still logged. A surfacing exactly 60 s old has expired, so the same code may surface again at T+60. A surfacing time later than the current time (the clock was set back) also counts as expired, for both the per-code timer and the HUD window, so one extra notice may appear but errors are never hidden until the clock catches up.
 
 **Logging**
 - **FR-000-09** Logging uses `os.Logger`, subsystem = the app bundle identifier, one category per module (`core`, `capture`, `screenshots`, `library`, `organize`, `triggers`, `shelf`, `storage`, `settings`). Level mapping: Info → `.info`, Warning → `.notice`, Error → `.error`, Fatal → `.fault`. Verbose traces use `.debug` and are wrapped in `#if DEBUG` so they are compiled out of release builds. `print`, `NSLog` and `dump` are forbidden in app sources (lint-enforced).
-- **FR-000-10** Content never appears in any log, error context, signpost, Notice or diagnostics report. Forbidden: clip text, URLs, colours, phone numbers, emails, file and folder names or paths of user items, screenshot file names, bundle names, notes, tag names, trigger strings, search queries, typed-key buffers. Every dynamic value interpolated into a log string carries an explicit privacy qualifier: `.private` by default; `.public` only for the allowlist — error code, severity, item kind, counts, byte sizes, durations, booleans, enum raw values, pasteboard type identifiers (UTIs), OS and app versions. Source-app bundle identifiers are `.private`.
+- **FR-000-10** Content never appears in any log, error context, signpost, Notice or diagnostics report. Forbidden: clip text, URLs, colours, phone numbers, emails, file and folder names or paths of user items, screenshot file names, bundle names, notes, tag names, trigger strings, search queries, typed-key buffers. Every dynamic value interpolated into a log string carries an explicit privacy qualifier: `.private` by default; `.public` only for the allowlist — error code, severity, item kind, counts, byte sizes, durations, booleans, enum raw values, system-declared pasteboard type identifiers (UTIs), OS and app versions. Source-app bundle identifiers, and any pasteboard type identifier that is not system-declared (an app's own type, a `dyn.` identifier), are `.private`; the log context types accept only a validated bundle identifier and a classified type identifier, never a free string.
 - **FR-000-11** Mandatory instrumented callsites (each logs code or outcome only): pasteboard change processed (kind, byte size, outcome: stored / deduped / skipped + `POL` code); screenshot import outcome; paste-back start and outcome; hotkey registration result; Shelf reveal, drag-out and drop-in outcome; trigger buffer match result (matched yes/no only); permission state transitions; retention sweep result (rows and bytes removed); database open, migrate, integrity-check results; every Warning/Error/Fatal raised.
 - **FR-000-12** Performance signposts (`OSSignposter`, category `perf`) mark the PRD metrics: `capture.persist`, `library.open`, `library.search`, `paste.back`, `shelf.reveal`, `retention.sweep`, `trigger.expand`, `retention.clearHistory` (one interval for the whole Clear history operation, FRD-007 FR-007-16). Signposts carry no content. They are the measurement source for the p95 targets in other FRDs.
 
+**FR-000-11 callsite checklist.** One row per mandatory callsite. The owning module's ticket adds the `LogEvent` call (`LogEvent.swift`, one case each, typed payload so a callsite cannot log more than code or outcome). Tick a row only when the call is in the owning module's code. Status as of 2026-11-17.
+
+| Callsite | `LogEvent` case | Owning FR | Owning ticket | Done |
+|---|---|---|---|---|
+| Pasteboard change processed: skipped + `POL` code | `pasteboardProcessed` | FR-001-04 | TASK-121 | [ ] |
+| Pasteboard change processed: stored / deduped | `pasteboardProcessed` | FR-007-05 | TASK-051 | [ ] |
+| Screenshot import outcome | `screenshotImported` | FR-002-09 | TASK-219 | [ ] |
+| Paste-back start and outcome | `pasteBack` (`started`, then outcome) | FR-003-15 | TASK-187 | [ ] |
+| Hotkey registration result | `hotkeyRegistered` | FR-005-03 | TASK-305 | [ ] |
+| Shelf reveal, drag-out, drop-in outcome | `shelf` | FR-006-18 | TASK-295 | [ ] |
+| Trigger buffer match result (yes/no only) | `triggerMatched` | FR-005-12 | TASK-323 | [ ] |
+| Permission state transitions | `permissionChanged` | FR-008-13 | TASK-105 | [ ] |
+| Retention sweep result (rows, bytes) | `retentionSwept` | FR-007-09 | TASK-059 | [ ] |
+| Database open | `database(.open)` | FR-007-02 | TASK-045 | [ ] |
+| Database migrate | `database(.migrate)` | FR-007-17 | TASK-075 | [ ] |
+| Database integrity check | `database(.integrityCheck)` | FR-007-13 | TASK-067 | [ ] |
+| Every Warning / Error / Fatal raised | `FlotsamLog.log(error)` via `ErrorReporter` | FR-000-08 | TASK-027 | [x] |
+
 **Diagnostics**
-- **FR-000-13** An in-memory ring buffer holds the last 100 raised errors (code, severity, timestamp). It is never written to disk and is cleared on quit.
+- **FR-000-13** An in-memory ring buffer holds the last 100 raised Warning, Error and Fatal errors (code, severity, timestamp). Info codes are logged but never recorded, so a high-frequency Info skip cannot evict real failures. Throttled occurrences are still recorded: the FR-000-08 throttle limits surfacing only. It is never written to disk and is cleared on quit.
 - **FR-000-14** Settings › About › "Copy Diagnostics" builds a plain-text report on user action only: app version and build, macOS version, CPU architecture, permission states (Accessibility, Input Monitoring, screenshot folder access, pasteboard access), setting values that are not content (retention preset, budget preset, toggle states; never ignored-app lists), item counts by kind, database and blob byte sizes, and the ring buffer. It is copied to the clipboard marked with the pasteboard types in FR-001-03 so Flotsam does not capture its own report. It is never sent anywhere.
+  *Ownership.* FRD-000 owns the snapshot builder (`DiagnosticsSnapshotBuilder`), the renderer and the copier, so a complete, redacted report can be produced from current state. The Settings › About "Copy Diagnostics" button and its "Diagnostics copied" HUD are owned by FRD-008 FR-008-09 (TASK-097, with tests in TASK-098); that ticket calls `DiagnosticsSnapshotBuilder.report()` and `DiagnosticsCopier.copy`. Permission states, item counts and file sizes come through `DiagnosticsDataSource`, which Capture, Shortcuts and Storage implement in their own tickets. AC-000-06 is verified end to end once TASK-097 lands.
 - **FR-000-15** No third-party crash reporting, analytics or logging service is linked (A4). macOS-generated crash reports are the only crash data.
 
 ## 4. Data Requirements
@@ -65,7 +84,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 This FRD defines the mechanism; its own failure modes: catalogue key missing at runtime → show `error.SYS-INT-001` text and log `SYS-INT-001` (unit test FR-000-07 prevents this shipping).
 
 ## 7. Error Catalogue (all codes, grouped by module)
-Columns: code · severity · user message (catalogue text) · recovery. `{n}` = count, `{limit}` = size. Info rows have no user message.
+Columns: code · severity · user message (catalogue text) · recovery. `{n}` = count, `{limit}` = size. Info and retired rows have no user message.
 
 **SYS**
 | Code | Sev | User message | Recovery |
@@ -113,8 +132,8 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | ORG-VAL-001 | Error | Tag names must be 1 to 32 characters and unique. | edit rejected inline |
 | ORG-VAL-002 | Error | Notes can be up to 2,000 characters. | edit rejected inline |
 | ORG-VAL-003 | Error | Only text items can be edited, and they can't be empty. | edit rejected |
-| ORG-VAL-004 | Error | Select at least two files, folders or images to group. | action disabled/HUD |
-| ORG-VAL-005 | Error | Names must be 1 to 80 characters. | edit rejected inline |
+| ORG-VAL-004 | retired | — (retired 2026-11-16: no group action exists; FRD-004 offers ungroup only) | never raised |
+| ORG-VAL-005 | retired | — (retired 2026-11-16: no rename exists; tag names use ORG-VAL-001) | never raised |
 | ORG-LIM-001 | Error | An item can have up to 10 tags. | assignment rejected |
 | ORG-LIM-002 | Error | You can have up to 100 tags. | creation rejected |
 | ORG-LIM-003 | Error | That text is over the {limit} limit. Shorten it and try again. | edit rejected inline |
@@ -146,7 +165,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | STO-DB-001 | Error | Flotsam couldn't save your history. Free up disk space and try again. | roll back; surface per FR-000-08 |
 | STO-DB-002 | Error | Your history database was damaged. A fresh one was created and the old file was kept in the data folder. | move aside, recreate; Notice |
-| STO-DB-003 | Fatal | Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder. | alert, quit |
+| STO-DB-003 | Fatal | Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder. | alert, quit |
 | STO-DB-004 | Error | Couldn't read your history. Try again. | propagate |
 | STO-IO-001 | Error | Flotsam couldn't write to its data folder. Check free disk space. | operation aborted |
 | STO-IO-002 | Fatal | Flotsam can't create its data folder, so it can't run. | alert, quit |
@@ -180,10 +199,15 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | HUD | transient floating label | top-centre of pointer's screen | message text, 2.5 s, no focus, VoiceOver announces |
 | Menu-bar badge dot | icon overlay | menu-bar icon | shown while unacknowledged Warning/Error Notices exist |
-| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text; "Dismiss all" |
-| Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder", "Quit" |
+| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so each row reads "message · CODE" on one line); "Dismiss all" |
+| Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder" (nearest existing ancestor if the folder is missing), "Quit" |
 | Copy Diagnostics button | button | Settings › About | builds and copies report; confirms with HUD "Diagnostics copied" |
 | Inline validation text | label | beside the invalid field | catalogue message, red text plus icon, role alert for VoiceOver |
 
 ## 10. Out of Scope
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
+
+## 11. Change Log
+- 2026-11-17: FR-000-05/06 and FR-000-08 (8A rulings): argument kinds must match message specifiers (checked); a wrong kind shows the SYS-INT-001 text instead of crashing; long app names are cut with "…" to fit 140 characters; negative values show as 0 and zero shows in digits; a surfacing time later than now (clock set back) counts as expired in the throttle.
+- 2026-11-16: FR-000-08 states the throttle boundary: a surfacing exactly 60 s old has expired, so the same code may surface again at T+60.
+- 2026-11-16: STO-DB-003 copy cut from three sentences to two (the 1-2 sentence rule): "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder."

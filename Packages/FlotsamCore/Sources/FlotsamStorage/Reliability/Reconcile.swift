@@ -131,7 +131,7 @@ extension FlotsamDatabase {
         where !referencedNames.contains(blob.name) && (blob.modifiedAt.map { $0.epochMillis < cutoff } ?? false) {
             guard case .success = blobs.remove(blobName: blob.name) else { continue }
             removed += 1
-            FlotsamLog.log(FlotsamError(.stoIo003, "Orphan blob removed by reconcile"), category: .storage)
+            report(FlotsamError(.stoIo003, "Orphan blob removed by reconcile"))
         }
         return removed
     }
@@ -175,9 +175,8 @@ extension FlotsamDatabase {
         for row in emptied.rows {
             var context: [LogKey: LogSafeValue] = [:]
             if let id = UUID(uuidString: row.itemId) { context[.itemId] = .id(id) }
-            FlotsamLog.log(
-                FlotsamError(.stoIo003, "Representation row with a missing blob removed by reconcile", context: context),
-                category: .storage)
+            report(
+                FlotsamError(.stoIo003, "Representation row with a missing blob removed by reconcile", context: context))
         }
         switch await delete(ids: emptied.itemIds) {
         case .success(let removedItems): return .success((emptied.rows.count, removedItems.count))

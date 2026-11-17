@@ -21,7 +21,7 @@ final class ManualClock: WallClock, @unchecked Sendable {
     }
 
     func now() -> Date { lock.withLock { current } }
-    func sleep(for duration: Duration) async throws {}
+    func sleep(for duration: Duration) async {}
     func advance(ms: Int64) { lock.withLock { current = current.addingTimeInterval(Double(ms) / 1000) } }
     var millis: Int64 { Int64((now().timeIntervalSince1970 * 1000).rounded()) }
 }
@@ -85,15 +85,40 @@ struct Spec {
     var thumbs = false
 }
 
+/// Keeps every log record a database writes, whole, so a test sees what a release build redacts as well as what it
+/// shows. `os.Logger` cannot do that: FR-000-10 makes the item id, the static message and the cause `.private`, and
+/// the unified log reads them back as `<private>`. One sink per store, so parallel suites cannot see each other's
+/// lines and a count of lines is exact, not a lower bound.
+final class RecordingLogSink: LogSink, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [LogRecord] = []
+
+    func write(_ record: LogRecord) { lock.withLock { recorded.append(record) } }
+
+    var records: [LogRecord] { lock.withLock { recorded } }
+
+    /// Each record as one line: the public text, then the private text (what a developer with the debugger attached
+    /// would see). Lines that contain every fragment.
+    func lines(containing fragments: [String] = []) -> [String] {
+        records.map { "\($0.publicText) \($0.privateText)" }.filter { line in fragments.allSatisfy { line.contains($0) } }
+    }
+
+    /// Only what a release build writes in the clear.
+    func publicLines() -> [String] { records.map(\.publicText) }
+}
+
 struct Store {
     let root: URL
     let clock: ManualClock
     let database: FlotsamDatabase
+    /// Every record the database logged (see `RecordingLogSink`).
+    var logs = RecordingLogSink()
 
     static func make(fileSystem: any FileSystemPort = LocalFileSystem(), root: URL? = nil, clock: ManualClock = ManualClock()) async throws -> Store {
         let root = root ?? FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-8t-\(UUID().uuidString)")
-        let database = try await FlotsamDatabase.open(folder: root, fileSystem: fileSystem, clock: clock).get()
-        return Store(root: root, clock: clock, database: database)
+        let logs = RecordingLogSink()
+        let database = try await FlotsamDatabase.open(folder: root, fileSystem: fileSystem, clock: clock, logSink: logs).get()
+        return Store(root: root, clock: clock, database: database, logs: logs)
     }
 
     func cleanUp() { try? FileManager.default.removeItem(at: root) }

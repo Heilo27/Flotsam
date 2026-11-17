@@ -393,7 +393,6 @@ import FlotsamBase
             Spec(n: last, ageMs: 3 * hourMs, blobs: 1, repBytes: 10),
         ])
         #expect(try s.presentIds() == [first, middle, last], "precondition")
-        let logged = ProcessLogProbe()
 
         // when the middle item is deleted
         let removed = try await s.database.delete(ids: [Store.id(middle)]).get()
@@ -404,7 +403,7 @@ import FlotsamBase
         #expect(s.exists(s.blobURL(middle, 1)))
         #expect(s.exists(s.blobURL(first, 1)) && s.exists(s.blobURL(last, 1)))
         // and the failure is logged as STO-IO-003 for this item
-        let lines = await logged.waitForEntries(containing: ["STO-IO-003", "itemId=\(Store.id(middle).uuidString)"])
+        let lines = s.logs.lines(containing: ["STO-IO-003", "itemId=\(Store.id(middle).uuidString)"])
         #expect(lines.count == 1, "one STO-IO-003 line for the stuck item: saw \(lines)")
         #expect(lines.first?.contains("left for reconcile") == true)
 

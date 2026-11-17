@@ -88,10 +88,9 @@ extension FlotsamDatabase {
         events.publish(.itemsDeleted(deletedIds))
         for item in removed {
             for name in item.blobNames where !removeBlob(named: name) {
-                FlotsamLog.log(
+                report(
                     FlotsamError(.stoIo003, "Blob could not be removed after delete; left for reconcile",
-                                 context: [.itemId: .id(item.id)]),
-                    category: .storage)
+                                 context: [.itemId: .id(item.id)]))
             }
         }
         await discardThumbnails(itemIds: deletedIds)

@@ -1,50 +1,15 @@
 import Foundation
-import OSLog
 import Testing
 import FlotsamBase
 @testable import FlotsamStorage
 
 // FRD-007 8V remediation B, the log halves of OC-7023, OC-7113, OC-7123 and OC-7076.
 //
-// The 8V mutation run showed that a "did a line appear" check which looks at the whole process log passes without
-// the line, because other suites running in parallel write the same lines. Every test here therefore either keys on
-// a value no other test in this process can produce (an item id, a count of 1,237) or, where the line carries no
-// context at all (the orphan-removal line), asserts a count no other test could supply alone. Entries are read back
-// from the real unified log with a poll, because OSLog flushes asynchronously.
-
-/// Reads this process's unified log back. Entries are kept only when they are newer than the probe and contain
-/// every fragment.
-struct Unmapped007LogProbe {
-    private let start = Date()
-
-    func lines(containing fragments: [String]) -> [String] {
-        guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else { return [] }
-        let position = store.position(date: start.addingTimeInterval(-1))
-        let all = (try? store.getEntries(at: position)) ?? AnySequence([])
-        return all.compactMap { $0 as? OSLogEntryLog }
-            .filter { $0.date >= start.addingTimeInterval(-1) }
-            .map(\.composedMessage)
-            .filter { message in fragments.allSatisfy { message.contains($0) } }
-    }
-
-    /// Polls for up to twelve seconds until `atLeast` lines match; returns the last thing seen.
-    func waitForLines(atLeast: Int = 1, containing fragments: [String]) async -> [String] {
-        let deadline = Date().addingTimeInterval(12)
-        var seen: [String] = []
-        repeat {
-            seen = lines(containing: fragments)
-            if seen.count >= atLeast { return seen }
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        } while Date() < deadline
-        return seen
-    }
-
-    /// Gives a line that should NOT appear its chance to, then returns what matched.
-    func linesAfterGrace(containing fragments: [String]) async -> [String] {
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
-        return lines(containing: fragments)
-    }
-}
+// Lines are read from the store's own `RecordingLogSink`, not from the process-wide unified log. FRD-000 (FR-000-10)
+// logs the item id, the static message and the cause `.private`, which the unified log shows as `<private>`, so a
+// probe on it can no longer see them. The sink keeps the public and the private text of every record, per store, so a
+// line count is exact and no parallel suite can supply or hide a line. Each test that asserts "no leak" reads the
+// public text on its own: that is exactly what a release build writes in the clear.
 
 @Suite struct Unmapped007LogTests {
     // MARK: OC-7123 (log half)
@@ -62,7 +27,6 @@ struct Unmapped007LogProbe {
         try await s.insert([
             Spec(n: stuckItem, ageMs: hourMs, blobs: 1, repBytes: 10), Spec(n: cleanItem, ageMs: 2 * hourMs, blobs: 1, repBytes: 10),
         ])
-        let probe = Unmapped007LogProbe()
 
         // when both are deleted together
         let removed = try await s.database.delete(ids: [Store.id(stuckItem), Store.id(cleanItem)]).get()
@@ -74,14 +38,16 @@ struct Unmapped007LogProbe {
         #expect(!s.exists(s.blobURL(cleanItem, 1)))
         // and exactly one line says so, with the exact code, static text and the stuck item's id
         let stuckId = Store.id(stuckItem).uuidString
-        let lines = await probe.waitForLines(containing: ["itemId=\(stuckId)"])
+        let lines = s.logs.lines(containing: ["itemId=\(stuckId)"])
         #expect(lines.count == 1, "one line for the stuck item: saw \(lines)")
-        #expect(lines.first?.contains("STO-IO-003 Blob could not be removed after delete; left for reconcile") == true,
+        #expect(lines.first.map { $0.contains("STO-IO-003") && $0.contains("Blob could not be removed after delete; left for reconcile") } == true,
                 "wrong code or text: \(lines)")
         // and the item whose blob was removed has no line at all
-        let cleanLines = await probe.linesAfterGrace(containing: ["itemId=\(Store.id(cleanItem).uuidString)"])
+        let cleanLines = s.logs.lines(containing: ["itemId=\(Store.id(cleanItem).uuidString)"])
         #expect(cleanLines.isEmpty, "a clean delete must not log: \(cleanLines)")
-        // and the line does not contain the blob's file name or any path
+        // and nothing in the clear (what a release build writes) holds the item id, the blob's file name or any path
+        let inTheClear = s.logs.publicLines().joined(separator: "\n")
+        #expect(!inTheClear.contains(stuckId) && !inTheClear.contains(stuckName) && !inTheClear.contains(s.root.path))
         #expect(lines.allSatisfy { !$0.contains(stuckName) && !$0.contains(s.root.path) })
     }
 
@@ -98,7 +64,6 @@ struct Unmapped007LogProbe {
         try await s.insert(Spec(n: 1, kind: .image, blobs: 1, repBytes: 10))
         let orphans = try (0..<12).map { try s.plantOrphanBlob(7_023_100 + $0, ageMs: 11 * 60_000) }
         let young = try s.plantOrphanBlob(7_023_200, ageMs: 2 * 60_000)
-        let probe = Unmapped007LogProbe()
 
         // when reconcile runs
         let outcome = try await s.database.reconcile().get()
@@ -110,8 +75,8 @@ struct Unmapped007LogProbe {
         #expect(s.exists(s.blobURL(1, 1)))
         #expect(try s.presentIds() == [1])
         // and at least twelve log lines carry the code and static text
-        let lines = await probe.waitForLines(atLeast: 12, containing: ["STO-IO-003 Orphan blob removed by reconcile"])
-        #expect(lines.count >= 12, "orphan removals logged: saw \(lines.count)")
+        let lines = s.logs.lines(containing: ["STO-IO-003", "Orphan blob removed by reconcile"])
+        #expect(lines.count == 12, "orphan removals logged: saw \(lines.count)")
         // and no line leaks a path or file name
         #expect(lines.allSatisfy { !$0.contains(s.root.path) && !$0.contains(".blob") })
     }
@@ -127,7 +92,6 @@ struct Unmapped007LogProbe {
         let orphans = try (0..<12).map { try s.plantOrphanBlob(7_113_100 + $0, ageMs: 11 * 60_000) }
         let young = try s.plantOrphanBlob(7_113_200, ageMs: 2 * 60_000)
         let scheduler = ReconcileScheduler(database: s.database)
-        let probe = Unmapped007LogProbe()
 
         // when the scheduler starts and its 15 second wait ends
         await scheduler.start()
@@ -138,8 +102,10 @@ struct Unmapped007LogProbe {
         // then the old orphans are removed by the pass, the young one is not, and the removals are logged
         #expect(await waitUntil { orphans.allSatisfy { !s.exists($0) } })
         #expect(s.exists(young))
-        let lines = await probe.waitForLines(atLeast: 12, containing: ["STO-IO-003 Orphan blob removed by reconcile"])
-        #expect(lines.count >= 12, "scheduled orphan removals logged: saw \(lines.count)")
+        let removalLine = ["STO-IO-003", "Orphan blob removed by reconcile"]
+        #expect(await waitUntil { s.logs.lines(containing: removalLine).count >= 12 })
+        let lines = s.logs.lines(containing: removalLine)
+        #expect(lines.count == 12, "scheduled orphan removals logged: saw \(lines.count)")
         await scheduler.stop()
     }
 
@@ -154,7 +120,6 @@ struct Unmapped007LogProbe {
         var specs = (1...1_237).map { Spec(n: $0, ageMs: 31 * dayMs, text: "SECRET-7076-\($0)") }
         specs += (2_001...2_100).map { Spec(n: $0, ageMs: 31 * dayMs, pinned: true) }
         try await s.insert(specs)
-        let probe = Unmapped007LogProbe()
 
         // when the sweep runs
         let outcome = try await s.database.runRetentionSweep(preset: .d30, budget: .unlimited).get()
@@ -163,7 +128,7 @@ struct Unmapped007LogProbe {
         #expect(outcome.retentionDeleted == 1_237)
         #expect(try s.count("item") == 100)
         // and one line names the code, the static text and the count
-        let lines = await probe.waitForLines(containing: ["STO-POL-001", "Retention sweep", "count=1237"])
+        let lines = s.logs.lines(containing: ["STO-POL-001", "Retention sweep", "count=1237"])
         #expect(lines.count == 1, "one sweep line with the count: saw \(lines)")
         // and the line holds no item content
         #expect(lines.allSatisfy { !$0.contains("SECRET-7076") })
@@ -174,8 +139,8 @@ struct Unmapped007LogProbe {
         // then it deletes 0, logs no second line for 1,237 and never logs a zero count
         #expect(second.retentionDeleted == 0)
         #expect(try s.count("item") == 100)
-        let after = await probe.linesAfterGrace(containing: ["STO-POL-001", "Retention sweep", "count=1237"])
+        let after = s.logs.lines(containing: ["STO-POL-001", "Retention sweep", "count=1237"])
         #expect(after.count == 1)
-        #expect(probe.lines(containing: ["STO-POL-001 Retention sweep count=0"]).isEmpty)
+        #expect(s.logs.lines(containing: ["STO-POL-001", "Retention sweep", "count=0"]).isEmpty)
     }
 }

@@ -1,7 +1,6 @@
 import CryptoKit
 import Foundation
 import GRDB
-import OSLog
 import Testing
 import FlotsamBase
 @testable import FlotsamStorage
@@ -111,7 +110,6 @@ import FlotsamBase
         let orphanURLs = orphanNames.map { rig.store.blobsDir.appendingPathComponent($0) }
         #expect(orphanURLs.allSatisfy { rig.store.exists($0) }, "precondition")
         #expect(try rig.store.count("representation") == 1)
-        let logged = ProcessLogProbe()
 
         // when 9 minutes pass, reconcile leaves them alone; when they are 11 minutes old, reconcile removes them
         rig.store.clock.advance(ms: 9 * 60_000)
@@ -128,8 +126,8 @@ import FlotsamBase
         #expect(try rig.reps(kept) == [keptBlob])
         #expect(try rig.store.count("representation") == 1)
         #expect(try rig.store.count("item") == 1)
-        let lines = await logged.waitForEntries(atLeast: 3, containing: ["STO-IO-003", "Orphan blob removed by reconcile"])
-        #expect(lines.count >= 3, "orphan removals logged as STO-IO-003: saw \(lines.count)")
+        let lines = rig.store.logs.lines(containing: ["STO-IO-003", "Orphan blob removed by reconcile"])
+        #expect(lines.count == 3, "orphan removals logged as STO-IO-003: saw \(lines.count)")
     }
 
     // MARK: OC-7025
@@ -299,32 +297,3 @@ import FlotsamBase
 }
 
 private extension Int64 { var asInt: Int { Int(self) } }
-
-/// Reads this process's own os_log entries written since the probe was created. The log is process-wide and Swift
-/// Testing runs suites in parallel, so a test must match a fragment unique to its own action (an item id, a count no
-/// other test produces) or use a lower bound ("at least N lines") that only its own action can reach.
-struct ProcessLogProbe {
-    private let start = Date()
-
-    /// Composed messages of this process's log entries since `start` that contain every fragment.
-    func entries(containing fragments: [String]) -> [String] {
-        guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else { return [] }
-        let position = store.position(date: start.addingTimeInterval(-1))
-        let all = (try? store.getEntries(at: position)) ?? AnySequence([])
-        return all.compactMap { ($0 as? OSLogEntryLog)?.composedMessage }.filter { message in
-            fragments.allSatisfy { message.contains($0) }
-        }
-    }
-
-    /// Polls up to five seconds for at least `atLeast` entries containing every fragment; returns what it saw last.
-    func waitForEntries(atLeast: Int = 1, containing fragments: [String]) async -> [String] {
-        let deadline = Date().addingTimeInterval(5)
-        var seen: [String] = []
-        repeat {
-            seen = entries(containing: fragments)
-            if seen.count >= atLeast { return seen }
-            try? await Task.sleep(nanoseconds: 100_000_000)
-        } while Date() < deadline
-        return seen
-    }
-}

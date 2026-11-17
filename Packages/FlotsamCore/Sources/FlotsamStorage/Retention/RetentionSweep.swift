@@ -75,7 +75,7 @@ extension FlotsamDatabase {
     /// Items are re-selected per batch instead of listing every eligible id up front, so memory stays bounded. A
     /// batch can still go stale between its read and its delete, so the delete re-checks eligibility itself.
     public func runRetentionSweep(preset: RetentionPreset, budget: ImageBudget) async -> FlotsamResult<SweepOutcome> {
-        await FlotsamSignpost.measure("retention.sweep") { () async -> FlotsamResult<SweepOutcome> in
+        await Signposts.measure(.retentionSweep) { () async -> FlotsamResult<SweepOutcome> in
             var deleted = 0
             if let period = preset.periodMillis {
                 switch await sweepOldItems(period: period) {
@@ -84,8 +84,7 @@ extension FlotsamDatabase {
                 }
             }
             if deleted > 0 {
-                FlotsamLog.log(
-                    FlotsamError(.stoPol001, "Retention sweep", context: [.count: .int(deleted)]), category: .storage)
+                report(FlotsamError(.stoPol001, "Retention sweep", context: [.count: .int(deleted)]))
             }
             switch await enforceImageBudget(budget) {
             case .failure(let error): return .failure(error)
@@ -114,7 +113,7 @@ extension FlotsamDatabase {
                 return .failure(Self.readFailure(error))
             }
             guard !ids.isEmpty else { return .success(total) }
-            FlotsamSignpost.event("retention.sweep.batch")
+            Signposts.event(.retentionSweepBatch)
             switch await deleteWhileEligible(ids: ids, guard: deletionGuard) {
             case .failure(let error): return .failure(error)
             case .success(let removed):

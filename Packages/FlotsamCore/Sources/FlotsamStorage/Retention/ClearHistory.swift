@@ -94,7 +94,7 @@ extension FlotsamDatabase {
     ) async -> FlotsamResult<ClearOutcome> {
         // One `retention.clearHistory` interval spans the count, every delete batch and the scrub, because FR-007-16's 5 s budget
         // is for the whole operation the user waits on, not for one step of it.
-        await FlotsamSignpost.measure("retention.clearHistory") { () async -> FlotsamResult<ClearOutcome> in
+        await Signposts.measure(.retentionClearHistory) { () async -> FlotsamResult<ClearOutcome> in
             await performClearHistory(range: range, includeExempt: includeExempt, progress: progress)
         }
     }
@@ -145,8 +145,7 @@ extension FlotsamDatabase {
             }
         }
         if deleted > 0 {
-            FlotsamLog.log(
-                FlotsamError(.stoPol001, "Clear history", context: [.count: .int(deleted)]), category: .storage)
+            report(FlotsamError(.stoPol001, "Clear history", context: [.count: .int(deleted)]))
         }
         return .success(ClearOutcome(deletedCount: deleted, checkpointCompleted: await scrubDatabaseFile()))
     }

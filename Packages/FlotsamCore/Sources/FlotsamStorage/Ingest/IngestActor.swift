@@ -24,7 +24,7 @@ public actor IngestActor {
 
     public func ingest(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult> {
         // `@Sendable` because `measure` is @concurrent: the closure may not capture actor-isolated state implicitly.
-        await FlotsamSignpost.measure("capture.persist") { @Sendable in await self.persist(candidate) }
+        await Signposts.measure(.capturePersist) { @Sendable in await self.persist(candidate) }
     }
 
     // MARK: Pipeline
@@ -169,7 +169,7 @@ public actor IngestActor {
         switch await database.enforceImageBudget(budget, protecting: itemId) {
         case .success(let outcome): return outcome.notice.map { [$0] } ?? []
         case .failure(let error):
-            FlotsamLog.log(error, category: .storage)
+            database.report(error)
             return []
         }
     }

@@ -20,14 +20,11 @@ public actor ReconcileScheduler {
         guard loop == nil else { return }
         let clock = database.clock
         loop = Task { [weak self] in
-            do {
-                try await clock.sleep(for: Self.launchDelay)
-                while !Task.isCancelled {
-                    await self?.reconcileNow()
-                    try await clock.sleep(for: Self.interval)
-                }
-            } catch {
-                // Cancelled while sleeping: stop() was called.
+            // The clock port's sleep never throws: on cancellation it returns early, so stop() is observed here.
+            await clock.sleep(for: Self.launchDelay)
+            while !Task.isCancelled {
+                await self?.reconcileNow()
+                await clock.sleep(for: Self.interval)
             }
         }
     }
@@ -46,7 +43,7 @@ public actor ReconcileScheduler {
         switch await database.reconcile() {
         case .success(let outcome): return outcome
         case .failure(let error):
-            FlotsamLog.log(error, category: .storage)
+            database.report(error)
             return nil
         }
     }
