@@ -307,7 +307,8 @@
    "original": "let missingMarker = \"\\u{0}missing\"",
    "mutated": "let missingMarker = \"\\u{0}missing~\"",
    "result": "SURVIVED",
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "equivalent (Friday ruling TASK-374)"
   },
   {
    "id": "X025",
@@ -447,7 +448,8 @@
    "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
    "mutated": "if excess <= 0 || nameLimit < 1 { return rendered }",
    "result": "SURVIVED",
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "unreachable through the shipped catalogue: needs a template with 139 or more non-name characters, shipped maximum is 68 (Friday ruling TASK-374)"
   },
   {
    "id": "X035",
@@ -479,7 +481,8 @@
    "original": "if excess <= 0 || nameLimit <= 1 { return rendered }",
    "mutated": "if excess <= 0 || nameLimit <= 2 { return rendered }",
    "result": "SURVIVED",
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "unreachable through the shipped catalogue: needs a template with 139 or more non-name characters, shipped maximum is 68 (Friday ruling TASK-374)"
   },
   {
    "id": "X038",
@@ -513,7 +516,8 @@
    "original": "nameLimit = max(1, nameLimit - excess)",
    "mutated": "nameLimit = max(2, nameLimit - excess)",
    "result": "SURVIVED",
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "unreachable through the shipped catalogue: needs a template with 139 or more non-name characters, shipped maximum is 68 (Friday ruling TASK-374)"
   },
   {
    "id": "X041",
@@ -701,7 +705,8 @@
    "original": "rest = rest.dropFirst()",
    "mutated": "<statement deleted>",
    "result": "SURVIVED",
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "equivalent (Friday ruling TASK-374)"
   },
   {
    "id": "X055",
@@ -782,7 +787,8 @@
    "original": "rest = rest.dropFirst(3)",
    "mutated": "<statement deleted>",
    "result": "SURVIVED",
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "equivalent (Friday ruling TASK-374)"
   },
   {
    "id": "X061",
@@ -3934,13 +3940,15 @@
    "id": "X024",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
    "line": 8,
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "equivalent (Friday ruling TASK-374)"
   },
   {
    "id": "X034",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
    "line": 35,
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "unreachable through the shipped catalogue: needs a template with 139 or more non-name characters, shipped maximum is 68 (Friday ruling TASK-374)"
   },
   {
    "id": "X036",
@@ -3952,13 +3960,15 @@
    "id": "X037",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
    "line": 35,
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "unreachable through the shipped catalogue: needs a template with 139 or more non-name characters, shipped maximum is 68 (Friday ruling TASK-374)"
   },
   {
    "id": "X040",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
    "line": 36,
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "unreachable through the shipped catalogue: needs a template with 139 or more non-name characters, shipped maximum is 68 (Friday ruling TASK-374)"
   },
   {
    "id": "X043",
@@ -3976,7 +3986,8 @@
    "id": "X054",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
    "line": 68,
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "equivalent (Friday ruling TASK-374)"
   },
   {
    "id": "X058",
@@ -3994,7 +4005,8 @@
    "id": "X060",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Strings/FlotsamStrings.swift",
    "line": 71,
-   "ticket": "TASK-374"
+   "ticket": "TASK-374",
+   "accepted": "equivalent (Friday ruling TASK-374)"
   },
   {
    "id": "X068",
