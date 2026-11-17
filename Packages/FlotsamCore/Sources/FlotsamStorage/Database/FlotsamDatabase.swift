@@ -97,8 +97,8 @@ public final class FlotsamDatabase: Sendable {
         let existed = (fileSystem.fileInfo(at: layout.databaseURL)?.byteSize ?? 0) > 0
         do {
             if existed {
-                // A read-only probe comes first, and it carries the whole integrity check (FR-007-13), so a newer-version or
-                // damaged database is refused or quarantined while still byte-identical: opening the pool would switch the
+                // A read-only probe comes first and runs the integrity check (FR-007-13), so a newer-version or damaged
+                // database is refused or quarantined while still byte-identical: opening the pool would switch the
                 // journal mode, rewrite the header and VACUUM (AC-007-15).
                 switch try probe(layout.databaseURL) {
                 case .damaged: return .damaged
@@ -115,7 +115,11 @@ public final class FlotsamDatabase: Sendable {
                     : .success(())
             }
             if case .failure(let error) = migrated { return .failed(error) }
-            return .opened(pool)
+            // WHY: the second check verifies the migrated file. The probe already vouched for the file as found, so a
+            // failure here is a migration bug (or the open itself writing a bad file), not user damage. It still takes
+            // the damaged path, because a database that fails its integrity check must not stay live, but the file has
+            // been written to by now: that quarantined copy is not the bytes the user had.
+            return try pool.read { try integrityCheckPasses($0) } ? .opened(pool) : .damaged
         } catch {
             return isDamage(error) ? .damaged : .failed(mapped(error))
         }
@@ -131,13 +135,18 @@ public final class FlotsamDatabase: Sendable {
             defer { try? queue.close() }
             return try queue.read { db in
                 // `quick_check` runs before the version is trusted: a damaged file can report any user_version.
-                try String.fetchAll(db, sql: "PRAGMA quick_check") == ["ok"]
-                    ? .version(try MigrationRunner.currentVersion(db)) : .damaged
+                try integrityCheckPasses(db) ? .version(try MigrationRunner.currentVersion(db)) : .damaged
             }
         } catch {
             if isDamage(error) { return .damaged }
             throw error
         }
+    }
+
+    /// The one integrity check (FR-007-13). It runs on the read-only probe of an existing file, before any write, to
+    /// decide quarantine, and on every open after migration, to verify the migrated file.
+    private static func integrityCheckPasses(_ db: Database) throws -> Bool {
+        try String.fetchAll(db, sql: "PRAGMA quick_check") == ["ok"]
     }
 
     /// SQLite reports a non-database file as NOTADB and a broken one as CORRUPT. Both mean "quarantine".
