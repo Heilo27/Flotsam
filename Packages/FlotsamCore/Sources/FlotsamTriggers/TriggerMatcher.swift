@@ -168,7 +168,7 @@ public final class TriggerMatcher {
 
 extension Duration {
     /// Whole and fractional seconds, for comparing against `Date` intervals.
-    fileprivate var seconds: TimeInterval {
+    var seconds: TimeInterval {
         let parts = components
         return TimeInterval(parts.seconds) + TimeInterval(parts.attoseconds) / 1e18
     }
