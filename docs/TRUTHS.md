@@ -37,3 +37,8 @@ pasted, OR any feature requires a network call carrying clip content. Either →
 ## NOT DOING (v1)
 iOS/iPad companion · AirDrop/Share-sheet from the Shelf (v1.1 candidate) · OCR · themes beyond
 light/dark · Mac App Store build (sandbox breaks paste-back & accessibility).
+
+## AMENDMENT LOG
+| Date | Change | Reason | FRDs re-tested |
+|---|---|---|---|
+| 2026-11-16 | Initial truths; primary confirmed by Ryan | — | — |
