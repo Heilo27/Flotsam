@@ -8,14 +8,16 @@ struct FlotsamApp: App {
     @State private var container = AppContainer()
 
     var body: some Scene {
-        MenuBarExtra("Flotsam", systemImage: "tray.full") {
+        MenuBarExtra(FlotsamStrings.text(forKey: "ui.menu.title") ?? "", systemImage: "tray.full") {
             Text(verbatim: FlotsamStrings.text(forKey: "ui.menu.status") ?? "")
             Divider()
             Button(FlotsamStrings.text(forKey: "ui.menu.quit") ?? "") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
         .onChange(of: container.startupError) { _, error in
-            if let error { FlotsamLog.log(error, category: .core) }
+            guard let error else { return }
+            FlotsamLog.log(error, category: error.code.logCategory)
+            FatalAlert.present(for: error, dataFolder: AppContainer.dataFolder)
         }
     }
 }
