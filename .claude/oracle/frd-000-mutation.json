@@ -314,9 +314,252 @@
       ],
       "result": "KILLED",
       "killed_by": "ErrorReporterLogTests.privacySplitAtTheSink (privateText ends NSCocoaErrorDomain:640)"
+    },
+    {
+      "id": "M14",
+      "pass": "re-run 2026-11-16",
+      "target": "re-run: ErrorReporter.report: delete FlotsamLog.log(error, sink:) call",
+      "oc": [
+        "OC-0013",
+        "OC-0014",
+        "OC-0040"
+      ],
+      "result": "KILLED",
+      "killed_by": "everySeverityWritesOneRecord, throttledOccurrenceIsStillLogged, cap-suppressed HUD still logged (23 issues)"
+    },
+    {
+      "id": "M22",
+      "pass": "re-run 2026-11-16",
+      "target": "re-run: LogRecord: message moved from privateText to publicText",
+      "oc": [
+        "OC-0033",
+        "OC-0035"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0013 OC-0035 user data, message and cause only in the private text; OC-0035 no-cause record (5 issues)"
+    },
+    {
+      "id": "M23",
+      "pass": "re-run 2026-11-16",
+      "target": "re-run: record(for: error) level fixed .info",
+      "oc": [
+        "OC-0032",
+        "OC-0013"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0032 OC-0013 level and category follow severity and module (3 issues)"
+    },
+    {
+      "id": "M34",
+      "pass": "re-run 2026-11-16",
+      "target": "re-run: LogRecord.privateText cause drops domain",
+      "oc": [
+        "OC-0035"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0013 OC-0035 domain:code only in private text (1 issue)"
+    },
+    {
+      "id": "M30",
+      "pass": "re-run 2026-11-16",
+      "target": "re-run: check-architecture.sh throws rule drops `package`",
+      "oc": [
+        "OC-0003"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0003 an injected public throws function fails the lint (package case)"
+    },
+    {
+      "id": "N1",
+      "pass": "re-run 2026-11-16",
+      "target": "LogRecord.publicText also emits privateContext",
+      "oc": [
+        "OC-0013",
+        "OC-0035"
+      ],
+      "result": "KILLED",
+      "killed_by": "user data only in private text"
+    },
+    {
+      "id": "N2",
+      "pass": "re-run 2026-11-16",
+      "target": "LogRecord.privateText drops the cause",
+      "oc": [
+        "OC-0035"
+      ],
+      "result": "KILLED",
+      "killed_by": "domain:code only in private text"
+    },
+    {
+      "id": "N3",
+      "pass": "re-run 2026-11-16",
+      "target": "LogRecord.privateText drops the message",
+      "oc": [
+        "OC-0035"
+      ],
+      "result": "KILLED",
+      "killed_by": "user data/message in private text; no-cause record"
+    },
+    {
+      "id": "N4",
+      "pass": "re-run 2026-11-16",
+      "target": "ErrorReporter.report logs Warning/Error after the throttle instead of before",
+      "oc": [
+        "OC-0013",
+        "OC-0014",
+        "OC-0040"
+      ],
+      "result": "KILLED",
+      "killed_by": "AC-000-04 throttled occurrence still logged; HUD cap still logged"
+    },
+    {
+      "id": "N5a",
+      "pass": "re-run 2026-11-16",
+      "target": "FlotsamCatalogue.englishStrings(from:) reads `de` instead of `en`",
+      "oc": [
+        "OC-0021",
+        "OC-0016",
+        "OC-0018"
+      ],
+      "result": "KILLED",
+      "killed_by": "107 issues; OC-0021 (1)-(3), OC-0016, OC-0018"
+    },
+    {
+      "id": "N5b",
+      "pass": "re-run 2026-11-16",
+      "target": "englishStrings(from:) returns success([:]) when the strings table is missing",
+      "oc": [
+        "OC-0021"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0021 a non-JSON or table-less catalogue fails to read"
+    },
+    {
+      "id": "N5c",
+      "pass": "re-run 2026-11-16",
+      "target": "englishStrings(from:) returns success([:]) on non-JSON",
+      "oc": [
+        "OC-0021"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0021 a non-JSON or table-less catalogue fails to read"
+    },
+    {
+      "id": "N5d",
+      "pass": "re-run 2026-11-16",
+      "target": "englishStrings(from:) reads stringUnit `state` instead of `value`",
+      "oc": [
+        "OC-0021",
+        "OC-0018",
+        "OC-0057"
+      ],
+      "result": "KILLED",
+      "killed_by": "141 issues; OC-0018, OC-0057..0059"
+    },
+    {
+      "id": "N6a",
+      "pass": "re-run 2026-11-16",
+      "target": "FlotsamCatalogue.shippedURL drops one deletingLastPathComponent",
+      "oc": [
+        "OC-0006",
+        "OC-0016",
+        "OC-0018"
+      ],
+      "result": "KILLED",
+      "killed_by": "26 issues; every catalogue-reading test goes red"
+    },
+    {
+      "id": "N6b",
+      "pass": "re-run 2026-11-16",
+      "target": "FlotsamCatalogue.shippedURL path Resources -> Resource",
+      "oc": [
+        "OC-0006",
+        "OC-0016",
+        "OC-0018"
+      ],
+      "result": "KILLED",
+      "killed_by": "26 issues"
+    },
+    {
+      "id": "N7",
+      "pass": "re-run 2026-11-16",
+      "target": "check-architecture.sh throws rule drops `open`",
+      "oc": [
+        "OC-0003"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0003 an injected public throws function fails the lint (open case, mutant 'open throws in a module file')"
+    },
+    {
+      "id": "N8a",
+      "pass": "re-run 2026-11-16",
+      "target": "SystemClock.sleep: try? -> try! (traps on cancellation)",
+      "oc": [
+        "OC-0003"
+      ],
+      "result": "KILLED",
+      "killed_by": "by the lint (OC-0001/0002 no-try! rule over shipped sources, 25 issues), not by a runtime test"
+    },
+    {
+      "id": "N8b",
+      "pass": "re-run 2026-11-16",
+      "target": "SystemClock.sleep: sleeps .zero instead of duration",
+      "oc": [],
+      "result": "SURVIVED",
+      "note": "no test calls SystemClock.sleep; no contract id covers its runtime behaviour"
+    },
+    {
+      "id": "N8c",
+      "pass": "re-run 2026-11-16",
+      "target": "SystemClock.sleep: on cancellation, sleeps the full duration again (no early return)",
+      "oc": [],
+      "result": "SURVIVED",
+      "note": "no test cancels a SystemClock.sleep; OC-0003 only checks the signature does not throw"
+    },
+    {
+      "id": "N8d",
+      "pass": "re-run 2026-11-16",
+      "target": "SystemClock.sleep: body is a no-op",
+      "oc": [],
+      "result": "SURVIVED",
+      "note": "no test calls SystemClock.sleep"
+    },
+    {
+      "id": "N9",
+      "pass": "re-run 2026-11-16",
+      "target": "ErrorReporter.report passes category .core to the log",
+      "oc": [
+        "OC-0032",
+        "OC-0013"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0032 OC-0013 level and category follow severity and module"
+    },
+    {
+      "id": "N10",
+      "pass": "re-run 2026-11-16",
+      "target": "record(for: error) category fixed .core",
+      "oc": [
+        "OC-0032",
+        "OC-0013"
+      ],
+      "result": "KILLED",
+      "killed_by": "OC-0032 OC-0013"
+    },
+    {
+      "id": "N11",
+      "pass": "re-run 2026-11-16",
+      "target": "FlotsamLog.log(error) writes the record twice",
+      "oc": [
+        "OC-0040",
+        "OC-0013",
+        "OC-0014"
+      ],
+      "result": "KILLED",
+      "killed_by": "exactly-one-record tests (15 issues)"
     }
   ],
-  "survivors": 0,
+  "survivors": 3,
   "discarded_equivalent": [
     {
       "id": "M31",
@@ -327,5 +570,37 @@
   "rerun_8T": {
     "by": "Worf",
     "note": "8V survivors M14 M22 M23 M34 M30 re-run one at a time against the new tests, each reverted; all KILLED. Data re-runs 8V independently."
-  }
+  },
+  "survivor_ids": [
+    "N8b",
+    "N8c",
+    "N8d"
+  ],
+  "rerun_8V": {
+    "by": "Data",
+    "date": "2026-11-16",
+    "head": "101b947",
+    "baseline_tests": 105,
+    "re_applied": [
+      "M14",
+      "M22",
+      "M23",
+      "M30",
+      "M34"
+    ],
+    "re_applied_killed": 5,
+    "planted_new": 18,
+    "planted_new_killed": 15,
+    "total_run": 23,
+    "total_killed": 20,
+    "survivors": 3,
+    "verdict": "FAIL",
+    "method": "one mutant at a time, swift test --package-path Packages/FlotsamCore --filter FlotsamBaseTests, git checkout of the file after each, git status clean after each"
+  },
+  "b_findings_recheck": {
+    "SettingsAndModelTests.swift:55": "RESOLVED: asserts logCategory for one code per module (8 modules)",
+    "ErrorCatalogueTests.swift:50": "RESOLVED: SYS-INT-001 compared to verbatim section 7 text",
+    "DiagnosticsTests.swift:161-162": "RESOLVED: Set of utis plus first-by-uti lookups, no positional index"
+  },
+  "OC-0021_verdict": "MET as written (see report)"
 }

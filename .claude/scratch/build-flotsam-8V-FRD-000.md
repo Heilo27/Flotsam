@@ -51,3 +51,42 @@ High on the 33 mutation results (each reverted, git status clean of source after
 1. Add LogSink seam in FlotsamLog (production code change, goes to O'Brien) and tests killing M14, M22, M23, M34.
 2. Add `package`/`open` throws mutants to LintHarnessTests (kills M30).
 3. Worf: GAP-unit ids; journey ids routed to the journey phase.
+
+## Re-run 2026-11-16
+
+Head 101b947, branch frd000. Baseline 105 tests green in FlotsamBaseTests. One mutant at a time, `swift test --package-path Packages/FlotsamCore --filter FlotsamBaseTests`, `git checkout` of the file after each, `git status` clean after each (checked by script, all 23 runs).
+
+### Verdict: FAIL (3 survivors, one defect: SystemClock.sleep has no runtime test)
+
+### Step 1: my five first-pass survivors, re-applied
+| id | mutant | result | killed by |
+|----|--------|--------|-----------|
+| M14 | delete the log call in ErrorReporter.report | KILLED | everySeverityWritesOneRecord, throttled and cap-suppressed still logged (23 issues) |
+| M22 | message moved into LogRecord.publicText | KILLED | OC-0013 OC-0035 private-text test (5 issues) |
+| M23 | record level fixed .info | KILLED | OC-0032 OC-0013 level and category test |
+| M34 | privateText cause drops domain | KILLED | OC-0013 OC-0035 private-text test |
+| M30 | lint throws rule drops `package` | KILLED | OC-0003 injected throws lint test, package case |
+
+### Step 2: 18 new mutants, 15 killed, 3 survived
+- LogRecord split: N1 publicText gains privateContext, N2 privateText drops cause, N3 privateText drops message. All KILLED.
+- ErrorReporter: N4 log after the throttle (Warning/Error), N9 wrong category passed, N11 log written twice. All KILLED (AC-000-04 throttled-still-logged tests, OC-0032, exactly-one-record tests).
+- N10 record category fixed .core. KILLED (OC-0032 OC-0013).
+- Catalogue parsing: N5a reads `de`, N5b missing table returns success, N5c non-JSON returns success, N5d reads `state` not `value`. All KILLED (OC-0021 reader tests, OC-0016, OC-0018, OC-0057..59).
+- shippedURL: N6a drops a path component, N6b `Resource` typo. KILLED (26 issues each).
+- Lint `open` branch: N7 drops `open` from the regex. KILLED by the "open throws in a module file" mutant under OC-0003. Worf's `open` coverage is real.
+- SystemClock.sleep: N8a `try?` to `try!` KILLED, but by the lint's no-`try!` rule over shipped sources, not by a runtime test. N8b sleeps `.zero`, N8c sleeps the full duration again on cancellation, N8d body is a no-op: all three SURVIVED.
+
+### Survivors
+N8b, N8c, N8d: Packages/FlotsamCore/Sources/FlotsamBase/Ports/Ports.swift:17-20 (`SystemClock.sleep`). No test calls SystemClock at all (`git grep SystemClock Tests` is empty); the test clock double returns immediately. No contract id maps to it: OC-0003 only asserts the signature does not throw, which the protocol enforces at compile time. This is a contract gap plus a test gap, not a mapped-test defect, but doctrine says any survivor is FAIL and none may be called acceptable. Fix (tests only, no production change): a SystemClock test that (1) sleeps 50 ms and asserts elapsed >= 50 ms, (2) cancels a task sleeping 10 s and asserts it returns promptly without trapping. Also add an OC id for it to the contract (paste's 40 ms delay, ADR-0004, depends on this adapter).
+
+### Step 3: B-findings
+- SettingsAndModelTests.swift:55 (was B3 count check): RESOLVED. `everyModuleHasALogCategory` asserts the category for one code in each of eight modules; `core` is asserted in LogLevelAndPrivacyTests.swift:173.
+- ErrorCatalogueTests.swift:50 (was B3 non-empty check): RESOLVED. SYS-INT-001 is compared to the verbatim FRD section 7 text, and the fallback for an unfilled template is asserted too.
+- DiagnosticsTests.swift:161-162 (was B5 positional): RESOLVED. Compares `Set` of UTIs and looks entries up by UTI. Write order is not asserted. One write is asserted by count.
+
+### Step 4: OC-0021
+Contract text: given "Five separate mutated copies: (1) key error.SYS-INT-001 removed; (2) a 141-character message on one code; (3) a message added for Info code CAP-POL-001; (4) orphan key error.XXX-INT-999 with no code; (5) two enum cases sharing one raw value", when "The catalogue unit test runs against each", then "The test FAILS in all 5 cases (5 of 5 red)".
+Verdict: MET as written. The id requires a unit test that goes red on each of five mutated inputs; it does not say where the checker lives. `CatalogueConsistency` in TestSupport is the checker, `ErrorCatalogueTests` feeds it all five mutations (plus a 140-character pass control and a clean baseline) and each yields exactly the expected violation tag. Case 5 uses a synthetic code list, because Swift will not compile an enum with two equal raw values; the compiler is a stronger guard and the checker still proves it would flag it. The production parser it reads through (`FlotsamCatalogue`) is mutation-covered by N5a-d and N6a-b. Residual note: the checker is test-only, so a shipped build has no consistency check; FR-000-07 and AC-000-02 are met by tests, not at runtime, and nothing in the contract asks otherwise.
+
+### Counts
+Run 23 (5 re-applied + 18 new), killed 20, survived 3. Survivor total for the gate: 3 (N8b, N8c, N8d). Mutation log updated in .claude/oracle/frd-000-mutation.json.
