@@ -1,0 +1,1236 @@
+{
+  "frd": "FRD-006",
+  "generated_blind": true,
+  "assertions": [
+    {
+      "id": "OC-6001",
+      "requirement": "AC-006-01",
+      "given": "Fresh install, onboarding skipped",
+      "when": "user opens Settings › General and the menu-bar menu",
+      "then": "Shelf switch on, placement 'Right Edge', 'Reveal when the pointer rests at the edge' off; the menu shows Toggle Shelf; choosing it shows the Shelf on the right edge",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6002",
+      "requirement": "AC-006-01",
+      "given": "Shelf enabled; Toggle Shelf bound to ⌘⇧9",
+      "when": "user turns the Shelf switch off, waits 1 s, then presses ⌘⇧9 in TextEdit, opens the menu-bar menu and drags a Finder file to the right-edge zone for 1 s",
+      "then": "no Shelf appears; ⌘⇧9 reaches TextEdit; the menu has no Toggle Shelf item; no Flotsam Shelf window exists in the window list",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6003",
+      "requirement": "AC-006-01",
+      "given": "Shelf was just turned off",
+      "when": "user turns the Shelf switch on without relaunching, then presses ⌘⇧9, and separately drags a Finder file to the right-edge zone for 300 ms",
+      "then": "Toggle Shelf is back in the menu; ⌘⇧9 shows the Shelf; the drag dwell reveals it",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6004",
+      "requirement": "FRD-006 §5 BR-5",
+      "given": "Shelf enabled with 'Reveal when the pointer rests at the edge' on",
+      "when": "user turns the Shelf off, rests the pointer in the right-edge zone for 2 s with no button down, and drags a file through the edge zone",
+      "then": "nothing appears; Flotsam's CPU use during continuous pointer motion and dragging is indistinguishable from Shelf-never-enabled (no observer left)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6005",
+      "requirement": "FR-006-01",
+      "given": "Placement 'Menu Bar'; Shelf turned off",
+      "when": "user drags a Finder file onto the menu-bar icon and releases",
+      "then": "the drop is refused (not-allowed cursor); item count unchanged; no Shelf appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6006",
+      "requirement": "FR-006-01",
+      "given": "Placement set to 'Left Edge' and hover reveal on",
+      "when": "user quits and relaunches Flotsam and opens Settings › General, then uses Toggle Shelf",
+      "then": "placement still 'Left Edge', hover reveal still on; the Shelf appears at the left edge",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6007",
+      "requirement": "AC-006-02",
+      "given": "TextEdit frontmost with the insertion point in a document",
+      "when": "user reveals the Shelf with the Toggle Shelf menu item, then with the hotkey",
+      "then": "after each reveal TextEdit is still the frontmost app and its menu bar is shown",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6008",
+      "requirement": "AC-006-02",
+      "given": "TextEdit frontmost with the insertion point in a document",
+      "when": "user drags a Finder file to the edge zone so the Shelf reveals, cancels the drag with Esc, then clicks nothing and types 'abc'",
+      "then": "TextEdit stayed frontmost throughout and 'abc' is inserted into the TextEdit document",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6009",
+      "requirement": "AC-006-02",
+      "given": "Hover reveal on; TextEdit document focused",
+      "when": "user rests the pointer at the edge zone 500 ms (Shelf reveals), moves away, then types 'xyz'",
+      "then": "'xyz' is inserted into TextEdit; TextEdit frontmost throughout",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6010",
+      "requirement": "AC-006-02",
+      "given": "Safari in full-screen in its own Space",
+      "when": "user presses the Toggle Shelf hotkey",
+      "then": "the Shelf is visible on top of full-screen Safari; the Space does not change; Safari stays frontmost",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6011",
+      "requirement": "FR-006-02",
+      "given": "Shelf visible",
+      "when": "user looks at the Dock, presses ⌘Tab, and presses ⌘` in TextEdit",
+      "then": "no Flotsam Dock icon; Flotsam is not in the app switcher; ⌘` never focuses the Shelf",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6012",
+      "requirement": "FR-006-02",
+      "given": "Two desktops (Spaces); Shelf hidden",
+      "when": "user switches to Space 2 and presses the Toggle Shelf hotkey",
+      "then": "the Shelf appears on Space 2",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6013",
+      "requirement": "AC-006-03",
+      "given": "Right-edge placement; a file is being dragged from Finder",
+      "when": "the pointer rests in the middle of the right-edge zone for 300 ms",
+      "then": "the Shelf slides in at the right edge",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6014",
+      "requirement": "FR-006-03",
+      "given": "Right-edge placement; a file is being dragged",
+      "when": "the pointer enters the edge zone for 150 ms and leaves",
+      "then": "no Shelf appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6015",
+      "requirement": "AC-006-03",
+      "given": "Hover reveal off; no mouse button down",
+      "when": "the pointer rests in the right-edge zone for 5 s",
+      "then": "no Shelf appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6016",
+      "requirement": "AC-006-03",
+      "given": "Hover reveal on; no mouse button down",
+      "when": "the pointer rests in the right-edge zone for 500 ms; separately it rests for 300 ms and leaves",
+      "then": "the first reveals the Shelf; the second does not",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6017",
+      "requirement": "FR-006-03",
+      "given": "Right-edge placement; a file is being dragged",
+      "when": "the pointer rests 1 s at the right edge within the top 15 % of its length; then 1 s 20 pt in from the edge at mid-height",
+      "then": "no Shelf appears in either case (outside the 4 pt by middle-60 % zone)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6018",
+      "requirement": "FR-006-03",
+      "given": "Two screens; right-edge placement",
+      "when": "a file drag rests in the right-edge zone of the secondary screen for 300 ms",
+      "then": "the Shelf appears on the secondary screen's right edge",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6019",
+      "requirement": "FR-006-03",
+      "given": "Placement 'Menu Bar'",
+      "when": "a file drag rests 1 s in the right-edge zone; separately the pointer rests there 1 s with no button",
+      "then": "no Shelf appears in either case",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6020",
+      "requirement": "AC-006-21",
+      "given": "Placement 'Menu Bar'; item count N",
+      "when": "a file drag hovers over the menu-bar icon for 300 ms, then is dropped on the Shelf that appears",
+      "then": "the Shelf appears directly under the icon; the drop is accepted; item count is N+1 with the file at the top of Recent",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6021",
+      "requirement": "FR-006-03",
+      "given": "Bottom-edge placement",
+      "when": "user chooses Toggle Shelf from the menu-bar menu",
+      "then": "the Shelf appears at the bottom edge",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6022",
+      "requirement": "FR-006-03",
+      "given": "A window title bar is dragged with the mouse (no drag-pasteboard change); right-edge placement",
+      "when": "the window is dragged so the pointer rests in the right-edge zone for 1 s",
+      "then": "no Shelf appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6023",
+      "requirement": "FR-006-03",
+      "given": "Shelf enabled; no triggers exist",
+      "when": "the user reveals, uses and hides the Shelf by every trigger",
+      "then": "Flotsam has no event tap and no Input Monitoring request has appeared (the Shelf monitors no key events)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6024",
+      "requirement": "AC-006-04",
+      "given": "Two screens; pointer on the secondary screen",
+      "when": "user presses the Toggle Shelf hotkey, moves the pointer away for 5 s and clicks in TextEdit",
+      "then": "the Shelf appears on the secondary screen and is still visible afterwards (sticky)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6025",
+      "requirement": "AC-006-04",
+      "given": "Sticky Shelf visible",
+      "when": "user presses the hotkey again; in a second run clicks the close button; in a third makes the Shelf key and presses Esc",
+      "then": "the Shelf hides in each case; no item is pasted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6026",
+      "requirement": "AC-006-04",
+      "given": "Shelf revealed by hover (transient)",
+      "when": "the pointer leaves the Shelf",
+      "then": "the Shelf is still visible 500 ms after leaving and hidden by 700 ms",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6027",
+      "requirement": "FR-006-04",
+      "given": "Shelf revealed by a drag (transient)",
+      "when": "user drops the drag on an empty area outside the Shelf with the pointer away from it",
+      "then": "the Shelf hides about 600 ms after the drag ends",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6028",
+      "requirement": "FR-006-04",
+      "given": "Transient Shelf",
+      "when": "user drags a text card into TextEdit and drops it",
+      "then": "the text is inserted and the Shelf hides immediately",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6029",
+      "requirement": "FR-006-04",
+      "given": "Transient Shelf",
+      "when": "user clicks once outside it",
+      "then": "the Shelf hides immediately",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6030",
+      "requirement": "FR-006-04",
+      "given": "Sticky Shelf visible; in a second run a transient one",
+      "when": "user switches to another Space; in a third run presses ⌃⌘V",
+      "then": "the Shelf hides on the Space switch; on ⌃⌘V the Shelf hides and the Library opens; never both panels visible",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6031",
+      "requirement": "FR-006-04",
+      "given": "Sticky Shelf key with a card selected",
+      "when": "user presses Return",
+      "then": "the card is pasted and the Shelf hides",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6032",
+      "requirement": "AC-006-05",
+      "given": "Two screens; the Dock on the right of the main screen; right-edge placement",
+      "when": "the Shelf is revealed on the main screen",
+      "then": "the Shelf frame lies inside the main screen's visible frame and does not overlap the Dock",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6033",
+      "requirement": "AC-006-05",
+      "given": "Bottom-edge placement with 30 items",
+      "when": "the Shelf is revealed",
+      "then": "its height is 140 pt; its width is at most 80 % of the visible width; it is horizontally centred",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6034",
+      "requirement": "FR-006-05",
+      "given": "Right-edge placement; first with 1 item, then with 40 items",
+      "when": "the Shelf is revealed",
+      "then": "width 280 pt; with 1 item the height is at least 160 pt; with 40 items the height equals the visible height minus 40 pt; vertically centred",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6035",
+      "requirement": "FR-006-05",
+      "given": "Placement 'Menu Bar'; the menu-bar icon is near the right screen edge",
+      "when": "the Shelf is revealed",
+      "then": "width 280 pt; its top sits directly under the icon; it lies fully on the screen",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6036",
+      "requirement": "AC-006-05",
+      "given": "Reduce Motion on; then off",
+      "when": "the Shelf is revealed",
+      "then": "with Reduce Motion on the frame position never changes during reveal (fade); with it off the Shelf moves in from the edge over about 150 ms",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6037",
+      "requirement": "FR-006-05",
+      "given": "Shelf visible",
+      "when": "user drags its border and its body",
+      "then": "its size and position are unchanged",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6038",
+      "requirement": "AC-006-06",
+      "given": "25 pinned and 30 unpinned items with distinct copy times",
+      "when": "the Shelf is revealed",
+      "then": "Pinned shows exactly 20 cards: the 20 most recently copied pinned items, newest first; then Recent shows exactly 20 cards: the 20 most recently copied unpinned items, newest first",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6039",
+      "requirement": "AC-006-06",
+      "given": "Shelf visible with Recent full (20 cards)",
+      "when": "user copies 'shelf-new-1' in TextEdit",
+      "then": "within 200 ms 'shelf-new-1' is the first Recent card; Recent still has 20 cards",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6040",
+      "requirement": "AC-006-06",
+      "given": "No items",
+      "when": "the Shelf is revealed",
+      "then": "no section headers; only the empty-state text (shelf.empty) is shown",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6041",
+      "requirement": "FR-006-06",
+      "given": "3 pinned and no unpinned items; then 0 pinned and 3 unpinned",
+      "when": "the Shelf is revealed",
+      "then": "first case: Pinned with 3 cards and no Recent header; second: Recent with 3 cards and no Pinned header",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6042",
+      "requirement": "FR-006-06",
+      "given": "Library filtered to tag 'work' and sorted Most Used",
+      "when": "the Library is closed and the Shelf revealed",
+      "then": "the Shelf shows untagged items too, ordered by copy time",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6043",
+      "requirement": "FR-006-06",
+      "given": "Sticky Shelf visible",
+      "when": "user pins a Recent card via its context menu",
+      "then": "within 200 ms it appears in Pinned and is gone from Recent",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6044",
+      "requirement": "FR-006-06",
+      "given": "Shelf hidden",
+      "when": "user copies 'just-now-1' and within 50 ms presses Toggle Shelf",
+      "then": "the first Shelf frame shows 'just-now-1' as the first Recent card",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6045",
+      "requirement": "AC-006-07",
+      "given": "Text item with 5 lines and 300 characters",
+      "when": "the Shelf is revealed",
+      "then": "its card shows the first 3 lines only, at most 120 characters, with the text kind icon",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6046",
+      "requirement": "AC-006-07",
+      "given": "Image, screenshot, link, colour '#FF8800', file, folder and a 3-file bundle item, one of them pinned",
+      "when": "the Shelf is revealed",
+      "then": "image and screenshot cards show thumbnails; link shows its text with the link icon; colour shows a swatch and '#FF8800'; file and folder show file icons; the bundle shows a stacked icon with '3'; only the pinned card has a pin badge; each card shows a small source-app icon",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6047",
+      "requirement": "FR-006-07",
+      "given": "An item with note 'nn-marker' and tag 'tt-marker'",
+      "when": "the Shelf is revealed",
+      "then": "the card shows neither marker nor any timestamp",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6048",
+      "requirement": "FR-006-07",
+      "given": "Right-edge, then bottom-edge placement",
+      "when": "the Shelf is revealed",
+      "then": "vertical cards are 64 pt tall; bottom-strip cards are 112 pt wide in one horizontal row",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6049",
+      "requirement": "FR-006-07",
+      "given": "A file item whose file was deleted",
+      "when": "the Shelf is revealed",
+      "then": "its card shows the Missing badge",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6050",
+      "requirement": "AC-006-08",
+      "given": "Sticky Shelf; a TextEdit document focused before reveal; third card is 'third-card-text'",
+      "when": "user presses Down, Down, Return",
+      "then": "'third-card-text' is inserted in TextEdit; the Shelf hides; TextEdit stayed frontmost; that item's paste count +1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6051",
+      "requirement": "AC-006-08",
+      "given": "Sticky Shelf key; clipboard 'prev'",
+      "when": "user selects card 'c-copy' and presses ⇧Return",
+      "then": "the clipboard holds 'c-copy'; TextEdit unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6052",
+      "requirement": "AC-006-08",
+      "given": "Sticky Shelf key; clipboard 'prev'",
+      "when": "user presses Esc",
+      "then": "the Shelf hides; TextEdit unchanged; clipboard holds 'prev'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6053",
+      "requirement": "FR-006-08",
+      "given": "Sticky Shelf key; rich-text card with bold selected",
+      "when": "user presses ⌥Return",
+      "then": "TextEdit receives the text without bold",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6054",
+      "requirement": "FR-006-08",
+      "given": "Sticky Shelf key; card 'c-cmdc' selected",
+      "when": "user presses ⌘C",
+      "then": "the clipboard holds 'c-cmdc'; TextEdit unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6055",
+      "requirement": "FR-006-08",
+      "given": "Sticky Shelf key; card selected",
+      "when": "user presses Space",
+      "then": "nothing is pasted or copied; no preview opens; the Shelf is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6056",
+      "requirement": "AC-006-08",
+      "given": "Shelf revealed by hover (transient); TextEdit focused",
+      "when": "user presses Down then Return",
+      "then": "TextEdit receives the Return (new line); nothing from the Shelf is pasted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6057",
+      "requirement": "FR-006-08",
+      "given": "Accessibility off; sticky Shelf key with card 'ax-off' selected",
+      "when": "user presses Return",
+      "then": "TextEdit unchanged; the clipboard holds 'ax-off'; SET-PRM-001 HUD 'Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6058",
+      "requirement": "FR-006-08",
+      "given": "Notes frontmost when the hotkey reveals the Shelf",
+      "when": "user selects a card and presses Return",
+      "then": "the card's text is inserted into Notes",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6059",
+      "requirement": "AC-006-09",
+      "given": "Sticky Shelf; TextEdit was frontmost",
+      "when": "user double-clicks card 'dbl-1'",
+      "then": "'dbl-1' is inserted in TextEdit; the Shelf hides",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6060",
+      "requirement": "FR-006-09",
+      "given": "Sticky Shelf",
+      "when": "user ⌘-clicks cards 1 and 3 then double-clicks card 2",
+      "then": "only card 2 is inserted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6061",
+      "requirement": "FR-006-09",
+      "given": "Sticky Shelf; clipboard 'prev'",
+      "when": "user single-clicks a card",
+      "then": "the card is selected; nothing inserted; clipboard holds 'prev'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6062",
+      "requirement": "FR-006-09",
+      "given": "Sticky Shelf",
+      "when": "user clicks card 1 then ⇧-clicks card 3 and drags into a recording drop target",
+      "then": "cards 1 to 3 are selected; the target receives 3 items",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6063",
+      "requirement": "AC-006-09",
+      "given": "An unpinned card; then a pinned card",
+      "when": "user right-clicks each",
+      "then": "menus read exactly: Paste, Paste as Plain Text, Copy, separator, Pin (Unpin on the pinned card), separator, Delete; nothing else",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6064",
+      "requirement": "FR-006-09",
+      "given": "Unpinned card 'pin-me'",
+      "when": "user chooses Pin from its context menu",
+      "then": "'pin-me' moves to the Pinned section",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6065",
+      "requirement": "AC-006-09",
+      "given": "Pinned card 'keep-pinned'; item count N",
+      "when": "user chooses Delete and cancels the confirmation; then chooses Delete and confirms",
+      "then": "a confirmation appears; after cancel the card remains and count is N; after confirm the card is gone from the Shelf and Library and count is N-1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6066",
+      "requirement": "FR-006-09",
+      "given": "Unpinned card 'del-unpinned'; item count N",
+      "when": "user chooses Delete (confirming if asked)",
+      "then": "the card is gone from Shelf and Library; count N-1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6067",
+      "requirement": "AC-006-10",
+      "given": "Screenshot card; Mail compose window; clipboard changeCount recorded",
+      "when": "user drags the card into the message body",
+      "then": "the image is attached inline; the changeCount is unchanged; item count unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6068",
+      "requirement": "AC-006-10",
+      "given": "Bundle card of 3 files; a destination Finder folder; originals' paths and modification dates recorded",
+      "when": "user drags the card into the destination folder",
+      "then": "3 copies are created there; all 3 originals remain at their paths with the same modification dates",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6069",
+      "requirement": "AC-006-10",
+      "given": "Text card 'drag-text-1'; TextEdit document; clipboard 'prev'",
+      "when": "user drags the card into TextEdit",
+      "then": "'drag-text-1' is inserted; the clipboard holds 'prev' and its changeCount is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6070",
+      "requirement": "AC-006-11",
+      "given": "File card whose original is on the same volume as the destination Finder folder (Finder would normally move)",
+      "when": "user drags the card into the folder",
+      "then": "a copy is created; the original keeps its path and modification date",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6071",
+      "requirement": "FRD-006 §5 BR-1",
+      "given": "File card; destination Finder folder",
+      "when": "user drags with ⌘ held (move), then with ⌘⌥ held (alias)",
+      "then": "no move happens and no alias or symlink is created; the original is unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6072",
+      "requirement": "FR-006-10",
+      "given": "3 text cards selected; a recording drop target",
+      "when": "user drags the selection to the target",
+      "then": "the target receives 3 pasteboard items in the cards' on-screen order",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6073",
+      "requirement": "FR-006-10",
+      "given": "Bundle of 3 files with 1 missing; a recording drop target",
+      "when": "user drags the bundle card to the target",
+      "then": "the target receives 2 file URLs, the existing members",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6074",
+      "requirement": "FR-006-10",
+      "given": "3 cards selected",
+      "when": "user drags past the threshold",
+      "then": "the drag image is a stack with a count badge '3'",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6075",
+      "requirement": "FR-006-10",
+      "given": "Text card '{date}'",
+      "when": "user drags it into TextEdit",
+      "then": "TextEdit receives the literal '{date}'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6076",
+      "requirement": "FR-006-10",
+      "given": "Rich-text card with bold; rich TextEdit document",
+      "when": "user drags the card into the document",
+      "then": "the inserted text keeps its bold",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6077",
+      "requirement": "FR-006-10",
+      "given": "Sticky Shelf; card 'tiny-move'",
+      "when": "user presses on the card and moves 1 pt before releasing",
+      "then": "no drag starts; the card is selected; nothing is inserted anywhere",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6078",
+      "requirement": "AC-006-12",
+      "given": "Transient Shelf; cards A and B selected; paste counts recorded",
+      "when": "user drags them into TextEdit",
+      "then": "each paste count +1; each last-used time is updated; the Shelf hides",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6079",
+      "requirement": "AC-006-12",
+      "given": "Bundle card whose members are all deleted",
+      "when": "user tries to drag it",
+      "then": "no drag image and no drop happens; LIB-DAT-001 HUD 'The original file or folder has moved or been deleted.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6080",
+      "requirement": "FR-006-11",
+      "given": "File card whose file was deleted",
+      "when": "user tries to drag it",
+      "then": "no drag starts; LIB-DAT-001 HUD",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6081",
+      "requirement": "AC-006-12",
+      "given": "Card C; its paste count recorded",
+      "when": "user drags it and presses Esc; then drags it and drops it where nothing accepts",
+      "then": "paste count unchanged; no HUD; Shelf contents unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6082",
+      "requirement": "FR-006-11",
+      "given": "Card C; system drag abort simulated",
+      "when": "user drags it",
+      "then": "SHF-OS-001 HUD 'Couldn't drag that item out. Try again or paste it from the Library.'; paste count unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6083",
+      "requirement": "AC-006-13",
+      "given": "A drag carrying only a file promise (e.g. a photo from Photos)",
+      "when": "it hovers over the Shelf and is dropped",
+      "then": "no drop-zone highlight appears, the cursor shows not-allowed, the drop is refused with SHF-VAL-001 HUD 'Flotsam can't store that kind of content.'; item count unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6084",
+      "requirement": "AC-006-13",
+      "given": "A colour swatch dragged from the Colors panel",
+      "when": "it hovers over the Shelf and is dropped",
+      "then": "no drop-zone highlight appears, the cursor shows not-allowed, the drop is refused with SHF-VAL-001 HUD 'Flotsam can't store that kind of content.'; item count unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6085",
+      "requirement": "AC-006-13",
+      "given": "A test drag source with text 'secret-x' plus org.nspasteboard.ConcealedType",
+      "when": "it hovers over the Shelf and is dropped",
+      "then": "no highlight; refused; no item contains 'secret-x'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6086",
+      "requirement": "FR-006-12",
+      "given": "Test drag sources with text plus TransientType, then text plus AutoGeneratedType",
+      "when": "each hovers and is dropped",
+      "then": "both refused; no item contains either text",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6087",
+      "requirement": "AC-006-13",
+      "given": "A Shelf card",
+      "when": "user drags it back onto the Shelf",
+      "then": "no highlight; refused; item count and the card's copy count unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6088",
+      "requirement": "FR-006-12",
+      "given": "Text selected in TextEdit is dragged",
+      "when": "it hovers over a visible Shelf",
+      "then": "the drop zone is highlighted and the cursor shows the copy badge",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6089",
+      "requirement": "FRD-006 §5 BR-4",
+      "given": "A test drag source that records data requests, offering lazy text",
+      "when": "it hovers over the Shelf for 2 s then leaves without dropping",
+      "then": "the source recorded zero data requests",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6090",
+      "requirement": "AC-006-14",
+      "given": "Capture mode Paused; item count N",
+      "when": "user drops 3 files from Finder onto the Shelf",
+      "then": "count N+1; the new item is a bundle of 3 with source 'Finder' at the top of Recent",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6091",
+      "requirement": "AC-006-14",
+      "given": "Count N",
+      "when": "user drops the text 'https://example.com/drop' onto the Shelf",
+      "then": "count N+1; the new item's kind is link",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6092",
+      "requirement": "AC-006-14",
+      "given": "The 3-file bundle from the earlier drop exists, not at the top; count N",
+      "when": "user drops the same 3 files again",
+      "then": "count N; that bundle's copy count +1; it is the top Recent card",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6093",
+      "requirement": "FR-006-13",
+      "given": "Capture mode Curated; count N",
+      "when": "user drops text 'curated-drop' from TextEdit",
+      "then": "count N+1 with 'curated-drop'",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6094",
+      "requirement": "AC-006-15",
+      "given": "TextEdit added to the ignored apps list; count N",
+      "when": "user drags text 'ign-drop' from TextEdit onto the Shelf, then copies 'ign-copy' in TextEdit",
+      "then": "count N+1: 'ign-drop' stored; 'ign-copy' not stored",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6095",
+      "requirement": "FR-006-13",
+      "given": "Count N",
+      "when": "user drops a folder from Finder",
+      "then": "count N+1; the item is a folder reference; the original folder is unchanged and the Flotsam data folder grows by far less than the folder's size",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6096",
+      "requirement": "FR-006-13",
+      "given": "Finder frontmost",
+      "when": "user drops a file onto the Shelf",
+      "then": "the original file still exists at its path; Finder is still frontmost",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6097",
+      "requirement": "FRD-006 §5 BR-2",
+      "given": "Text 'kind-probe@example.com'",
+      "when": "user drops it on the Shelf, then deletes that item and copies the same text with capture active",
+      "then": "both resulting items have the same kind",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6098",
+      "requirement": "FR-006-13",
+      "given": "Database write failure injected; count N",
+      "when": "user drops a file",
+      "then": "count N; STO-DB-001 surfaced: 'Flotsam couldn't save your history. Free up disk space and try again.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6099",
+      "requirement": "AC-006-16",
+      "given": "3 files: one unreadable (no read permission), one over the FRD-007 size ceiling, one readable; count N",
+      "when": "user drops all 3 onto the Shelf",
+      "then": "count N+1: the readable file stored as a single item (not a bundle); SHF-IO-001 'A dropped file couldn't be read and was skipped.' and SHF-LIM-001 'A dropped item was too large to save (over <limit>).' with the limit filled in, subject to throttling",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6100",
+      "requirement": "AC-006-16",
+      "given": "Count N",
+      "when": "user drops content with only unsupported types (a PDF data drag)",
+      "then": "count N; SHF-VAL-001 HUD 'Flotsam can't store that kind of content.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6101",
+      "requirement": "FR-006-14",
+      "given": "2 files dragged; one deleted on disk during the drag; count N",
+      "when": "user drops",
+      "then": "count N+1 with the remaining file; SHF-IO-001 HUD",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6102",
+      "requirement": "FR-006-14",
+      "given": "Two drops each with one unreadable file, 10 s apart",
+      "when": "both drops complete",
+      "then": "the SHF-IO-001 HUD shows once (60 s throttle)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6103",
+      "requirement": "FR-006-14",
+      "given": "2 readable files",
+      "when": "user drops them",
+      "then": "a bundle is stored; no error HUD",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6104",
+      "requirement": "FR-006-14",
+      "given": "Text longer than the text ceiling; count N",
+      "when": "user drops it",
+      "then": "count N; SHF-LIM-001 HUD",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6105",
+      "requirement": "AC-006-17",
+      "given": "Transient Shelf revealed by the drag",
+      "when": "user drops a file",
+      "then": "the new card is highlighted for about 600 ms and visible at the top of Recent; the Shelf is still visible 1.4 s after the drop",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6106",
+      "requirement": "AC-006-17",
+      "given": "Count N",
+      "when": "user drops text 'once-only'",
+      "then": "after 2 s count is N+1 and the item's copy count is 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6107",
+      "requirement": "AC-006-17",
+      "given": "Count N; sticky Shelf",
+      "when": "user pastes a card with Return",
+      "then": "after 2 s count is N and that item's copy count is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6108",
+      "requirement": "FR-006-16",
+      "given": "Clipboard 'keep-me'; changeCount recorded",
+      "when": "user drags a card out to TextEdit, then drops a file onto the Shelf",
+      "then": "the clipboard holds 'keep-me' and the changeCount is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6109",
+      "requirement": "FR-006-15",
+      "given": "Sticky Shelf scrolled to the bottom of Recent; an existing item 'bump-me' is 15th in Recent",
+      "when": "user drops the text 'bump-me' onto the Shelf",
+      "then": "'bump-me' is scrolled into view as the first Recent card and highlighted for about 600 ms; item count unchanged",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6110",
+      "requirement": "FR-006-15",
+      "given": "Transient Shelf revealed by the drag; TextEdit frontmost",
+      "when": "user drops a file, then keeps the pointer away from the Shelf",
+      "then": "the Shelf is visible at 1.4 s after the drop and hidden by about 2.2 s (1.5 s plus the 600 ms leave delay); TextEdit is frontmost throughout",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6111",
+      "requirement": "FRD-006 §5 BR-3",
+      "given": "Preview frontmost with a document window key",
+      "when": "the Shelf is revealed by drag dwell, hover, hotkey and menu item in turn",
+      "then": "after each reveal Preview is frontmost and the same document window is key",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6112",
+      "requirement": "AC-006-18",
+      "given": "10,000 items",
+      "when": "the Shelf is revealed 20 times",
+      "then": "shelf.reveal p95 ≤ 120 ms from trigger to fully visible with content",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6113",
+      "requirement": "AC-006-18",
+      "given": "10,000 items",
+      "when": "20 drags are started",
+      "then": "threshold crossed to drag image visible p95 ≤ 100 ms",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6114",
+      "requirement": "AC-006-18",
+      "given": "A 5 MiB image",
+      "when": "dropped 20 times (deleting between runs)",
+      "then": "drop to card visible in Recent p95 ≤ 800 ms",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6115",
+      "requirement": "AC-006-18",
+      "given": "Shelf enabled and hidden",
+      "when": "Flotsam idles 60 s, then a drag runs continuously for 60 s",
+      "then": "no timers fire while idle; CPU during dragging averages < 0.5 % of one core",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6116",
+      "requirement": "FR-006-17",
+      "given": "10,000 image items",
+      "when": "the Library and the Shelf are opened in turn and scrolled through",
+      "then": "thumbnail cache memory never exceeds 64 MB",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6117",
+      "requirement": "AC-006-19",
+      "given": "A session with one reveal by each trigger, a drag-out of 3 cards and one drop",
+      "when": "log show filters Flotsam Info lines",
+      "then": "exactly one line per event: reveals carry the trigger type, the drag-out carries count 3, the drop carries its outcome code",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6118",
+      "requirement": "AC-006-19",
+      "given": "The same session used file 'zz-marker-file.txt', text 'zz-marker-text' and TextEdit",
+      "when": "logs are searched",
+      "then": "none of 'zz-marker-file', 'zz-marker-text' or 'TextEdit' appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6119",
+      "requirement": "FR-006-18",
+      "given": "After the session",
+      "when": "Flotsam preferences and data folder are inspected and network traffic was captured",
+      "then": "no Shelf usage counter is stored and Flotsam made no network connection",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6120",
+      "requirement": "AC-006-20",
+      "given": "VoiceOver on; Shelf with 5 cards",
+      "when": "user navigates the cards",
+      "then": "each card announces a label in the Library's form and offers actions Paste, Copy and Pin; no Drag action",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6121",
+      "requirement": "FR-006-19",
+      "given": "Reduce Transparency, Increase Contrast, accent green, dark appearance",
+      "when": "the Shelf is revealed and a file drag hovers",
+      "then": "background opaque, higher contrast borders, a green drop highlight, dark appearance",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6122",
+      "requirement": "AC-006-20",
+      "given": "Two screens; Shelf visible on the secondary",
+      "when": "the secondary display is disconnected",
+      "then": "the Shelf hides; within 1 s a drag dwell at the main screen's right edge reveals it",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-6123",
+      "requirement": "FR-006-20",
+      "given": "One screen; Shelf enabled",
+      "when": "a second display is connected",
+      "then": "within 1 s a drag dwell at the new screen's right edge reveals the Shelf there",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}

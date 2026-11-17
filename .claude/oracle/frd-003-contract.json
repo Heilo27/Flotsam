@@ -1,0 +1,1046 @@
+{
+  "frd": "FRD-003",
+  "generated_blind": true,
+  "assertions": [
+    {
+      "id": "OC-3001",
+      "requirement": "AC-003-01",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end",
+      "when": "the open-Library hotkey (default ⌃⌘V) is pressed, then 'abc' is typed",
+      "then": "the panel is visible; TextEdit remains the frontmost application (its menu bar stays); the search field contains 'abc'; D's text is still 'base'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3002",
+      "requirement": "AC-003-01",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V)",
+      "when": "the hotkey is pressed again; separately (reopened) Esc is pressed with an empty query and preview closed",
+      "then": "the panel closes each time; D's text is still 'base'; the pasteboard changeCount is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3003",
+      "requirement": "AC-003-02",
+      "given": "two displays; a full-screen app on display 2; pointer on display 2",
+      "when": "the open-Library hotkey (default ⌃⌘V) is pressed",
+      "then": "the panel appears on display 2 over the full-screen app",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3004",
+      "requirement": "FR-003-01",
+      "given": "Mission Control has 3 desktops; desktop 3 active",
+      "when": "the open-Library hotkey (default ⌃⌘V) is pressed",
+      "then": "the panel appears on desktop 3 without switching Spaces",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3005",
+      "requirement": "FR-003-01",
+      "given": "Flotsam running",
+      "when": "the Library is opened and closed 20 times",
+      "then": "the window list (CGWindowListCopyWindowInfo) never shows more than one Library window owned by Flotsam, and its window number is the same on every open (kept, not rebuilt)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3006",
+      "requirement": "FR-003-02",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V)",
+      "when": "in turn (reopening each time): a click on the desktop outside the panel; a switch to another Space (⌃→); Calculator is activated with `open -a Calculator`",
+      "then": "the panel hides in each case; the pasteboard changeCount and every item's 'Times pasted' are unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3007",
+      "requirement": "FR-003-02",
+      "given": "capture mode Active; Library closed",
+      "when": "a script copies unique text Q and the open-Library hotkey (default ⌃⌘V) is pressed within 50 ms",
+      "then": "the first rendered top row is the item Q (count +1)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3008",
+      "requirement": "FR-003-03",
+      "given": "two displays; pointer on display 2; panel at default size",
+      "when": "the open-Library hotkey (default ⌃⌘V) is pressed",
+      "then": "the panel is on display 2; its horizontal centre equals the centre of that screen's visible frame (±1 pt); its top edge is one third of the visible frame's height below the visible frame's top (±1 pt)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3009",
+      "requirement": "FR-003-03",
+      "given": "fresh install",
+      "when": "the Library is opened",
+      "then": "the panel is 760 x 480 pt",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3010",
+      "requirement": "FR-003-03",
+      "given": "the Library open",
+      "when": "the panel is dragged to 400 x 300 pt",
+      "then": "it stops at 560 x 360 pt (minimum)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3011",
+      "requirement": "FR-003-03",
+      "given": "the Library resized to 900 x 600 pt",
+      "when": "it is closed and reopened, then Flotsam is quit and relaunched and it is opened again",
+      "then": "the panel is 900 x 600 pt both times",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3012",
+      "requirement": "AC-003-03",
+      "given": "a previous session left query 'foo', the Links filter, the 5th row selected, the list scrolled down and preview open",
+      "when": "the Library is closed and reopened",
+      "then": "search is empty, the sidebar selection is All, the newest item is selected, the list is scrolled to the top, preview is closed, and typing 'z' puts 'z' in the search field",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3013",
+      "requirement": "FR-003-04",
+      "given": "the Library open on a different item than the newest",
+      "when": "it is closed and reopened",
+      "then": "the newest item is selected",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3014",
+      "requirement": "AC-003-04",
+      "given": "10,000 items",
+      "when": "the open-Library hotkey (default ⌃⌘V) is pressed by script 50 times (closing between)",
+      "then": "the library.open signpost shows p95 <= 150 ms from key press to panel visible with the search field focused",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3015",
+      "requirement": "FR-003-05",
+      "given": "10,000 items with known oldest text 'oldest-<uuid>'",
+      "when": "the Library is opened and ⌘↓ is pressed",
+      "then": "the selection reaches the item 'oldest-<uuid>' (all rows page in) and the footer reads '10000 items' (or the catalogue's formatted equivalent)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3016",
+      "requirement": "FR-003-06",
+      "given": "the Library open with preview on",
+      "when": "the accessibility hierarchy frames are read",
+      "then": "the search field spans the top; the sidebar is at the left; the results list is in the centre; the preview pane is at the right; a one-line footer spans the bottom",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3017",
+      "requirement": "AC-003-05",
+      "given": "a library seeded with one item of each kind: text (3 lines, 300 characters), richText, link https://example.com/a, color #1A2b3C, phone +1 (415) 555-0100, email a@b.co, image 120x80, screenshot 1440x900, file a.txt, folder Docs, bundle of 3 files (b1.txt, b2.txt, b3.txt)",
+      "when": "the Library is opened in list view",
+      "then": "primary lines: text and richText show at most the first 2 lines and at most 140 characters; link shows the URL; color shows a swatch plus '#1A2b3C'; phone and email show their values; image shows 'Image' plus 120 x 80; screenshot shows 'Screenshot' plus 1440 x 900; file shows 'a.txt'; folder shows 'Docs'; bundle shows '3 items' plus 'b1.txt' and 'b2.txt'",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3018",
+      "requirement": "AC-003-05",
+      "given": "a library of 12 items",
+      "when": "the Library is opened",
+      "then": "the first nine visible rows show badges ⌘1 to ⌘9 in order; rows 10 to 12 show no index badge",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3019",
+      "requirement": "FR-003-07",
+      "given": "items copied 2 hours ago, yesterday, and 10 days ago from Safari; one item has 5 tags",
+      "when": "the Library is opened",
+      "then": "each secondary line starts with 'Safari'; the times read as a relative time, 'Yesterday', and a date (not relative) respectively; the 5-tag item shows 3 tag chips and '+2'",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3020",
+      "requirement": "FR-003-07",
+      "given": "a pinned item, an item with a trigger, and a file item whose file was deleted",
+      "when": "the Library is opened",
+      "then": "the pinned row shows a pin badge (VoiceOver 'Pinned'); the trigger row shows a trigger badge ('Has trigger'); the file row shows a 'Missing' badge ('Original file missing')",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3021",
+      "requirement": "FR-003-07",
+      "given": "the Library in list view",
+      "when": "the rows are measured",
+      "then": "each row is 44 pt tall; image, screenshot, file, folder and bundle rows show a 32 pt thumbnail; other kinds show a kind icon",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3022",
+      "requirement": "FR-003-07",
+      "given": "the Library in list view",
+      "when": "⌘G is pressed, then Flotsam is quit, relaunched and the Library opened",
+      "then": "after ⌘G the results are 120 pt square grid cells with the same badges; after relaunch the grid view is still shown",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3023",
+      "requirement": "AC-003-06",
+      "given": "the Library open, 5 items, list view, empty query",
+      "when": "↓ twice, ↑ once, ⌘↓, ⌘↑ are pressed",
+      "then": "the selection moves to row 2, row 3, row 2, the last row, the first row",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3024",
+      "requirement": "AC-003-06",
+      "given": "the Library open in grid view with at least 8 items",
+      "when": "→ then ↓ are pressed",
+      "then": "the selection moves one cell right, then one row down",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3025",
+      "requirement": "AC-003-06",
+      "given": "the Library open with empty query",
+      "when": "Space is pressed, then Space again",
+      "then": "preview opens, then closes; the search field stays empty",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3026",
+      "requirement": "AC-003-06",
+      "given": "the Library open with query 'a'",
+      "when": "Space is pressed, then ⌘Y twice",
+      "then": "Space makes the query 'a ' and preview does not toggle; ⌘Y opens then closes preview",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3027",
+      "requirement": "AC-003-07",
+      "given": "the Library open with query 'x' and preview open",
+      "when": "Esc is pressed three times",
+      "then": "the first press clears the query (preview still open), the second closes preview (panel still open), the third closes the panel",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3028",
+      "requirement": "AC-003-06",
+      "given": "the Library open with sidebar on All",
+      "when": "⌥↓ then ⌥↓ then ⌥↑ are pressed",
+      "then": "the sidebar selection becomes Pinned, then the first Types row, then Pinned",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3029",
+      "requirement": "AC-003-06",
+      "given": "the Library open; a file item for /tmp/oc/r.txt is selected",
+      "when": "⌘R is pressed",
+      "then": "Finder shows /tmp/oc with r.txt selected",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3030",
+      "requirement": "AC-003-06",
+      "given": "the Library open with an unpinned item selected",
+      "when": "⌘P is pressed, then ⌘P again",
+      "then": "the row shows a pin badge and the Pinned count rises by 1; after the second press the badge is gone and the count is back",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3031",
+      "requirement": "AC-003-06",
+      "given": "the Library open with a text item selected",
+      "when": "⌘T, ⌘N, ⌘E and ⌘K are each pressed (dismissing between)",
+      "then": "respectively the tag editor, note editor, text editor and shortcut-and-trigger editor open for that item",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3032",
+      "requirement": "AC-003-06",
+      "given": "the Library open; item 'del-<uuid>' selected; count n",
+      "when": "⌘⌫ is pressed",
+      "then": "searching 'del-<uuid>' returns nothing and the footer count is n - 1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3033",
+      "requirement": "AC-003-06",
+      "given": "the Library open with text items 'Zeta-<uuid>' (copied first), 'alpha-<uuid>' (copied last) and 'mid-<uuid>' (copied in between, with the highest copy count and the highest paste count); sort Recent",
+      "when": "⌘S is pressed four times",
+      "then": "the sort label and order change to Oldest ('Zeta-…' first), Most Used ('mid-…' first), A to Z ('alpha-…' before 'mid-…' before 'Zeta-…'), then back to Recent ('alpha-…' first)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3034",
+      "requirement": "AC-003-06",
+      "given": "the Library open; a bundle of 3 members selected; count n",
+      "when": "⌘⇧U is pressed",
+      "then": "the bundle row is absent and 3 file items for its members appear; count is n + 2",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3035",
+      "requirement": "AC-003-06",
+      "given": "the Library open",
+      "when": "⌘, is pressed",
+      "then": "the Flotsam Settings window opens",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3036",
+      "requirement": "AC-003-06",
+      "given": "the Library open with 10 items and empty query",
+      "when": "⌘3 is pressed",
+      "then": "the item in the third visible row is pasted into the target app and the panel closes",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3037",
+      "requirement": "FR-003-08",
+      "given": "the Library open (US keyboard)",
+      "when": "⌥e then e is typed, then 'ac' (dead-key composition and plain keys)",
+      "then": "the search field contains 'éac' (keys not handled by the map reach the search field)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3038",
+      "requirement": "AC-003-18",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); two items selected with ⇧↓",
+      "when": "Return, ⌥Return and ⇧Return are pressed",
+      "then": "the panel stays open, the pasteboard changeCount is unchanged, D is unchanged, and the footer says the paste keys are disabled and shows '2 selected'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3039",
+      "requirement": "AC-003-18",
+      "given": "the Library open; two unpinned items selected with ⇧↓",
+      "when": "⌘P is pressed",
+      "then": "both rows show a pin badge and the Pinned count rises by 2",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3040",
+      "requirement": "FR-003-08",
+      "given": "the Library open; three items 'm1-<uuid>', 'm2-<uuid>', 'm3-<uuid>' selected; count n",
+      "when": "⌘⌫ is pressed",
+      "then": "all three are absent from search and count is n - 3",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3041",
+      "requirement": "FR-003-08",
+      "given": "the Library open; two items selected",
+      "when": "⌘T is used to add tag 'both', then ⌘N to add note 'nb-<uuid>'",
+      "then": "both items show the 'both' tag chip, the Tags › both count is 2, and searching 'nb-<uuid>' lists exactly those two items",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3042",
+      "requirement": "AC-003-08",
+      "given": "an item with text 'Résumé draft', note 'for Anna', tag 'work', source Safari, among 50 other items",
+      "when": "the queries `resume`, `anna`, `work`, `safari draft` and `resume zzz` are typed in turn",
+      "then": "each of the first four results lists that item; `resume zzz` lists no results and shows the no-results state",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3043",
+      "requirement": "FR-003-09",
+      "given": "the AC-003-08 item",
+      "when": "the queries `RÉSUMÉ`, `DRAFT ANNA`, `umé dra` are typed",
+      "then": "the item matches each (case- and diacritic-insensitive substring, all tokens ANDed)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3044",
+      "requirement": "FR-003-09",
+      "given": "items: link https://example.com/qz1-path; file 'qz2-name.txt'; bundle with member 'qz3-member.pdf'; screenshot from 'Screenshot qz4.png'; text item whose note is empty",
+      "when": "queries qz1-path, qz2-name, qz3-member, qz4 and 'screenshot' are typed",
+      "then": "each returns its item; 'screenshot' returns the screenshot item (kind label)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3045",
+      "requirement": "FR-003-09",
+      "given": "a text item of 12,000 characters with 'deep9k' at character 9,000 and 'deep11k' at character 11,000",
+      "when": "the queries deep9k and deep11k are typed",
+      "then": "deep9k matches the item; deep11k returns no results",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3046",
+      "requirement": "FR-003-09",
+      "given": "a text item 'sharedword-<uuid>' (newer) and a link item https://x.example/sharedword-<uuid> (older); sidebar filter Links",
+      "when": "the query sharedword is typed",
+      "then": "only the link item is listed (search within the active filter)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3047",
+      "requirement": "FR-003-09",
+      "given": "older item O whose text repeats 'rank' 20 times and newer item N containing 'rank' once; sort Recent",
+      "when": "the query rank is typed",
+      "then": "N is listed above O (sort order kept, no relevance ranking)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3048",
+      "requirement": "AC-003-09",
+      "given": "10,000 items",
+      "when": "100 scripted queries are typed one character at a time",
+      "then": "the library.search signpost shows p95 <= 100 ms from keystroke to updated results",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3049",
+      "requirement": "FR-003-10",
+      "given": "10,000 items",
+      "when": "'abcdef' is typed at 20 ms per character",
+      "then": "after typing stops, the displayed results are exactly those for 'abcdef' and no later render shows results for a shorter prefix",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3050",
+      "requirement": "FR-003-11",
+      "given": "the library has 4 link items among 10 items",
+      "when": "the Links filter is selected, then the query 'zzzq' is typed",
+      "then": "the footer reads '4 items' with Links; with 'zzzq' it reads '0 items' and the results area shows 'No matches for “zzzq”' and 'Check the spelling, or clear the search to see everything.'; no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3051",
+      "requirement": "FR-003-11",
+      "given": "an empty library",
+      "when": "the Library is opened",
+      "then": "the results area shows 'Nothing copied yet' and 'Copy something and it appears here. Press ⌃⌘V any time to open this panel.'; no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3052",
+      "requirement": "AC-003-16",
+      "given": "tags 'work' (3 items) and 'home' (0 items); no email items",
+      "when": "the Library is opened",
+      "then": "Tags lists 'home' then 'work' with counts 0 and 3, 'home' dimmed; Types has no 'Emails' row",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3053",
+      "requirement": "FR-003-12",
+      "given": "a library with every kind present, 2 tags, no pinned items, items from 17 different source apps with distinct counts",
+      "when": "the Library is opened",
+      "then": "the sidebar order is All, Pinned, Types (Text, Rich Text, Links, Colors, Phone Numbers, Emails, Images, Screenshots, Files, Folders, Bundles), Tags, Apps; every row shows a count; All's count equals the total; Pinned shows 0 and is dimmed; Apps lists exactly 15 apps in descending count order",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3054",
+      "requirement": "FR-003-12",
+      "given": "the Library open",
+      "when": "Images, then a tag, then an app row are clicked",
+      "then": "exactly one sidebar row is selected at any time and the results show only items in that row",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3055",
+      "requirement": "FR-003-13",
+      "given": "10,000 items including 2,000 images; thumbnails not yet generated for a new 5 MiB image",
+      "when": "the image is copied and the Library opened at once, then the list is scrolled top to bottom at full speed",
+      "then": "the new row first shows the kind icon and later its thumbnail without reopening; no main-thread hang over 250 ms is reported while scrolling",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3056",
+      "requirement": "FR-003-13",
+      "given": "10,000 items including 2,000 distinct images",
+      "when": "all 2,000 image rows are scrolled past twice",
+      "then": "Flotsam's resident memory after the second pass exceeds its pre-scroll value by no more than about 64 MB (thumbnail cache bounded)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": false
+    },
+    {
+      "id": "OC-3057",
+      "requirement": "FR-003-14",
+      "given": "the Library open with a 25,000-character text item selected and a 19,000-character text item",
+      "when": "preview is opened on each",
+      "then": "the first shows text then a 'Show more' link; the second shows its full text with no 'Show more'; the pane is 280 pt wide",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3058",
+      "requirement": "FR-003-14",
+      "given": "a rich item with one bold word, and a color item #1A2B3C",
+      "when": "preview is opened on each",
+      "then": "the bold word renders bold; the colour shows a large swatch plus its hex value and rgb values 26, 43, 60",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3059",
+      "requirement": "AC-003-15",
+      "given": "a network monitor is attached; a link item https://example.com/a",
+      "when": "preview is opened on it for 30 s",
+      "then": "the preview shows only the URL text (no page title, image or favicon) and Flotsam opens zero network connections",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3060",
+      "requirement": "FR-003-14",
+      "given": "a 4000 x 3000 image item and a bundle of 25 files",
+      "when": "preview is opened on each",
+      "then": "the image is scaled to fit the pane with no scrolling; the bundle shows 20 members with names then 'and 5 more'",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3061",
+      "requirement": "FR-003-14",
+      "given": "an image item with known values",
+      "when": "preview is opened",
+      "then": "the metadata block shows Kind, Source, Copied, First copied, Times copied, Times pasted, Size and Pixel size with values matching the item; a text item's block has no Pixel size",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3062",
+      "requirement": "FR-003-14",
+      "given": "the Library open; row 3 selected; preview closed",
+      "when": "preview is opened, a click is made in the preview text, then 'q' is typed",
+      "then": "row 3 is still selected; the preview text is unchanged; 'q' goes to the search field",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3063",
+      "requirement": "AC-003-10",
+      "given": "Accessibility granted; a text item 'paste-<uuid>'",
+      "when": "for each of Notes, Terminal, Safari (a text field), Xcode and VS Code, a text field is focused, the Library opened and Return pressed on the item",
+      "then": "'paste-<uuid>' appears exactly once at the insertion point in each app",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3064",
+      "requirement": "AC-003-10",
+      "given": "a rich item with a bold word; Notes has focus",
+      "when": "⌥Return is pressed on it",
+      "then": "the pasted text in Notes is not bold; the pasteboard holds public.utf8-plain-text and no public.html or public.rtf",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3065",
+      "requirement": "AC-003-11",
+      "given": "Accessibility granted; an image item 300x200",
+      "when": "Return is pressed on it with Preview (new from clipboard) or a Notes note as target",
+      "then": "an image of 300 x 200 pixels appears in the target",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3066",
+      "requirement": "AC-003-11",
+      "given": "a bundle of 3 existing files; a Finder window on an empty folder E is the target",
+      "when": "Return is pressed on the bundle",
+      "then": "3 files with the members' names appear in E",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3067",
+      "requirement": "AC-003-11",
+      "given": "a bundle of 3 files where 1 member was deleted from disk; Finder window on empty folder E",
+      "when": "Return is pressed on the bundle",
+      "then": "exactly the 2 existing files appear in E",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3068",
+      "requirement": "AC-003-11",
+      "given": "a bundle of 3 files where all members were deleted from disk; Times pasted = p",
+      "when": "Return is pressed on the bundle",
+      "then": "nothing is pasted; the panel stays open; a HUD at the top centre of the screen shows 'The original file or folder has moved or been deleted.' and disappears after about 2.5 s; Times pasted is still p; the row shows the 'Missing' badge",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3069",
+      "requirement": "AC-003-12",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); item 'cnt-<uuid>' with Times pasted = p; library count n",
+      "when": "Return is pressed on it",
+      "then": "Times pasted is p + 1, the library count is still n, and no second item for 'cnt-<uuid>' exists",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3070",
+      "requirement": "AC-003-12",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); 10,000 items",
+      "when": "Return is pressed 100 times across items (reopening between)",
+      "then": "the paste.back signpost shows p95 <= 150 ms from Return to ⌘V posted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3071",
+      "requirement": "FR-003-15",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); text item 'shift-<uuid>'; Times pasted = p",
+      "when": "⇧Return is pressed",
+      "then": "the panel closes; the pasteboard holds 'shift-<uuid>'; D is still 'base' (no ⌘V posted); Times pasted is p + 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3072",
+      "requirement": "FR-003-15",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); a rich item captured with public.html and plain text",
+      "when": "⇧Return is pressed",
+      "then": "the pasteboard holds both public.html and public.utf8-plain-text plus org.nspasteboard.AutoGeneratedType and com.flotsam.own-write",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3073",
+      "requirement": "FR-003-15",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); an image item",
+      "when": "⇧Return is pressed",
+      "then": "the pasteboard holds a standard image type (public.tiff or public.png) that decodes to the item's pixels",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3074",
+      "requirement": "FR-003-15",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); text item 'once-<uuid>'",
+      "when": "Return is pressed",
+      "then": "D reads 'baseonce-<uuid>' exactly (pasted once, after the panel closed; no 'v' or the text went into the search field)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3075",
+      "requirement": "AC-003-13",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); text item 'mis-<uuid>'; a script activates Calculator within 100 ms of Return",
+      "when": "Return is pressed",
+      "then": "D is still 'base' and nothing is pasted into Calculator; the pasteboard holds 'mis-<uuid>'; a HUD at the top centre of the screen shows 'Couldn't paste into that app. The item is on your clipboard; press ⌘V.' and disappears after about 2.5 s",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3076",
+      "requirement": "FR-003-16",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); the pasteboard changeCount recorded as k",
+      "when": "Return is pressed on a text item and 1 s passes",
+      "then": "the pasteboard changeCount is exactly k + 1 (written once, never re-written after the ⌘V post)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3077",
+      "requirement": "AC-003-14",
+      "given": "Accessibility revoked for Flotsam; TextEdit D is 'base'; text item 'ax-<uuid>'",
+      "when": "the Library is opened and Return is pressed on the item",
+      "then": "the panel closes; D is still 'base'; the pasteboard holds 'ax-<uuid>'; a HUD at the top centre of the screen shows 'Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V.' and disappears after about 2.5 s",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3078",
+      "requirement": "AC-003-14",
+      "given": "AC-003-14 happened",
+      "when": "the Library is reopened",
+      "then": "the footer shows 'Press ⌘V to paste'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3079",
+      "requirement": "FR-003-17",
+      "given": "Accessibility revoked",
+      "when": "Return is pressed on items three times within 30 s",
+      "then": "each item lands on the pasteboard and its Times pasted rises by 1; the footer shows 'Press ⌘V to paste' on every open even when no HUD appears for a repeat",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3080",
+      "requirement": "FR-003-17",
+      "given": "Accessibility revoked",
+      "when": "search, preview, ⌘P, ⌘T and ⌘⌫ are used in the Library",
+      "then": "each works as with Accessibility granted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3081",
+      "requirement": "FR-003-18",
+      "given": "the Library open with 7 items, single selection, Accessibility granted",
+      "when": "the footer is read",
+      "then": "it shows three key hints, '7 items', and no copy-only notice",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3082",
+      "requirement": "FR-003-18",
+      "given": "Flotsam launched with -NSDoubleLocalizedStrings YES",
+      "when": "the Library is opened in normal, multi-select and Accessibility-revoked states",
+      "then": "every footer string appears doubled (all footer text comes from the string catalogue)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3083",
+      "requirement": "FR-003-19",
+      "given": "human participants; a clip copied yesterday among 10,000 items",
+      "when": "the timed dogfood task runs: hotkey, type to find, paste",
+      "then": "median time from hotkey to pasted is <= 3 s",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": false
+    },
+    {
+      "id": "OC-3084",
+      "requirement": "FR-003-20",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); item 'gone-<uuid>' whose stored blob was deleted from ~/Library/Application Support/Flotsam; count n",
+      "when": "Return is pressed on it",
+      "then": "nothing is pasted (D is 'base'); a HUD at the top centre of the screen shows 'This item's data is missing, so it was removed.' and disappears after about 2.5 s; searching 'gone-<uuid>' returns nothing and count is n - 1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3085",
+      "requirement": "FR-003-20",
+      "given": "the database read is forced to fail (test hook or unreadable database file)",
+      "when": "the Library is opened",
+      "then": "the results area shows 'History unavailable', 'Couldn't read your history. Try again.' and a Retry button; typing in the search field and Esc still work; after the fault is cleared, Retry shows the items",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3086",
+      "requirement": "AC-003-17",
+      "given": "VoiceOver on; a pinned text item 'Hello' from Safari copied yesterday",
+      "when": "VoiceOver focuses its row",
+      "then": "it reads the item's kind label, then 'Hello', 'from Safari', 'Yesterday', 'pinned', comma-separated in that order; the VoiceOver actions menu lists paste and pin actions",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3087",
+      "requirement": "FR-003-21",
+      "given": "VoiceOver on; a text item of 300 characters",
+      "when": "its row is focused",
+      "then": "the primary-text part of the label is at most 100 characters",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3088",
+      "requirement": "AC-003-17",
+      "given": "keyboard only (no mouse) with Full Keyboard Access on",
+      "when": "every sidebar row, the view toggle, the preview and each row action are reached and invoked",
+      "then": "every control is reachable and operable, with a visible focus ring on the selection",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3089",
+      "requirement": "AC-003-17",
+      "given": "Reduce Motion on",
+      "when": "the Library is opened and closed while recording at 60 fps",
+      "then": "the panel's frame position does not change during the animation (fade only, no slide)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3090",
+      "requirement": "FR-003-21",
+      "given": "Increase Contrast on, then light and dark appearance in turn",
+      "when": "the Library is opened",
+      "then": "the panel follows each appearance and shows the increased-contrast styling; every button and row has an accessibility frame at least 44 pt tall",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3091",
+      "requirement": "FR-003-22",
+      "given": "the Library open; a text item, a bundle item and an image item",
+      "when": "each row is right-clicked",
+      "then": "the text menu is: Paste, Paste as Plain Text, Copy, Preview, separator, Pin, Tags..., Note..., Edit..., Shortcut and Trigger..., separator, Delete (Reveal in Finder absent for text); the bundle menu has Ungroup and Reveal in Finder and no Edit...; the image menu has neither Edit... nor Ungroup",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3092",
+      "requirement": "FR-003-22",
+      "given": "a pinned item",
+      "when": "it is right-clicked",
+      "then": "the menu shows 'Unpin' in place of 'Pin'",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3093",
+      "requirement": "FR-003-22",
+      "given": "the Library open; item 'ctx-<uuid>'; count n",
+      "when": "Delete is chosen from its context menu",
+      "then": "the item is absent from search and count is n - 1 (same as ⌘⌫)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3094",
+      "requirement": "FR-003-22",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); text item 'cm-<uuid>'",
+      "when": "Paste is chosen from its context menu",
+      "then": "D reads 'basecm-<uuid>' (same as Return)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3095",
+      "requirement": "BR-003-01",
+      "given": "a text item with note, tags and Times copied c; a rich item and an image item with stored blobs whose SHA-256 is recorded",
+      "when": "each item is pasted 5 times via Return, ⌥Return, ⇧Return and ⌘1",
+      "then": "each item's text, note, tags, kind, Times copied and stored blob SHA-256 are unchanged; the library count is unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3096",
+      "requirement": "BR-003-02",
+      "given": "Accessibility granted; TextEdit frontmost with an open document D whose text is 'base' and insertion point at the end; the Library is opened with the open-Library hotkey (default ⌃⌘V); item Times pasted = p",
+      "when": "it is placed via Return, ⇧Return, ⌘1, the context-menu Copy, and once with Accessibility revoked",
+      "then": "Times pasted is p + 5; opening and closing the Library or pressing Esc changes nothing",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3097",
+      "requirement": "BR-003-03",
+      "given": "a network monitor attached",
+      "when": "a Library session runs: open, search, preview of every kind, paste, close",
+      "then": "Flotsam opens zero network connections",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3098",
+      "requirement": "BR-003-04",
+      "given": "an image item whose pixels render the word 'Pelican' and no text field containing it",
+      "when": "the query pelican is typed",
+      "then": "no results (no OCR)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3099",
+      "requirement": "BR-003-05",
+      "given": "the Library open over a TextEdit document",
+      "when": "a row is dragged onto the document",
+      "then": "nothing is inserted in the document (no drag-out from Library rows)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": false
+    },
+    {
+      "id": "OC-3100",
+      "requirement": "LIB-OS-001",
+      "given": "a target mismatch as in AC-003-13",
+      "when": "the code is raised",
+      "then": "a HUD at the top centre of the screen shows 'Couldn't paste into that app. The item is on your clipboard; press ⌘V.' and disappears after about 2.5 s",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3101",
+      "requirement": "LIB-IO-001",
+      "given": "a missing blob as in FR-003-20",
+      "when": "the code is raised",
+      "then": "a HUD at the top centre of the screen shows 'This item's data is missing, so it was removed.' and disappears after about 2.5 s",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3102",
+      "requirement": "LIB-DAT-001",
+      "given": "all bundle members missing as in AC-003-11",
+      "when": "the code is raised",
+      "then": "a HUD at the top centre of the screen shows 'The original file or folder has moved or been deleted.' and disappears after about 2.5 s; the panel stays open",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3103",
+      "requirement": "SET-PRM-001",
+      "given": "Accessibility revoked as in AC-003-14",
+      "when": "the code is raised",
+      "then": "a HUD at the top centre of the screen shows 'Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V.' and disappears after about 2.5 s",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-3104",
+      "requirement": "STO-DB-004",
+      "given": "a forced database read failure as in FR-003-20",
+      "when": "the code is raised",
+      "then": "the results area shows 'Couldn't read your history. Try again.' with a Retry button (inline, not a HUD)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}

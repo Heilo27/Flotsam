@@ -1,0 +1,785 @@
+{
+  "frd": "FRD-000",
+  "generated_blind": true,
+  "inputs": [
+    "docs/frd/FRD-000-ErrorSystem.md",
+    "docs/PRD.md",
+    "docs/TRUTHS.md",
+    "docs/DESIGN.md (UI element names only)"
+  ],
+  "freshness": "greenfield; no freshness.json; all requirements CONFIRMED",
+  "assertions": [
+    {
+      "id": "OC-0001",
+      "requirement": "FR-000-01,FR-000-02,AC-000-01",
+      "given": "The app sources as shipped",
+      "when": "The project's lint step and build run",
+      "then": "Lint reports 0 violations of the forbidden-construct rules (try!, as!, force-unwrap on external data, fatalError outside FR-000-04 sites) AND the build succeeds",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0002",
+      "requirement": "FR-000-02,AC-000-01",
+      "given": "A scratch copy of the sources with exactly one `try!` added on a pasteboard read, then separately one `as!` on a database row value, then separately one `fatalError` in a non-Fatal code path",
+      "when": "Lint and build run on each mutated copy",
+      "then": "Each of the 3 mutated builds FAILS with a lint error naming the injected line; reverting the mutation makes the build pass again",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0003",
+      "requirement": "FR-000-01,AC-000-01",
+      "given": "Every module's public API surface",
+      "when": "Its public function signatures are enumerated (e.g. from the generated interface)",
+      "then": "The count of public fallible functions whose return type is not Result<_, FlotsamError> is 0 AND the count of public functions declared `throws` that cross a module boundary is 0",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0004",
+      "requirement": "FR-000-01",
+      "given": "The data folder is made unwritable while Flotsam is running (so an OS file error with an underlying domain/code occurs)",
+      "when": "The user copies an image",
+      "then": "The log entry for the raised error contains the Flotsam code and an underlying domain string + integer code, AND neither the log, the Notice text nor the diagnostics report contains any path component of the data folder or the OS localized error description text",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0005",
+      "requirement": "FR-000-03",
+      "given": "The full set of ErrorCode raw values and the FRD-000 §7 table",
+      "when": "Each raw value is matched against ^(SYS|CAP|SSP|LIB|ORG|TRG|SHF|STO|SET)-(PRM|IO|DB|VAL|LIM|OS|POL|DAT|INT)-[0-9]{3}$",
+      "then": "Non-matching count is 0 AND duplicate raw value count is 0 AND the ErrorCode set equals exactly the 60 live (non-retired) codes in FRD-000 §7 (none missing, none extra); §7 still lists 62 rows, exactly 2 of them marked retired (ORG-VAL-004, ORG-VAL-005); neither retired raw value is an ErrorCode member, and no live code reuses either raw value",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004/005 retired (FR-000-03, §7): live set is 60 of the 62 §7 rows; retired raw values are not members and never reused"
+    },
+    {
+      "id": "OC-0006",
+      "requirement": "FR-000-03,FR-000-04",
+      "given": "The ErrorCode enum",
+      "when": "The severity of every code in category POL is read (CAP-POL-001, CAP-POL-002, CAP-POL-003, CAP-POL-004, TRG-POL-001, TRG-POL-002, STO-POL-001)",
+      "then": "All 7 POL codes are Info; no POL code has a user message",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 pre-existing miscount, not from the delta: §7 has 7 POL codes (TRG-POL-002 was omitted)"
+    },
+    {
+      "id": "OC-0007",
+      "requirement": "FR-000-04",
+      "given": "The ErrorCode enum",
+      "when": "Codes are grouped by severity",
+      "then": "Exactly 2 codes are Fatal: STO-IO-002 and STO-DB-003 (no other); 20 Warning, 24 Error, 14 Info; total 60 live codes; ORG-VAL-004 and ORG-VAL-005 carry none of the four severities (retired, not raisable)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004/005 retired: Error count 26 -> 24, live total 62 -> 60"
+    },
+    {
+      "id": "OC-0008",
+      "requirement": "FR-000-04,AC-000-05",
+      "given": "Flotsam is launched while ~/Library/Application Support is not writable, so STO-IO-002 is raised",
+      "when": "The fatal alert appears",
+      "then": "A modal alert shows the catalogue text for STO-IO-002 ('Flotsam can't create its data folder, so it can't run.') and offers exactly 2 buttons titled 'Reveal Data Folder' and 'Quit'; after 'Quit' is clicked the Flotsam process no longer exists",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0009",
+      "requirement": "FR-000-04,AC-000-05",
+      "given": "The Flotsam data folder (~/Library/Application Support/Flotsam) does not exist and cannot be created, so the STO-IO-002 fatal alert is showing; the set of directories along the data folder path is recorded",
+      "when": "The user clicks 'Reveal Data Folder'",
+      "then": "Finder comes forward with the nearest existing ancestor of the data folder path revealed (e.g. ~/Library/Application Support selected or open), not an empty or unrelated window; the data folder still does not exist afterwards (0 directories created along its path); the Flotsam process exits after the alert is dismissed",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 FR-000-04/§9: Reveal Data Folder reveals the nearest existing ancestor when the folder is missing and never creates the folder"
+    },
+    {
+      "id": "OC-0010",
+      "requirement": "FR-000-04,AC-000-05",
+      "given": "A database fixture whose user_version is 99 is placed in the data folder, so STO-DB-003 is raised at launch",
+      "when": "The fatal alert appears and 'Quit' is clicked",
+      "then": "Alert text equals the STO-DB-003 catalogue text; buttons are exactly 'Reveal Data Folder' and 'Quit'; the process exits after dismissal",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0011",
+      "requirement": "FR-000-04,AC-000-05",
+      "given": "Flotsam is running",
+      "when": "One non-Fatal code of each severity is raised: SYS-INT-001 (Error), CAP-LIM-001 (Warning), CAP-POL-001 (Info), STO-DB-001 (Error)",
+      "then": "The Flotsam process is still alive (same PID) after all 4, no modal alert was shown, and the Library hotkey still opens the Library",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0012",
+      "requirement": "FR-000-04,FR-000-08",
+      "given": "Flotsam is running with Accessibility granted and the target app refuses the synthetic paste (LIB-OS-001)",
+      "when": "The user selects an item and presses Return in the Library",
+      "then": "A HUD shows the LIB-OS-001 catalogue text; the process stays alive; the item's content is on the general pasteboard",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0013",
+      "requirement": "FR-000-04,FR-000-09",
+      "given": "Flotsam is running",
+      "when": "A Warning code is raised (copy text larger than 10 MiB so CAP-LIM-001 fires)",
+      "then": "`log show` has one entry for CAP-LIM-001 at Default/notice level in category 'capture'; the app continues to capture the next normal copy (item count +1 for that copy)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0014",
+      "requirement": "FR-000-04,FR-000-08",
+      "given": "Flotsam is running; Notices list empty; no badge",
+      "when": "A concealed pasteboard item (org.nspasteboard.ConcealedType) is copied",
+      "then": "`log show` has an Info entry with CAP-POL-001; no HUD appears; Notices count stays 0; the menu-bar badge dot does not appear; item count delta 0",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0015",
+      "requirement": "FR-000-05",
+      "given": "A build run under an Xcode pseudo-language (e.g. accented or double-length pseudolocalization)",
+      "when": "The tester visits the menu-bar menu, Notices, Library, Shelf, every Settings pane, the Clear History sheet, the shorten confirmation, a HUD and the fatal alert",
+      "then": "Every visible user-facing string is pseudo-transformed; the count of untransformed English literals is 0 (user content such as clip text excepted)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0016",
+      "requirement": "FR-000-05",
+      "given": "The shipped Localizable.xcstrings",
+      "when": "Its keys are listed",
+      "then": "Source language is en; for each of the 46 Warning/Error/Fatal codes a key 'error.<code>' exists (e.g. 'error.SET-PRM-001'); no 'error.<code>' key exists for any of the 14 Info codes or for the 2 retired codes ORG-VAL-004 and ORG-VAL-005",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004/005 retired with no catalogue text: keyed codes 48 -> 46"
+    },
+    {
+      "id": "OC-0017",
+      "requirement": "FR-000-05",
+      "given": "Exactly 1 non-exempt item then (separately) exactly 2 non-exempt items exist",
+      "when": "Clear History > All time is confirmed each time",
+      "then": "The completion HUD reads with correct plural agreement: singular form for 1 ('1 item deleted') and plural form for 2 ('2 items deleted'); no '1 items' string appears",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0018",
+      "requirement": "FR-000-06",
+      "given": "Every catalogue entry error.<code>",
+      "when": "Each message is measured and parsed",
+      "then": "Every message is <= 140 characters, has 1 or 2 sentences, contains no substring matching [A-Z]{3}-[A-Z]{2,3}-[0-9]{3}, and its only placeholders are from {n}, {limit} (or a count, byte size, duration, permission name or app display name)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0019",
+      "requirement": "FR-000-06,FR-000-10",
+      "given": "A text over 10 MiB containing marker FLOTSAM-MARK-6A, a 501-file copy whose file names contain FLOTSAM-MARK-6B, and an over-limit Shelf drop named FLOTSAM-MARK-6C",
+      "when": "Each is copied or dropped, raising CAP-LIM-001, CAP-LIM-003 and SHF-LIM-001",
+      "then": "Every HUD and Notice text shown contains 0 occurrences of any FLOTSAM-MARK-6 marker; the CAP-LIM-001 message shows the limit formatted as '10 MB' and CAP-LIM-003 shows the count 501",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0020",
+      "requirement": "FR-000-07,AC-000-02",
+      "given": "The unmodified code enum and catalogue",
+      "when": "The catalogue unit test runs",
+      "then": "It passes: the set of codes with messages equals the set of 46 Warning/Error/Fatal codes, every message <= 140 chars, no Info code and no retired code (ORG-VAL-004, ORG-VAL-005) has a message",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004/005 retired: 46 keyed codes; retired codes carry no message"
+    },
+    {
+      "id": "OC-0021",
+      "requirement": "FR-000-07,AC-000-02",
+      "given": "Five separate mutated copies: (1) key error.SYS-INT-001 removed; (2) a 141-character message on one code; (3) a message added for Info code CAP-POL-001; (4) orphan key error.XXX-INT-999 with no code; (5) two enum cases sharing one raw value",
+      "when": "The catalogue unit test runs against each",
+      "then": "The test FAILS in all 5 cases (5 of 5 red)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0022",
+      "requirement": "FR-000-08,AC-000-04",
+      "given": "Flotsam running, Notices empty",
+      "when": "The same background Warning (e.g. SSP-LIM-001 from 10 oversized screenshots) is raised 10 times within 30 s",
+      "then": "`log show` contains exactly 10 entries for that code; the Notices list contains exactly 1 entry for that code; the badge dot is shown",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0023",
+      "requirement": "FR-000-08",
+      "given": "One Notice for code X was surfaced at time T",
+      "when": "Code X is raised again at T+61 s",
+      "then": "The Notices list for code X goes from 1 to 2 entries (the throttle window is 60 s, not permanent)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0024",
+      "requirement": "FR-000-08",
+      "given": "Flotsam running; frontmost app is a text editor with a focused key window",
+      "when": "Five DIFFERENT user-initiated failures with 5 distinct codes are triggered within 60 s",
+      "then": "At most 3 HUDs are displayed in that minute; `log show` contains all 5 codes",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0025",
+      "requirement": "FR-000-08",
+      "given": "Two displays; the pointer is on the secondary display; frontmost app is a text editor",
+      "when": "A user-initiated failure occurs (e.g. paste-back fails with LIB-OS-001)",
+      "then": "A HUD with the catalogue text appears top-centre of the secondary display, disappears 2.5 s (+/- 0.3 s) later, and the frontmost app and its key window are unchanged before, during and after",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0026",
+      "requirement": "FR-000-08",
+      "given": "Flotsam running, Notices empty, no badge",
+      "when": "A background failure occurs (screenshot too large: SSP-LIM-001)",
+      "then": "No HUD appears; the menu-bar badge dot appears; Notices count goes 0 -> 1 with that catalogue text",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0027",
+      "requirement": "FR-000-08",
+      "given": "12 background Warnings with 12 distinct identifiable occurrences (different codes or > 60 s apart) raised in sequence W1..W12",
+      "when": "The user opens menu bar > Notices",
+      "then": "Exactly 10 entries are listed, they are W3..W12 (newest 10), W1 and W2 are absent",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0028",
+      "requirement": "FR-000-08",
+      "given": "Notices list has 3 entries and the badge dot is shown",
+      "when": "The user chooses 'Dismiss all'",
+      "then": "Notices count is 0 and the badge dot is gone",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0029",
+      "requirement": "FR-000-08,FR-000-13",
+      "given": "Notices list has 2 entries",
+      "when": "Flotsam is quit and relaunched (with no new failures)",
+      "then": "Notices count is 0 and no badge dot is shown",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0030",
+      "requirement": "FR-000-08",
+      "given": "A fresh launch with no failures",
+      "when": "The user opens menu bar > Notices",
+      "then": "0 notice entries are listed and the menu-bar icon has no badge dot",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0031",
+      "requirement": "FR-000-09",
+      "given": "A debug-enabled scripted session that exercises capture, screenshot pickup, Library, organize, triggers, Shelf, storage and settings",
+      "when": "`log show --info --debug --predicate 'subsystem == \"<bundle id>\"'` is run",
+      "then": "Entries exist under each category core, capture, screenshots, library, organize, triggers, shelf, storage, settings; no entry uses a category outside those 9 plus 'perf'; subsystem equals the app bundle identifier",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0032",
+      "requirement": "FR-000-09",
+      "given": "Flotsam running",
+      "when": "CAP-POL-001 (Info), CAP-LIM-001 (Warning), CAP-IO-001 (Error) and STO-IO-002 (Fatal) are each raised once",
+      "then": "`log show` message types are respectively Info, Default (notice), Error, Fault",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0033",
+      "requirement": "FR-000-09,AC-000-08",
+      "given": "A Release build and a Debug build",
+      "when": "The same scripted session runs on each and `log show --debug` is captured",
+      "then": "The Release log contains 0 Debug-level entries from the subsystem; the Debug log contains >= 1",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0034",
+      "requirement": "FR-000-09,AC-000-08",
+      "given": "The app sources; then a mutated copy containing one `print(`, one `NSLog(` and one `dump(` call",
+      "when": "Lint runs",
+      "then": "Unmodified sources: 0 occurrences flagged; mutated copy: lint fails reporting 3 violations",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0035",
+      "requirement": "FR-000-10,AC-000-03",
+      "given": "A Debug build; the user copies unique marker text MARK-T1, marker URL https://mark-u1.invalid/MARK-U1, a file named MARK-F1.txt, a colour #A1B2C3, phone +1 555 0100 199, email mark-e1@invalid.test, takes a screenshot renamed MARK-S1.png, sets tag MARK-G1, note MARK-N1, trigger ;markt1, searches for MARK-Q1, adds an ignored app, types the trigger",
+      "when": "`log show --last 5m --info --debug --predicate 'subsystem == \"<bundle id>\"'`, all signposts, the Notices list and a fresh Copy Diagnostics report are searched for every marker",
+      "then": "0 matches for every marker in every source",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0036",
+      "requirement": "FR-000-10",
+      "given": "A Release build without private-data logging enabled; a known source app copies plain text typed public.utf8-plain-text (a system-declared UTI)",
+      "when": "A text copy from a known source app is processed and logged",
+      "then": "The pasteboard-processed log entry shows outcome code, item kind, byte size and the system-declared UTI 'public.utf8-plain-text' in clear text, while the source app bundle identifier and every other dynamic value appear as '<private>'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 FR-000-10: public UTI allowlist narrowed to system-declared types; bundle IDs always private"
+    },
+    {
+      "id": "OC-0037",
+      "requirement": "FR-000-11",
+      "given": "Scripted session",
+      "when": "A new text is copied, the same text is copied again, and a concealed item is copied",
+      "then": "`log show` contains 3 'pasteboard change processed' entries with outcomes stored, deduped, and skipped + CAP-POL-001 respectively, each with kind and byte size and no content",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0038",
+      "requirement": "FR-000-11",
+      "given": "Scripted session",
+      "when": "A screenshot is imported, an item is pasted back via the Library, a global hotkey is registered, the Shelf is revealed, an item is dragged out and a file dropped in, and a trigger is typed once matching and once not matching",
+      "then": "`log show` contains >= 1 outcome entry for each: screenshot import, paste-back start, paste-back outcome, hotkey registration, Shelf reveal, drag-out, drop-in, trigger match = yes, trigger match = no; trigger entries contain no typed characters",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0039",
+      "requirement": "FR-000-11",
+      "given": "Scripted session with 5 items eligible for retention",
+      "when": "Flotsam launches and the retention sweep runs; then Accessibility is toggled off and on",
+      "then": "`log show` contains database open, migrate and integrity-check result entries; a retention sweep entry with rows removed = 5 and a bytes-removed figure; and 2 permission state transition entries",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0040",
+      "requirement": "FR-000-11",
+      "given": "Scripted session that raises one Warning, one Error and one Fatal code",
+      "when": "`log show` is searched",
+      "then": "Each of the 3 raised codes has >= 1 log entry; a code that was throttled from the UI still has its log entry",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0041",
+      "requirement": "FR-000-12,AC-000-07",
+      "given": "A Release build profiled in Instruments (os_signpost) during a scripted session that copies, opens and searches the Library, pastes back, reveals the Shelf, runs a retention sweep and expands a trigger",
+      "when": "The signpost lanes for the app's subsystem, category 'perf', are inspected",
+      "then": "Intervals named capture.persist, library.open, library.search, paste.back, shelf.reveal, retention.sweep and trigger.expand each appear >= 1 time; 0 intervals with other names appear in category perf",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0042",
+      "requirement": "FR-000-12,FR-000-10",
+      "given": "The same signpost recording, with marker content copied and searched",
+      "when": "All signpost names, messages and metadata are searched for the markers",
+      "then": "0 matches",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0043",
+      "requirement": "FR-000-13",
+      "given": "A fresh launch",
+      "when": "105 Warning or Error occurrences (no Info codes; none suppressed by the FR-000-08 throttle) are raised in order E1..E105, then Copy Diagnostics is clicked",
+      "then": "The ring-buffer section lists exactly 100 entries, E6..E105 by code and timestamp, each with code, severity and timestamp, every severity Warning or Error; E1..E5 absent",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 FR-000-04/13: the ring buffer records Warning, Error and Fatal only; the sequence is restricted to non-Info codes"
+    },
+    {
+      "id": "OC-0044",
+      "requirement": "FR-000-13",
+      "given": "Errors were raised in a previous session",
+      "when": "Flotsam is quit, relaunched with no new errors, and Copy Diagnostics is clicked",
+      "then": "The ring-buffer section has 0 entries; a search of the data folder and ~/Library (Preferences, Caches, Application Support) for those error codes with timestamps finds 0 persisted ring entries",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0045",
+      "requirement": "FR-000-14,AC-000-06",
+      "given": "Flotsam with items of several kinds, retention preset 30 days, image budget 2 GB",
+      "when": "The user clicks Settings > About > 'Copy Diagnostics' (the FRD-008 FR-008-09 button)",
+      "then": "The general pasteboard holds plain text containing: app version and build, macOS version, CPU architecture, permission states for Accessibility, Input Monitoring, screenshot folder access and pasteboard access, retention preset, budget preset, toggle states, item counts by kind (matching the Library sidebar counts), database byte size, blob byte size, and the ring buffer (Warning/Error/Fatal entries only)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 FR-000-14 ownership: the About button and its 'Diagnostics copied' HUD belong to FRD-008 FR-008-09 and are asserted there; this row keeps the report content (AC-000-06, end to end once that button exists)"
+    },
+    {
+      "id": "OC-0046",
+      "requirement": "FR-000-14,FR-000-10",
+      "given": "The ignored-apps list contains an app with display name and bundle id containing MARK-IGN; items contain MARK-T2 text",
+      "when": "Copy Diagnostics is clicked",
+      "then": "The report contains 0 occurrences of MARK-IGN and 0 of MARK-T2 and no item text, URL, file name, tag, note or trigger",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0047",
+      "requirement": "FR-000-14,AC-000-06",
+      "given": "Library item count N",
+      "when": "Copy Diagnostics is clicked and Flotsam polls for 3 s",
+      "then": "Library item count is still N (delta 0); no item contains the report text; the pasteboard carries the FR-001-03 self-write marker types",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0048",
+      "requirement": "FR-000-14,FR-000-15",
+      "given": "Flotsam idle for 5 minutes, then Copy Diagnostics clicked",
+      "when": "A network monitor and pasteboard changeCount are observed",
+      "then": "During idle the pasteboard changeCount does not change due to Flotsam; across the whole period Flotsam opens 0 outbound network connections",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0049",
+      "requirement": "FR-000-15",
+      "given": "The Release .app bundle",
+      "when": "`otool -L` on the main binary and all embedded frameworks is listed",
+      "then": "No third-party crash reporting, analytics or logging library is linked (only Apple system frameworks and Flotsam's own modules); a network audit of a scripted session shows 0 outbound connections",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0050",
+      "requirement": "FRD-000 §6,SYS-INT-001",
+      "given": "A test build whose catalogue lacks the key for a raised user-facing code",
+      "when": "That code is raised from a user action",
+      "then": "The HUD shows the SYS-INT-001 catalogue text ('Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings › About.') and `log show` contains SYS-INT-001",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0051",
+      "requirement": "SYS-INT-001",
+      "given": "The shipped catalogue",
+      "when": "error.SYS-INT-001 is read",
+      "then": "Severity Error; text equals 'Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings › About.' (<= 140 chars)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0052",
+      "requirement": "FRD-000 §5 BR severity-belongs-to-code",
+      "given": "Code STO-DB-001 raised once from a user action (Shelf drop) and once from a background path (retention sweep write failure)",
+      "when": "Both logs are compared",
+      "then": "Both entries carry the same severity (Error) and the same log level (.error)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0053",
+      "requirement": "FRD-000 §5 BR code-with-catalogue",
+      "given": "The catalogue and code enum",
+      "when": "Every Warning/Error/Fatal code is checked for a catalogue entry",
+      "then": "46 of 46 have one; the only codes without a catalogue entry are the 14 Info codes and the 2 retired codes ORG-VAL-004 and ORG-VAL-005",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004/005 retired with no catalogue text: 48 -> 46; retired codes join Info as the only codes without an entry"
+    },
+    {
+      "id": "OC-0054",
+      "requirement": "FRD-000 §9 HUD",
+      "given": "VoiceOver on",
+      "when": "A HUD appears",
+      "then": "VoiceOver announces the HUD text; keyboard focus does not move",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0055",
+      "requirement": "FRD-000 §9 Notices submenu",
+      "given": "One Notice for CAP-LIM-001",
+      "when": "The user opens menu bar > Notices",
+      "then": "The entry is a single line: the full CAP-LIM-001 message text followed, on the same line, by the code 'CAP-LIM-001' (message first, code after; no second line); a 'Dismiss all' item is present",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 §9 Notices: a menu item cannot style a second line, so the code follows the message on the same line"
+    },
+    {
+      "id": "OC-0056",
+      "requirement": "FRD-000 §9 inline validation",
+      "given": "The tag editor is open; VoiceOver on",
+      "when": "The user enters a 33-character tag name",
+      "then": "Beside the field, red text with an icon shows the ORG-VAL-001 catalogue text, VoiceOver announces it (alert role), and the tag is not created (tag count delta 0)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0057",
+      "requirement": "FRD-000 §7 SYS,SYS-INT-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The SYS codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: SYS-INT-001:Error (exactly 1 SYS codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0058",
+      "requirement": "FRD-000 §7 CAP,CAP-PRM-001,CAP-OS-001,CAP-OS-002,CAP-POL-001,CAP-POL-002,CAP-POL-003,CAP-POL-004,CAP-VAL-001,CAP-DAT-001,CAP-LIM-001,CAP-LIM-002,CAP-LIM-003,CAP-IO-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The CAP codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: CAP-PRM-001:Warning, CAP-OS-001:Warning, CAP-OS-002:Info, CAP-POL-001:Info, CAP-POL-002:Info, CAP-POL-003:Info, CAP-POL-004:Info, CAP-VAL-001:Info, CAP-DAT-001:Info, CAP-LIM-001:Warning, CAP-LIM-002:Info, CAP-LIM-003:Warning, CAP-IO-001:Error (exactly 13 CAP codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0059",
+      "requirement": "FRD-000 §7 SSP,SSP-PRM-001,SSP-IO-001,SSP-IO-002,SSP-IO-003,SSP-VAL-001,SSP-LIM-001,SSP-OS-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The SSP codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: SSP-PRM-001:Warning, SSP-IO-001:Warning, SSP-IO-002:Info, SSP-IO-003:Warning, SSP-VAL-001:Info, SSP-LIM-001:Warning, SSP-OS-001:Warning (exactly 7 SSP codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0060",
+      "requirement": "FRD-000 §7 LIB,LIB-OS-001,LIB-IO-001,LIB-DAT-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The LIB codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: LIB-OS-001:Error, LIB-IO-001:Error, LIB-DAT-001:Warning (exactly 3 LIB codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0061",
+      "requirement": "FRD-000 §7 ORG,ORG-VAL-001,ORG-VAL-002,ORG-VAL-003,ORG-VAL-004,ORG-VAL-005,ORG-LIM-001,ORG-LIM-002,ORG-LIM-003",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The ORG codes are enumerated",
+      "then": "For each listed live code, the enum severity equals the listed severity and the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim. Live codes: ORG-VAL-001:Error, ORG-VAL-002:Error, ORG-VAL-003:Error, ORG-LIM-001:Error, ORG-LIM-002:Error, ORG-LIM-003:Error (exactly 6 live ORG codes, no others). ORG-VAL-004 and ORG-VAL-005 are listed in §7 as retired: neither is an ErrorCode member and neither has catalogue text (§7 lists 8 ORG rows in total)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004/005 retired (§7): 6 live ORG codes; the 8-code roster no longer holds"
+    },
+    {
+      "id": "OC-0062",
+      "requirement": "FRD-000 §7 TRG,TRG-VAL-001,TRG-VAL-002,TRG-VAL-003,TRG-VAL-004,TRG-VAL-005,TRG-OS-001,TRG-OS-002,TRG-OS-003,TRG-POL-001,TRG-POL-002",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The TRG codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: TRG-VAL-001:Error, TRG-VAL-002:Error, TRG-VAL-003:Error, TRG-VAL-004:Error, TRG-VAL-005:Warning, TRG-OS-001:Error, TRG-OS-002:Error, TRG-OS-003:Warning, TRG-POL-001:Info, TRG-POL-002:Info (exactly 10 TRG codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0063",
+      "requirement": "FRD-000 §7 SHF,SHF-OS-001,SHF-IO-001,SHF-LIM-001,SHF-VAL-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The SHF codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: SHF-OS-001:Error, SHF-IO-001:Warning, SHF-LIM-001:Warning, SHF-VAL-001:Warning (exactly 4 SHF codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0064",
+      "requirement": "FRD-000 §7 STO,STO-DB-001,STO-DB-002,STO-DB-003,STO-DB-004,STO-IO-001,STO-IO-002,STO-IO-003,STO-LIM-001,STO-LIM-002,STO-POL-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The STO codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: STO-DB-001:Error, STO-DB-002:Error, STO-DB-003:Fatal, STO-DB-004:Error, STO-IO-001:Error, STO-IO-002:Fatal, STO-IO-003:Info, STO-LIM-001:Warning, STO-LIM-002:Warning, STO-POL-001:Info (exactly 10 STO codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0065",
+      "requirement": "FRD-000 §7 SET,SET-PRM-001,SET-PRM-002,SET-OS-001,SET-VAL-001,SET-VAL-002,SET-DAT-001",
+      "given": "The shipped ErrorCode enum and Localizable.xcstrings",
+      "when": "The SET codes are enumerated",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: SET-PRM-001:Warning, SET-PRM-002:Warning, SET-OS-001:Error, SET-VAL-001:Error, SET-VAL-002:Error, SET-DAT-001:Warning (exactly 6 SET codes, no others)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0066",
+      "requirement": "FR-000-04,FR-000-13",
+      "given": "A fresh launch; one Warning W (CAP-LIM-001, an over-limit copy) has been raised",
+      "when": "150 concealed pasteboard items (org.nspasteboard.ConcealedType) are copied, raising 150 CAP-POL-001 Info skips, then one Error E is raised, then Copy Diagnostics is clicked",
+      "then": "The ring-buffer section lists exactly 2 entries, W then E by code and timestamp; it contains 0 entries of severity Info and 0 occurrences of CAP-POL-001; `log show` for the subsystem still contains 150 CAP-POL-001 entries at Info level (Info is logged, never recorded)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0067",
+      "requirement": "FR-000-13",
+      "given": "A fresh launch; 100 Warning/Error occurrences R1..R100 have been raised (none throttle-suppressed)",
+      "when": "500 Info skips are raised (concealed copies -> CAP-POL-001, and keystrokes in a secure input field -> TRG-POL-001), then Copy Diagnostics is clicked",
+      "then": "The ring-buffer section lists exactly 100 entries and they are R1..R100 by code and timestamp (0 of R1..R100 evicted); 0 entries are CAP-POL-001, TRG-POL-001 or any other Info code",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0068",
+      "requirement": "FR-000-04,FR-000-13",
+      "given": "A fresh launch in which only Info events have occurred (20 concealed copies, 1 copy from an ignored app, 1 empty copy)",
+      "when": "Copy Diagnostics is clicked",
+      "then": "The report's ring-buffer section is present and has 0 entries",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0069",
+      "requirement": "FR-000-04,AC-000-05",
+      "given": "The STO-IO-002 fatal alert is showing because the data folder is missing and its parent was not writable",
+      "when": "While the alert is still up, the parent directory is made writable again; then the user clicks 'Reveal Data Folder'",
+      "then": "The data folder still does not exist after the click (Reveal Data Folder never creates it, even when creation would now succeed); Finder reveals the nearest existing ancestor; the process exits after the alert is dismissed",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0070",
+      "requirement": "FR-000-04,FRD-000 §9 Fatal alert",
+      "given": "The data folder exists and holds a database fixture whose user_version is 99, so the STO-DB-003 fatal alert is showing; the folder's file names and count are recorded",
+      "when": "The user clicks 'Reveal Data Folder'",
+      "then": "Finder reveals the data folder itself (~/Library/Application Support/Flotsam), not its parent; the folder's file names and count are unchanged; the process exits after the alert is dismissed",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0071",
+      "requirement": "FR-000-10,AC-000-03",
+      "given": "A Release build without private-data logging enabled; a helper source app whose bundle identifier is com.flotsamtest.markbid1, plus TextEdit (com.apple.TextEdit); the helper app is also added to the ignored-apps list for a second pass",
+      "when": "Text is copied from each app (stored), the same text is copied again (deduped), the helper app is ignored and copies once more (skipped, CAP-POL-002); then `log show --info --debug --predicate 'subsystem == \"<bundle id>\"'` and all signposts are searched",
+      "then": "0 occurrences of 'markbid1' and 0 occurrences of 'com.apple.TextEdit' in any subsystem log message or signpost; every source-app field in those entries reads '<private>'; the stored/deduped/skipped outcome entries are still present (3 or more)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0072",
+      "requirement": "FR-000-10",
+      "given": "A Release build without private-data logging enabled; a helper app writes one pasteboard item carrying public.utf8-plain-text plus an app-declared type com.flotsamtest.markuti1.payload, and a second item carrying only a dyn.-prefixed type identifier",
+      "when": "Both pasteboard changes are processed; then `log show --info --debug` for the subsystem, all signposts, the Notices list and a fresh Copy Diagnostics report are searched",
+      "then": "0 occurrences of 'markuti1' and 0 occurrences of the dyn. identifier in every source; where a type field is logged for those events it reads '<private>' for the non-system-declared types and 'public.utf8-plain-text' in clear text for the system-declared one",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0073",
+      "requirement": "FR-000-10",
+      "given": "A copy of the app sources",
+      "when": "Two mutations are built separately: (1) a log context's source-app bundle identifier is given an arbitrary String (e.g. the clip's text); (2) a log context's pasteboard type identifier is given an arbitrary String",
+      "then": "Each mutated build fails to compile (2 of 2 red) because the log context accepts only a validated bundle identifier and a classified type identifier; reverting each mutation builds green",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0074",
+      "requirement": "FRD-000 §7 ORG-VAL-004,ORG-VAL-005,FR-000-03",
+      "given": "Flotsam running with subsystem logging captured; Library holds files, folders, images, a bundle and tags",
+      "when": "Every organize path is driven: multi-select of 2+ files, folders and images, every context-menu and menu-bar action on them, Ungroup, tag rename to an 81-character name and to an empty name, note and text edits",
+      "then": "`log show` for the subsystem contains 0 entries for ORG-VAL-004 and 0 for ORG-VAL-005; no HUD, Notice or inline validation text shows either code or the retired texts 'Select at least two files, folders or images to group.' or 'Names must be 1 to 80 characters.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0075",
+      "requirement": "FRD-000 §7 ORG-VAL-004,ORG-VAL-005,FR-000-03",
+      "given": "The built Release Flotsam.app",
+      "when": "Its executable and compiled string catalogue are searched for the raw strings and texts",
+      "then": "0 occurrences of 'ORG-VAL-004', 'ORG-VAL-005', 'error.ORG-VAL-004', 'error.ORG-VAL-005', 'Select at least two files, folders or images to group.' and 'Names must be 1 to 80 characters.' (retired codes cannot be raised or shown)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-0076",
+      "requirement": "FR-000-14,AC-000-06",
+      "given": "A diagnostics report R1 was copied with text-item count t and Accessibility granted",
+      "when": "One new unique text is copied (count +1), Accessibility is revoked for Flotsam, then Copy Diagnostics is clicked again producing R2",
+      "then": "R2's text-item count is exactly t+1 and every other kind's count is unchanged from R1; R2 shows Accessibility as not granted; R2 is built from current state, not a cached R1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}

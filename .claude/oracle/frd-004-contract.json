@@ -1,0 +1,1098 @@
+{
+  "frd": "FRD-004",
+  "generated_blind": true,
+  "assertions": [
+    {
+      "id": "OC-4001",
+      "requirement": "AC-004-01",
+      "given": "Library has item A (pinned) and item B (unpinned), both selected",
+      "when": "user presses ⌘P",
+      "then": "A and B both show the pin badge; the Pinned sidebar count increases by exactly 1; A and B are both listed under the Pinned filter",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4002",
+      "requirement": "AC-004-01",
+      "given": "Items A and B are both pinned and both selected",
+      "when": "user presses ⌘P",
+      "then": "neither A nor B shows the pin badge; the Pinned sidebar count decreases by exactly 2; neither is listed under Pinned",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4003",
+      "requirement": "FR-004-01",
+      "given": "A single unpinned item X is selected",
+      "when": "user chooses Pin from the context menu, then reopens the context menu",
+      "then": "X shows the pin badge and appears under Pinned; the context menu entry now reads Unpin; choosing Unpin removes the badge and X leaves Pinned (Pinned count back to its prior value)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4004",
+      "requirement": "FR-004-01",
+      "given": "Unpinned item X is visible in the Shelf Recent section",
+      "when": "user chooses Pin from the Shelf card context menu",
+      "then": "X moves to the Shelf Pinned section and, in the Library, X shows the pin badge and is counted under Pinned",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4005",
+      "requirement": "FR-004-01",
+      "given": "All filter, Recent sort; item X is at position 3 of at least 5 items, unpinned",
+      "when": "user pins X",
+      "then": "the full ordered list of item identities in All is identical before and after; X stays at position 3 (pinned items never float)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4006",
+      "requirement": "AC-004-01",
+      "given": "Pinned item P with lastCopiedAt older than the retention window (e.g. 31 days with d30); unpinned item U equally old",
+      "when": "the retention sweep runs",
+      "then": "P is still present (searchable, listed under Pinned); U is absent; total item count decreases by exactly 1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4007",
+      "requirement": "FR-004-01",
+      "given": "Pinned image item P and unpinned image items whose total size exceeds the image budget",
+      "when": "the image-budget sweep runs",
+      "then": "P is still present with its thumbnail and full image; only unpinned images are evicted",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4008",
+      "requirement": "FR-004-01",
+      "given": "Library has items but none is pinned",
+      "when": "user selects the Pinned sidebar row",
+      "then": "zero rows are listed and the footer reads 0 items; no item from All appears",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4009",
+      "requirement": "AC-004-02",
+      "given": "Tag 'Work' exists",
+      "when": "user creates a tag named 'work'",
+      "then": "inline text shows the ORG-VAL-001 message 'Tag names must be 1 to 32 characters and unique.'; total tag count is unchanged; only 'Work' exists",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4010",
+      "requirement": "AC-004-02",
+      "given": "Tag editor open",
+      "when": "user tries to create a tag with a 33-character name",
+      "then": "ORG-VAL-001 inline; tag count unchanged; no tag with that name exists",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4011",
+      "requirement": "FR-004-02",
+      "given": "Tag editor open",
+      "when": "user creates a tag with a name of exactly 32 characters",
+      "then": "the tag is created: tag count increases by exactly 1 and the sidebar lists the full 32-character name",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4012",
+      "requirement": "AC-004-02",
+      "given": "An existing tag 'alpha'",
+      "when": "user renames it to an empty name, and separately to a name of only spaces",
+      "then": "each attempt shows ORG-VAL-001 inline and the tag is still named 'alpha'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4013",
+      "requirement": "AC-004-02",
+      "given": "Tag 'Résumé' exists",
+      "when": "user creates a tag named 'resume'",
+      "then": "ORG-VAL-001 inline; tag count unchanged (diacritic- and case-insensitive duplicate)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4014",
+      "requirement": "FR-004-02",
+      "given": "No tag named 'client-a' exists",
+      "when": "user creates a tag named '  client-a  ' (leading and trailing spaces)",
+      "then": "exactly one new tag exists, displayed as 'client-a' without surrounding spaces; creating 'client-a' again is then rejected with ORG-VAL-001",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4015",
+      "requirement": "FR-004-02",
+      "given": "Tag editor open",
+      "when": "user attempts a tag name containing a control character (pasted tab or newline inside the name)",
+      "then": "ORG-VAL-001 inline; tag count unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4016",
+      "requirement": "FR-004-02",
+      "given": "No tags exist",
+      "when": "user creates tag 'x' without choosing a colour",
+      "then": "the new tag's colour dot is gray",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4017",
+      "requirement": "FR-004-02",
+      "given": "A tag exists",
+      "when": "user opens Colour from the tag's sidebar context menu",
+      "then": "exactly eight options are offered: red, orange, yellow, green, blue, purple, pink, gray; no custom-colour option",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4018",
+      "requirement": "AC-004-03",
+      "given": "Item I carries exactly 10 tags; tag T is not on I",
+      "when": "user toggles T on for I",
+      "then": "ORG-LIM-001 shows 'An item can have up to 10 tags.'; I still carries exactly 10 tags; T's count is unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4019",
+      "requirement": "AC-004-03",
+      "given": "Exactly 100 tags exist",
+      "when": "user creates a 101st tag",
+      "then": "ORG-LIM-002 shows 'You can have up to 100 tags.'; the sidebar still lists exactly 100 tags",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4020",
+      "requirement": "FR-004-02",
+      "given": "Exactly 99 tags exist",
+      "when": "user creates a new valid tag",
+      "then": "it is created; tag count is exactly 100",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4021",
+      "requirement": "FR-004-03",
+      "given": "One item selected, at least two tags exist",
+      "when": "user presses ⌘T",
+      "then": "a popover anchored to the selection shows a filter/create field and a list of every tag, each with check state, colour dot and item count",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4022",
+      "requirement": "FR-004-03",
+      "given": "One item selected, no tag named 'newtag'",
+      "when": "user types 'newtag' in the tag popover field and presses Return",
+      "then": "a 'Create' row naming 'newtag' was shown; after Return tag count increases by 1, the item shows a 'newtag' chip and the tag's count is 1",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4023",
+      "requirement": "FR-004-03",
+      "given": "Item selected without tag 'work'; tag 'work' exists",
+      "when": "user types 'wor' in the popover field and presses Return",
+      "then": "the first match 'work' is toggled on: the item gains the 'work' chip and no new tag is created (tag count unchanged)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4024",
+      "requirement": "FR-004-03",
+      "given": "Tag popover open on an item",
+      "when": "user clicks a tag's checkbox",
+      "then": "the item's row shows the chip immediately while the popover stays open; that tag's count increases by exactly 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4025",
+      "requirement": "AC-004-04",
+      "given": "3 items selected; tag T is on exactly one of them",
+      "when": "user opens ⌘T, observes T, toggles T, then toggles T again",
+      "then": "T shows a mixed state; after the first toggle all 3 carry T (T's count +2); after the second toggle none of the 3 carry T (T's count -3 from that state)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4026",
+      "requirement": "FR-004-03",
+      "given": "Tag popover open and a tag was just toggled on",
+      "when": "user presses Esc",
+      "then": "the popover closes and the toggled tag stays applied",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4027",
+      "requirement": "FR-004-03",
+      "given": "No tags exist; one item selected",
+      "when": "user presses ⌘T",
+      "then": "the popover shows the field and no tag rows; the item is unchanged",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4028",
+      "requirement": "FR-004-04",
+      "given": "A tag exists in the sidebar",
+      "when": "user right-clicks the tag row",
+      "then": "the menu offers exactly Rename, Colour (eight values) and Delete",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4029",
+      "requirement": "AC-004-05",
+      "given": "Tag T is on exactly 5 items; total item count N",
+      "when": "user deletes T and confirms",
+      "then": "a confirmation (organize.confirm.deleteTag) stating 5 items appeared first; after confirming T is absent from the sidebar (tag count -1), item count is still N, and none of the 5 items carries T",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4030",
+      "requirement": "FR-004-04",
+      "given": "Tag T is on 5 items",
+      "when": "user deletes T and cancels the confirmation",
+      "then": "T still exists and all 5 items still carry it; tag and item counts unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4031",
+      "requirement": "FR-004-04",
+      "given": "Tag T is on zero items",
+      "when": "user deletes T",
+      "then": "no confirmation appears; T is removed; item count unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4032",
+      "requirement": "AC-004-05",
+      "given": "Tag 'old' on several items; All sorted Recent",
+      "when": "user renames 'old' to 'new'",
+      "then": "the sidebar and every chip on those items read 'new'; no chip reads 'old'; the ordered list of item identities is identical before and after",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4033",
+      "requirement": "FR-004-04",
+      "given": "Tag T (gray) on several items",
+      "when": "user sets T's colour to blue",
+      "then": "the sidebar dot and every chip of T show blue; item order unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4034",
+      "requirement": "FR-004-04",
+      "given": "Tags 'a' and 'b' exist",
+      "when": "user renames 'b' to 'A'",
+      "then": "ORG-VAL-001 inline; tag 'b' keeps its name",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4035",
+      "requirement": "FR-004-05",
+      "given": "Item X carries tag 'zebra-unique'; no item text contains that word",
+      "when": "user types 'zebra-unique' in Library search",
+      "then": "X is in the results",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4036",
+      "requirement": "FR-004-05",
+      "given": "Tag T is on exactly k items",
+      "when": "user selects T in the sidebar",
+      "then": "exactly k rows are listed, all carrying T, and the footer reads k items",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4037",
+      "requirement": "AC-004-14",
+      "given": "Unpinned item with no hotkey or trigger, carrying a tag, older than the retention window",
+      "when": "the retention sweep runs",
+      "then": "the item is absent afterwards (tags do not exempt from retention); the tag itself still exists",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4038",
+      "requirement": "AC-004-06",
+      "given": "Item selected, note popover open",
+      "when": "user enters 2,001 characters and presses ⌘Return",
+      "then": "ORG-VAL-002 shows 'Notes can be up to 2,000 characters.'; the item's stored note is unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4039",
+      "requirement": "FR-004-06",
+      "given": "Item selected, note popover open",
+      "when": "user enters exactly 2,000 characters and presses ⌘Return",
+      "then": "the note is saved in full (2,000 characters); no error",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4040",
+      "requirement": "FR-004-06",
+      "given": "Note popover open",
+      "when": "user types until the note is 2,000 characters long",
+      "then": "a character counter is visible and its limit reads 2,000 (not any other limit)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4041",
+      "requirement": "FR-004-06",
+      "given": "Note popover open, empty note",
+      "when": "user types 'a', presses Return, types 'b', presses ⌘Return",
+      "then": "the popover closes and the saved note has two lines 'a' and 'b' (Return inserted a newline, did not save)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4042",
+      "requirement": "FR-004-06",
+      "given": "Item has note 'old'",
+      "when": "user opens ⌘N, changes the text to 'new', presses Esc",
+      "then": "the note is still 'old'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4043",
+      "requirement": "AC-004-06",
+      "given": "Item X; no item contains the word 'qzxnote'",
+      "when": "user saves note 'staging qzxnote hint' with ⌘Return, then searches 'qzxnote'",
+      "then": "exactly one result, X",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4044",
+      "requirement": "AC-004-06",
+      "given": "Item X has note containing 'qzxnote'",
+      "when": "user clears the note text and saves",
+      "then": "X has no note (no note shown in preview); searching 'qzxnote' returns zero results; X still exists",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4045",
+      "requirement": "FR-004-06",
+      "given": "Item has note 'first'",
+      "when": "user saves note 'second'",
+      "then": "the item has exactly one note reading 'second'; 'first' is no longer findable",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4046",
+      "requirement": "FR-004-06",
+      "given": "Unpinned item without bindings has a note and is older than the retention window",
+      "when": "the retention sweep runs",
+      "then": "the item is absent (notes do not exempt from retention)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4047",
+      "requirement": "FR-004-07",
+      "given": "One item of each kind text, richText, link, color, phone, email",
+      "when": "user selects each and presses ⌘E",
+      "then": "for each, an in-panel editor replaces the results area showing the item's plain text with Save and Cancel",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4048",
+      "requirement": "AC-004-07",
+      "given": "An image item selected (repeat for screenshot, file, folder, bundle)",
+      "when": "user presses ⌘E or chooses Edit… from the context menu",
+      "then": "no editor opens; ORG-VAL-003 'Only text items can be edited, and they can't be empty.' is shown; the item is unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4049",
+      "requirement": "AC-004-07",
+      "given": "Text item 'hello' open in the editor",
+      "when": "user replaces the text with only spaces and newlines, presses ⌘Return",
+      "then": "ORG-VAL-003 shown; the stored text is still 'hello'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4050",
+      "requirement": "FR-004-07",
+      "given": "Text item 'hello' open in the editor",
+      "when": "user deletes all text and presses ⌘Return",
+      "then": "ORG-VAL-003 shown; the stored text is still 'hello'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4051",
+      "requirement": "FR-004-07",
+      "given": "Text item open in the editor",
+      "when": "user enters text one character over the text ceiling and saves",
+      "then": "ORG-LIM-003 shown inline with the limit value; stored text unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4052",
+      "requirement": "FR-004-07",
+      "given": "Text item 'hello' open in the editor, text changed to 'bye'",
+      "when": "user presses Esc",
+      "then": "editor closes; stored text is still 'hello'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4053",
+      "requirement": "AC-004-07",
+      "given": "richText item containing bold text and a hyperlink",
+      "when": "user opens the editor and saves an edit with ⌘Return",
+      "then": "the formatting-removed notice (organize.edit.formattingRemoved) was visible in the editor; afterwards Copy of the item puts plain text only on the pasteboard (no RTF or HTML type) and the item no longer previews formatting",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4054",
+      "requirement": "FR-004-07",
+      "given": "Plain text item",
+      "when": "user opens the editor",
+      "then": "no formatting-removed notice is shown",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4055",
+      "requirement": "AC-004-07",
+      "given": "Text item 'hello' (counted under Text)",
+      "when": "user edits it to 'https://x.y' and saves",
+      "then": "the item's kind is link: it appears under the Links filter (Links count +1) and not under Text (Text count -1)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4056",
+      "requirement": "FR-004-07",
+      "given": "link item 'https://x.y'",
+      "when": "user edits it to 'plain words' and saves",
+      "then": "the item is re-detected as text (Links count -1, Text count +1)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4057",
+      "requirement": "AC-004-07",
+      "given": "Pinned richText item with tags, a note and a hotkey at Recent position 4",
+      "when": "user edits and saves",
+      "then": "position 4 in Recent is unchanged (lastCopiedAt unchanged); pin badge, tag chips, note and hotkey badge all remain",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4058",
+      "requirement": "FR-004-07",
+      "given": "Text item A edited from 'old text' to 'new text'; no other item holds either",
+      "when": "user copies 'new text' in another app, then copies 'old text'",
+      "then": "copying 'new text' bumps A to the top of Recent with no new row; copying 'old text' creates a new row (item count +1)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4059",
+      "requirement": "FR-004-07",
+      "given": "Item has trigger ';x' and hotkey H; its text is edited from 'one' to 'two'",
+      "when": "user types ';x' Space in TextEdit, then presses H in TextEdit",
+      "then": "both insert 'two', never 'one'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4060",
+      "requirement": "AC-004-08",
+      "given": "Items A ('aaa') and B ('bbb'); item count N",
+      "when": "user edits A to 'bbb'",
+      "then": "both A and B exist; item count still N",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4061",
+      "requirement": "FR-004-08",
+      "given": "A and B both hold 'bbb'; B has the later lastCopiedAt",
+      "when": "user copies 'bbb' in another app",
+      "then": "item count unchanged; B moves to the top of Recent; A's position relative to the others is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4062",
+      "requirement": "AC-004-09",
+      "given": "One unpinned item X with no hotkey or trigger; item count N",
+      "when": "user selects X and presses ⌘⌫",
+      "then": "no dialog appears; X is gone; count is N-1; searching X's unique text returns zero",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4063",
+      "requirement": "AC-004-09",
+      "given": "One pinned item P selected",
+      "when": "user presses ⌘⌫ and then cancels the confirmation",
+      "then": "a confirmation (organize.confirm.delete) appears before anything is removed; after cancel P still exists and count is unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4064",
+      "requirement": "AC-004-09",
+      "given": "3 unpinned items selected; count N",
+      "when": "user presses ⌘⌫ and confirms",
+      "then": "a confirmation appears first; afterwards all 3 are absent by identity and count is N-3",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4065",
+      "requirement": "FR-004-09",
+      "given": "One unpinned item with a trigger (and separately one with a hotkey)",
+      "when": "user presses ⌘⌫",
+      "then": "a confirmation appears before deletion in each case",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4066",
+      "requirement": "AC-004-09",
+      "given": "Bundle item of 3 files on disk",
+      "when": "user deletes the bundle (confirming if asked)",
+      "then": "all 3 files still exist at their paths with unchanged modification dates; the bundle is absent from the Library",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4067",
+      "requirement": "FR-004-09",
+      "given": "A file item and a screenshot item whose source files exist on disk",
+      "when": "user deletes both",
+      "then": "both source files still exist unchanged; neither item is listed",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4068",
+      "requirement": "AC-004-09",
+      "given": "Image item X with stored image data and a thumbnail",
+      "when": "user deletes X",
+      "then": "X is absent; X's image and thumbnail files no longer exist in the Flotsam data folder (blob file count drops by X's files)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4069",
+      "requirement": "FR-004-09",
+      "given": "An item was just deleted",
+      "when": "user presses ⌘Z and looks for any Trash or Recently Deleted view",
+      "then": "the item is not restored; no trash or recovery view exists",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4070",
+      "requirement": "FR-004-09",
+      "given": "All sorted Recent shows P, Q, R, S in order",
+      "when": "user selects Q and R and deletes (confirming)",
+      "then": "S is selected afterwards",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4071",
+      "requirement": "FR-004-09",
+      "given": "Library holds exactly one item",
+      "when": "user deletes it",
+      "then": "the Library shows its empty state and the footer reads 0 items",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4072",
+      "requirement": "FR-004-11",
+      "given": "Selections: one file item; two bundles; one bundle plus a text item",
+      "when": "user opens the context menu for each selection",
+      "then": "Ungroup is unavailable for every one of these selections; it is available only when exactly one bundle is selected",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4073",
+      "requirement": "AC-004-10",
+      "given": "Bundle B of 4 files with tag 'x', a note and a pin",
+      "when": "user chooses Ungroup",
+      "then": "a confirmation (organize.confirm.ungroup) appears before any change",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4074",
+      "requirement": "AC-004-10",
+      "given": "Bundle B of 4 files f1..f4 (in that order), tag 'x', note, pin; item count N",
+      "when": "user confirms Ungroup",
+      "then": "B is absent; exactly 4 new file items exist, count N+3; in Recent they appear consecutively as f1, f2, f3, f4; each carries 'x'; none has a note or pin",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4075",
+      "requirement": "FR-004-11",
+      "given": "Bundle B with a note",
+      "when": "user chooses Ungroup and cancels the confirmation",
+      "then": "B still exists with its note and members; item count unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4076",
+      "requirement": "FR-004-11",
+      "given": "Bundle B of 2 files with no note, pin, trigger or hotkey",
+      "when": "user chooses Ungroup",
+      "then": "no confirmation appears; B is replaced by 2 file items",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4077",
+      "requirement": "FR-004-11",
+      "given": "Bundle B with hotkey H",
+      "when": "user confirms Ungroup and presses H",
+      "then": "no new item shows a hotkey badge; pressing H pastes nothing",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4078",
+      "requirement": "FR-004-11",
+      "given": "Bundle of one file and one folder copied from Finder app",
+      "when": "user ungroups it",
+      "then": "one file-kind item and one folder-kind item exist, each showing Finder as source and the bundle's created date",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4079",
+      "requirement": "FR-004-11",
+      "given": "File f1 already exists as its own item; bundle B also contains f1",
+      "when": "user ungroups B",
+      "then": "two separate items now reference f1 (no dedupe)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4080",
+      "requirement": "AC-004-10",
+      "given": "Bundle of 4 files; failure injected on the 3rd member insert",
+      "when": "user confirms Ungroup",
+      "then": "the bundle is still present, unchanged; no member item was created; count unchanged; STO-DB-001 is surfaced",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4081",
+      "requirement": "FR-004-11",
+      "given": "Bundle of files on disk",
+      "when": "user ungroups it",
+      "then": "every member file still exists at its path with unchanged modification date",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4082",
+      "requirement": "AC-004-11",
+      "given": "Tag T and kind Links each have items; some links carry T and some don't",
+      "when": "user selects T, then selects Links",
+      "then": "only links are shown, including links without T (exactly one filter; not combined)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4083",
+      "requirement": "AC-004-11",
+      "given": "Tag T selected; query 'abc' typed",
+      "when": "results are shown",
+      "then": "every result carries T and matches 'abc'; count ≤ T's count",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4084",
+      "requirement": "AC-004-11",
+      "given": "Tag T selected with query 'abc'",
+      "when": "user selects All",
+      "then": "the search field still contains 'abc'; results are all items matching 'abc' regardless of tag",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4085",
+      "requirement": "FR-004-10",
+      "given": "Items copied from Safari, items with unknown source, items from another device",
+      "when": "user selects Safari, then Unknown, then Another device in the Apps section",
+      "then": "each shows only items from that source; counts match the sidebar badges",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4086",
+      "requirement": "FR-004-10",
+      "given": "Library with mixed kinds",
+      "when": "user selects a kind row (e.g. Images)",
+      "then": "only items of that kind are listed",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4087",
+      "requirement": "FR-004-10",
+      "given": "Tag T selected in the sidebar",
+      "when": "user changes the sort, types a query, pins an item and opens a context menu",
+      "then": "the sidebar selection stays T; none of those actions changes the active filter",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4088",
+      "requirement": "FR-004-10",
+      "given": "Tag T exists on zero items",
+      "when": "user selects T",
+      "then": "zero rows; footer reads 0 items",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4089",
+      "requirement": "AC-004-12",
+      "given": "6 items with distinct text, pasteCount and lastCopiedAt",
+      "when": "sort is Recent",
+      "then": "order is lastCopiedAt descending",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4090",
+      "requirement": "AC-004-12",
+      "given": "Same 6 items",
+      "when": "sort is Oldest",
+      "then": "order is lastCopiedAt ascending",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4091",
+      "requirement": "AC-004-12",
+      "given": "Same 6 items plus two with equal pasteCount",
+      "when": "sort is Most Used",
+      "then": "order is pasteCount descending; the equal pair is ordered by lastCopiedAt descending",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4092",
+      "requirement": "AC-004-12",
+      "given": "Items 'banana', 'Apple', 'cherry', 'apple'",
+      "when": "sort is A to Z",
+      "then": "order is case-insensitive locale order: the two apples first (later lastCopiedAt first), then banana, then cherry",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4093",
+      "requirement": "AC-004-12",
+      "given": "Items including equal-key ties under every sort",
+      "when": "the list is reloaded, the panel reopened and the app relaunched",
+      "then": "the order of item identities is identical every time for each sort",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4094",
+      "requirement": "FR-004-12",
+      "given": "Pinned items exist",
+      "when": "each sort is applied",
+      "then": "pinned items appear exactly where the sort key places them, never collected at the top",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4095",
+      "requirement": "AC-004-12",
+      "given": "Sort is Recent",
+      "when": "user presses ⌘S four times",
+      "then": "the active sort goes Oldest, Most Used, A to Z, Recent; the footer names each; the sort menu checkmark is on the active one",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4096",
+      "requirement": "FR-004-12",
+      "given": "Sort set to Most Used",
+      "when": "user quits and relaunches Flotsam and opens the Library",
+      "then": "sort is still Most Used",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4097",
+      "requirement": "FR-004-12",
+      "given": "Fresh install",
+      "when": "Library opened",
+      "then": "sort is Recent",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4098",
+      "requirement": "FRD-004 §5 BR-5",
+      "given": "Item C copied 5 times, pasted 0 times; item P pasted twice from Flotsam",
+      "when": "sort is Most Used",
+      "then": "P ranks above C (repeated copies do not count)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4099",
+      "requirement": "FR-004-13",
+      "given": "Library open with sidebar counts and footer visible",
+      "when": "user pins, tags, edits, deletes, ungroups, or a new capture arrives",
+      "then": "the affected sidebar counts and the footer update within 200 ms; the footer count equals the rows under the active filter",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4100",
+      "requirement": "FR-004-14",
+      "given": "Database write failure injected",
+      "when": "user applies a tag to an item",
+      "then": "STO-DB-001 is surfaced ('Flotsam couldn't save your history. Free up disk space and try again.'); the item shows no new chip; tag counts unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4101",
+      "requirement": "FR-004-14",
+      "given": "500 items selected; database failure injected partway",
+      "when": "user applies a tag to all 500",
+      "then": "none of the 500 carries the tag; STO-DB-001 surfaced once",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4102",
+      "requirement": "AC-004-13",
+      "given": "10,000 items",
+      "when": "single-item pin, tag and delete are each repeated",
+      "then": "each completes in ≤ 100 ms p95",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4103",
+      "requirement": "AC-004-13",
+      "given": "10,000 items; 500 selected",
+      "when": "user tags all 500",
+      "then": "completes in ≤ 1 s",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4104",
+      "requirement": "FRD-004 §5 BR-2",
+      "given": "Debug build; a tag named with a unique marker and a note containing a marker",
+      "when": "user creates, renames and deletes the tag and edits the note; unified log and Copy Diagnostics are searched",
+      "then": "zero occurrences of either marker",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4105",
+      "requirement": "FR-004-11",
+      "given": "Any single item",
+      "when": "user opens its context menu",
+      "then": "entries from this FRD are Pin/Unpin, Tags…, Note…, Edit…, Ungroup, Delete; no Group, Rename, Undo or Move to Trash entry exists",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4106",
+      "requirement": "FRD-004 §5 BR-1",
+      "given": "Two unpinned items older than the retention window: T has a trigger, U has neither trigger, hotkey nor pin",
+      "when": "the retention sweep runs",
+      "then": "T is still present with its trigger badge; U is absent; item count decreases by exactly 1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4107",
+      "requirement": "FRD-004 §5 BR-3",
+      "given": "Item X shows a copied time t in its preview",
+      "when": "user edits X's text and saves",
+      "then": "X's preview still shows copied time t; X's position under Recent and Oldest is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-4108",
+      "requirement": "ORG-VAL-004 (retired)",
+      "given": "Several file, folder and image items exist; subsystem logging is captured",
+      "when": "The user selects 2 or more of them, then a single one, and on each selection opens the context menu, the menu-bar menus and tries every organize shortcut",
+      "then": "No Group action exists anywhere; ORG-VAL-004 is never raised or shown: 0 log entries for ORG-VAL-004 and no HUD, Notice or inline text shows the code or 'Select at least two files, folders or images to group.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-004 retired in FRD-000 §7 (no group action exists); was an unverified spec-gap note"
+    },
+    {
+      "id": "OC-4109",
+      "requirement": "ORG-VAL-005 (retired),ORG-VAL-001",
+      "given": "Items of every kind, a bundle and a tag 'alpha' exist; subsystem logging is captured",
+      "when": "The user looks for Rename on items and the bundle, then renames tag 'alpha' to an 81-character name and to an empty name",
+      "then": "No item or bundle Rename exists; each tag rename is rejected with ORG-VAL-001 ('Tag names must be 1 to 32 characters and unique.') and 'alpha' keeps its name; ORG-VAL-005 is never raised or shown: 0 log entries for ORG-VAL-005 and no text 'Names must be 1 to 80 characters.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-16 ORG-VAL-005 retired in FRD-000 §7 (no rename exists; tag names use ORG-VAL-001); was an unverified spec-gap note"
+    }
+  ]
+}

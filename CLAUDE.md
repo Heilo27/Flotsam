@@ -14,7 +14,7 @@ Swift 6 · SwiftUI + AppKit (NSPanel) · SQLite (decided in architecture) · mac
 - docs/TRUTHS.md outranks the PRD; FRDs move with code in the same commit.
 
 ## Project State
-2026-11-16: Phases 0–4 done (truths confirmed, repo public, PRD). FRDs done. Phase 6 design done: docs/DESIGN.md + docs/design/ (HTML mockups; Pencil was unavailable).
+2026-11-16: Specs, design, architecture done. Oracle contracts for FRD-000…008 in .claude/oracle/ (blind; the pass criteria for tests). Phase 8 underway: FRD-000 built + reviewed (branch frd000, Worf 8T next); FRD-007 implementation nearly done (branch frd007). Spec rulings pending FRD edits: .claude/scratch/flotsam-frd007-decisions.md.
 
 ## Ticketmaster ID
 `flotsam`

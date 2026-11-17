@@ -1,0 +1,1476 @@
+{
+  "frd": "FRD-008",
+  "generated_blind": true,
+  "assertions": [
+    {
+      "id": "OC-8001",
+      "requirement": "FR-008-01",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "user opens Settings › General",
+      "then": "Launch at Login off; 'Pick up screenshots' on; Screenshot folder shows the macOS default screenshot location's name; Shelf switch on; placement popup reads 'Right Edge'; 'Reveal when the pointer rests at the edge' off",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8002",
+      "requirement": "FR-008-01",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "user opens Settings › Storage, then the menu-bar menu, then copies the sentence 'oracle-cap-1' in TextEdit",
+      "then": "Capture mode shows Active; the menu item reads 'Pause Capture'; Library item count increases by exactly 1 and a row with 'oracle-cap-1' exists",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8003",
+      "requirement": "FR-008-01",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "user opens Settings › Shortcuts, then presses ⌃⌘V in TextEdit",
+      "then": "Open Library shows ⌃⌘V; Save Clipboard and Toggle Shelf show the unbound state; ⌃⌘V opens the Library",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8004",
+      "requirement": "FR-008-01",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "user opens Settings › Triggers",
+      "then": "'Expand typed triggers' is on; the excluded-apps list contains exactly 11 entries equal to the set {com.apple.Terminal, com.googlecode.iterm2, net.kovidgoyal.kitty, com.mitchellh.ghostty, io.alacritty, dev.warp.Warp-Stable, co.zeit.hyper, com.microsoft.rdc.macos, com.apple.ScreenSharing, com.parallels.desktop.console, com.vmware.fusion} (shown as name or bundle id)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8005",
+      "requirement": "FR-008-01",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "user opens Settings › Storage",
+      "then": "Keep history for = '30 days'; Image storage limit = '2 GB'; Image quality = 'Original'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8006",
+      "requirement": "FR-008-01",
+      "given": "Fresh install, onboarding closed on step 1; history holds items A (copied first) and B (copied second)",
+      "when": "user opens the Library with ⌃⌘V",
+      "then": "panel is 760 x 480 points; view mode is List; sort is most-recent-first (B above A)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8007",
+      "requirement": "FR-008-01",
+      "given": "Fresh install (no Flotsam preferences domain exists)",
+      "when": "app launches for the first time; later the user closes onboarding and opens Settings",
+      "then": "onboarding window appears automatically; Settings opens with the General pane selected",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8008",
+      "requirement": "FR-008-01",
+      "given": "Launch at Login on and Flotsam listed in System Settings › Login Items; history holds 5 items",
+      "when": "Flotsam is quit, its UserDefaults domain is deleted (`defaults delete`), and it is relaunched",
+      "then": "Login Items still lists Flotsam and the General switch shows on (launch at login is not a registry value); history still holds the same 5 items (item data is not in preferences); no screenshot already imported is imported again (scan watermark lives in the database)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8009",
+      "requirement": "AC-008-01",
+      "given": "The app target's test suite",
+      "when": "the registry enumeration unit test runs",
+      "then": "it asserts exactly the 20 keys of the FR-008-01 table with equal types and defaults and passes; a source scan finds zero UserDefaults reads/writes outside the registry accessor and zero repeated literal defaults",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8010",
+      "requirement": "FRD-008 §5 BR-1",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "each default is observed in the running app",
+      "then": "every default equals both the FR-008-01 row and the owner FR's stated default: capture mode active (FR-007-12), retention 30 days (FR-007-09), triggers on (FR-005-10), excluded list (FR-005-13), backfill checkbox checked (FR-002-12)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8011",
+      "requirement": "AC-008-02",
+      "given": "`storage.retention` written as the string 'd45' in Flotsam's UserDefaults while the app is quit",
+      "when": "Flotsam launches; user opens Settings › Storage and the Notices submenu",
+      "then": "Keep history for = '30 days'; `defaults read` shows `storage.retention` = d30; Notices contains exactly 1 entry with code SET-DAT-001 and text 'A setting had an invalid value and was reset to its default.'; the warning dot is shown; no HUD appeared",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8012",
+      "requirement": "SET-DAT-001",
+      "given": "`storage.retention` was invalid at launch and has been reset (1 SET-DAT-001 Notice exists)",
+      "when": "user opens and closes Settings › Storage 5 times in the same launch, then quits and relaunches",
+      "then": "Notices still holds exactly 1 SET-DAT-001 entry during that launch; after relaunch there are 0 SET-DAT-001 entries",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8013",
+      "requirement": "FR-008-02",
+      "given": "`shelf.enabled` written as the string 'maybe' (wrong type) while quit",
+      "when": "Flotsam launches; user opens Settings › General",
+      "then": "Shelf switch is on (default); exactly 1 SET-DAT-001 Notice exists",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8014",
+      "requirement": "FR-008-02",
+      "given": "`shelf.placement` written as unknown case 'topEdge' while quit",
+      "when": "Flotsam launches; user opens Settings › General",
+      "then": "placement popup reads 'Right Edge'; exactly 1 SET-DAT-001 Notice exists",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8015",
+      "requirement": "AC-008-02",
+      "given": "`screenshots.folderOverride` holds bytes that are not a valid bookmark while quit",
+      "when": "Flotsam launches; user opens Settings › General; a PNG screenshot is saved to the macOS default screenshot location",
+      "then": "Screenshot folder shows the macOS default location; the screenshot appears in the Library (count +1); exactly 1 SET-DAT-001 Notice exists",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8016",
+      "requirement": "FR-008-02",
+      "given": "`shortcuts.openLibrary` holds a chord value that is unusable (key code 9999) while quit",
+      "when": "Flotsam launches; user presses ⌃⌘V",
+      "then": "Shortcuts pane shows ⌃⌘V; ⌃⌘V opens the Library; exactly 1 SET-DAT-001 Notice exists",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8017",
+      "requirement": "FR-008-02",
+      "given": "`storage.retention` = 'd45' and `shelf.placement` = 'topEdge' both written while quit",
+      "when": "Flotsam launches",
+      "then": "Keep history for = '30 days' AND placement = 'Right Edge'; Notices contains at least 1 SET-DAT-001 entry and no HUD appeared",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8018",
+      "requirement": "AC-008-02",
+      "given": "Shelf enabled, placement Right Edge, Toggle Shelf bound to ⌘⇧9",
+      "when": "Settings window open; user changes placement to 'Left Edge' and, without relaunch, presses ⌘⇧9",
+      "then": "the Shelf appears on the left screen edge",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8019",
+      "requirement": "AC-008-02",
+      "given": "Capture mode Active",
+      "when": "user selects Paused in Settings › Storage, then (no relaunch) copies 'oracle-cap-2' in TextEdit and opens the menu-bar menu",
+      "then": "Library count unchanged (delta 0); the menu reads 'Resume Capture'; the icon shows the paused glyph",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8020",
+      "requirement": "FR-008-02",
+      "given": "Placement set to 'Bottom Edge', view mode Grid, Settings last on Privacy",
+      "when": "Flotsam is quit and relaunched",
+      "then": "placement reads 'Bottom Edge'; Library opens in Grid; Settings opens on Privacy",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8021",
+      "requirement": "FR-008-02",
+      "given": "Placement set to 'Left Edge'; history database is damaged so STO-DB-002 occurs at next launch",
+      "when": "Flotsam relaunches",
+      "then": "placement still reads 'Left Edge' and every other changed preference is unchanged (preferences survive a database reset)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8022",
+      "requirement": "FR-008-02",
+      "given": "Any pane of Settings, onboarding and the menu",
+      "when": "user inspects every control and menu",
+      "then": "there is no export, import or sync control for settings anywhere",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8023",
+      "requirement": "AC-008-03",
+      "given": "Library open",
+      "when": "user presses ⌘,",
+      "then": "exactly one Settings window opens with exactly 6 panes in order General, Shortcuts, Triggers, Privacy, Storage, About",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8024",
+      "requirement": "AC-008-03",
+      "given": "Settings window open, then sent behind TextEdit",
+      "when": "user chooses 'Settings…' in the menu-bar menu, then presses ⌘, from the Library",
+      "then": "the window count for Settings stays exactly 1 and that window becomes key/front each time",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8025",
+      "requirement": "AC-008-03",
+      "given": "Settings open on General",
+      "when": "user selects Privacy, presses ⌘W, reopens Settings; then quits Flotsam, relaunches and reopens Settings",
+      "then": "Privacy is selected both times",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8026",
+      "requirement": "FR-008-03",
+      "given": "Settings › General open; Shelf switch on",
+      "when": "user turns the Shelf switch off, then presses Escape; Flotsam is then quit and relaunched",
+      "then": "the window closes on Escape; Shelf switch remains off after reopening and after relaunch; no pane has an Apply, Save or OK button",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8027",
+      "requirement": "FR-008-03",
+      "given": "A Notice or alert that offers an 'Open Settings' action is present",
+      "when": "user chooses 'Open Settings'",
+      "then": "the Settings window opens (or comes to front if already open)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8028",
+      "requirement": "AC-008-03",
+      "given": "Settings window open",
+      "when": "user moves through every pane using only Tab, Shift-Tab, Space and arrow keys",
+      "then": "every control in every pane receives focus and can be operated; every control has a non-empty VoiceOver label",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8029",
+      "requirement": "FR-008-03",
+      "given": "Settings window open in Light appearance",
+      "when": "system appearance is switched to Dark",
+      "then": "the Settings window renders in Dark without reopening or relaunch",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8030",
+      "requirement": "AC-008-04",
+      "given": "Settings › General",
+      "when": "user lists the pane's controls top to bottom",
+      "then": "exactly, in order: Launch at Login switch; 'Pick up screenshots' switch; Screenshot folder name with 'Choose…' and 'Use System Default'; Shelf switch; placement popup with exactly 4 items Right Edge, Left Edge, Bottom Edge, Menu Bar; 'Reveal when the pointer rests at the edge' switch; 'Show Setup Guide…' button; nothing else",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8031",
+      "requirement": "FR-008-04",
+      "given": "Settings › General; Shelf on, placement Right Edge",
+      "when": "user (1) observes the Reveal switch, (2) turns Shelf off, (3) turns Shelf on and sets placement Menu Bar, (4) sets placement Left Edge",
+      "then": "Reveal switch is enabled in (1), disabled in (2), disabled in (3), enabled in (4)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8032",
+      "requirement": "FR-008-04",
+      "given": "Onboarding completed; Settings › General",
+      "when": "user clicks 'Show Setup Guide…'",
+      "then": "the onboarding window opens on step 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8033",
+      "requirement": "FR-008-04",
+      "given": "Pickup on, default folder, onboarding past step 5",
+      "when": "user turns 'Pick up screenshots' off and presses ⌘⇧3; then turns it on and presses ⌘⇧3 again",
+      "then": "Library screenshot count delta is 0 after the first capture and +1 after the second",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8034",
+      "requirement": "AC-008-04",
+      "given": "Settings › Shortcuts",
+      "when": "user lists the pane's controls",
+      "then": "exactly 3 rows Open Library, Save Clipboard, Toggle Shelf, each with label, recorder and clear button; a footnote saying per-item shortcuts and triggers are set from the Library (⌘K); nothing else",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8035",
+      "requirement": "FR-008-05",
+      "given": "Open Library bound to ⌃⌘V",
+      "when": "user clicks Open Library's clear button, presses ⌃⌘V in TextEdit, then opens the menu-bar menu",
+      "then": "the row shows unbound; ⌃⌘V does not open the Library; the menu's Open Library item shows no chord",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8036",
+      "requirement": "AC-008-04",
+      "given": "Settings › Triggers",
+      "when": "user lists the pane's controls",
+      "then": "exactly: 'Expand typed triggers' switch; Accessibility status row and Input Monitoring status row, each with an 'Open System Settings' button; excluded-apps list with add, remove and 'Reset to Defaults'; plus inline permission text when applicable; nothing else",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8037",
+      "requirement": "SET-PRM-002",
+      "given": "Input Monitoring not granted; Accessibility granted",
+      "when": "user opens Settings › Triggers with 'Expand typed triggers' on, then turns the switch off",
+      "then": "with the switch on, inline text equals 'Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security.'; after turning it off that inline text is absent",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8038",
+      "requirement": "FR-008-06",
+      "given": "Accessibility not granted; Input Monitoring granted; 'Expand typed triggers' on",
+      "when": "user opens Settings › Triggers",
+      "then": "an inline message in the pane states that Accessibility is missing and triggers are paused; the Accessibility row reads Not granted (exact inline wording not asserted: spec gap 1)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8039",
+      "requirement": "FR-008-06",
+      "given": "Accessibility and Input Monitoring both granted; triggers on",
+      "when": "user opens Settings › Triggers",
+      "then": "no inline SET-PRM-001 or SET-PRM-002 text is shown; both rows read Granted",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8040",
+      "requirement": "FR-008-06",
+      "given": "Excluded list at its 11 defaults; Safari installed",
+      "when": "user adds Safari, then adds Safari again, then removes Safari",
+      "then": "after the first add, count = 12 and Safari present; after the second add, count = 12 and no error shown; after removal, count = 11 and Safari absent",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8041",
+      "requirement": "SET-VAL-002",
+      "given": "Excluded list at 11 entries",
+      "when": "user adds an .app bundle whose Info.plist has no CFBundleIdentifier",
+      "then": "inline text 'That isn't an app Flotsam can add. Choose an application.'; list count stays 11 with identical members",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8042",
+      "requirement": "FR-008-06",
+      "given": "Excluded list edited to 9 entries (2 defaults removed, Safari added)",
+      "when": "user clicks 'Reset to Defaults' in Triggers and completes any confirmation",
+      "then": "list equals exactly the 11 FR-005-13 defaults; Safari absent",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8043",
+      "requirement": "FR-008-13",
+      "given": "Input Monitoring never requested; Settings › Triggers with triggers off",
+      "when": "user turns 'Expand typed triggers' on",
+      "then": "the macOS Input Monitoring request appears at that moment and not before",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8044",
+      "requirement": "AC-008-04",
+      "given": "Settings › Privacy on macOS 15.4 or later",
+      "when": "user lists the pane's controls",
+      "then": "exactly: ignored-apps list (+, -, Reset to Defaults); read-only text naming concealed, transient and auto-generated pasteboard types as never stored; 'Paste from Other Apps' status row with guidance and System Settings button; one-line statement that Flotsam makes no network connections; no control that sends, shares, uploads or reports anything",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8045",
+      "requirement": "FR-008-07",
+      "given": "Settings › Privacy on macOS 14",
+      "when": "user lists the pane's controls",
+      "then": "the 'Paste from Other Apps' row is absent; all other Privacy elements are present",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8046",
+      "requirement": "AC-008-04",
+      "given": "Settings › Storage",
+      "when": "user lists the pane's controls top to bottom",
+      "then": "exactly, in order: Keep history for (7 days, 30 days, 90 days, 1 year, Forever); Image storage limit (500 MB, 2 GB, 10 GB, Unlimited); Image quality (Original, Balanced, Efficient); Capture mode (Active, Paused, Curated); storage usage labels; 'Clear History…'; 'Reveal Data Folder'; nothing else",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8047",
+      "requirement": "FR-008-08",
+      "given": "Budget 2 GB; history holds unpinned images I1..I10 (oldest first) plus pinned image P and shortcut image S; lowering to 500 MB would remove N>0 images of total size Z",
+      "when": "user selects '500 MB' and clicks Cancel in the alert",
+      "then": "alert text equals 'Lowering the image budget removes {N} older images ({Z}). Pinned and shortcut items are kept.' with the real N and Z; after Cancel the popup reads '2 GB', image count delta 0, I1..I10, P and S all present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8048",
+      "requirement": "FR-008-08",
+      "given": "Same state as the previous assertion",
+      "when": "user selects '500 MB' and confirms",
+      "then": "popup reads '500 MB'; image count decreases by exactly N; the removed images are the N oldest unpinned ones; P and S are still present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8049",
+      "requirement": "FR-008-08",
+      "given": "Budget 2 GB; total image size well under 500 MB (0 images would be removed)",
+      "when": "user selects '500 MB'",
+      "then": "no confirmation appears; popup reads '500 MB' immediately; item count delta 0",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8050",
+      "requirement": "FR-008-08",
+      "given": "Budget 500 MB; history holds images",
+      "when": "user selects '10 GB'",
+      "then": "no confirmation appears; item count delta 0",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8051",
+      "requirement": "FR-008-08",
+      "given": "Retention 90 days; history holds K unpinned items last copied 10 days ago and pinned item Q last copied 10 days ago",
+      "when": "user selects '7 days' and clicks Cancel in the shorten confirmation",
+      "then": "the confirmation appears; after Cancel the popup reads '90 days', item count delta 0, all K items and Q present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8052",
+      "requirement": "FR-008-08",
+      "given": "Same state as the previous assertion",
+      "when": "user selects '7 days' and confirms",
+      "then": "item count decreases by exactly K; those K items are absent; Q is present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8053",
+      "requirement": "FR-008-08",
+      "given": "Retention 7 days; history holds items",
+      "when": "user selects '90 days'",
+      "then": "no confirmation appears; item count delta 0",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8054",
+      "requirement": "FR-008-08",
+      "given": "History holds no item copied in the last hour",
+      "when": "user opens 'Clear History…' and chooses the range 'Last hour'",
+      "then": "the Delete button is disabled and the secondary text reads 'Nothing to clear in this range.'",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8055",
+      "requirement": "FR-008-08",
+      "given": "History holds 20 items",
+      "when": "user opens 'Clear History…', chooses All time, then clicks Cancel",
+      "then": "item count delta 0; all 20 items present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8056",
+      "requirement": "FR-008-08",
+      "given": "History holds 3 unpinned items copied in the last hour (H1..H3) and 5 unpinned items copied 3 days ago (O1..O5)",
+      "when": "user opens 'Clear History…', chooses 'Last hour' and confirms Delete",
+      "then": "item count decreases by exactly 3; H1..H3 absent; O1..O5 present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8057",
+      "requirement": "FR-008-08",
+      "given": "Settings › Storage",
+      "when": "user clicks 'Reveal Data Folder' in Storage, then in About",
+      "then": "Finder opens the same Flotsam data folder both times",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8058",
+      "requirement": "AC-008-04",
+      "given": "Settings › About",
+      "when": "user lists the pane's contents",
+      "then": "exactly: app name; version and build; licence line naming MIT; 'View Licence'; 'Copy Diagnostics'; 'Reveal Data Folder'; 'Project Page' link button; no 'Check for Updates' control and no update status text",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8059",
+      "requirement": "FR-008-09",
+      "given": "Network disabled; Settings › About",
+      "when": "user clicks 'View Licence'",
+      "then": "a sheet shows the MIT licence text; it loads with the network off",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8060",
+      "requirement": "AC-008-04",
+      "given": "History holds 12 items",
+      "when": "user clicks 'Copy Diagnostics' in About, then opens the Library",
+      "then": "HUD 'Diagnostics copied' appears; the pasteboard holds the diagnostics report; Library count stays 12 (the copy is not captured)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8061",
+      "requirement": "FR-008-09",
+      "given": "Packet capture running on the Flotsam process; Settings › About",
+      "when": "user opens About and waits 30 s, then clicks 'Project Page'",
+      "then": "0 connections from Flotsam while About is open; after the click the default browser opens the project URL and Flotsam itself still makes 0 connections",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8062",
+      "requirement": "FR-008-10",
+      "given": "Settings › General",
+      "when": "user clicks 'Choose…'",
+      "then": "an open panel appears in which folders can be chosen and files cannot",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8063",
+      "requirement": "SET-VAL-001",
+      "given": "Override is folder A (pickup working); folder B exists with read permission removed (chmod 000)",
+      "when": "user chooses B with 'Choose…', then saves a PNG screenshot into A",
+      "then": "inline text 'That folder can't be used for screenshots. Choose a folder you can read.'; the label still shows A's name; the screenshot in A appears in the Library (count +1)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8064",
+      "requirement": "AC-008-05",
+      "given": "Override is folder A; folder E exists with execute-only permission (chmod 111: not listable)",
+      "when": "user chooses E with 'Choose…'",
+      "then": "inline SET-VAL-001 text 'That folder can't be used for screenshots. Choose a folder you can read.'; the label still shows A's name",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8065",
+      "requirement": "AC-008-05",
+      "given": "Pickup on, system default location in use; readable folder C",
+      "when": "user chooses C, saves a screenshot into C and one into the default location; then quits and relaunches",
+      "then": "label shows C's name; Library count +1 for the C screenshot and 0 for the default-location one; after relaunch the label still shows C",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8066",
+      "requirement": "AC-008-05",
+      "given": "Override is folder C",
+      "when": "user clicks 'Use System Default', then saves a screenshot into C and one into the macOS default location",
+      "then": "label shows the default location; count +1 for the default-location screenshot and 0 for the C screenshot",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8067",
+      "requirement": "AC-008-05",
+      "given": "Fresh install; default screenshot location is the Desktop",
+      "when": "Flotsam launches and the user advances onboarding to step 4",
+      "then": "no macOS folder-access prompt appears at launch or before step 5",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8068",
+      "requirement": "SSP-IO-003",
+      "given": "Override folder is ~/Documents/Shots; Flotsam's Documents access refused in macOS",
+      "when": "user opens Settings › General and saves a screenshot into the folder",
+      "then": "beside the folder name the text 'Your chosen screenshot folder is missing. Screenshot pickup is paused.' is shown with a button that opens System Settings › Privacy & Security › Files and Folders; Library count delta 0",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8069",
+      "requirement": "AC-008-06",
+      "given": "Fresh install, onboarding closed on step 1",
+      "when": "user opens Settings › Privacy",
+      "then": "the ignored list has exactly 6 entries equal to {com.apple.keychainaccess, com.apple.Passwords, com.1password.1password, com.agilebits.onepassword7, com.bitwarden.desktop, org.keepassxc.keepassxc}",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8070",
+      "requirement": "CAP-POL-002",
+      "given": "Fresh install; 1Password is frontmost",
+      "when": "user copies the text 'oracle-pw' in 1Password, then opens the Library and Notices",
+      "then": "Library count delta 0; no row contains 'oracle-pw'; no HUD and no Notice for this skip (Info code)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8071",
+      "requirement": "FR-008-11",
+      "given": "Fresh install; Passwords app frontmost",
+      "when": "user copies 'oracle-pw2' in Passwords",
+      "then": "Library count delta 0",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8072",
+      "requirement": "FR-008-11",
+      "given": "Default ignored list; TextEdit not ignored",
+      "when": "user copies 'oracle-te-1' in TextEdit",
+      "then": "Library count +1 and 'oracle-te-1' present (control case)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8073",
+      "requirement": "FR-008-11",
+      "given": "History holds items T1, T2 copied from TextEdit",
+      "when": "user adds TextEdit to the ignored list, then copies 'oracle-te-2' in TextEdit",
+      "then": "T1 and T2 still present (count not reduced by the add); the new copy is not stored (count delta 0)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8074",
+      "requirement": "FR-008-11",
+      "given": "TextEdit is in the ignored list",
+      "when": "user removes TextEdit, then copies 'oracle-te-3' in TextEdit",
+      "then": "list count decreases by 1 with TextEdit absent; Library count +1 with 'oracle-te-3' present",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8075",
+      "requirement": "SET-VAL-002",
+      "given": "Ignored list at 6 defaults",
+      "when": "user clicks 'Add…' and chooses an .app bundle with no bundle identifier",
+      "then": "inline text 'That isn't an app Flotsam can add. Choose an application.'; list count stays 6 with identical members",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8076",
+      "requirement": "FR-008-11",
+      "given": "Ignored list contains 1Password 8",
+      "when": "user adds 1Password 8 again",
+      "then": "list count unchanged; no error text shown",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8077",
+      "requirement": "FR-008-11",
+      "given": "Settings › Privacy",
+      "when": "user clicks 'Add…'",
+      "then": "the open panel starts in /Applications and allows choosing only .app bundles",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8078",
+      "requirement": "FR-008-11",
+      "given": "Ignored list includes an installed app (Keychain Access) and a bundle id with no installed app",
+      "when": "user views the list",
+      "then": "the installed app shows its icon and name; the uninstalled one shows its bundle identifier text",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8079",
+      "requirement": "AC-008-06",
+      "given": "Ignored list = 6 defaults minus Bitwarden plus TextEdit (6 entries)",
+      "when": "user clicks 'Reset to Defaults' and clicks Cancel",
+      "then": "the alert text is 'Replace your list with the default apps?'; after Cancel the list is unchanged: TextEdit present, Bitwarden absent, count 6",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8080",
+      "requirement": "FR-008-11",
+      "given": "Same list as above; history holds TextEdit items",
+      "when": "user clicks 'Reset to Defaults' and confirms",
+      "then": "list equals exactly the 6 defaults; TextEdit absent; Bitwarden present; Library item count unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8081",
+      "requirement": "FR-008-11",
+      "given": "Default ignored list",
+      "when": "user removes all 6 entries, then copies 'oracle-e1' in TextEdit",
+      "then": "the list shows no rows and no error; 'Reset to Defaults' remains available; the copy is stored (+1)",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8082",
+      "requirement": "AC-008-07",
+      "given": "Fresh install",
+      "when": "Flotsam launches",
+      "then": "the onboarding window opens on step 1 before any system permission prompt; step 1 states what Flotsam does and that it never sends anything off the Mac",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8083",
+      "requirement": "FR-008-12",
+      "given": "Onboarding open",
+      "when": "user advances through every step",
+      "then": "every step shows Skip, a title and a one-sentence purpose; steps 2 to 8 show Back; a progress indicator shows the current position; permission steps state what the permission is for and what stops without it",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8084",
+      "requirement": "FR-008-12",
+      "given": "Fresh install on macOS 15.4+, Paste from Other Apps not set to Allow",
+      "when": "user reaches step 2 and sets Allow in System Settings, then returns",
+      "then": "step 2 shows the instruction, a System Settings button and a status that changes to granted without restarting onboarding",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8085",
+      "requirement": "FR-008-12",
+      "given": "Fresh install on macOS 14",
+      "when": "user continues from step 1",
+      "then": "step 2 is not shown; the next step is Paste for you (Accessibility)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8086",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 3; Accessibility not granted",
+      "when": "user clicks 'Allow'",
+      "then": "the macOS Accessibility prompt appears now (it had not appeared on steps 1 and 2)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8087",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 3; Accessibility not granted",
+      "when": "user clicks 'Not Now', finishes onboarding, chooses an item in the Library over TextEdit",
+      "then": "no Accessibility prompt appeared during onboarding; the item is copied but not pasted and the HUD is SET-PRM-001 (copy-only)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8088",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 4",
+      "when": "user presses Return",
+      "then": "Return activates 'Not Now' (the default); no Input Monitoring prompt appears; step 5 is shown",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8089",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 4",
+      "when": "user clicks 'Allow'",
+      "then": "the macOS Input Monitoring request appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8090",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 5; the screenshot folder holds 3 screenshots 1-10 days old and 1 that is 40 days old; retention 30 days",
+      "when": "user leaves pickup on and the import box checked (its default) and clicks Continue",
+      "then": "Library count increases by exactly 3; the 3 recent screenshots are present; the 40-day-old one is absent",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8091",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 5 with the same folder",
+      "when": "user unchecks the import box and clicks Continue, then saves a new screenshot",
+      "then": "0 of the existing screenshots are imported; the new screenshot appears (+1)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8092",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 5 (pickup switch on)",
+      "when": "user clicks Skip; later opens Settings › General",
+      "then": "'Pick up screenshots' is still on (Skip left it unchanged)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8093",
+      "requirement": "FR-008-17",
+      "given": "Onboarding on step 6",
+      "when": "user records ⌥⌘V and continues, then opens Settings › Shortcuts",
+      "then": "step 6 showed ⌃⌘V as the default before recording; Settings shows Open Library = ⌥⌘V",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8094",
+      "requirement": "FR-008-15",
+      "given": "Onboarding on step 7",
+      "when": "user leaves the switch on (its default) and clicks Continue",
+      "then": "System Settings › Login Items lists Flotsam; status is enabled or requires approval",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8095",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 7",
+      "when": "user clicks Skip (or, separately, closes the window on step 7 with the switch on)",
+      "then": "Flotsam is not added to Login Items in either case",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8096",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 8",
+      "when": "user clicks 'Open Library'",
+      "then": "the onboarding window closes and the Library opens",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8097",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 3",
+      "when": "user closes the onboarding window, then quits and relaunches Flotsam",
+      "then": "onboarding does not open automatically on relaunch",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8098",
+      "requirement": "AC-008-07",
+      "given": "Onboarding on step 4 after finishing steps 1-3",
+      "when": "user quits Flotsam with ⌘Q and relaunches",
+      "then": "steps 1, 2 and 3 are not shown again",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8099",
+      "requirement": "AC-008-07",
+      "given": "Fresh install",
+      "when": "user clicks Skip on every step until onboarding closes, then copies 'oracle-skip' in TextEdit",
+      "then": "no system permission prompt appeared at any point; Library count +1 and 'oracle-skip' present",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8100",
+      "requirement": "FR-008-12",
+      "given": "Fresh install; onboarding open on step 1",
+      "when": "user copies 'oracle-ob-1' in TextEdit without touching onboarding",
+      "then": "Library count +1 with 'oracle-ob-1' present (onboarding never blocks capture)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8101",
+      "requirement": "FR-008-12",
+      "given": "Onboarding on step 4",
+      "when": "user clicks Back",
+      "then": "step 3 is shown; no setting changed",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8102",
+      "requirement": "AC-008-07",
+      "given": "Onboarding completed",
+      "when": "user chooses 'Show Setup Guide…' in the menu-bar menu, closes it, then relaunches",
+      "then": "onboarding opens on step 1; after relaunch it does not open automatically",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8103",
+      "requirement": "AC-008-08",
+      "given": "Accessibility granted; Settings › Triggers open",
+      "when": "user revokes Accessibility in System Settings and returns to Settings; then grants it and returns",
+      "then": "the Accessibility row reads 'Not granted' within 2 s of returning, then 'Granted' within 2 s of the second return",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8104",
+      "requirement": "AC-008-08",
+      "given": "Input Monitoring granted; Settings › Triggers open",
+      "when": "user revokes Input Monitoring in System Settings and returns",
+      "then": "the Input Monitoring row reads 'Not granted' within 2 s",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8105",
+      "requirement": "CAP-PRM-001",
+      "given": "macOS 15.4+; capture working; Settings › Privacy open",
+      "when": "user sets Paste from Other Apps to deny for Flotsam, returns, copies 'oracle-blk'; then sets it to Allow, returns, copies 'oracle-ok'",
+      "then": "row reads 'Not granted' within 2 s; Notices contains 'macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings.' and the warning dot shows; 'oracle-blk' not stored (delta 0); after Allow 'oracle-ok' is stored (+1)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8106",
+      "requirement": "FR-008-13",
+      "given": "Settings window open",
+      "when": "user inspects every permission row in Triggers and Privacy",
+      "then": "each row shows the text 'Granted' or 'Not granted', what the permission enables, and a button that opens the matching System Settings pane; state is not shown by colour alone",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8107",
+      "requirement": "AC-008-08",
+      "given": "Onboarding completed with every permission declined",
+      "when": "Flotsam is quit and relaunched 3 times",
+      "then": "0 system permission prompts appear",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8108",
+      "requirement": "FR-008-13",
+      "given": "Flotsam quit; Accessibility granted in System Settings while it was quit",
+      "when": "Flotsam launches; user chooses an item in the Library over TextEdit",
+      "then": "the Accessibility row reads Granted and the item pastes into TextEdit (state not taken from a previous launch)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8109",
+      "requirement": "AC-008-08",
+      "given": "Accessibility and Input Monitoring both revoked",
+      "when": "user copies 'oracle-u1', presses ⌃⌘V, searches 'oracle-u1', toggles the Shelf, and takes a screenshot",
+      "then": "copy stored (+1); Library opens; search returns the item; Shelf shows; screenshot stored (+1)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8110",
+      "requirement": "FR-008-13",
+      "given": "Accessibility not granted; onboarding step 3 was 'Not Now'; no paste attempted yet",
+      "when": "user chooses an item in the Library twice",
+      "then": "the macOS Accessibility prompt appears on the first attempt only; the second attempt shows no prompt",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8111",
+      "requirement": "AC-008-09",
+      "given": "Accessibility not granted to Flotsam; TextEdit document D frontmost behind the Library; history holds item X (text 'oracle-x')",
+      "when": "user selects X and presses Return",
+      "then": "pasteboard text = 'oracle-x'; D's contents unchanged; Library closed; HUD text = 'Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V.'; Library item count delta 0 and exactly 1 row has 'oracle-x'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8112",
+      "requirement": "AC-008-09",
+      "given": "Accessibility not granted to Flotsam; TextEdit document D frontmost behind the Library; history holds item X (text 'oracle-x')",
+      "when": "user double-clicks X",
+      "then": "same outcome as Return: pasteboard = 'oracle-x', D unchanged, Library closed, history count delta 0",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8113",
+      "requirement": "AC-008-09",
+      "given": "Accessibility not granted",
+      "when": "user opens the Library and clicks the footer's 'Enable' button",
+      "then": "footer shows 'Press ⌘V to paste' with an 'Enable' button; clicking opens System Settings › Privacy & Security › Accessibility",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8114",
+      "requirement": "FR-008-14",
+      "given": "Accessibility not granted; history holds 'oracle-s1'",
+      "when": "user opens the Library, searches 'oracle-s1', previews it and edits its text to 'oracle-s1b'",
+      "then": "each action works; the edited text is shown",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8115",
+      "requirement": "FR-008-14",
+      "given": "Accessibility not granted to Flotsam; TextEdit document D frontmost behind the Library; history holds item X (text 'oracle-x'); history also holds Y and Z",
+      "when": "user chooses X, Y and Z within 20 s",
+      "then": "after each choice the pasteboard holds that item; at most one HUD per choice; D unchanged; history count delta 0",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8116",
+      "requirement": "FR-008-14",
+      "given": "Accessibility not granted; Open Library = ⌃⌘V",
+      "when": "user presses ⌃⌘V in TextEdit",
+      "then": "the Library opens (Carbon hotkeys keep working)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8117",
+      "requirement": "FR-008-14",
+      "given": "Accessibility not granted; Input Monitoring granted; item with trigger ';sig' exists",
+      "when": "user types ';sig ' in TextEdit",
+      "then": "the text stays ';sig ' (no expansion)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8118",
+      "requirement": "AC-008-09",
+      "given": "Accessibility not granted to Flotsam; TextEdit document D frontmost behind the Library; history holds item X (text 'oracle-x'); the copy-only HUD has been shown once",
+      "when": "user grants Accessibility in System Settings (no relaunch) and chooses X again",
+      "then": "'oracle-x' is pasted into D; no SET-PRM-001 HUD; the footer copy-only hint is gone",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8119",
+      "requirement": "SET-PRM-001",
+      "given": "Accessibility not granted to Flotsam; TextEdit document D frontmost behind the Library; history holds item X (text 'oracle-x')",
+      "when": "user chooses X in the Library",
+      "then": "a HUD shows exactly 'Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V.'; no keystroke reaches D (contents unchanged); the pasteboard holds 'oracle-x'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8120",
+      "requirement": "AC-008-10",
+      "given": "Flotsam in /Applications; Launch at Login off",
+      "when": "user turns the General switch on",
+      "then": "SMAppService.mainApp status is enabled or requiresApproval and the switch shows on",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8121",
+      "requirement": "FR-008-15",
+      "given": "Launch at Login registered but awaiting user approval",
+      "when": "user opens Settings › General",
+      "then": "the switch shows on with the caption 'Waiting for approval in System Settings' and a button that opens Login Items",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8122",
+      "requirement": "SET-OS-001",
+      "given": "Flotsam running from ~/Downloads (not /Applications) and the system refuses registration",
+      "when": "user turns Launch at Login on",
+      "then": "the switch reverts to off; HUD text 'Couldn't change Launch at Login. Check System Settings › General › Login Items.'; Login Items does not list Flotsam",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8123",
+      "requirement": "SET-OS-001",
+      "given": "Launch at Login on; unregister fails",
+      "when": "user turns the switch off",
+      "then": "the switch reverts to on; HUD shows the SET-OS-001 message",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8124",
+      "requirement": "AC-008-10",
+      "given": "Launch at Login on",
+      "when": "user removes Flotsam from Login Items in System Settings, then reopens Settings › General",
+      "then": "the switch shows off",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8125",
+      "requirement": "FR-008-15",
+      "given": "Fresh install; onboarding closed on step 2",
+      "when": "Flotsam is quit and relaunched twice",
+      "then": "Login Items never lists Flotsam",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8126",
+      "requirement": "FR-008-16",
+      "given": "Flotsam running",
+      "when": "user looks at the Dock and presses ⌘Tab",
+      "then": "no Flotsam Dock icon and no Flotsam entry in the app switcher; no main window opened at launch",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8127",
+      "requirement": "AC-008-11",
+      "given": "Shelf on; Open Library ⌃⌘V; Save Clipboard ⌥⌘S; Toggle Shelf ⌘⇧9; mode Active",
+      "when": "user clicks the menu-bar icon",
+      "then": "the menu is exactly, in order: Open Library ⌃⌘V; Save Clipboard ⌥⌘S; Toggle Shelf ⌘⇧9; separator; Pause Capture; Notices (submenu); separator; Settings… ⌘,; Show Setup Guide…; separator; Quit Flotsam ⌘Q (11 entries)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8128",
+      "requirement": "AC-008-11",
+      "given": "Mode Active",
+      "when": "user chooses 'Pause Capture', copies 'oracle-p1', reopens the menu, chooses 'Resume Capture', copies 'oracle-p2'",
+      "then": "after pausing, the item reads 'Resume Capture', the icon shows the paused glyph and 'oracle-p1' is not stored (delta 0); after resuming, the item reads 'Pause Capture' and 'oracle-p2' is stored (+1)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8129",
+      "requirement": "FR-008-16",
+      "given": "Mode Curated (set in Storage)",
+      "when": "user opens the menu and chooses its capture item",
+      "then": "the item reads 'Resume Capture'; afterwards Storage shows Active and the icon shows the active glyph",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8130",
+      "requirement": "AC-008-11",
+      "given": "Flotsam running",
+      "when": "the mode is set to Active, Paused and Curated in turn; a grayscale screenshot and the accessibility label of the icon are recorded each time",
+      "then": "the three glyph shapes differ from each other and the three accessibility labels differ",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8131",
+      "requirement": "AC-008-11",
+      "given": "Mode is in turn Active, Paused, Curated; one unacknowledged Warning Notice (e.g. SET-DAT-001)",
+      "when": "user views the icon in each mode, then chooses 'Dismiss all' in Notices",
+      "then": "the dot overlay shows in all three modes alongside the mode glyph; after 'Dismiss all' the dot is gone",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8132",
+      "requirement": "FR-008-16",
+      "given": "No Notices exist",
+      "when": "user copies in 1Password (CAP-POL-002, Info)",
+      "then": "the icon shows no warning dot",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8133",
+      "requirement": "AC-008-11",
+      "given": "Shelf on; menu contains Toggle Shelf",
+      "when": "user turns the Shelf off in Settings and opens the menu",
+      "then": "Toggle Shelf is absent; menu entry count drops by exactly 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8134",
+      "requirement": "AC-008-11",
+      "given": "Open Library ⌃⌘V",
+      "when": "user records ⌥⌘V in Settings › Shortcuts and opens the menu; then clears Save Clipboard and opens the menu",
+      "then": "Open Library shows ⌥⌘V; Save Clipboard shows no chord",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8135",
+      "requirement": "FR-008-16",
+      "given": "Menu closed",
+      "when": "user selects Paused in Settings › Storage, then opens the menu",
+      "then": "the menu shows 'Resume Capture' at first open (never stale)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8136",
+      "requirement": "FR-008-16",
+      "given": "Flotsam running",
+      "when": "user chooses Settings…, then Show Setup Guide…, then Quit Flotsam",
+      "then": "Settings opens; onboarding opens on step 1; the Flotsam process exits",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8137",
+      "requirement": "FR-008-16",
+      "given": "Flotsam running",
+      "when": "the menu bar is switched between light and dark",
+      "then": "the icon is drawn as a template image adapting to each",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8138",
+      "requirement": "AC-008-12",
+      "given": "VoiceOver on",
+      "when": "user navigates every Settings pane, every onboarding step and the menu",
+      "then": "every control is announced with a role and a non-empty label; zero unlabeled controls",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8139",
+      "requirement": "FR-008-17",
+      "given": "Settings window open",
+      "when": "user reads control labels",
+      "then": "labels are sentence case and plain, e.g. 'Pick up screenshots', 'Expand typed triggers'; no label 'Enable screenshot monitoring'",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8140",
+      "requirement": "FR-008-17",
+      "given": "Settings › Storage open; mode Active",
+      "when": "user chooses 'Pause Capture' in the menu",
+      "then": "Storage's Capture mode shows Paused without reopening (both write the same setting)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8141",
+      "requirement": "FR-008-17",
+      "given": "Settings window open",
+      "when": "user lists every registry-backed control across the 6 panes and the menu",
+      "then": "no registry key has more than one control, except capture.mode (Storage and menu) and shortcuts.openLibrary (Shortcuts; also onboarding step 6)",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8142",
+      "requirement": "AC-008-13",
+      "given": "Release build of Flotsam",
+      "when": "the app binary's linked frameworks and symbols are inspected",
+      "then": "no WebKit, Sparkle or Network.framework linkage; no URLSession, NWConnection or WKWebView symbols",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8143",
+      "requirement": "AC-008-13",
+      "given": "Packet capture filtered to the Flotsam process",
+      "when": "for 10 minutes the user opens every Settings pane, runs onboarding through all steps, opens View Licence and copies diagnostics",
+      "then": "0 outbound connections from Flotsam",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8144",
+      "requirement": "FR-008-18",
+      "given": "Network disabled",
+      "when": "user opens onboarding steps 1-8 and every Settings pane",
+      "then": "all content renders identically to the network-enabled run; no web view or remote image placeholder appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8145",
+      "requirement": "FRD-008 §5 BR-2",
+      "given": "Fresh install",
+      "when": "user runs a session that never reaches onboarding steps 3-5, never pastes, never saves a trigger, never toggles triggers and never chooses a folder",
+      "then": "0 system permission prompts appear",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8146",
+      "requirement": "FRD-008 §5 BR-3",
+      "given": "History holds 30 items; ignored list customised",
+      "when": "user triggers each destructive control (Clear History, shorten retention, lower the image budget with >0 affected, Reset ignored apps) and cancels each",
+      "then": "each shows a confirmation first; after all cancels item count delta 0 and the ignored list is unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-8147",
+      "requirement": "FRD-008 §5 BR-4",
+      "given": "Fresh install; onboarding skipped on every step",
+      "when": "user copies 'oracle-d1', presses ⌃⌘V, checks Storage",
+      "then": "the copy is stored; ⌃⌘V opens the Library; retention 30 days; screenshots on; Shelf on; capture Active",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}

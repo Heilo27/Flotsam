@@ -1,0 +1,1456 @@
+{
+  "frd": "FRD-005",
+  "generated_blind": true,
+  "assertions": [
+    {
+      "id": "OC-5001",
+      "requirement": "AC-005-01",
+      "given": "Fresh install, onboarding skipped, TextEdit frontmost",
+      "when": "user opens Settings › Shortcuts and then presses ⌃⌘V twice in TextEdit",
+      "then": "Open Library shows ⌃⌘V; Save Clipboard and Toggle Shelf show no chord; the first ⌃⌘V opens the Library, the second closes it; no other chord triggers any Flotsam action",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5002",
+      "requirement": "AC-005-01",
+      "given": "Open Library bound to ⌃⌘V",
+      "when": "user records ⌃⌥⌘L for Open Library, then presses ⌃⌥⌘L and ⌃⌘V in TextEdit without relaunching",
+      "then": "⌃⌥⌘L toggles the Library immediately; ⌃⌘V no longer opens it; after relaunch ⌃⌥⌘L still opens it",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5003",
+      "requirement": "AC-005-01",
+      "given": "Open Library bound to ⌃⌘V",
+      "when": "user focuses its recorder and presses Delete, then Backspace, and looks for a clear button",
+      "then": "the binding is still ⌃⌘V after each attempt (clearing refused); ⌃⌘V still opens the Library",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5004",
+      "requirement": "FR-005-01",
+      "given": "Save Clipboard bound to ⌃⌥S",
+      "when": "user clears the Save Clipboard binding, presses ⌃⌥S in TextEdit, then chooses Save Clipboard from the menu-bar menu",
+      "then": "⌃⌥S does nothing in Flotsam; the menu item is still present (without a chord) and saves the clipboard",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5005",
+      "requirement": "FR-005-01",
+      "given": "Save Clipboard and Toggle Shelf have chords; menu-bar menu open",
+      "when": "user reads the menu items",
+      "then": "Open Library, Save Clipboard and Toggle Shelf each display their current chord; changing a chord in Settings updates the menu item label",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5006",
+      "requirement": "AC-005-02",
+      "given": "Shortcut recorder for Save Clipboard focused",
+      "when": "user presses ⌥A, then ⌥⇧A, then ⇧A",
+      "then": "each is rejected with TRG-VAL-003 inline: 'Shortcuts need ⌘ or ⌃ plus a key, and can't be a reserved system shortcut.'; Save Clipboard binding unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5007",
+      "requirement": "AC-005-02",
+      "given": "Shortcut recorder focused",
+      "when": "user presses ⌘Q, ⌘C, ⌘Space and ⌃Space in turn",
+      "then": "each is rejected with TRG-VAL-003; nothing is saved; Flotsam did not quit",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5008",
+      "requirement": "FR-005-02",
+      "given": "Shortcut recorder focused",
+      "when": "user presses ⌘W, ⌘H, ⌘M, ⌘Tab, ⌘⌥Esc, ⌘comma, ⌘V, ⌘X, ⌘Z and ⌘A in turn",
+      "then": "each is rejected with TRG-VAL-003; binding unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5009",
+      "requirement": "FR-005-02",
+      "given": "Shortcut recorder focused; ⌘⇧V is not an enabled macOS symbolic hotkey",
+      "when": "user presses ⌘⇧V",
+      "then": "it is accepted and saved (reserved letters are reserved only with ⌘ alone)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5010",
+      "requirement": "AC-005-02",
+      "given": "macOS screenshot shortcut ⌘⇧3 is enabled in System Settings › Keyboard Shortcuts",
+      "when": "user records ⌘⇧3",
+      "then": "TRG-VAL-003 inline; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5011",
+      "requirement": "FR-005-02",
+      "given": "⌘⇧3 has been turned off in System Settings › Keyboard Shortcuts",
+      "when": "user records ⌘⇧3 for Save Clipboard",
+      "then": "it is accepted and pressing it saves the clipboard",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5012",
+      "requirement": "AC-005-02",
+      "given": "No chords in use besides defaults",
+      "when": "user records ⌃⌥A for Save Clipboard, ⌘⇧9 for Toggle Shelf, and ⌃⌘F5 on an item",
+      "then": "all three are accepted, saved and each fires its action when pressed in TextEdit",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5013",
+      "requirement": "AC-005-02",
+      "given": "Item A has hotkey ⌃⌥1",
+      "when": "user assigns ⌃⌥1 to item B",
+      "then": "TRG-VAL-004 inline: 'That shortcut is already used in Flotsam.'; B has no hotkey badge; ⌃⌥1 still pastes A",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5014",
+      "requirement": "FR-005-02",
+      "given": "Open Library is ⌃⌘V",
+      "when": "user assigns ⌃⌘V to an item",
+      "then": "TRG-VAL-004 inline; the item gets no hotkey; ⌃⌘V still opens the Library",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5015",
+      "requirement": "FR-005-02",
+      "given": "Item A has hotkey ⌃⌥2",
+      "when": "user records ⌃⌥2 for Toggle Shelf",
+      "then": "TRG-VAL-004 inline; Toggle Shelf binding unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5016",
+      "requirement": "AC-005-03",
+      "given": "OS registration refusal simulated for item hotkey ⌃⌥7; other hotkeys registered",
+      "when": "user saves ⌃⌥7 on item A",
+      "then": "TRG-OS-001 'macOS wouldn't let Flotsam use that shortcut. Try a different one.' is shown; A's editor still shows ⌃⌥7 with a warning badge; ⌃⌘V and other item hotkeys still work",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5017",
+      "requirement": "AC-005-03",
+      "given": "Binding ⌃⌥7 saved while refused; refusal simulation removed",
+      "when": "user quits and relaunches Flotsam and presses ⌃⌥7 in TextEdit",
+      "then": "item A is pasted; the warning badge is gone",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5018",
+      "requirement": "FR-005-03",
+      "given": "Binding ⌃⌥7 saved while refused; refusal simulation removed while running",
+      "when": "the Mac sleeps and wakes, then user presses ⌃⌥7",
+      "then": "item A is pasted (retry on wake)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5019",
+      "requirement": "FR-005-03",
+      "given": "Binding ⌃⌥7 saved while refused; refusal simulation removed while running",
+      "when": "user re-saves ⌃⌥7 in A's editor, then presses it",
+      "then": "item A is pasted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5020",
+      "requirement": "FR-005-03",
+      "given": "Accessibility and Input Monitoring both not granted",
+      "when": "user presses ⌃⌘V and the Save Clipboard chord in TextEdit",
+      "then": "the Library opens and the clipboard is saved (hotkeys need neither permission)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5021",
+      "requirement": "FR-005-03",
+      "given": "Flotsam running with ⌃⌘V bound",
+      "when": "user quits Flotsam and presses ⌃⌘V in TextEdit",
+      "then": "no Flotsam window appears; the key goes to TextEdit as normal",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5022",
+      "requirement": "AC-005-04",
+      "given": "Item A has hotkey ⌃⌥1; the Save Clipboard recorder is recording",
+      "when": "user presses ⌃⌥1, then ⌃⌘V",
+      "then": "A is not pasted and the Library does not open; the recorder shows TRG-VAL-004 for ⌃⌥1 and keeps recording",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5023",
+      "requirement": "AC-005-04",
+      "given": "Recorder recording after the above",
+      "when": "user presses Esc, then ⌃⌥1 and ⌃⌘V in TextEdit",
+      "then": "recording ends with the Save Clipboard binding unchanged; ⌃⌥1 pastes A and ⌃⌘V opens the Library",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5024",
+      "requirement": "AC-005-04",
+      "given": "Save Clipboard bound to ⌃⌥S",
+      "when": "user focuses its recorder and presses Delete",
+      "then": "Save Clipboard shows no chord; ⌃⌥S no longer saves",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5025",
+      "requirement": "FR-005-04",
+      "given": "Recorder recording",
+      "when": "user presses ⌥A, then ⌃⌥S",
+      "then": "⌥A shows TRG-VAL-003 inline while recording continues; ⌃⌥S is then recorded and saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5026",
+      "requirement": "FR-005-04",
+      "given": "Recorder recording",
+      "when": "user presses and releases ⌘ alone, then ⌃⌥ alone",
+      "then": "nothing is recorded; recorder still recording; binding unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5027",
+      "requirement": "AC-005-05",
+      "given": "Item 'hk-text-123' with hotkey ⌃⌥1; TextEdit document focused; clipboard holds 'prev-clip'; Accessibility granted",
+      "when": "user presses ⌃⌥1",
+      "then": "'hk-text-123' is inserted at the cursor; no Flotsam window appears at any point; within 600 ms of the paste the clipboard holds 'prev-clip'; the item's paste count increases by 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5028",
+      "requirement": "AC-005-05",
+      "given": "Same item and hotkey; Accessibility not granted",
+      "when": "user presses ⌃⌥1 in TextEdit",
+      "then": "nothing is inserted; the clipboard holds 'hk-text-123'; the SET-PRM-001 HUD reads 'Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V.'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5029",
+      "requirement": "FR-005-05",
+      "given": "Image item with hotkey ⌃⌥3; rich TextEdit document focused",
+      "when": "user presses ⌃⌥3",
+      "then": "the image is inserted into the document",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5030",
+      "requirement": "FR-005-05",
+      "given": "File item with hotkey ⌃⌥4 whose file has been deleted from disk; clipboard holds 'prev-clip'",
+      "when": "user presses ⌃⌥4 in TextEdit",
+      "then": "nothing is inserted; LIB-DAT-001 HUD 'The original file or folder has moved or been deleted.'; clipboard still holds 'prev-clip'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5031",
+      "requirement": "FR-005-05",
+      "given": "Text item '{date:yyyy-MM-dd}' with hotkey ⌃⌥5",
+      "when": "user presses ⌃⌥5 in TextEdit",
+      "then": "today's date in yyyy-MM-dd form is inserted, not the literal variable",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5032",
+      "requirement": "FR-005-05",
+      "given": "Item A with hotkey ⌃⌥1; the Library panel is open and key",
+      "when": "user presses ⌃⌥1, then repeats with the Settings window key",
+      "then": "A is not pasted in either case; the Library search field and Settings are unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5033",
+      "requirement": "FR-005-05",
+      "given": "Item A with hotkey ⌃⌥1; Notes is frontmost when the key goes down",
+      "when": "user presses ⌃⌥1",
+      "then": "A is inserted into Notes (frontmost app at key-down)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5034",
+      "requirement": "AC-005-06",
+      "given": "Curated mode; 'curated-xyz' copied in TextEdit and not in history; item count N",
+      "when": "user presses the Save Clipboard chord",
+      "then": "item count is N+1; 'curated-xyz' is the top item under Recent; the shortcuts.saved HUD appears",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5035",
+      "requirement": "AC-005-06",
+      "given": "Paused mode; 'paused-xyz' copied; item count N",
+      "when": "user presses the Save Clipboard chord, then copies 'paused-2'",
+      "then": "count is N+1 with 'paused-xyz' present; the saved HUD appears; capture is still Paused and 'paused-2' is not captured",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5036",
+      "requirement": "AC-005-06",
+      "given": "Content marked Concealed is on the clipboard; item count N",
+      "when": "user presses the Save Clipboard chord",
+      "then": "count stays N; no item contains the content; the matching CAP-* HUD (concealed) appears",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5037",
+      "requirement": "FR-005-06",
+      "given": "Content marked Transient is on the clipboard; item count N",
+      "when": "user presses the Save Clipboard chord",
+      "then": "count stays N; no item contains the content; a CAP-* HUD appears",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5038",
+      "requirement": "FR-005-06",
+      "given": "Text copied from an app on the ignored-apps list (e.g. Keychain Access); count N",
+      "when": "user presses the Save Clipboard chord",
+      "then": "count stays N; the CAP-POL-002 (ignored app) HUD appears",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5039",
+      "requirement": "FR-005-06",
+      "given": "Clipboard is empty; count N",
+      "when": "user presses the Save Clipboard chord",
+      "then": "count stays N; a CAP-* HUD for empty content appears; no saved HUD",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5040",
+      "requirement": "AC-005-06",
+      "given": "Curated mode; 'dup-xyz' already in history, not the top of Recent; count N",
+      "when": "user copies 'dup-xyz' in TextEdit and presses the Save Clipboard chord",
+      "then": "count stays N; 'dup-xyz' is the top item under Recent; its copy count increased by 1; the saved HUD appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5041",
+      "requirement": "FR-005-07",
+      "given": "Shelf enabled; Toggle Shelf bound to ⌘⇧9",
+      "when": "user presses ⌘⇧9 twice",
+      "then": "the Shelf appears, then hides",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5042",
+      "requirement": "FR-005-07",
+      "given": "Toggle Shelf bound to ⌘⇧9; Shelf disabled in Settings",
+      "when": "user presses ⌘⇧9 in TextEdit, then re-enables the Shelf and presses it again",
+      "then": "the first press shows no Shelf and the keystroke reaches TextEdit; after re-enabling, ⌘⇧9 shows the Shelf",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5043",
+      "requirement": "AC-005-07",
+      "given": "Text item with no trigger",
+      "when": "user saves trigger ';sig'",
+      "then": "accepted; the item shows a trigger badge",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5044",
+      "requirement": "AC-005-07",
+      "given": "Another item has ';sig'",
+      "when": "user saves ';Sig' on a second item",
+      "then": "TRG-VAL-002 inline 'That trigger is already used by another item.'; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5045",
+      "requirement": "AC-005-07",
+      "given": "Trigger field",
+      "when": "user enters 'sig'",
+      "then": "TRG-VAL-001 inline 'Triggers start with a symbol (like ;), have 2 to 24 characters and contain no spaces.'; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5046",
+      "requirement": "AC-005-07",
+      "given": "Trigger field",
+      "when": "user enters ';' alone",
+      "then": "TRG-VAL-001; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5047",
+      "requirement": "AC-005-07",
+      "given": "Trigger field",
+      "when": "user enters '; sig'",
+      "then": "TRG-VAL-001; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5048",
+      "requirement": "AC-005-07",
+      "given": "Trigger field",
+      "when": "user enters ';é'",
+      "then": "TRG-VAL-001; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5049",
+      "requirement": "AC-005-07",
+      "given": "Trigger field",
+      "when": "user enters ';' followed by 23 letters (24 characters)",
+      "then": "accepted and saved",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5050",
+      "requirement": "AC-005-07",
+      "given": "Trigger field",
+      "when": "user enters ';' followed by 24 letters (25 characters)",
+      "then": "TRG-VAL-001; not saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5051",
+      "requirement": "FR-005-08",
+      "given": "Trigger field",
+      "when": "user enters '1abc', then 'abc', then ';a.b', then '；sig' (full-width semicolon), then ';ab\\t' with a tab",
+      "then": "each is rejected with TRG-VAL-001",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5052",
+      "requirement": "FR-005-08",
+      "given": "Trigger field on separate items",
+      "when": "user enters ';a-b_9', '!x', '/x', '@x', '[x', '`x', '{x' and '~x'",
+      "then": "each is accepted (first character from each permitted ASCII punctuation range)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5053",
+      "requirement": "FR-005-08",
+      "given": "Item S and item G",
+      "when": "user saves ';s' on S and ';sig' on G",
+      "then": "both are accepted",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5054",
+      "requirement": "AC-005-08",
+      "given": "An image item selected (repeat for screenshot, file, folder and bundle)",
+      "when": "user presses ⌘K",
+      "then": "the editor shows a hotkey recorder and no trigger field; a hotkey saved there pastes the item",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5055",
+      "requirement": "AC-005-08",
+      "given": "A text item selected (repeat for richText, link, color, phone, email)",
+      "when": "user presses ⌘K, and separately chooses 'Shortcut and Trigger...' from the context menu",
+      "then": "both open the same editor with a hotkey recorder, a trigger field and a variable help line listing {date}, {time} and {clipboard}",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5056",
+      "requirement": "AC-005-08",
+      "given": "Item with trigger ';sig' that expands",
+      "when": "user clears the trigger field and saves, then types ';sig' Space in TextEdit without relaunching",
+      "then": "no expansion; TextEdit shows ';sig '; the item's trigger badge is gone",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5057",
+      "requirement": "FR-005-09",
+      "given": "Item with trigger ';a'",
+      "when": "user changes the trigger to ';b', then types ';a' Space and ';b' Space in TextEdit",
+      "then": "';a ' stays as typed; ';b' expands; the item holds only one trigger",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5058",
+      "requirement": "FR-005-09",
+      "given": "Text item with text 'Hi {foo}'",
+      "when": "user saves trigger ';foo1'",
+      "then": "the save succeeds; an inline warning reads 'An unknown variable was left as plain text.'; typing ';foo1' Space inserts 'Hi {foo}' literally",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5059",
+      "requirement": "FR-005-09",
+      "given": "Editor open on item with no bindings",
+      "when": "user enters invalid trigger 'x' and tries to save",
+      "then": "the save is blocked by the inline error; the item has no trigger and no badge",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5060",
+      "requirement": "FR-005-09",
+      "given": "Item A has a hotkey only, B a trigger only, C neither",
+      "when": "Library list shown",
+      "then": "A shows a hotkey badge, B a trigger badge, C no binding badge",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5061",
+      "requirement": "FR-005-09",
+      "given": "Item with hotkey ⌃⌥1",
+      "when": "user clears the hotkey and saves, then presses ⌃⌥1 in TextEdit",
+      "then": "the item is not pasted; its hotkey badge is gone",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5062",
+      "requirement": "AC-005-09",
+      "given": "No item has a trigger; Accessibility and Input Monitoring granted; triggers.enabled on",
+      "when": "the event taps of the Flotsam process are listed",
+      "then": "there are none, and no Input Monitoring permission prompt has been requested",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5063",
+      "requirement": "AC-005-09",
+      "given": "Items with triggers exist; Input Monitoring not granted",
+      "when": "Flotsam is launched",
+      "then": "no permission prompt appears at launch",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5064",
+      "requirement": "AC-005-09",
+      "given": "Item with ';sig'; Accessibility granted; Input Monitoring not granted",
+      "when": "user types ';sig' Space in TextEdit and opens Settings › Triggers",
+      "then": "no event tap exists; no expansion: the document contains exactly the typed characters including the boundary key, the clipboard is unchanged, no HUD appears and the item's paste count is unchanged; SET-PRM-002 'Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security.' is reported",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5065",
+      "requirement": "AC-005-09",
+      "given": "Same state",
+      "when": "user grants Input Monitoring in System Settings and waits 5 s, then types ';sig' Space",
+      "then": "a tap exists within 5 s and ';sig' expands",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5066",
+      "requirement": "FR-005-10",
+      "given": "Item with ';sig'; Input Monitoring granted; Accessibility not granted",
+      "when": "user types ';sig' Space in TextEdit",
+      "then": "no event tap exists; no expansion; SET-PRM-001 is reported",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5067",
+      "requirement": "FR-005-10",
+      "given": "Item with ';sig'; permissions granted",
+      "when": "user turns 'Expand typed triggers' off and types ';sig' Space in TextEdit",
+      "then": "no event tap exists; no expansion: the document contains exactly the typed characters including the boundary key, the clipboard is unchanged, no HUD appears and the item's paste count is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5068",
+      "requirement": "FR-005-10",
+      "given": "No triggers exist; Input Monitoring never requested",
+      "when": "user saves the first trigger on an item",
+      "then": "the Input Monitoring permission request appears at that moment (not earlier)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5069",
+      "requirement": "FR-005-10",
+      "given": "Exactly one item has a trigger and a tap exists",
+      "when": "user deletes that trigger",
+      "then": "the Flotsam process has no event tap",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5070",
+      "requirement": "AC-005-10",
+      "given": "Trigger ';sig' on item text 'Best, R'; empty TextEdit document",
+      "when": "user types ';sig' then Space",
+      "then": "the document reads exactly 'Best, R' with no ';sig' and no trailing space",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5071",
+      "requirement": "AC-005-10",
+      "given": "Trigger ';sig'; empty TextEdit document",
+      "when": "user types 'x;sig' then Space",
+      "then": "no expansion: the document contains exactly 'x;sig ' including the boundary key, the clipboard is unchanged, no HUD appears and the item's paste count is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5072",
+      "requirement": "AC-005-10",
+      "given": "Trigger ';sig'",
+      "when": "user types ';si' then Space in TextEdit",
+      "then": "no expansion; the document reads ';si '",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5073",
+      "requirement": "AC-005-10",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig', Backspace, 'g', then Space",
+      "then": "the item text is inserted in place of ';sig'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5074",
+      "requirement": "AC-005-10",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig', clicks the mouse in the document at the end of the text, then presses Space",
+      "then": "no expansion; the document contains ';sig '",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5075",
+      "requirement": "AC-005-10",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig' Tab, and on a new line ';sig' Return",
+      "then": "each expands; no tab and no line break is inserted by the boundary key",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5076",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig', waits 6 seconds without typing, then presses Space",
+      "then": "no expansion; the document contains ';sig '",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5077",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig', presses ← then →, then Space; and separately ';sig', ⌘B, Space",
+      "then": "no expansion in either case",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5078",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig'; TextEdit holds 'hello'",
+      "when": "user types 'ab', presses Backspace three times, then types ';sig' Space, then types ';sig' Space again",
+      "then": "the first ';sig ' is left as typed (dead word after backspacing past the word); the second expands",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5079",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig'",
+      "when": "user types 26 letters starting with ';sig' (25th character makes the word dead), presses Backspace 22 times so ';sig' remains, then presses Space",
+      "then": "no expansion; the document contains ';sig '",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5080",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig'",
+      "when": "user types ';SIG' with ⇧ held, then with Caps Lock on, each followed by Space",
+      "then": "both expand (⇧ and Caps Lock allowed; match is case-insensitive)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5081",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig'; a non-US keyboard layout (e.g. French AZERTY) active",
+      "when": "user types the keys that produce ';sig' on that layout, then Space",
+      "then": "the item text is inserted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5082",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';zzzz'",
+      "when": "scripted events type ';' then 'z' with auto-repeat events producing exactly 'zzzz', then Space",
+      "then": "the item text is inserted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5083",
+      "requirement": "FR-005-11",
+      "given": "Trigger ';sig' in TextEdit",
+      "when": "user types ';sig', switches to Notes and back by clicking the Dock, then presses Space",
+      "then": "no expansion",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5084",
+      "requirement": "AC-005-11",
+      "given": "Triggers ';s' (item S) and ';sig' (item G)",
+      "when": "user types ';s' Space, then on a new line ';sig' Space",
+      "then": "the first inserts S's text, the second G's text; while typing ';sig' nothing changes in the document before Space",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5085",
+      "requirement": "FR-005-12",
+      "given": "Trigger ';sig' in a chat field where ⇧Return inserts a newline",
+      "when": "user types ';sig' ⇧Return, and separately ';sig' ⌥Space",
+      "then": "no expansion; the boundary keys pass through untouched (newline / option-space inserted)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5086",
+      "requirement": "FR-005-12",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig' then keypad Enter",
+      "then": "the item text is inserted and no line break is added",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5087",
+      "requirement": "FR-005-12",
+      "given": "Chat app where Return sends; trigger ';sig' exists",
+      "when": "user types 'hello' then Return",
+      "then": "the message 'hello' is sent (non-matching boundary key passes through)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5088",
+      "requirement": "AC-005-12",
+      "given": "Terminal frontmost (default exclusion); trigger ';sig'",
+      "when": "user types ';sig' Return",
+      "then": "the shell receives ';sig' and Return unchanged (the command line ran as typed); no HUD or Notice; TRG-POL-002 is logged as Info",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5089",
+      "requirement": "FR-005-13",
+      "given": "Each of iTerm2, kitty, Ghostty, Alacritty, Warp, Hyper, Microsoft Remote Desktop, Screen Sharing, Parallels Desktop and VMware Fusion (those installed) frontmost; trigger ';sig'",
+      "when": "user types ';sig' Space in each",
+      "then": "in every app the typed text passes through unchanged; no HUD; clipboard unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5090",
+      "requirement": "FR-005-13",
+      "given": "User adds TextEdit to the excluded apps list; trigger ';sig'",
+      "when": "user types ';sig' Space in TextEdit, then removes TextEdit from the list and repeats",
+      "then": "no expansion: the document contains exactly the typed characters including the boundary key, the clipboard is unchanged, no HUD appears and the item's paste count is unchanged for the first attempt (TRG-POL-002 logged); the second attempt expands",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5091",
+      "requirement": "AC-005-12",
+      "given": "A password field (Secure Event Input on) focused in Safari; trigger ';sig'",
+      "when": "user types ';sig' Space",
+      "then": "the field receives 5 characters; the clipboard is unchanged; no HUD; TRG-POL-001 is logged as Info",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5092",
+      "requirement": "AC-005-12",
+      "given": "Japanese input method active and composing in TextEdit; trigger ';sig'",
+      "when": "user types ';sig' then Space",
+      "then": "no Flotsam expansion; the item text is not inserted; the input method handles Space",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5093",
+      "requirement": "FR-005-13",
+      "given": "Trigger ';sig'",
+      "when": "user types ';sig' Space in the Library search field, the note popover, the item editor and the Settings excluded-apps field",
+      "then": "no expansion in any Flotsam window; each field contains ';sig '",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5094",
+      "requirement": "FR-005-13",
+      "given": "Fresh install",
+      "when": "user opens Settings › Triggers",
+      "then": "the excluded list holds exactly the 11 defaults: Terminal, iTerm2, kitty, Ghostty, Alacritty, Warp, Hyper, Microsoft Remote Desktop, Screen Sharing, Parallels Desktop, VMware Fusion; Flotsam is not listed and cannot be added or removed",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5095",
+      "requirement": "FRD-005 §5 BR-1",
+      "given": "Trigger ';sig'; Safari text area, Xcode editor and VS Code editor in turn",
+      "when": "user types the text 'for(i=0;sig<n;i++) a;sig b https://e.com/x;sig end' in each",
+      "then": "zero expansions in all three apps; each contains exactly the typed text",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5096",
+      "requirement": "AC-005-22",
+      "given": "Trigger ';sig' whose item text is ';sig2 and more'; item ';sig2' also exists",
+      "when": "user types ';sig' Space in TextEdit",
+      "then": "the document reads exactly ';sig2 and more'; ';sig2' did not expand",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5097",
+      "requirement": "AC-005-22",
+      "given": "Trigger ';sig' just expanded in TextEdit",
+      "when": "user immediately types ';s' Space where ';s' is another trigger",
+      "then": "';s' expands normally (Flotsam's own backspaces and ⌘V did not enter the word buffer)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5098",
+      "requirement": "AC-005-13",
+      "given": "Messages compose field focused (Return sends); trigger ';sig'",
+      "when": "user types ';sig' Return",
+      "then": "the compose field holds the item text, the message is not sent, ';sig' is not left; the item's paste count increases by exactly 1 and its last-used time is updated",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5099",
+      "requirement": "FR-005-14",
+      "given": "Trigger ';sig'; a delay is injected before the re-check; user switches to Notes during it",
+      "when": "user types ';sig' Space in TextEdit",
+      "then": "the item text is not inserted into Notes or TextEdit; TextEdit keeps ';sig' and the boundary key; TRG-OS-002 HUD",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5100",
+      "requirement": "FR-005-14",
+      "given": "An external listen-only event tap records Flotsam-posted events",
+      "when": "an expansion runs",
+      "then": "N backspaces (N = trigger length) and ⌘V are posted with at most 10 ms between consecutive events, apart from the settle delay before ⌘V",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5101",
+      "requirement": "AC-005-14",
+      "given": "Injected failure at the pasteboard write; trigger ';sig'; clipboard holds 'prev'",
+      "when": "user types ';sig' Space in TextEdit",
+      "then": "TextEdit shows ';sig ' exactly as typed; HUD 'Couldn't expand that trigger. Your typed text was left as it was.'; clipboard holds 'prev'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5102",
+      "requirement": "AC-005-14",
+      "given": "Injected failure at the ⌘V post",
+      "when": "user types ';sig' Space in TextEdit",
+      "then": "TextEdit shows ';sig ' (trigger and boundary re-posted); the TRG-OS-002 HUD appears; no second expansion occurs",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5103",
+      "requirement": "FR-005-15",
+      "given": "Trigger tap active; Accessibility revoked just before expansion (within the watchdog window)",
+      "when": "user types ';sig' Space",
+      "then": "TextEdit shows ';sig ' as typed; the SET-PRM-001 HUD appears",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5104",
+      "requirement": "AC-005-15",
+      "given": "An image I is on the clipboard; trigger ';sig'",
+      "when": "user types ';sig' Space",
+      "then": "within 600 ms the clipboard holds image I again; item count unchanged; the top Recent item is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5105",
+      "requirement": "AC-005-15",
+      "given": "Trigger ';sig'; another app writes 'other' to the clipboard within 300 ms after ⌘V",
+      "when": "expansion completes",
+      "then": "the clipboard holds 'other'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5106",
+      "requirement": "AC-005-15",
+      "given": "A 40 MiB item on the clipboard and already in history; trigger ';sig'",
+      "when": "user types ';sig' Space",
+      "then": "the clipboard still holds the item text after 600 ms (not restored); the 40 MiB clip is still in history",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5107",
+      "requirement": "FR-005-16",
+      "given": "Clipboard holds 'prev'; item P selected in the Library",
+      "when": "user presses Return, then repeats with ⌥Return and ⇧Return",
+      "then": "after each, the clipboard holds P's content, not 'prev'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5108",
+      "requirement": "FR-005-16",
+      "given": "A password copied from a password manager (Concealed) is on the clipboard; trigger ';sig'",
+      "when": "user types ';sig' Space",
+      "then": "after the restore the password is back on the clipboard; no history item contains it; it is in no log or diagnostics",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5109",
+      "requirement": "AC-005-16",
+      "given": "Item '{date:yyyy-MM-dd}' with trigger ';d'",
+      "when": "user types ';d' Space",
+      "then": "today's date as yyyy-MM-dd is inserted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5110",
+      "requirement": "AC-005-16",
+      "given": "Item 'D={date} T={time}' with trigger ';dt'; locale en_US",
+      "when": "user types ';dt' Space",
+      "then": "inserted text uses the medium date style (e.g. 'Nov 16, 2026') and short time style (e.g. '2:05 PM') for now",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5111",
+      "requirement": "FR-005-17",
+      "given": "Item '{time:HH:mm}' with trigger ';t'",
+      "when": "user types ';t' Space",
+      "then": "the current 24-hour time is inserted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5112",
+      "requirement": "AC-005-16",
+      "given": "Item 'C={clipboard}' with trigger ';c'; 'clip-abc' copied",
+      "when": "user types ';c' Space, then copies an image only and repeats",
+      "then": "first inserts 'C=clip-abc'; second inserts 'C='",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5113",
+      "requirement": "AC-005-16",
+      "given": "Item text 'A {foo} B {date:@@}'",
+      "when": "user saves trigger ';u' then expands it",
+      "then": "TRG-VAL-005 warning at save; the item still saves; expansion inserts 'A {foo} B {date:@@}' literally",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5114",
+      "requirement": "FR-005-17",
+      "given": "Item text '{clipboard:x} {date:yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy}' (33-character format)",
+      "when": "user saves a trigger and expands it",
+      "then": "TRG-VAL-005 at save; both variables are inserted literally",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5115",
+      "requirement": "AC-005-16",
+      "given": "Item '{{date}} {{ .Name }}' with trigger ';lit'",
+      "when": "user types ';lit' Space",
+      "then": "inserted text is '{date} {{ .Name }}'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5116",
+      "requirement": "AC-005-16",
+      "given": "Item 'X={clipboard}' with trigger ';c'; the clipboard text is '{date}'",
+      "when": "user types ';c' Space",
+      "then": "'X={date}' is inserted (no re-expansion)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5117",
+      "requirement": "AC-005-16",
+      "given": "Item '{date}' with trigger ';d'",
+      "when": "user pastes it with Library Return, uses Copy, views the preview and drags it from the Shelf into TextEdit",
+      "then": "each yields the literal text '{date}'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5118",
+      "requirement": "FR-005-17",
+      "given": "Item text just under the text ceiling containing '{clipboard}'; clipboard text is long",
+      "when": "user expands the trigger",
+      "then": "the inserted text length equals the text ceiling exactly (truncated at the limit)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5119",
+      "requirement": "AC-005-17",
+      "given": "richText item with hyperlink text 'Report {date}' to https://e.com and some bold text; trigger ';r'",
+      "when": "user types ';r' Space in a rich TextEdit document",
+      "then": "the link is still a link to https://e.com and its text reads 'Report ' plus today's date; bold is kept",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5120",
+      "requirement": "FR-005-18",
+      "given": "Plain text item ';p' and link item ';l' (https://e.com)",
+      "when": "user expands each in a rich TextEdit document",
+      "then": "the plain item inserts unformatted text; the link item inserts the URL text",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5121",
+      "requirement": "AC-005-18",
+      "given": "Trigger ';sig'; tapDisabledByTimeout simulated",
+      "when": "user waits for the event, then types ';sig' Space",
+      "then": "the expansion works; a Notice 'Typed triggers were paused by macOS and have been restarted.' appears",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5122",
+      "requirement": "AC-005-18",
+      "given": "Trigger ';sig'; three tap disablements simulated within 60 s",
+      "when": "user types ';sig' Space, then toggles 'Expand typed triggers' off and on and types ';sig' Space",
+      "then": "the first attempt does not expand and the menu-bar warning dot stays; after the toggle it expands",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5123",
+      "requirement": "FR-005-19",
+      "given": "Tap disabled without a callback (simulated)",
+      "when": "user waits 5 s and types ';sig' Space",
+      "then": "it expands (watchdog re-enabled the tap)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5124",
+      "requirement": "FR-005-19",
+      "given": "Trigger tap active",
+      "when": "user revokes Input Monitoring in System Settings, waits 5 s and types ';sig' Space",
+      "then": "no event tap exists; no expansion; SET-PRM-002 is reported",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5125",
+      "requirement": "FR-005-19",
+      "given": "Trigger ';sig'",
+      "when": "user types ';si', the Mac sleeps and wakes, user types 'g' Space",
+      "then": "no expansion; then ';sig' Space expands",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5126",
+      "requirement": "FR-005-19",
+      "given": "Two tap disablements simulated 30 s apart",
+      "when": "Notices opened",
+      "then": "exactly one TRG-OS-003 Notice exists (60 s throttle)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5127",
+      "requirement": "AC-005-19",
+      "given": "Debug run; trigger ';sig'",
+      "when": "user types a unique marker word, Space, then ';sig' Space; unified log, diagnostics report and signposts are searched",
+      "then": "zero occurrences of the marker word, ';sig' or any typed text; only outcome codes appear",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5128",
+      "requirement": "FR-005-20",
+      "given": "Same run",
+      "when": "the Flotsam data folder is searched for the marker word",
+      "then": "zero occurrences",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5129",
+      "requirement": "AC-005-20",
+      "given": "100 triggers defined",
+      "when": "1,000 scripted key events are sent",
+      "then": "tap callback time p99 ≤ 1 ms",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5130",
+      "requirement": "AC-005-20",
+      "given": "10 KB text item with a trigger",
+      "when": "50 expansions are timed",
+      "then": "boundary key to ⌘V posted p95 ≤ 150 ms (trigger.expand signpost)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5131",
+      "requirement": "FR-005-21",
+      "given": "Item with a hotkey",
+      "when": "50 hotkey pastes are timed",
+      "then": "hotkey to ⌘V posted p95 ≤ 150 ms (paste.back signpost)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5132",
+      "requirement": "FR-005-21",
+      "given": "100 items with hotkeys vs none",
+      "when": "launch time is compared",
+      "then": "the 100 hotkeys add ≤ 50 ms to launch",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5133",
+      "requirement": "AC-005-21",
+      "given": "Item with hotkey ⌃⌥1 and trigger ';del'",
+      "when": "user deletes the item (confirming), then presses ⌃⌥1 and types ';del' Space in TextEdit without relaunching",
+      "then": "nothing is pasted; ';del ' stays as typed",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5134",
+      "requirement": "FR-005-22",
+      "given": "The item holding ';del' and ⌃⌥1 was deleted",
+      "when": "user assigns ';del' and ⌃⌥1 to another item",
+      "then": "both are accepted with no TRG-VAL-002 or TRG-VAL-004",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5135",
+      "requirement": "AC-005-21",
+      "given": "Item B with a trigger, item C with a hotkey, item U with neither",
+      "when": "user runs Clear History and confirms",
+      "then": "B and C remain with their badges and working bindings; U is gone",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5136",
+      "requirement": "AC-005-21",
+      "given": "Bundle with hotkey ⌃⌥8",
+      "when": "user ungroups it (confirming)",
+      "then": "no member item has a hotkey or trigger badge; ⌃⌥8 pastes nothing",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5137",
+      "requirement": "FR-005-22",
+      "given": "Unpinned item with trigger ';old' older than the retention window",
+      "when": "the retention sweep runs; user then clears the trigger and the sweep runs again",
+      "then": "after the first sweep the item remains; after the second it is gone",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5138",
+      "requirement": "FR-005-22",
+      "given": "Item with ';e' and hotkey ⌃⌥E, text 'one'",
+      "when": "user edits the text to 'two', then expands ';e' and presses ⌃⌥E",
+      "then": "both insert 'two'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5139",
+      "requirement": "FRD-005 §5 BR-2",
+      "given": "Trigger ';sig' with text 'Best, R'; empty TextEdit document",
+      "when": "user types 'abc' Space 'def' Space ';sig' Space",
+      "then": "the document reads exactly 'abc def Best, R' (non-matching spaces inserted; only the completing Space consumed)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5140",
+      "requirement": "FRD-005 §5 BR-3",
+      "given": "Terminal has Secure Keyboard Entry turned on (system-wide secure input) but TextEdit is frontmost; trigger ';sig'",
+      "when": "user types ';sig' Space in TextEdit",
+      "then": "no expansion: the document contains exactly ';sig ' including the boundary key, the clipboard is unchanged, no HUD appears and the item's paste count is unchanged; TRG-POL-001 is logged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5141",
+      "requirement": "FRD-005 §5 BR-4",
+      "given": "Item '{time}' with trigger ';t'; item selected in the Library",
+      "when": "user uses ⌥Return (plain paste) into TextEdit, then the Copy action",
+      "then": "TextEdit receives the literal '{time}'; the clipboard holds the literal '{time}'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5142",
+      "requirement": "FRD-005 §5 BR-5",
+      "given": "A rich-text selection with bold and a link copied from TextEdit is on the clipboard; item hotkey ⌃⌥1",
+      "when": "user presses ⌃⌥1 in Notes and waits 600 ms, then pastes with ⌘V into a rich TextEdit document",
+      "then": "the pasted content is the original rich text with bold and link intact",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5143",
+      "requirement": "FRD-005 §5 BR-6",
+      "given": "Exactly one item has a trigger; an event tap exists",
+      "when": "user deletes that item (confirming)",
+      "then": "the Flotsam process has no event tap; no Input Monitoring prompt appears",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5144",
+      "requirement": "FRD-005 §5 BR-7",
+      "given": "Shortcut recorder focused",
+      "when": "user presses F5 alone, then ⇧F5, then ⌥F5",
+      "then": "each is rejected with TRG-VAL-003; nothing is saved",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-5145",
+      "requirement": "FRD-005 §5 BR-7",
+      "given": "Shortcut recorder focused",
+      "when": "user presses ⌃F5, then on another item ⌘F6",
+      "then": "both are accepted and each pastes its item when pressed in TextEdit",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}

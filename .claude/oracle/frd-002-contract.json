@@ -1,0 +1,866 @@
+{
+  "frd": "FRD-002",
+  "generated_blind": true,
+  "assertions": [
+    {
+      "id": "OC-2001",
+      "requirement": "AC-002-01",
+      "given": "Pick up screenshots on, no override; `defaults write com.apple.screencapture location ~/Pictures/Shots` with that folder existing; Flotsam relaunched",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into ~/Pictures/Shots by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1); Settings › General 'Screenshot folder' shows ~/Pictures/Shots with status 'Watching'",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2002",
+      "requirement": "AC-002-01",
+      "given": "the ~/Pictures/Shots setup above is active",
+      "when": "~/Pictures/Shots is deleted, 35 s pass, then a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into ~/Desktop by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1); Notices shows SSP-IO-001 exactly once; Settings status reads 'Using Desktop'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2003",
+      "requirement": "AC-002-01",
+      "given": "a valid system location S and an override set to a folder that does not exist",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into S by atomic rename from a hidden '.'-prefixed temp name, and a second one into ~/Desktop",
+      "then": "neither file is imported (count delta 0); Notices shows SSP-IO-003; Settings status reads 'Paused'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2004",
+      "requirement": "FR-002-01",
+      "given": "override set to existing folder O; system location set to existing folder S (S != O)",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into O by atomic rename from a hidden '.'-prefixed temp name, then another into S, then another into ~/Desktop",
+      "then": "only the file in O is imported (count +1 exactly); the S and Desktop files are absent",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2005",
+      "requirement": "FR-002-01",
+      "given": "Pick up screenshots on, no override; `defaults write com.apple.screencapture location '~/Pictures/Tilde'` (literal tilde) with that folder existing; Flotsam relaunched",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into ~/Pictures/Tilde by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1) (tilde expanded to the home folder)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2006",
+      "requirement": "FR-002-01",
+      "given": "Pick up screenshots on, no override; system location points at a path that is a regular file, not a folder",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into ~/Desktop by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1); Notices shows SSP-IO-001; Settings status reads 'Using Desktop'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2007",
+      "requirement": "FR-002-01",
+      "given": "Pick up screenshots on, no override; system location is a folder on a mounted disk image, which is then ejected",
+      "when": "35 s pass, then a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into ~/Desktop by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1) and SSP-IO-001 is raised",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2008",
+      "requirement": "FR-002-01",
+      "given": "system location invalid, Desktop fallback active",
+      "when": "Flotsam keeps running for 3 minutes (six 30 s re-resolutions) with no change of state",
+      "then": "the log records SSP-IO-001 exactly once for the period (raised once per change of state, not per re-resolution)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2009",
+      "requirement": "AC-002-02",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; W is the system location",
+      "when": "`defaults write com.apple.screencapture location` is changed to existing folder N, 31 s pass, then a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into N by atomic rename from a hidden '.'-prefixed temp name and a second one into W",
+      "then": "the file in N is imported and the file in W is not (count +1 exactly); Flotsam was not restarted",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2010",
+      "requirement": "FR-002-02",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; W is the system location",
+      "when": "the location is changed to N and Flotsam is activated (brought to the front) 1 s later, then a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into N by atomic rename from a hidden '.'-prefixed temp name 1 s after that",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1) within 2.0 s of the file appearing (re-resolution on activation, without waiting 30 s)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2011",
+      "requirement": "FR-002-02",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; W is the system location; Flotsam's last scan was at time T",
+      "when": "a qualifying screenshot with birth date after T is placed in folder N while N is not watched, then the location is changed to N",
+      "then": "within 35 s that file is imported with no further event on it (a reconcile scan ran on the rebuilt watcher)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2012",
+      "requirement": "AC-002-03",
+      "given": "Pick up screenshots on; folder access for the watched folder is denied (Files and Folders off for Flotsam)",
+      "when": "Flotsam starts and a screenshot is added to the folder",
+      "then": "the screenshot is not imported (count delta 0); Notices shows 'Flotsam can't read your screenshot folder. Allow access in System Settings › Privacy & Security › Files and Folders.' and the menu-bar warning dot shows; the Notice text contains no folder path or file name; Settings status reads 'Needs access'",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2013",
+      "requirement": "AC-002-03",
+      "given": "SSP-PRM-001 active as above",
+      "when": "access is granted in System Settings without activating Flotsam, then 30 s pass, then a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into W by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1); the SSP-PRM-001 Notice and the menu-bar dot clear",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2014",
+      "requirement": "FR-002-03",
+      "given": "SSP-PRM-001 active",
+      "when": "access is granted and Flotsam is activated immediately, then a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into W by atomic rename from a hidden '.'-prefixed temp name 1 s later",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1) within 2.5 s of the file appearing (retry on activation)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2015",
+      "requirement": "FR-002-03",
+      "given": "Flotsam's Files and Folders permission reset (tccutil reset) and pickup on with Desktop as the watched folder",
+      "when": "Flotsam launches",
+      "then": "the macOS folder-access prompt for the Desktop folder appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2016",
+      "requirement": "AC-002-04",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; the FSEvents stream is forced to fail by the test hook",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into W by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "Notices shows 'Live screenshot watching isn't working. Flotsam is checking every 5 seconds instead.' and the menu-bar warning dot shows; the Notice text contains no folder path or file name; the file is found by the Library search within 5.5 s of appearing",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2017",
+      "requirement": "FR-002-04",
+      "given": "SSP-OS-001 active (stream forced to fail)",
+      "when": "the forced failure is removed and the next re-resolution (<= 30 s) creates the stream",
+      "then": "the SSP-OS-001 Notice and menu-bar dot clear, and a new screenshot is found by the Library search within 2.0 s",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2018",
+      "requirement": "FR-002-04",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a qualifying screenshot is moved into the subfolder W/sub, and a symbolic link W/'Screenshot link.png' pointing to a qualifying screenshot outside W is created",
+      "then": "neither is imported (count delta 0 after 10 s)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2019",
+      "requirement": "AC-002-09",
+      "given": "Pick up screenshots off",
+      "when": "3 qualifying screenshots are added to W, pickup is turned on and 10 s pass",
+      "then": "none of the 3 is in the Library (count delta 0)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2020",
+      "requirement": "AC-002-09",
+      "given": "the 3 screenshots above not imported, pickup on",
+      "when": "'Import recent screenshots' is run, then run a second time",
+      "then": "after the first run all 3 are found by file-name search (count +3) and a HUD shows 'Imported 3'; after the second run count delta 0",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2021",
+      "requirement": "FR-002-05",
+      "given": "fresh install with default settings",
+      "when": "Settings › General is opened",
+      "then": "the 'Pick up screenshots' toggle is on",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2022",
+      "requirement": "FR-002-05",
+      "given": "Pick up screenshots off from launch; a file-system trace (fs_usage) runs on the Flotsam process",
+      "when": "Flotsam runs for 2 minutes while screenshots are added to the system folder",
+      "then": "the trace shows no access by Flotsam to the screenshot folder and no folder-access prompt appears",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2023",
+      "requirement": "FR-002-05",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; capture mode Paused",
+      "when": "a qualifying screenshot is added, capture is resumed, then Flotsam is quit and relaunched",
+      "then": "searching the Library for that file name returns nothing (count delta 0) after resume and after relaunch (watermark advanced during the pause)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2024",
+      "requirement": "FR-002-05",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; capture mode Curated",
+      "when": "a qualifying screenshot is added, then Save Clipboard is invoked and Flotsam is activated",
+      "then": "searching the Library for that file name returns nothing (count delta 0)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2025",
+      "requirement": "AC-002-05",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "W receives: a system screenshot (png), a screenshot saved as jpg, a .mov screen recording, a PDF, a hidden '.Screenshot x.png' temp file, a qualifying screenshot inside W/sub, and 'holiday.png' with no screen-capture attribute",
+      "then": "exactly 2 items are created (count +2): the png and jpg screenshots; the other five files are absent",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2026",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "qualifying screenshots named with extensions .PNG, .JPEG, .jpeg, .TIF, .tiff and .heic are added",
+      "then": "all 6 are imported (count +6), each found by its file name with kind screenshot",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2027",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a file 'capture-<uuid>.png' (no prefix) with kMDItemIsScreenCapture = 1 is added",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2028",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "files 'Screenshot a-<uuid>.png' and 'Screen Shot b-<uuid>.png' with NO kMDItemIsScreenCapture attribute are added",
+      "then": "both are imported (count +2)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2029",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a file 'Screenshot c-<uuid>.png' whose kMDItemIsScreenCapture attribute is present and false is added",
+      "then": "searching the Library for that file name returns nothing (count delta 0) (the name prefix applies only when the attribute is absent)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2030",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; `defaults write com.apple.screencapture name Grab`; Flotsam relaunched",
+      "when": "a file 'Grab <uuid>.png' with no screen-capture attribute is added",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2031",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; for each of French, German, Spanish, Dutch, Italian, Japanese, Chinese (Simplified), Chinese (Traditional) and Korean, a fixture name using the prefix macOS writes in that language (taken from a test machine set to that language)",
+      "when": "each fixture is added without the screen-capture attribute",
+      "then": "all 9 are imported (count +9)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": false
+    },
+    {
+      "id": "OC-2032",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a hidden file '.Screenshot d-<uuid>.png' with the attribute set is added, waited on for 5 s, then renamed to 'Screenshot d-<uuid>.png'",
+      "then": "nothing is imported while hidden; exactly one item is created after the rename (count +1)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2033",
+      "requirement": "FR-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "'Screenshot e-<uuid>.gif' and 'Screenshot f-<uuid>.mov' with the attribute set are added",
+      "then": "neither is imported (count delta 0) and the log records no entry for either event",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2034",
+      "requirement": "AC-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a qualifying screenshot is written into W in chunks for 3 s, then left final",
+      "then": "exactly one item is created for it (count +1, not more) after it stops changing",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2035",
+      "requirement": "AC-002-06",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a qualifying screenshot keeps growing for 8 s, then stays final; 10 s later Flotsam is activated (reconcile scan)",
+      "then": "it is not imported during the growth window; the app's log (subsystem = bundle id) records SSP-IO-002 for that event with no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot; after the activation scan it is found exactly once",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2036",
+      "requirement": "FR-002-07",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a qualifying screenshot created with file mode 000 (unreadable) is added; then 6 reconcile scans are triggered by activating Flotsam with no other change to the file",
+      "then": "it is not imported and SSP-IO-002 is logged at most 4 times for it in total (first attempt plus at most 3 retries)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2037",
+      "requirement": "AC-002-07",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "Flotsam is quit, 3 qualifying screenshots are added, Flotsam is launched",
+      "then": "exactly those 3 items appear (count +3)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2038",
+      "requirement": "AC-002-07",
+      "given": "the 3 screenshots above are in the Library",
+      "when": "one of them is deleted from history (⌘⌫), then Flotsam is quit and relaunched",
+      "then": "the deleted one stays absent after relaunch (count after relaunch = count after delete; the file is still on disk)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2039",
+      "requirement": "FR-002-08",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; Flotsam quit at time Q",
+      "when": "a qualifying screenshot with birth date set (SetFile -d) to Q minus 60 s is added, plus one with birth date after Q, then Flotsam launches",
+      "then": "only the file born after Q is imported (count +1); the older file is absent (outside the watermark window)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2040",
+      "requirement": "FR-002-08",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; 20 screenshots already imported",
+      "when": "Flotsam is quit and relaunched with no new files in W",
+      "then": "count delta 0 after launch (watermark persisted across launches)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2041",
+      "requirement": "FR-002-08",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "the Mac sleeps and wakes, and separately Flotsam is activated",
+      "then": "the log records a completed reconcile-scan outcome within 5 s of each event",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2042",
+      "requirement": "AC-002-08",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; Flotsam quit",
+      "when": "a qualifying screenshot is added at time T, Flotsam is launched at T + 10 min",
+      "then": "the item's preview 'Copied' and 'First copied' show T (the file's creation date), not the launch time; the item is listed in Recent at T's position",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2043",
+      "requirement": "AC-002-08",
+      "given": "a screenshot item S imported from file F",
+      "when": "F is deleted from disk (moved to Trash and emptied), then the Library is reopened",
+      "then": "S is still present (count delta 0) and its preview shows the image with the same pixel size as before",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2044",
+      "requirement": "AC-002-08",
+      "given": "a screenshot item S imported from file F; F's SHA-256 recorded",
+      "when": "S is deleted from history (⌘⌫)",
+      "then": "S is absent (count -1) and F still exists at its path with the same SHA-256",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2045",
+      "requirement": "FR-002-09",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; the file's SHA-256, name, path, modification date and extended attributes recorded before import",
+      "when": "a qualifying screenshot file 'Screenshot oc-<uuid>.png' (unique pixels, xattr com.apple.metadata:kMDItemIsScreenCapture = 1) is moved into W by atomic rename from a hidden '.'-prefixed temp name",
+      "then": "after import the file is at the same path with identical SHA-256, name, modification date and extended attributes",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2046",
+      "requirement": "FR-002-09",
+      "given": "a screenshot item imported from W",
+      "when": "its row, preview and the sidebar Apps section are inspected",
+      "then": "Source shows the catalogue label for source.screenshot (not 'Unknown' and not an app name); the item appears under the Screenshots filter; the row reads 'Screenshot' plus pixel size",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2047",
+      "requirement": "FR-002-09",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; Flotsam quit",
+      "when": "screenshot A is added at T, screenshot B at T + 2 min, Flotsam launches",
+      "then": "B is listed above A in Recent (ordering by file creation date)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2048",
+      "requirement": "FR-002-09",
+      "given": "a screenshot item imported from W/'Screenshot g-<uuid>.png'",
+      "when": "the item is selected and ⌘R (Reveal in Finder) is pressed",
+      "then": "Finder opens W with 'Screenshot g-<uuid>.png' selected",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2049",
+      "requirement": "FR-002-10",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a qualifying screenshot is added, then the same file is touched twice (extra file events)",
+      "then": "exactly one item exists for it (count +1 total)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2050",
+      "requirement": "FR-002-10",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; an image item I (kind image, copy count c) was captured from the clipboard",
+      "when": "a qualifying screenshot whose bytes are identical to I's is added",
+      "then": "count delta 0; I keeps kind image and its copy count is c + 1",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2051",
+      "requirement": "FR-002-10",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; screenshot X imported",
+      "when": "X is duplicated in Finder into W as 'Screenshot X copy.png' (same bytes)",
+      "then": "count delta 0",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2052",
+      "requirement": "FR-002-11",
+      "given": "a screenshot item S imported from file F",
+      "when": "F is deleted from disk",
+      "then": "S remains (count delta 0)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2053",
+      "requirement": "FR-002-11",
+      "given": "a screenshot item S imported from file F",
+      "when": "S is deleted from history",
+      "then": "F remains on disk unchanged (same SHA-256)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2054",
+      "requirement": "FR-002-11",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a system screenshot is taken with 'Save to Clipboard' (⌃⇧⌘4)",
+      "then": "one item of kind image is created through capture (count +1); no screenshot-kind item is created and no file appears in W",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2055",
+      "requirement": "AC-002-10",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; 700 qualifying screenshots in W with distinct creation dates within the last 30 days; none in the Library",
+      "when": "'Import recent screenshots' is run",
+      "then": "count +500; the 500 newest by creation date are each found by file name; the 200 oldest are absent; a HUD shows 'Imported 500'",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2056",
+      "requirement": "AC-002-10",
+      "given": "the backfill above completed",
+      "when": "'Import recent screenshots' is run again",
+      "then": "count delta 0 (no duplicates)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2057",
+      "requirement": "FR-002-12",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; retention set to 7 days; W holds qualifying screenshots created 3 days and 10 days ago (older than the watermark)",
+      "when": "'Import recent screenshots' is run",
+      "then": "the 3-day file is imported and the 10-day file is not (count +1)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2058",
+      "requirement": "FR-002-12",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; retention longer than 30 days; W holds qualifying screenshots created 20 days and 40 days ago",
+      "when": "'Import recent screenshots' is run",
+      "then": "the 20-day file is imported and the 40-day file is not (30-day cap)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2059",
+      "requirement": "FR-002-12",
+      "given": "a screenshot item already imported, given tag 'keep' and note 'n-<uuid>'",
+      "when": "'Import recent screenshots' is run",
+      "then": "the item is still a single item with tag 'keep' and note 'n-<uuid>' (count delta 0 for it)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2060",
+      "requirement": "FR-002-12",
+      "given": "first-run onboarding; W holds 2 qualifying screenshots from the last week",
+      "when": "the screenshots step is shown and onboarding is completed without touching its checkbox",
+      "then": "the checkbox 'Import screenshots from the last 30 days' was checked by default and both screenshots are in the Library (count +2)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2061",
+      "requirement": "FR-002-12",
+      "given": "first-run onboarding; W holds 2 qualifying screenshots from the last week",
+      "when": "the checkbox 'Import screenshots from the last 30 days' is unchecked and onboarding is completed",
+      "then": "neither screenshot is in the Library (count delta 0)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2062",
+      "requirement": "FR-002-12",
+      "given": "onboarding completed earlier",
+      "when": "Settings › General is opened",
+      "then": "an 'Import recent screenshots' button is present and enabled",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2063",
+      "requirement": "FR-002-13",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a qualifying screenshot larger than the FRD-007 FR-007-06 image ceiling is added",
+      "then": "searching the Library for that file name returns nothing (count delta 0); Notices shows 'A screenshot was too large to import (over {limit}).' with the limit filled",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2064",
+      "requirement": "FR-002-13",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "a file 'Screenshot h-<uuid>.png' with the attribute set but non-image bytes is added",
+      "then": "searching the Library for that file name returns nothing (count delta 0); the app's log (subsystem = bundle id) records SSP-VAL-001 for that event; no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2065",
+      "requirement": "FR-002-13",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "an unreadable (mode 000) qualifying screenshot is added, followed within 1 s by 5 valid qualifying screenshots",
+      "then": "all 5 valid ones are found by name within 2.0 s of their arrival (the stuck file does not block them)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2066",
+      "requirement": "AC-002-11",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable",
+      "when": "20 qualifying screenshots are added within 10 s",
+      "then": "all 20 are imported (count +20); the pickup import signpost intervals never show more than 2 overlapping; p95 time from file arrival to Library-searchable is <= 2.0 s",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2067",
+      "requirement": "FR-002-14",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; 10,000 items in the Library",
+      "when": "100 final screenshot files are moved into W one at a time, 3 s apart",
+      "then": "p95 time from file arrival to the item being returned by Library search is <= 2.0 s",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2068",
+      "requirement": "FR-002-14",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; no screenshots taken",
+      "when": "Flotsam idles 10 minutes under a CPU profile",
+      "then": "pickup-related CPU keeps the Flotsam process under 0.1 % of one core above its idle baseline with pickup off",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2069",
+      "requirement": "AC-002-12",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; screenshot file named 'Screenshot zq7marker-<uuid>.png' in a folder named 'fold-zq7marker'",
+      "when": "it is imported, then SSP-IO-001 and SSP-LIM-001 are provoked with that folder and a marker-named oversized file, then Copy Diagnostics is used",
+      "then": "`log show` for the subsystem, the diagnostics report and every Notices entry contain zero occurrences of 'zq7marker'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2070",
+      "requirement": "FR-002-15",
+      "given": "the override folder 'fold-zq7marker' is set",
+      "when": "Settings › General is opened",
+      "then": "the 'Screenshot folder' label may show the path containing 'fold-zq7marker' (local display allowed), while the log still has zero occurrences of it",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2071",
+      "requirement": "BR-002-01",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; a full listing of W (names, SHA-256, modification dates) taken",
+      "when": "a session runs: 10 imports, a dedupe, a backfill, 3 item deletions and a Clear History",
+      "then": "W's listing is identical except files the test itself added; Flotsam created, renamed, modified or deleted no file in W",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2072",
+      "requirement": "BR-002-02",
+      "given": "override set to folder O; system location S; Desktop also holds a new qualifying screenshot",
+      "when": "a qualifying screenshot is added to each of O, S and ~/Desktop",
+      "then": "count +1 exactly (only O's file)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2073",
+      "requirement": "BR-002-02",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; W is the system location",
+      "when": "the location is changed to N, 35 s pass, then a qualifying screenshot is added to W",
+      "then": "the W file is not imported (old folder no longer watched)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2074",
+      "requirement": "BR-002-03",
+      "given": "a screenshot item S was deleted from history; its file remains in W",
+      "when": "Flotsam is relaunched, the Mac sleeps and wakes, and Flotsam is activated",
+      "then": "S is absent after each event (count unchanged)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2075",
+      "requirement": "BR-002-04",
+      "given": "the AC-002-05 seven-file fixture set",
+      "when": "the set is placed in turn into the system folder, the Desktop fallback (system location invalid) and an override folder, clearing history between runs",
+      "then": "each run imports exactly the same 2 files (png and jpg screenshots)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2076",
+      "requirement": "SSP-PRM-001",
+      "given": "folder access denied as in AC-002-03",
+      "when": "the code is raised",
+      "then": "Notices shows 'Flotsam can't read your screenshot folder. Allow access in System Settings › Privacy & Security › Files and Folders.' and the menu-bar warning dot shows; the Notice text contains no folder path or file name",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2077",
+      "requirement": "SSP-IO-001",
+      "given": "system location invalid as in AC-002-01",
+      "when": "the code is raised",
+      "then": "Notices shows 'Your screenshot folder isn't available, so Flotsam is watching the Desktop instead.' and the menu-bar warning dot shows; the Notice text contains no folder path or file name",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2078",
+      "requirement": "SSP-IO-002",
+      "given": "an unstable file as in AC-002-06",
+      "when": "the code is raised",
+      "then": "log records SSP-IO-002 at info level; no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2079",
+      "requirement": "SSP-IO-003",
+      "given": "override folder missing as in AC-002-01",
+      "when": "the code is raised",
+      "then": "Notices shows 'Your chosen screenshot folder is missing. Screenshot pickup is paused.' and the menu-bar warning dot shows; the Notice text contains no folder path or file name",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2080",
+      "requirement": "SSP-IO-003",
+      "given": "SSP-IO-003 active for override O",
+      "when": "folder O is recreated and 35 s pass, then a qualifying screenshot is added to O",
+      "then": "searching the Library for that file name returns exactly one item, of kind screenshot (count +1) (pickup resumes when the folder returns)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2081",
+      "requirement": "SSP-VAL-001",
+      "given": "an undecodable file as in FR-002-13",
+      "when": "the code is raised",
+      "then": "log records SSP-VAL-001 at info level; no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2082",
+      "requirement": "SSP-LIM-001",
+      "given": "an oversized file as in FR-002-13",
+      "when": "the code is raised",
+      "then": "Notices shows 'A screenshot was too large to import (over {limit}).' and the menu-bar warning dot shows; the Notice text contains no folder path or file name; {limit} is filled",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2083",
+      "requirement": "SSP-OS-001",
+      "given": "the stream forced to fail as in AC-002-04",
+      "when": "the code is raised",
+      "then": "Notices shows 'Live screenshot watching isn't working. Flotsam is checking every 5 seconds instead.' and the menu-bar warning dot shows; the Notice text contains no folder path or file name",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2084",
+      "requirement": "STO-*",
+      "given": "Pick up screenshots on, capture mode Active, Flotsam running, watched folder W resolved and listable; the Flotsam data folder made unwritable; F's SHA-256 recorded",
+      "when": "a qualifying screenshot F is added",
+      "then": "searching the Library for that file name returns nothing (count delta 0); Notices shows an STO-* code's catalogue message; F is unchanged on disk",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2085",
+      "requirement": "UI-002-1",
+      "given": "override set to folder O",
+      "when": "Settings › General is opened, then 'Use system setting' is clicked",
+      "then": "the button is visible before the click; after it the override is cleared, the label shows the system location, the button is hidden, and a screenshot added to the system location is imported",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-2086",
+      "requirement": "UI-002-2",
+      "given": "no override set",
+      "when": "'Choose folder...' is clicked and folder O is chosen, then a qualifying screenshot is added to O",
+      "then": "'Use system setting' becomes visible, the label shows O, and the screenshot is imported",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}

@@ -1,0 +1,1533 @@
+{
+  "frd": "FRD-007",
+  "generated_blind": true,
+  "inputs": [
+    "docs/frd/FRD-007-RetentionStorage.md",
+    "docs/PRD.md",
+    "docs/TRUTHS.md",
+    "docs/DESIGN.md (UI element names only)"
+  ],
+  "freshness": "greenfield; no freshness.json; all requirements CONFIRMED",
+  "assertions": [
+    {
+      "id": "OC-7001",
+      "requirement": "FR-007-01,AC-007-01",
+      "given": "No ~/Library/Application Support/Flotsam/ exists",
+      "when": "Flotsam is launched for the first time",
+      "then": "~/Library/Application Support/Flotsam/ exists with mode 0700 and contains flotsam.sqlite, blobs/, thumbs/ and tmp/; every file Flotsam created there has mode 0600",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7002",
+      "requirement": "FR-007-01",
+      "given": "Flotsam quit; a file tmp/leftover.part (any bytes) is placed in the data folder's tmp/",
+      "when": "Flotsam is launched",
+      "then": "tmp/ contains 0 entries after launch completes; no item was created from the leftover (item count delta 0)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7003",
+      "requirement": "FR-007-01",
+      "given": "Data folder created",
+      "when": "`tmutil isexcluded` is run on thumbs/, flotsam.sqlite and blobs/",
+      "then": "thumbs/ is Excluded; flotsam.sqlite and blobs/ are NOT excluded",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7004",
+      "requirement": "FR-007-01",
+      "given": "Data folder listing L0 taken",
+      "when": "The user changes the retention preset to 90 days and quits/relaunches",
+      "then": "The preset reads 90 days after relaunch AND the data folder contains no settings/preferences file that was not in L0",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7005",
+      "requirement": "FR-007-01",
+      "given": "fs_usage (or equivalent file-activity trace) attached to Flotsam",
+      "when": "A scripted session copies text, an image, files; imports a screenshot; deletes an item; runs Clear History",
+      "then": "0 file writes by the Flotsam process land outside ~/Library/Application Support/Flotsam/ other than pasteboard, Finder drag-out destinations and the diagnostics copy",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7006",
+      "requirement": "FR-007-01,AC-007-01,STO-IO-002",
+      "given": "~/Library/Application Support is made unwritable and no Flotsam data folder exists",
+      "when": "Flotsam is launched",
+      "then": "STO-IO-002 Fatal alert with exactly 'Reveal Data Folder' and 'Quit'; the process exits after dismissal; no Flotsam data folder was created",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7007",
+      "requirement": "FR-007-01,STO-IO-001,FR-007-05",
+      "given": "Flotsam running with N items; the data folder's blobs/ is made unwritable",
+      "when": "The user copies an image",
+      "then": "Item count stays N (delta 0); `log show` contains STO-IO-001 as the underlying code; exactly 1 Notice (CAP-IO-001 text) appears; the process stays alive",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7008",
+      "requirement": "FR-007-02,AC-007-01",
+      "given": "Flotsam running after first launch",
+      "when": "`sqlite3 flotsam.sqlite 'PRAGMA journal_mode'` is run and the folder is listed",
+      "then": "journal_mode returns 'wal'; flotsam.sqlite-wal exists while Flotsam runs",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7009",
+      "requirement": "FR-007-02,AC-007-01",
+      "given": "The app's database connection (via a test hook or debug query)",
+      "when": "PRAGMA foreign_keys and PRAGMA secure_delete are read",
+      "then": "foreign_keys returns 1 and secure_delete returns 1",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7010",
+      "requirement": "FR-007-02,User story 1",
+      "given": "Flotsam running, N items",
+      "when": "The user copies unique text MARK-K1, it appears in the Library, and 1 s later Flotsam is killed with SIGKILL, then relaunched",
+      "then": "Item count is N+1 and the item with text MARK-K1 exists exactly once",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7011",
+      "requirement": "FR-007-02",
+      "given": "10,000-item database; 5,000 items eligible for retention",
+      "when": "The retention sweep runs while the user opens the Library, types a search and scrolls",
+      "then": "Instruments/hang detection reports 0 main-thread hangs > 250 ms; Library open stays within its FRD-003 target",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7012",
+      "requirement": "FR-007-03,AC-007-02",
+      "given": "A freshly created database",
+      "when": "The schema is introspected (sqlite_master, PRAGMA table_info)",
+      "then": "Tables item, representation, bundleMember, tag, itemTag, meta exist with every column named in FR-007-03 (item: id, kind, createdAt, lastCopiedAt, copyCount, pasteCount, lastUsedAt, contentKey, plainText, searchText, sourceBundleId, sourceName, byteSize, pixelWidth, pixelHeight, originalPath, pinned, note, updatedAt, hotkeyCode, hotkeyModifiers, trigger, exemptReleasedAt); no stored 'exempt' column exists",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7013",
+      "requirement": "FR-007-03,AC-007-02",
+      "given": "Item A has trigger ';sig'",
+      "when": "A second item's trigger is set to ';SIG' at the database level",
+      "then": "The write is rejected; exactly 1 item has a trigger equal to ';sig' case-insensitively",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7014",
+      "requirement": "FR-007-03,AC-007-02",
+      "given": "Item A has hotkey keyCode K + modifiers M",
+      "when": "Item B is given K+M, then item C is given K + different modifiers M2, then items D and E have no hotkey",
+      "then": "B's write is rejected; C's is accepted; D and E coexist with null hotkeys (2 items with null hotkey, no constraint error)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7015",
+      "requirement": "FR-007-03,AC-007-02",
+      "given": "Two items with identical contentKey (e.g. an edited copy per FRD-004)",
+      "when": "Both are inserted",
+      "then": "Both rows exist (count of rows with that contentKey = 2)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7016",
+      "requirement": "FR-007-03,AC-007-02",
+      "given": "Item X has 2 representations, 3 bundle members and 2 tags (T1, T2); T1 is also on item Y",
+      "when": "Item X is deleted",
+      "then": "representation, bundleMember and itemTag rows for X = 0; tag rows T1 and T2 still exist (tag count unchanged); Y still has T1",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7017",
+      "requirement": "FR-007-03",
+      "given": "Clock at known time T",
+      "when": "A plain text is copied",
+      "then": "The new item has createdAt and lastCopiedAt within T +/- 2000 as UTC ms since epoch; copyCount 1; pasteCount 0; lastUsedAt null; pinned 0; note null; trigger, hotkeyCode, hotkeyModifiers, exemptReleasedAt null; 0 representation rows (plain text is in item.plainText)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7018",
+      "requirement": "FR-007-03",
+      "given": "Flotsam running",
+      "when": "An RTF clip with plain fallback is copied, then a PNG image",
+      "then": "RTF item: plainText set AND one representation with uti public.rtf whose blob file exists; image item: plainText null, pixelWidth and pixelHeight equal the source pixel size, originalPath null; byteSize of each equals the sum of its blob file sizes and does not change after its thumbnail is generated",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7019",
+      "requirement": "FR-007-03",
+      "given": "First launch, then one sweep",
+      "when": "The meta table is read",
+      "then": "meta.schemaVersion = '1' and equals PRAGMA user_version; retention.lastSweepAt is set to a time >= launch time",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7020",
+      "requirement": "FR-007-04",
+      "given": "An item with id I and 2 rich representations (rtf, html)",
+      "when": "The blobs folder is listed",
+      "then": "Exactly 2 files exist named blobs/<first two chars of I>/<I>.<n> (n an integer); 0 blob files for I exist anywhere else",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7021",
+      "requirement": "FR-007-04",
+      "given": "Many items stored, including dedupe bumps and edited duplicates",
+      "when": "All representation.blobName values are read",
+      "then": "Count of distinct blobName = count of representation rows (no blob shared between items)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7022",
+      "requirement": "FR-007-04",
+      "given": "Image item I with blob hash H",
+      "when": "The user pins I, tags it, adds a note, copies the same image again (bump) and changes the quality preset",
+      "then": "I's blob file still has hash H and the same file size (never modified in place)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7023",
+      "requirement": "FR-007-04,AC-007-03",
+      "given": "Flotsam is killed after a blob is renamed into blobs/ and before its transaction commits (fault injection)",
+      "when": "Flotsam restarts; reconcile runs once the orphan is older than 10 minutes",
+      "then": "The orphan blob file is gone; no item references it; `log show` contains STO-IO-003",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7024",
+      "requirement": "FR-007-04,FR-007-13",
+      "given": "An orphan blob (no representation row) younger than 10 minutes",
+      "when": "Reconcile runs",
+      "then": "The orphan file still exists after that reconcile pass (not deleted before 10 minutes)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7025",
+      "requirement": "FR-007-04,AC-007-03",
+      "given": "Blob count B0 in blobs/; a database write failure is forced",
+      "when": "An image is copied",
+      "then": "Blob file count is B0 afterwards (no new blob remains); item count delta 0",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7026",
+      "requirement": "FR-007-04,FR-007-15,STO-DB-001",
+      "given": "Item X with 2 blob files; the delete transaction is forced to fail",
+      "when": "The user deletes X",
+      "then": "X still exists (item count delta 0); both blob files still exist with unchanged hashes; STO-DB-001 is raised",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7027",
+      "requirement": "FR-007-05,AC-007-04",
+      "given": "Item count N; no item with text MARK-D1",
+      "when": "The same text payload MARK-D1 is submitted to ingest twice concurrently",
+      "then": "Item count is N+1; exactly 1 item has text MARK-D1 and its copyCount is 2",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7028",
+      "requirement": "FR-007-05",
+      "given": "Item I (text MARK-B1) with copyCount 3, pinned, tag T, note, pasteCount 2, lastUsedAt U, createdAt C",
+      "when": "MARK-B1 is copied again",
+      "then": "Item count delta 0; I.lastCopiedAt is now (+/- 2 s); I.copyCount is 4; createdAt C, pinned, tag T, note, pasteCount 2, lastUsedAt U and plainText are unchanged; I is first in Recent",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7029",
+      "requirement": "FR-007-05,AC-007-04",
+      "given": "An item whose content was copied and pinned 60 days ago",
+      "when": "The same content is copied again",
+      "then": "No item is created (count delta 0); that item's lastCopiedAt equals now (+/- 2 s); it remains pinned",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7030",
+      "requirement": "FR-007-05",
+      "given": "Screenshot item S imported with lastCopiedAt L (file date); then its bytes are copied by the user at time L+1h, setting lastCopiedAt to L+1h",
+      "when": "The screenshot pickup re-supplies the same bytes with supplied date L",
+      "then": "S.lastCopiedAt stays L+1h (never moved backwards); item count delta 0",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7031",
+      "requirement": "FR-007-05,AC-007-04,CAP-IO-001",
+      "given": "Item count N, blob count B0, Notices empty; a database write failure is forced",
+      "when": "The user copies an image",
+      "then": "Item count N; blob count B0 (no blob remains); exactly 1 Notice appears and it carries the CAP-IO-001 text (not a separate STO Notice); `log show` contains CAP-IO-001 with the STO-* code as underlying error",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7032",
+      "requirement": "FR-007-05,STO-DB-001",
+      "given": "A forced write failure; Shelf open",
+      "when": "A text clip is dropped on the Shelf, and separately a screenshot is imported",
+      "then": "Each surfaces the STO-* code (STO-DB-001) per FRD-006/FRD-002, not CAP-IO-001; item count delta 0 for both",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7033",
+      "requirement": "FR-007-05",
+      "given": "A copy of MARK-R1 failed with a forced write failure, then the fault is removed",
+      "when": "MARK-R1 is copied again",
+      "then": "Exactly 1 item with text MARK-R1 exists (count delta +1 from before the first attempt); copyCount 1",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7034",
+      "requirement": "FR-007-05",
+      "given": "Library window and Shelf open, sidebar shows count C for Text",
+      "when": "A new text is copied",
+      "then": "Within 1 s the new item appears at the top of the Library Recent list and the Shelf's recent strip (if it shows recents), and the Text count reads C+1, without reopening any window",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7035",
+      "requirement": "FR-007-05",
+      "given": "An empty store (fresh install)",
+      "when": "The Library and Settings › Storage are opened",
+      "then": "Library shows 0 items (empty state); Storage usage shows total items 0",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7036",
+      "requirement": "FR-007-06,AC-007-05,CAP-LIM-001",
+      "given": "Item count N",
+      "when": "Plain text of exactly 10 MiB + 1 byte of UTF-8 is copied, then exactly 10 MiB",
+      "then": "First: count stays N, CAP-LIM-001 is raised and its message shows the limit as '10 MB'; second: count N+1 and the stored plainText byte length is 10,485,760",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7037",
+      "requirement": "FR-007-06,AC-007-05,CAP-LIM-002",
+      "given": "Item count N, Notices empty",
+      "when": "An RTF of 5 MiB + 1 byte with a plain-text fallback is copied; then an RTF of exactly 5 MiB with plain text",
+      "then": "First: count N+1, the new item has plainText and 0 public.rtf representations, CAP-LIM-002 is logged, no Notice and no HUD; second: count N+2 and the item has 1 public.rtf representation of exactly 5 MiB",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7038",
+      "requirement": "FR-007-06,AC-007-05,CAP-LIM-001",
+      "given": "Item count N",
+      "when": "An image of 100 MiB + 1 byte source bytes is copied, then one of exactly 100 MiB",
+      "then": "First: count stays N and CAP-LIM-001 is raised; second: count N+1",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7039",
+      "requirement": "FR-007-06,AC-007-05,CAP-LIM-003",
+      "given": "Item count N, Notices empty",
+      "when": "501 files are copied in one copy; then exactly 500 files in another",
+      "then": "First: count N+1, the item has exactly 500 members, 1 CAP-LIM-003 Notice whose text shows 501; second: count N+2, 500 members, no new CAP-LIM-003 Notice",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7040",
+      "requirement": "FR-007-06,SSP-LIM-001,SHF-LIM-001",
+      "given": "Item count N",
+      "when": "A screenshot over 100 MiB lands in the screenshot folder; separately a text over 10 MiB is dropped on the Shelf",
+      "then": "Count stays N for both; SSP-LIM-001 is raised for the screenshot and SHF-LIM-001 for the Shelf drop",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7041",
+      "requirement": "FR-007-06",
+      "given": "Settings window",
+      "when": "Every pane and the settings registry are inspected",
+      "then": "No control or settings key exists for the text, rich, image or bundle-member ceilings",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7042",
+      "requirement": "FR-007-07,AC-007-06",
+      "given": "A TIFF screenshot of W x H pixels with known SHA of its bytes",
+      "when": "It is copied to the pasteboard",
+      "then": "1 item created; its stored blob decodes as PNG with pixels identical to the TIFF (lossless); contentKey equals the FR-001-15 hash of the original TIFF bytes; pixelWidth = W and pixelHeight = H; thumbs/<id>-256.jpg exists within 1 s, is JPEG with longest edge 256 px",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7043",
+      "requirement": "FR-007-07,FR-007-08",
+      "given": "The TIFF from the previous case is stored under preset Original",
+      "when": "The preset is changed to Efficient and the same TIFF is copied again",
+      "then": "Item count delta 0; the existing item is bumped (copyCount + 1); its blob is unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7044",
+      "requirement": "FR-007-07,AC-007-06",
+      "given": "Image item I is displayed in the Library; thumbs/<I>-256.jpg exists",
+      "when": "The thumbnail file is deleted (then separately overwritten with random bytes) and the item is displayed again",
+      "then": "The thumbnail is shown, thumbs/<I>-256.jpg exists again as a valid JPEG, and no HUD, Notice or error log entry appears",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7045",
+      "requirement": "FR-007-07",
+      "given": "Image item I",
+      "when": "I is selected in the Library so the preview pane shows it",
+      "then": "thumbs/<I>-512.jpg exists and is JPEG with longest edge 512 px",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7046",
+      "requirement": "FR-007-07,CAP-VAL-001,SSP-VAL-001",
+      "given": "Item count N",
+      "when": "Bytes declared as public.png that are not a decodable image are copied; separately a corrupt .png lands in the screenshot folder",
+      "then": "Count stays N for both; CAP-VAL-001 (Info, logged, no HUD/Notice) for the copy; SSP-VAL-001 (Info, logged) for the screenshot; no blob file remains for either",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7047",
+      "requirement": "FR-007-07",
+      "given": "A Library of 2,000 image items, release build",
+      "when": "The user scrolls the entire Library grid and then the Shelf",
+      "then": "Resident memory stays under 150 MB throughout (thumbnail cache bounded)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7048",
+      "requirement": "FR-007-08,AC-007-07",
+      "given": "Preset Efficient",
+      "when": "A 5120 x 2880 opaque PNG is copied",
+      "then": "The stored blob is JPEG (quality 0.85), 2560 x 1440; contentKey is the hash of the received PNG bytes",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7049",
+      "requirement": "FR-007-08,AC-007-07",
+      "given": "Preset Balanced",
+      "when": "A 5120 x 2880 opaque PNG is copied",
+      "then": "The stored blob is 3840 x 2160 JPEG",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7050",
+      "requirement": "FR-007-08,AC-007-07",
+      "given": "Preset Original",
+      "when": "A 5120 x 2880 opaque PNG is copied",
+      "then": "The stored blob is byte-identical to the source PNG (same SHA-256)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7051",
+      "requirement": "FR-007-08",
+      "given": "Preset Efficient",
+      "when": "A 5120 x 2880 PNG with an alpha channel containing transparent pixels is copied; then a 5120 x 2880 JPEG",
+      "then": "The PNG is stored as PNG at 2560 x 1440 with transparency preserved; the JPEG is stored as JPEG at 2560 x 1440",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7052",
+      "requirement": "FR-007-08",
+      "given": "Preset Efficient",
+      "when": "A 2000 x 1000 PNG (longest edge below 2560) is copied",
+      "then": "Stored blob is byte-identical to the source (not downscaled, not re-encoded)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7053",
+      "requirement": "FR-007-08,AC-007-07",
+      "given": "Three image items stored under Original with blob hashes H1..H3",
+      "when": "The preset is changed to Efficient, then Balanced, and Flotsam is relaunched",
+      "then": "The three blobs still have hashes H1..H3 and identical sizes (existing items never re-encoded)",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7054",
+      "requirement": "FR-007-08,AC-007-07,STO-POL-001",
+      "given": "Budget 500 MiB; unpinned image items totalling 600 MiB with distinct lastCopiedAt; their identities sorted oldest first",
+      "when": "One more small image is ingested (triggering the budget check)",
+      "then": "Sum of image+screenshot representation byteSize <= 450 MiB; the removed items are exactly a prefix of the oldest-first list (no newer item removed while an older non-exempt one remains); their blobs are gone; `log show` has STO-POL-001 with counts only; no Notice and no HUD",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7055",
+      "requirement": "FR-007-08",
+      "given": "Budget 500 MiB; images total 495 MiB",
+      "when": "A new 20 MiB image is ingested (oldest-first eviction would otherwise include it only if it were older)",
+      "then": "The just-ingested item still exists after the pass; total ends <= 450 MiB through removal of older non-exempt images",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7056",
+      "requirement": "FR-007-08",
+      "given": "Budget 500 MiB; images total 400 MiB; plus 300 MiB of text items and 2 GiB of files held by reference",
+      "when": "A 10 MiB image is ingested",
+      "then": "0 items deleted (text and referenced files are not counted toward the budget); referenced files untouched",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7057",
+      "requirement": "FR-007-08,AC-007-07,STO-LIM-001",
+      "given": "Budget 500 MiB; 600 MiB of pinned images only; Notices empty",
+      "when": "Another pinned image ingest runs the check; then another 1 h later",
+      "then": "0 items deleted; exactly 1 STO-LIM-001 Notice in total (the second check within 24 h adds none)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7058",
+      "requirement": "FR-007-08,STO-LIM-001",
+      "given": "State after the previous case; budget.lastNoticeAt is T",
+      "when": "The clock passes T + 24 h + 1 min and the check runs again",
+      "then": "A second STO-LIM-001 Notice appears (Notices count for that code +1); still 0 items deleted",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7059",
+      "requirement": "FR-007-08,FR-007-10,STO-LIM-001",
+      "given": "Budget 500 MiB; 450 MiB of pinned/triggered/hotkeyed images plus 200 MiB of non-exempt images",
+      "when": "The budget check runs",
+      "then": "All non-exempt images are deleted (reaching total <= 450 MiB requires all 200 MiB); every exempt item remains (exempt count delta 0); no STO-LIM-001 is raised, because exempt items alone (450 MiB) do not exceed the 500 MiB budget",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7060",
+      "requirement": "FR-007-08",
+      "given": "Budget Unlimited; 20 GiB of unpinned images",
+      "when": "Images are ingested and a retention sweep runs (retention Forever)",
+      "then": "0 items deleted",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7061",
+      "requirement": "FR-007-08,FR-007-09",
+      "given": "Budget 10 GiB; 3 GiB of non-exempt images where n of them would be evicted at 2 GiB",
+      "when": "The user selects 'Image storage limit' 2 GB",
+      "then": "A confirmation alert shows the exact count n before anything is deleted; item count unchanged while it is showing",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7062",
+      "requirement": "FR-007-08,FR-007-09",
+      "given": "The lower-budget confirmation from the previous case is showing",
+      "when": "The user clicks Cancel",
+      "then": "The popup reads 10 GB again; storage.imageBudget is unchanged after relaunch; item count delta 0",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7063",
+      "requirement": "FR-007-08,FR-007-09",
+      "given": "The lower-budget confirmation showing count n",
+      "when": "The user confirms",
+      "then": "Exactly n items are deleted (count delta -n), all non-exempt images, and the popup reads 2 GB",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7064",
+      "requirement": "FR-007-08",
+      "given": "Budget 500 MB",
+      "when": "The user selects 10 GB",
+      "then": "No confirmation appears; 0 items deleted; popup reads 10 GB",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7065",
+      "requirement": "FR-007-08,FR-007 §4",
+      "given": "Fresh install",
+      "when": "Settings › Storage is opened",
+      "then": "'Image storage limit' popup shows 2 GB and offers exactly 500 MB, 2 GB, 10 GB, Unlimited; 'Image quality' shows Original and offers exactly Original, Balanced, Efficient, with a caption describing each",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7066",
+      "requirement": "FR-007-08",
+      "given": "Budget 500 MiB; exactly 0 image items",
+      "when": "The budget check runs (a text ingest, then a sweep)",
+      "then": "0 items deleted; no STO-LIM-001; no STO-POL-001 eviction entry",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7067",
+      "requirement": "FR-007-09,FR-007-10,AC-007-08",
+      "given": "Retention 30 days; 4 items last copied 31 days ago: P (plain), PN (pinned), TR (trigger ';t31'), HK (hotkey)",
+      "when": "A sweep runs",
+      "then": "Item count delta -1; P is absent; PN, TR, HK are present; ';t31' and HK's hotkey still work",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7068",
+      "requirement": "FR-007-09",
+      "given": "Retention 30 days; item A last copied 29 days 23 h ago",
+      "when": "A sweep runs",
+      "then": "A is present (count delta 0)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7069",
+      "requirement": "FR-007-09,FRD-007 §5",
+      "given": "Retention 30 days; item O with createdAt 45 days ago and lastCopiedAt 31 days ago",
+      "when": "O's content is copied again, then a sweep runs",
+      "then": "O is present (same id), with lastCopiedAt now (re-copy renews; age measured from lastCopiedAt not createdAt)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7070",
+      "requirement": "FR-007-09,FRD-007 §5",
+      "given": "Retention 30 days; items X, Y, Z last copied 31 days ago",
+      "when": "X is pasted from the Library, Y is opened in the preview pane, Z's text is edited (FRD-004), then a sweep runs",
+      "then": "No item with the ids of X, Y or Z remains (paste, opening and editing do not renew them); count of those 3 ids present = 0",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7071",
+      "requirement": "FR-007-09,FR-007-10,AC-007-08",
+      "given": "Retention 30 days; item Q copied 40 days ago and pinned for a year",
+      "when": "Q is unpinned at time U, and sweeps run at U+1 h, U+23 h 59 min, then U+24 h 1 min",
+      "then": "Q is present after the first two sweeps and absent after the sweep at U+24 h 1 min",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7072",
+      "requirement": "FR-007-10",
+      "given": "Item Q 40 days old, unpinned at U (exemptReleasedAt = U)",
+      "when": "Q is pinned again at U+2 h; read exemptReleasedAt; then Q is unpinned at U+30 h; sweeps run at U+30 h 5 min and U+54 h 1 min",
+      "then": "After re-pin exemptReleasedAt is null; Q survives the sweep at U+30 h 5 min (grace restarted at the second unpin) and is absent after U+54 h 1 min",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7073",
+      "requirement": "FR-007-10",
+      "given": "Item R 40 days old with only a trigger; item S 40 days old with only a hotkey",
+      "when": "The trigger is removed from R and the hotkey from S at time V; a sweep runs at V+1 h",
+      "then": "R and S each have exemptReleasedAt = V (+/- 2 s) and both are present after the V+1 h sweep",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7074",
+      "requirement": "FR-007-10",
+      "given": "Item W pinned AND with a trigger, 40 days old",
+      "when": "Only the pin is removed; a sweep runs 25 h later",
+      "then": "exemptReleasedAt stays null (an exemption remains) and W is present",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7075",
+      "requirement": "FR-007-09",
+      "given": "Retention 30 days; 1 eligible item; Flotsam launched at time L",
+      "when": "The process runs, observed via `log show` sweep entries",
+      "then": "The first sweep entry is at L+30 s (+/- 5 s); the next is ~1 h later; after a sleep/wake cycle a sweep entry appears within 60 s of wake",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7076",
+      "requirement": "FR-007-09,STO-POL-001,FR-000-12",
+      "given": "Retention 30 days; 1,200 eligible items plus 100 not eligible; release build with signposts",
+      "when": "A sweep runs",
+      "then": "Exactly 1,200 items removed (count delta -1,200), the 100 remain; `log show` has STO-POL-001 with a removed-row count and no content; each retention.sweep interval is <= 50 ms; >= 3 batch intervals observed (<= 500 items each); no Notice and no HUD",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7077",
+      "requirement": "FR-007-09,FR-007 §6 STO-POL-001",
+      "given": "Retention 30 days; 0 eligible items",
+      "when": "A sweep runs",
+      "then": "Count delta 0; no STO-POL-001 entry for a sweep that removed nothing; no error",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7078",
+      "requirement": "FR-007-09",
+      "given": "Empty store, retention 7 days",
+      "when": "A sweep runs",
+      "then": "No error logged, no Notice, item count 0",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7079",
+      "requirement": "FR-007-09,AC-007-08",
+      "given": "Retention Forever; 60 non-exempt items last copied 8-400 days ago and k of them older than 7 days; 4 exempt old items",
+      "when": "'Keep history for' is changed to 7 days",
+      "then": "An alert appears with the storage.confirm.shorten text with {n} = k and {period} = the 7-day period ('This permanently deletes k items older than 7 days. Pinned items and items with a shortcut are kept.'), buttons Delete and Cancel; item count unchanged while it shows",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7080",
+      "requirement": "FR-007-09,AC-007-08",
+      "given": "The shorten alert from the previous case is showing",
+      "when": "The user clicks Cancel",
+      "then": "The popup reads Forever again; after relaunch it still reads Forever; item count delta 0; no sweep for 7 days ran",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7081",
+      "requirement": "FR-007-09",
+      "given": "The shorten alert showing count k",
+      "when": "The user clicks Delete",
+      "then": "Exactly k items deleted (count delta -k); the 4 exempt old items remain; the popup reads 7 days",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7082",
+      "requirement": "FR-007-09",
+      "given": "Retention 30 days; 0 items older than 7 days",
+      "when": "'Keep history for' is changed to 7 days",
+      "then": "If the confirmation shows, its count is 0; after confirming, count delta 0 (see ambiguity: whether a 0-count confirmation is shown)",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7083",
+      "requirement": "FR-007-09",
+      "given": "Retention 7 days; items aged 1-6 days",
+      "when": "Retention is changed to 30 days, then 1 year, then Forever",
+      "then": "No confirmation appears; count delta 0 after each change and after a sweep",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7084",
+      "requirement": "FR-007-09,FR-007-08",
+      "given": "Retention Forever; budget 500 MiB; 600 MiB of unpinned images up to 3 years old",
+      "when": "A sweep runs",
+      "then": "No item is removed for age; image items are evicted oldest first until total <= 450 MiB (budget still applies)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7085",
+      "requirement": "FR-007-09,FR-007 §4",
+      "given": "Fresh install",
+      "when": "Settings › Storage › 'Keep history for' is opened",
+      "then": "Shows 30 days; offers exactly 7 days, 30 days, 90 days, 1 year, Forever",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7086",
+      "requirement": "FR-007-10",
+      "given": "A pinned item with a trigger and a hotkey",
+      "when": "The user deletes it explicitly from the Library",
+      "then": "It is absent (count delta -1); its trigger and hotkey no longer fire",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7087",
+      "requirement": "FR-007-10,FRD-007 §5",
+      "given": "A pinned files item referencing 3 files on disk",
+      "when": "Retention, budget, Clear History (with option) and explicit delete each run against such items",
+      "then": "The 3 referenced files still exist with unchanged hashes in every case; their bytes never count toward the image budget",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7088",
+      "requirement": "FR-007-11",
+      "given": "Settings › Storage",
+      "when": "The user clicks 'Clear History…'",
+      "then": "A sheet opens with a range popup offering exactly Last hour, Last 24 hours, All time; an UNCHECKED checkbox 'Also delete pinned and shortcut items'; a count label; Cancel; a destructive-styled button 'Delete {n} Items' with n = the count",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7089",
+      "requirement": "FR-007-11,AC-007-09",
+      "given": "50 items: 3 pinned (P1-P3), 2 with triggers (T1, T2), 45 plain; 4 tags in use",
+      "when": "Clear History, All time, option unchecked, is confirmed",
+      "then": "Item count 50 -> 5; the remaining 5 are exactly P1, P2, P3, T1, T2; tag count still 4; the HUD reads '45 items deleted'",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7090",
+      "requirement": "FR-007-11,AC-007-09",
+      "given": "The same 50-item fixture rebuilt",
+      "when": "Clear History, All time, option CHECKED, is confirmed",
+      "then": "Item count 0; tag count still 4; T1/T2 triggers and any hotkeys no longer fire; the HUD reads '50 items deleted'",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7091",
+      "requirement": "FR-007-11",
+      "given": "Items last copied 30 min, 59 min, 61 min, 23 h and 25 h ago (all non-exempt)",
+      "when": "Clear History 'Last hour' is confirmed; then on a rebuilt fixture 'Last 24 hours'",
+      "then": "Last hour: the 30- and 59-min items are absent, the other 3 present (delta -2); Last 24 hours: 30 min, 59 min, 61 min, 23 h absent, 25 h present (delta -4)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7092",
+      "requirement": "FR-007-11",
+      "given": "Item A created 10 days ago and re-copied 10 min ago",
+      "when": "Clear History 'Last hour' is confirmed",
+      "then": "A is absent (range is on lastCopiedAt)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7093",
+      "requirement": "FR-007-11",
+      "given": "Clear sheet open, count n shown; item count N",
+      "when": "The user clicks Cancel",
+      "then": "Sheet closes; item count N (delta 0)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7094",
+      "requirement": "FR-007-11",
+      "given": "Clear sheet open on 'All time' with 45 non-exempt and 5 exempt items",
+      "when": "The user checks the option, then switches range to Last hour (with 2 items in that hour)",
+      "then": "Count label and button go 45 -> 50 when checked, then to the in-range number for Last hour; the button text always equals 'Delete {count} Items'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7095",
+      "requirement": "FR-007-11,AC-007-09",
+      "given": "An item with unique text marker MARK-CLR-7Q9 and an image item with unique pixel marker exist; Flotsam has been running (WAL contains them)",
+      "when": "Clear History All time with option is confirmed and completes",
+      "then": "A byte search of flotsam.sqlite, flotsam.sqlite-wal and flotsam.sqlite-shm for 'MARK-CLR-7Q9' (UTF-8 and UTF-16) finds 0 matches; the -wal file is 0 bytes or absent; the image's blob and thumbnail files are absent",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7096",
+      "requirement": "FR-007-11,AC-007-09",
+      "given": "A screenshot item imported from ~/Desktop/Screen Shot X.png",
+      "when": "Clear History All time is confirmed, then Flotsam is relaunched and the pickup runs",
+      "then": "No item for Screen Shot X.png exists after relaunch (count 0 for it); the original file still exists, byte-identical",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7097",
+      "requirement": "FR-007-11",
+      "given": "A files item referencing 2 files and a folder; a screenshot item with its original on disk",
+      "when": "Clear History All time with option is confirmed",
+      "then": "Both items are gone; the 2 files, the folder (with its contents) and the screenshot original all exist byte-identical",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7098",
+      "requirement": "FR-007-11,FR-007-16,AC-007-14",
+      "given": "10,000 non-exempt items including 2,000 images; release build",
+      "when": "Clear History All time is confirmed",
+      "then": "A progress state is shown in the sheet (work > 1 s); completion within 5 s of confirming; item count 0; HUD '10,000 items deleted' (locale-formatted n)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7099",
+      "requirement": "FR-007-11",
+      "given": "No item in the last hour",
+      "when": "Clear sheet with 'Last hour' is shown",
+      "then": "Count label shows 0; if Delete is pressed (or is disabled) the item count delta is 0 and no error appears (see ambiguity)",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7100",
+      "requirement": "FR-007-11",
+      "given": "An empty store",
+      "when": "Clear History… is opened with All time",
+      "then": "Count shows 0; no error; item count stays 0",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7101",
+      "requirement": "FR-007-11,FR-007-15",
+      "given": "An item with hotkey H and trigger ';clr' cleared with the option",
+      "when": "H is pressed and ';clr' is typed in TextEdit",
+      "then": "Nothing is pasted or expanded; the typed text remains ';clr'",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7102",
+      "requirement": "FR-007-12,AC-007-10",
+      "given": "Capture mode Paused; item count N",
+      "when": "The user copies text MARK-P1 and takes a screenshot (Cmd-Shift-3), waits 5 s, then resumes (Active)",
+      "then": "Item count stays N while paused; after resume, still N: MARK-P1 and the paused-period screenshot are not imported (no backfill); the screenshot file still exists on disk",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7103",
+      "requirement": "FR-007-12,AC-007-10",
+      "given": "Capture mode Curated; item count N",
+      "when": "The user copies text MARK-C1 and takes a screenshot; then runs Save Clipboard",
+      "then": "Count stays N after the copy and screenshot; after Save Clipboard, count N+1 and that item's text is MARK-C1; no screenshot item is ever created",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7104",
+      "requirement": "FR-007-12,AC-007-10",
+      "given": "Item count N",
+      "when": "In Paused, a text is dropped on the Shelf and Save Clipboard is run; then in Curated a file is dropped on the Shelf",
+      "then": "Count N+3 after the three actions (Shelf drops and Save Clipboard work in every mode)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7105",
+      "requirement": "FR-007-12,AC-007-10",
+      "given": "Capture mode Paused",
+      "when": "Flotsam is quit and relaunched",
+      "then": "Mode is still Paused (Settings › Storage segmented control shows Paused); the menu-bar icon is in its paused state with accessibility label 'Flotsam, paused'; the menu shows 'Resume Capture'; copying text still creates no item",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7106",
+      "requirement": "FR-007-12",
+      "given": "Capture mode Active",
+      "when": "The user chooses menu bar > 'Pause Capture', copies text 1 poll interval + 100 ms later; chooses 'Resume Capture' and copies another text 1 poll interval + 100 ms later",
+      "then": "The first copy creates no item; the second creates 1 item; the menu item label toggles between 'Pause Capture' and 'Resume Capture'",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7107",
+      "requirement": "FR-007-12",
+      "given": "Pasteboard holds text MARK-H1 with changeCount C",
+      "when": "Mode changes Active -> Paused -> Curated -> Active",
+      "then": "After each change the pasteboard still holds MARK-H1 and changeCount is still C (no held clipboard state discarded); Flotsam made no pasteboard write",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7108",
+      "requirement": "FR-007-12",
+      "given": "Menu bar menu open in each of Active, Paused and Curated",
+      "when": "The capture-mode items are listed",
+      "then": "The menu offers only 'Pause Capture' / 'Resume Capture'; no menu item selects Curated; Curated is selectable in Settings › Storage only",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7109",
+      "requirement": "FR-007-12,FR-007 §4",
+      "given": "Fresh install",
+      "when": "Settings › Storage is opened",
+      "then": "Capture mode segmented control shows Active and offers exactly Active, Paused, Curated, with a caption",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7110",
+      "requirement": "FR-007-13,AC-007-11,STO-DB-002",
+      "given": "flotsam.sqlite overwritten with random bytes (hash HDB); blobs/ holds K files (hashes recorded)",
+      "when": "Flotsam is launched",
+      "then": "corrupt-<timestamp>/ exists containing the old flotsam.sqlite (hash HDB) and blobs/ with the same K files byte-identical; a fresh flotsam.sqlite exists with user_version 1 and 0 items; exactly 1 STO-DB-002 Notice whose detail offers 'Reveal Data Folder'; no Fatal alert; a new copy is captured (count 0 -> 1)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7111",
+      "requirement": "FR-007-13",
+      "given": "A corrupt-<timestamp>/ folder from the previous case",
+      "when": "Clear History All time with option is confirmed, a retention sweep runs, reconcile runs, and Flotsam is relaunched twice",
+      "then": "corrupt-<timestamp>/ and all its files still exist byte-identical",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7112",
+      "requirement": "FR-007-13,AC-007-11,STO-IO-003",
+      "given": "Text item A with an RTF representation; image item B with one representation; files item F with a member; each one's blob file is deleted on disk while Flotsam is quit",
+      "when": "Flotsam is launched (reconcile runs)",
+      "then": "A's representation row is removed and A remains (has plainText); B is removed (no text, no representation, not files); F remains; `log show` has STO-IO-003 for each repair; no Notice",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7113",
+      "requirement": "FR-007-13",
+      "given": "Flotsam running for > 7 days (clock advanced) with an orphan blob older than 10 min created after launch",
+      "when": "The weekly reconcile time passes",
+      "then": "The orphan blob is deleted without a relaunch and STO-IO-003 is logged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7114",
+      "requirement": "FR-007-13",
+      "given": "A file thumbs/<nonexistent-id>-256.jpg",
+      "when": "Reconcile runs",
+      "then": "The file is deleted; no STO-IO-003 or any other log error/Notice is produced for it",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7115",
+      "requirement": "FR-007-13",
+      "given": "A data folder with 20,000 orphan blobs",
+      "when": "Flotsam is launched and the Library is opened immediately",
+      "then": "The Library opens within its FRD-003 target and no main-thread hang > 250 ms occurs while reconcile runs",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7116",
+      "requirement": "FR-007-13,FR-007-17",
+      "given": "A v0 fixture database",
+      "when": "Flotsam is launched and `log show` (storage category) is read",
+      "then": "The migrate entry precedes the integrity-check (quick_check) entry",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7117",
+      "requirement": "FR-007-14,AC-007-12,STO-LIM-002",
+      "given": "Simulated available capacity 400 MiB",
+      "when": "An image is copied, then a text",
+      "then": "The image is skipped (count unchanged), STO-LIM-002 raised as a Notice; the text is saved (count +1)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7118",
+      "requirement": "FR-007-14",
+      "given": "Simulated available capacity 400 MiB",
+      "when": "5 images are copied within 60 s",
+      "then": "0 items created; exactly 1 STO-LIM-002 Notice (throttled); 5 STO-LIM-002 log entries",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7119",
+      "requirement": "FR-007-14",
+      "given": "Simulated available capacity 200 MiB",
+      "when": "A copy of 3 files is made",
+      "then": "1 files item is created (files still ingest above 50 MiB)",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7120",
+      "requirement": "FR-007-14,AC-007-12,STO-IO-001",
+      "given": "Simulated available capacity 40 MiB",
+      "when": "A text is copied, then files, then a Shelf drop",
+      "then": "Item count delta 0 for all; capture raises CAP-IO-001 with underlying STO-IO-001 (1 Notice); the Shelf drop surfaces STO-IO-001",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7121",
+      "requirement": "FR-007-14,STO-DB-001",
+      "given": "SQLite returns disk full (SQLITE_FULL) on write (fault injection)",
+      "when": "A text is copied",
+      "then": "Count delta 0; no partial rows (representation/bundleMember counts unchanged); log has STO-DB-001; capture surfaces CAP-IO-001 with underlying STO-DB-001",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7122",
+      "requirement": "FR-007-15,AC-007-13",
+      "given": "Bundle item Z with hotkey H, trigger ';zz', 2 blobs, thumbnails, referencing 3 files on disk (hashes recorded)",
+      "when": "delete([Z]) is invoked through the explicit delete action; immediately on return H is pressed and ';zz' typed",
+      "then": "Z is absent (count delta -1); H pastes nothing and ';zz' does not expand from the moment the call returns; Z's blob and thumbnail files are absent; the 3 referenced files exist byte-identical",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7123",
+      "requirement": "FR-007-15,AC-007-13,STO-IO-003",
+      "given": "Item Y whose blob file is made undeletable (immutable flag)",
+      "when": "Y is deleted",
+      "then": "Delete succeeds: Y is absent (count delta -1), no error HUD/Notice; `log show` has STO-IO-003; after the flag is cleared, the next reconcile removes the orphan file",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7124",
+      "requirement": "FR-007-15",
+      "given": "Items I1..I5",
+      "when": "delete([I2, I3, I5]) is run",
+      "then": "Count delta -3; I2, I3, I5 absent; I1 and I4 present and unchanged",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7125",
+      "requirement": "FR-007-15",
+      "given": "A screenshot item S whose original file is on disk",
+      "when": "S is deleted from the Library",
+      "then": "S is absent; the original screenshot file exists byte-identical",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7126",
+      "requirement": "FR-007-15",
+      "given": "Item V visible on the Shelf and in the Library",
+      "when": "V is deleted from the Shelf",
+      "then": "V disappears from both the Shelf and the Library within 1 s (count delta -1 in each); its blobs and thumbnails are gone",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7127",
+      "requirement": "FR-007-15,LIB-IO-001",
+      "given": "A files item whose referenced file has been moved away so pasting it raises LIB-IO-001 (the path that deletes the item per its FRD)",
+      "when": "The user takes the action that triggers LIB-IO-001",
+      "then": "A HUD shows the LIB-IO-001 text; if that path deletes the item it is absent afterwards and no other item changes (count delta -1 at most)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7128",
+      "requirement": "FR-007-15",
+      "given": "Bundle item B referencing files F1..F3",
+      "when": "The user ungroups B (FRD-004)",
+      "then": "The bundle item B is absent; F1..F3 still exist on disk byte-identical",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7129",
+      "requirement": "FR-007-15",
+      "given": "Item E with image blob and 2 thumbnails displayed in the Library",
+      "when": "E is deleted and then the Library is scrolled over its former position",
+      "then": "No image of E is rendered anywhere (thumbnail cache evicted); thumbs/<E>-256.jpg and thumbs/<E>-512.jpg are absent",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7130",
+      "requirement": "FR-007-16,AC-007-14",
+      "given": "Release build; 10,000-item database with 2,000 images",
+      "when": "Flotsam is launched 10 times",
+      "then": "Database open plus schema check completes in <= 300 ms each time (signpost or log timestamps)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7131",
+      "requirement": "FR-007-16,AC-007-14,FR-000-12",
+      "given": "Release build; 10,000-item database; 100 text copies",
+      "when": "The capture.persist signposts are read",
+      "then": "The p95 duration meets the FRD-001 FR-001-20 target (thumbnail excluded)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7132",
+      "requirement": "FR-007-16,AC-007-14",
+      "given": "Release build; 10,000-item database with 2,000 images; 5,000 eligible items",
+      "when": "A retention sweep runs",
+      "then": "p95 of retention.sweep batch intervals <= 50 ms",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7133",
+      "requirement": "FR-007-16",
+      "given": "Release build; 10,000-item database with 2,000 images",
+      "when": "The user opens the Library and scrolls through every image so the thumbnail cache fills, then the Shelf",
+      "then": "Resident memory never exceeds 150 MB",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7134",
+      "requirement": "FR-007-17,AC-007-15",
+      "given": "A user_version 0 fixture flotsam.sqlite (SHA-256 H0) containing items in the v0 schema",
+      "when": "Flotsam is launched",
+      "then": "pre-migration/flotsam-v0.sqlite exists with SHA-256 H0; PRAGMA user_version = 1; meta.schemaVersion = '1'; every v0 item is present (count unchanged)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7135",
+      "requirement": "FR-007-17,AC-007-15,STO-DB-003",
+      "given": "A flotsam.sqlite fixture with user_version 99 (SHA-256 H99)",
+      "when": "Flotsam is launched and the Fatal alert is dismissed with Quit",
+      "then": "STO-DB-003 Fatal alert shown; after exit flotsam.sqlite has SHA-256 H99 (byte-identical), -wal/-shm contain no new writes; no item was created; the process exits",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7136",
+      "requirement": "FR-007-17,STO-DB-003",
+      "given": "A v0 fixture (SHA-256 H0) plus a test build whose v0->v1 migration fails mid-transaction",
+      "when": "Flotsam is launched",
+      "then": "STO-DB-003 Fatal alert; flotsam.sqlite still has user_version 0 and its logical contents equal H0's contents (rolled back); pre-migration/flotsam-v0.sqlite exists with SHA-256 H0; process exits",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7137",
+      "requirement": "FR-007-17",
+      "given": "pre-migration/ already holds an older flotsam-vX.sqlite; a v0 database requiring migration",
+      "when": "Flotsam is launched and migrates",
+      "then": "pre-migration/ contains exactly 1 copy, flotsam-v0.sqlite (only the latest kept)",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7138",
+      "requirement": "FR-007-17",
+      "given": "A current v1 database (SHA-256 H1 after a clean quit) and no pre-migration/ copy",
+      "when": "Flotsam is launched",
+      "then": "No pre-migration copy is created; user_version stays 1; items unchanged",
+      "class": "persistence",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7139",
+      "requirement": "FR-007-18,AC-007-16",
+      "given": "10,000 items; a reference implementation that scans plainText (and the FR-003-09 fields) with case/diacritic folding and AND-of-substrings",
+      "when": "50 random queries (1-3 tokens) run through the Library search",
+      "then": "For all 50, the set of returned item ids equals the reference set exactly",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7140",
+      "requirement": "FR-007-18,AC-007-16,FR-000-12",
+      "given": "Release build, 10,000 items",
+      "when": "A 12-character query is typed one character at a time, 20 times",
+      "then": "p95 of library.search per keystroke <= 100 ms",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7141",
+      "requirement": "FR-007-18",
+      "given": "450 items match filter F",
+      "when": "The Library pages through all results",
+      "then": "Pages contain at most 200 rows; the union has exactly 450 unique ids with no duplicates or gaps; the reported count is 450",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7142",
+      "requirement": "FR-007-18",
+      "given": "A mixed library with tags and kinds",
+      "when": "Each sidebar entry's count is compared with the number of rows that selecting it returns",
+      "then": "Every sidebar count equals its row count",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7143",
+      "requirement": "FR-007-18",
+      "given": "Item with text 'Café Résumé ÉCOLE'",
+      "when": "Searches 'cafe', 'RESUME', 'ecole cafe', 'cafe zzz' run",
+      "then": "The first three return the item; 'cafe zzz' does not (AND over tokens)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7144",
+      "requirement": "FR-007-18",
+      "given": "Item I with tag 'alpha' and note 'beta'",
+      "when": "The tag is renamed to 'gamma', then the note set to 'delta', and searched immediately",
+      "then": "'gamma' and 'delta' find I; 'alpha' and 'beta' no longer find I",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7145",
+      "requirement": "FR-007-18",
+      "given": "A text item of 12,000 characters with unique token MARK-EARLY at position 100 and MARK-LATE at position 11,000",
+      "when": "Both tokens are searched",
+      "then": "MARK-EARLY returns the item; MARK-LATE returns 0 results",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7146",
+      "requirement": "FR-007-18,STO-DB-004",
+      "given": "Library open; database reads forced to fail",
+      "when": "The user searches; then the fault is removed and the user clicks Retry",
+      "then": "The Library shows the inline 'History unavailable' state with a Retry button and the STO-DB-004 text; after Retry the items list returns with the correct count",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7147",
+      "requirement": "FR-007-18",
+      "given": "Any library",
+      "when": "A query matching nothing ('zzqqxx-none') is run",
+      "then": "0 rows, count 0, the empty search state is shown, no error",
+      "class": "empty",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7148",
+      "requirement": "FRD-007 §5 BR dedupe-after-retention",
+      "given": "Item with text MARK-RT1 deleted by retention",
+      "when": "MARK-RT1 is copied again",
+      "then": "A new item exists with a different id, copyCount 1 and createdAt now",
+      "class": "create",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7149",
+      "requirement": "FRD-007 §5 BR no-network",
+      "given": "Scripted session covering ingest, sweep, Clear History, reconcile, migration",
+      "when": "Outbound connections are monitored (e.g. Little Snitch / nettop)",
+      "then": "0 outbound network connections by Flotsam",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7150",
+      "requirement": "FRD-007 §5 BR single-ingest-path",
+      "given": "Text item T exists (copyCount 1)",
+      "when": "T's identical text is dropped on the Shelf",
+      "then": "No new item (count delta 0); T.copyCount is 2 and lastCopiedAt is now (Shelf drop goes through the same dedupe ingest)",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7151",
+      "requirement": "FR-007 §8 Storage usage",
+      "given": "Settings › Storage open showing total items N and sizes",
+      "when": "Settings is closed, 5 items (one image) are copied, Storage is reopened",
+      "then": "Total items reads N+5; image size and database size labels increased",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    },
+    {
+      "id": "OC-7152",
+      "requirement": "FR-007 §8 Reveal Data Folder",
+      "given": "Settings › Storage",
+      "when": "The user clicks 'Reveal Data Folder'",
+      "then": "Finder shows ~/Library/Application Support/Flotsam/",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true
+    }
+  ]
+}
