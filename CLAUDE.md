@@ -14,7 +14,7 @@ Swift 6 · SwiftUI + AppKit (NSPanel) · SQLite (decided in architecture) · mac
 - docs/TRUTHS.md outranks the PRD; FRDs move with code in the same commit.
 
 ## Project State
-2026-11-16: Phases 0–4 done (truths confirmed, repo public, PRD). FRDs next.
+2026-11-16: Phases 0–4 done (truths confirmed, repo public, PRD). FRDs done. Phase 6 design done: docs/DESIGN.md + docs/design/ (HTML mockups; Pencil was unavailable).
 
 ## Ticketmaster ID
 `flotsam`

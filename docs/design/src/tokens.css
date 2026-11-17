@@ -1,0 +1,77 @@
+/* Flotsam design tokens. Source of truth: docs/DESIGN.md §2. OKLCH, light + dark equal. */
+:root {
+  /* surface */
+  --bg: oklch(0.975 0.004 95);
+  --bg-side: oklch(0.95 0.006 95);
+  --bg-raised: oklch(1 0 0);
+  --bg-field: oklch(1 0 0);
+  --sep: oklch(0.88 0.005 95);
+  --sep-strong: oklch(0.80 0.006 95);
+  --edge: oklch(0.64 0.006 95);
+  --scrim: oklch(0.2 0.01 250 / 0.28);
+  /* text */
+  --t1: oklch(0.22 0.01 250);
+  --t2: oklch(0.46 0.01 250);
+  --t3: oklch(0.53 0.01 250);
+  /* accent (sea glass) */
+  --accent: oklch(0.52 0.11 195);
+  --accent-text: oklch(0.50 0.11 195);
+  --accent-tint: oklch(0.52 0.11 195 / 0.12);
+  --sel: oklch(0.52 0.11 195);
+  --on-sel: oklch(1 0 0);
+  --on-sel-2: oklch(0.96 0.02 195);
+  --focus: oklch(0.62 0.13 215);
+  /* status */
+  --warn: oklch(0.50 0.12 65);
+  --warn-tint: oklch(0.50 0.12 65 / 0.12);
+  --err: oklch(0.50 0.19 25);
+  --err-tint: oklch(0.50 0.19 25 / 0.10);
+  --ok: oklch(0.48 0.12 150);
+  /* tags */
+  --tag-red: oklch(0.58 0.19 25);    --tag-orange: oklch(0.62 0.16 55);
+  --tag-yellow: oklch(0.65 0.13 90); --tag-green: oklch(0.58 0.14 150);
+  --tag-blue: oklch(0.55 0.17 255);  --tag-purple: oklch(0.55 0.18 305);
+  --tag-pink: oklch(0.60 0.19 355);  --tag-gray: oklch(0.58 0.01 250);
+  /* elevation */
+  --shadow-panel: 0 18px 48px oklch(0.2 0.02 250 / 0.28), 0 2px 8px oklch(0.2 0.02 250 / 0.18);
+  --shadow-pop: 0 8px 24px oklch(0.2 0.02 250 / 0.22), 0 1px 3px oklch(0.2 0.02 250 / 0.18);
+  --hud-bg: oklch(0.24 0.01 250 / 0.92);
+  --hud-fg: oklch(0.97 0.004 250);
+  /* geometry */
+  --r-panel: 16px; --r-pop: 12px; --r-row: 8px; --r-ctl: 6px; --r-chip: 6px; --r-card: 10px;
+  --s1: 2px; --s2: 4px; --s3: 8px; --s4: 12px; --s5: 16px; --s6: 20px; --s7: 24px;
+  --font: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+}
+.dark {
+  --bg: oklch(0.235 0.008 240);
+  --bg-side: oklch(0.205 0.008 240);
+  --bg-raised: oklch(0.28 0.008 240);
+  --bg-field: oklch(0.19 0.008 240);
+  --sep: oklch(0.34 0.008 240);
+  --sep-strong: oklch(0.42 0.008 240);
+  --edge: oklch(0.58 0.008 240);
+  --scrim: oklch(0.05 0.01 250 / 0.5);
+  --t1: oklch(0.96 0.004 250);
+  --t2: oklch(0.78 0.008 250);
+  --t3: oklch(0.69 0.008 250);
+  --accent: oklch(0.76 0.11 195);
+  --accent-text: oklch(0.76 0.11 195);
+  --accent-tint: oklch(0.76 0.11 195 / 0.16);
+  --sel: oklch(0.46 0.09 195);
+  --on-sel: oklch(1 0 0);
+  --on-sel-2: oklch(0.93 0.02 195);
+  --focus: oklch(0.78 0.12 215);
+  --warn: oklch(0.80 0.13 80);
+  --warn-tint: oklch(0.80 0.13 80 / 0.14);
+  --err: oklch(0.76 0.15 25);
+  --err-tint: oklch(0.76 0.15 25 / 0.14);
+  --ok: oklch(0.78 0.13 150);
+  --tag-red: oklch(0.72 0.16 25);    --tag-orange: oklch(0.78 0.15 60);
+  --tag-yellow: oklch(0.86 0.15 95); --tag-green: oklch(0.78 0.15 150);
+  --tag-blue: oklch(0.74 0.13 255);  --tag-purple: oklch(0.74 0.14 305);
+  --tag-pink: oklch(0.77 0.13 355);  --tag-gray: oklch(0.72 0.01 250);
+  --shadow-panel: 0 18px 48px oklch(0 0 0 / 0.55), 0 0 0 0.5px oklch(1 0 0 / 0.16);
+  --shadow-pop: 0 8px 24px oklch(0 0 0 / 0.5), 0 0 0 0.5px oklch(1 0 0 / 0.16);
+  --hud-bg: oklch(0.34 0.01 250 / 0.92);
+}
