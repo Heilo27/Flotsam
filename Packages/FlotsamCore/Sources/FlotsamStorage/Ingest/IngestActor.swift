@@ -14,9 +14,12 @@ import GRDB
 /// with `copyCount` 2 (AC-007-04); the loser deletes its freshly written blobs and reports `bumped`.
 public actor IngestActor {
     private let database: FlotsamDatabase
+    private let settings: SettingsStore
 
-    public init(database: FlotsamDatabase) {
+    /// `settings` supplies the image-quality preset (FR-007-08).
+    public init(database: FlotsamDatabase, settings: SettingsStore) {
         self.database = database
+        self.settings = settings
     }
 
     public func ingest(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult> {
@@ -36,7 +39,7 @@ public actor IngestActor {
         }
 
         let prepared: PreparedItem
-        switch prepare(candidate) {
+        switch await prepare(candidate) {
         case .failure(let error): return .failure(error)
         case .success(let value): prepared = value
         }
@@ -70,6 +73,7 @@ public actor IngestActor {
             return bumped(existingId, warnings: prepared.warnings)
         case .created:
             database.events.publish(.itemsChanged)
+            if prepared.pixelWidth != nil { warmThumbnails(itemId) }
             return .success(IngestResult(outcome: .created(itemId), warnings: prepared.warnings))
         }
     }
@@ -115,14 +119,40 @@ public actor IngestActor {
 
     // MARK: Step 2
 
-    /// Limits (FR-007-06) now; the disk guard and image pipeline hook in here (FR-007-14, -07).
-    private func prepare(_ candidate: IngestCandidate) -> FlotsamResult<PreparedItem> {
+    /// Limits (FR-007-06), then the image pipeline (FR-007-07); the disk guard hooks in here (FR-007-14).
+    private func prepare(_ candidate: IngestCandidate) async -> FlotsamResult<PreparedItem> {
+        let limited: LimitedPayload
         switch IngestLimits.apply(to: candidate) {
         case .failure(let error): return .failure(error)
-        case .success(let limited):
+        case .success(let value): limited = value
+        }
+        guard candidate.kind == .image || candidate.kind == .screenshot,
+              let primary = limited.representations.first
+        else {
             return .success(PreparedItem(
                 representations: limited.representations, members: limited.members,
                 pixelWidth: nil, pixelHeight: nil, warnings: limited.warnings))
+        }
+
+        let quality = settings.value(SettingKeys.storageImageQuality)
+        guard let image = await database.imageWorker.process(primary.data, receivedUTI: primary.uti, quality: quality) else {
+            // Undecodable bytes are never stored (FR-007-07): the code depends on where they came from.
+            let code: ErrorCode = candidate.origin == .screenshotFile ? .sspVal001 : .capVal001
+            return .failure(FlotsamError(code, "Image data could not be decoded"))
+        }
+        var representations = limited.representations
+        representations[0] = PasteboardRepresentation(uti: image.uti, data: image.data)
+        return .success(PreparedItem(
+            representations: representations, members: limited.members,
+            pixelWidth: image.sourceWidth, pixelHeight: image.sourceHeight, warnings: limited.warnings))
+    }
+
+    /// Thumbnails are built right after commit so the grid never waits on a decode (FR-007-07). Unstructured and
+    /// unawaited on purpose: a failure only means the thumbnail is built on first view instead.
+    private func warmThumbnails(_ itemId: UUID) {
+        let database = self.database
+        Task.detached(priority: .utility) {
+            for size in ThumbnailSize.allCases { _ = await database.thumbnail(itemId: itemId, size: size) }
         }
     }
 

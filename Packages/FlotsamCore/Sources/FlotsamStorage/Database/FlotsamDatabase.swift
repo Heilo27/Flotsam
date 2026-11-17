@@ -29,6 +29,9 @@ public final class FlotsamDatabase: Sendable {
     /// The one clock for ingest, sweep and clear (FR-007-03 stores UTC milliseconds); tests inject a manual one.
     let clock: any WallClock
     public let events = ItemEventBus()
+    /// One image in flight for ingest and thumbnails together (FR-007-07, FR-007-16).
+    let imageWorker = ImageWorker()
+    let thumbnails = ThumbnailCache()
     /// `STO-DB-002` when this launch found the file damaged, moved it aside and started fresh (FR-007-13). The app
     /// raises it as a Notice; Storage cannot, it has no UI.
     public let openNotice: FlotsamError?
