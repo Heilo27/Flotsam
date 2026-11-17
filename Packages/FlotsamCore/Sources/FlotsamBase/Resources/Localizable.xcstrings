@@ -151,6 +151,15 @@
     "ui.fatal.revealDataFolder" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reveal Data Folder" } } }
     },
+    "ui.menu.dismissAll" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Dismiss all" } } }
+    },
+    "ui.menu.noNotices" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "No notices" } } }
+    },
+    "ui.menu.notices" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Notices" } } }
+    },
     "ui.menu.quit" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit Flotsam" } } }
     },

@@ -8,16 +8,34 @@ struct FlotsamApp: App {
     @State private var container = AppContainer()
 
     var body: some Scene {
-        MenuBarExtra(FlotsamStrings.text(forKey: "ui.menu.title") ?? "", systemImage: "tray.full") {
+        MenuBarExtra {
             Text(verbatim: FlotsamStrings.text(forKey: "ui.menu.status") ?? "")
+            Divider()
+            noticesMenu
             Divider()
             Button(FlotsamStrings.text(forKey: "ui.menu.quit") ?? "") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
+        } label: {
+            Image(nsImage: MenuBarIcon.image(badged: container.presenter.hasBadge))
+                .accessibilityLabel(FlotsamStrings.text(forKey: "ui.menu.title") ?? "")
         }
-        .onChange(of: container.startupError) { _, error in
-            guard let error else { return }
-            FlotsamLog.log(error, category: error.code.logCategory)
-            FatalAlert.present(for: error, dataFolder: AppContainer.dataFolder)
+    }
+
+    /// Menu bar, Notices (FR-000-08 b): newest 10 background failures, with "Dismiss all".
+    @ViewBuilder
+    private var noticesMenu: some View {
+        Menu(FlotsamStrings.text(forKey: "ui.menu.notices") ?? "") {
+            if container.presenter.notices.isEmpty {
+                Text(verbatim: FlotsamStrings.text(forKey: "ui.menu.noNotices") ?? "")
+            } else {
+                ForEach(container.presenter.notices) { notice in
+                    Text(verbatim: notice.message)
+                }
+                Divider()
+                Button(FlotsamStrings.text(forKey: "ui.menu.dismissAll") ?? "") {
+                    Task { await container.reporter.dismissAllNotices() }
+                }
+            }
         }
     }
 }

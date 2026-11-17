@@ -4,14 +4,19 @@ import Foundation
 import Observation
 
 /// Composition root: builds the long-lived objects once at launch. Failure here is the Fatal path
-/// (STO-IO-002 / STO-DB-003); `FatalAlert` shows the alert and quits (FR-000-04).
+/// (STO-IO-002 / STO-DB-003): the error goes to `ErrorReporter`, which logs it and asks the presenter for the
+/// Fatal alert (FR-000-04).
 @MainActor
 @Observable
 final class AppContainer {
     private(set) var database: FlotsamDatabase?
-    private(set) var startupError: FlotsamError?
+    let presenter: ErrorPresenterAdapter
+    let reporter: ErrorReporter
 
     init() {
+        let presenter = ErrorPresenterAdapter(dataFolder: Self.dataFolder)
+        self.presenter = presenter
+        reporter = ErrorReporter(presenter: presenter)
         Task { await openDatabase() }
     }
 
@@ -25,7 +30,7 @@ final class AppContainer {
     private func openDatabase() async {
         switch await FlotsamDatabase.open(folder: Self.dataFolder) {
         case .success(let opened): database = opened
-        case .failure(let error): startupError = error
+        case .failure(let error): await reporter.report(error, origin: .background)
         }
     }
 }
