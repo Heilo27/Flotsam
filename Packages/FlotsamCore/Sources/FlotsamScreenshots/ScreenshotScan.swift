@@ -36,7 +36,9 @@ public struct ScreenshotFolderScanner: Sendable {
     public func scan(_ folder: URL) -> FlotsamResult<[ScreenshotFile]> {
         let customPrefix = preferences.name()
         return fileSystem.contentsOfDirectory(at: folder).map { urls in
-            urls.compactMap { candidate($0, customPrefix: customPrefix) }
+            // Foundation lists /var/... as /private/var/...; a file keeps one path form (the folder's) so the
+            // watcher's seen/pending/retry keys agree between a scan and an event for the same file.
+            urls.compactMap { candidate(folder.appendingPathComponent($0.lastPathComponent), customPrefix: customPrefix) }
         }
     }
 

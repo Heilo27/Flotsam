@@ -356,10 +356,12 @@ public actor ScreenshotWatcher {
         }
         // No watermark yet: a new library imports nothing and only records where it is (FR-002-08).
         if let last = await currentWatermark() {
-            enqueue(ScreenshotSelection.reconcile(files, lastScanAt: last), batch: nil, bypassSeen: false)
             let present = Set(files.map(\.url.path))
             retry = retry.filter { present.contains($0.key) }
-            enqueue(retryDue(among: files), batch: nil, bypassSeen: false)
+            // The retry is spent before the selection is queued: a file the watermark window also selects would
+            // otherwise be queued first and found `pending`, and never use up its budget (FR-002-07).
+            let retries = retryDue(among: files)
+            enqueue(retries + ScreenshotSelection.reconcile(files, lastScanAt: last), batch: nil, bypassSeen: false)
         }
         await advanceWatermark(to: started)
     }
@@ -378,7 +380,7 @@ public actor ScreenshotWatcher {
     private func markAccessGranted() async {
         guard accessDenied else { return }
         accessDenied = false
-        status = location.map { $0 == .usingDesktop(URL(fileURLWithPath: "/")) ? .usingDesktop : statusFor($0) } ?? .off
+        status = location.map(statusFor) ?? .off
         await clear(.sspPrm001)
     }
 
@@ -502,7 +504,10 @@ public actor ScreenshotWatcher {
     private func noteUnstable(_ file: ScreenshotFile) {
         let path = file.url.path
         if let entry = retry[path], entry.retriesLeft == 0 {
+            // Out of retries: dropped. Marked seen so the watermark window cannot select it again; only
+            // "Import recent screenshots" (which bypasses `seen`) can still bring it in.
             retry[path] = nil
+            seen.insert(file)
         } else if retry[path] == nil {
             retry[path] = RetryEntry(file: file, retriesLeft: Self.maxRetries)
         }
