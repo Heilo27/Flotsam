@@ -35,7 +35,7 @@ struct FRD001GateContractTests {
         try await withRig { rig in
             for _ in 0..<5 { await rig.process() }
             #expect(rig.sink.records.filter { $0.headline == "pasteboard.processed" }.isEmpty)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
             #expect(rig.pasteboard.snapshotReads == 0)
         }
     }
@@ -46,7 +46,7 @@ struct FRD001GateContractTests {
         try await withRig(startCapture: false) { rig in
             let text = uid("launch")
             rig.pasteboard.copyText(text)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
             rig.capture.start()
             await rig.process()
             let stored = try await rig.items()
@@ -63,7 +63,7 @@ struct FRD001GateContractTests {
             rig.pasteboard.copyText(text)
             rig.capture.captureNow()
             #expect(await rig.until { try await rig.itemCount() == 1 })
-            #expect(try await rig.items().map(\.plainText) == [text])
+            try #expect(await rig.items().map(\.plainText) == [text])
         }
     }
 
@@ -127,7 +127,7 @@ struct FRD001GateContractTests {
             _ = rig.ledger.write([PasteboardRepresentation(uti: PB.text, data: PB.data("diagnostics"))], to: rig.pasteboard)
             await rig.process()
             #expect(rig.sink.logged(.capPol004).count == 2)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -137,7 +137,7 @@ struct FRD001GateContractTests {
         try await withRig { rig in
             rig.pasteboard.copy([(PB.text, PB.data("Z")), (PasteboardMarkers.ownWrite, Data())])
             await rig.process()
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
             #expect(rig.sink.logged(.capPol004).count == 1)
             #expect(rig.pasteboard.bytesRequested.isEmpty)
         }
@@ -148,8 +148,8 @@ struct FRD001GateContractTests {
             let secret = "secret-marker-\(label)-\(UUID().uuidString)"
             rig.pasteboard.copy([(PB.text, PB.data(secret)), (marker, Data("1".utf8))])
             await rig.process()
-            #expect(try await rig.itemCount() == 0)
-            #expect(try await rig.searchCount("secret-marker-\(label)") == 0)
+            try #expect(await rig.itemCount() == 0)
+            try #expect(await rig.searchCount("secret-marker-\(label)") == 0)
             #expect(rig.sink.logged(.capPol001).count == 1)
             #expect(rig.sink.logged(.capPol002).isEmpty && rig.sink.logged(.capPol003).isEmpty)
             #expect(!rig.sink.everything.contains(secret))
@@ -174,8 +174,8 @@ struct FRD001GateContractTests {
             let text = uid("S")
             rig.pasteboard.copy([(PB.text, PB.data(text)), (PasteboardMarkers.concealed, Data())])
             await rig.process()
-            #expect(try await rig.item(withText: text).isEmpty)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.item(withText: text).isEmpty)
+            try #expect(await rig.itemCount() == 0)
             #expect(rig.sink.logged(.capPol001).count == 1)
         }
     }
@@ -188,7 +188,7 @@ struct FRD001GateContractTests {
             let g1 = uid("G1"), g2 = uid("G2")
             rig.pasteboard.copyText(g1)
             await rig.process()
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
             #expect(rig.sink.logged(.capPol002).count == 1)
 
             rig.sourceApps.frontmost = SourceApp(bundleId: "com.example.other", name: "Other")
@@ -209,12 +209,12 @@ struct FRD001GateContractTests {
             let p = uid("P"), r = uid("R")
             rig.pasteboard.copyText(p)
             await rig.process()
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
             #expect(rig.sink.logged(.capPol003).count == 1)
 
             rig.settings.set(.active, for: SettingKeys.captureMode)
             await rig.process()
-            #expect(try await rig.item(withText: p).isEmpty)
+            try #expect(await rig.item(withText: p).isEmpty)
 
             rig.pasteboard.copyText(r)
             await rig.process()
@@ -232,7 +232,7 @@ struct FRD001GateContractTests {
             await rig.process()
             #expect(rig.sink.logged(.capPol003).count == 1)
             #expect(rig.sink.logged(.capPol001).isEmpty)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -244,7 +244,7 @@ struct FRD001GateContractTests {
             await rig.process()
             #expect(rig.sink.logged(.capPol001).count == 1)
             #expect(rig.sink.logged(.capPol002).isEmpty)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -256,7 +256,7 @@ struct FRD001GateContractTests {
             await rig.process()
             #expect(rig.sink.logged(.capPol002).count == 1)
             #expect(rig.sink.logged(.capVal001).isEmpty)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -269,7 +269,7 @@ struct FRD001GateContractTests {
             #expect(rig.sink.logged(.capPol001).count == 1)
             #expect(rig.sink.logged(.capOs001).isEmpty)
             #expect(rig.pasteboard.snapshotReads == 0)
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 }
@@ -348,7 +348,7 @@ struct FRD001KindContractTests {
                 rig.pasteboard.copy(one.0, one.1)
                 await rig.process()
                 #expect(await rig.until { rig.sink.logged(.capVal001).count == index + 1 })
-                #expect(try await rig.itemCount() == 0)
+                try #expect(await rig.itemCount() == 0)
             }
         }
     }
@@ -362,7 +362,7 @@ struct FRD001KindContractTests {
                 rig.pasteboard.copy(uti, Data("x".utf8))
                 await rig.process()
                 #expect(await rig.until { rig.sink.logged(.capVal001).count == index + 1 })
-                #expect(try await rig.itemCount() == 0)
+                try #expect(await rig.itemCount() == 0)
             }
         }
     }
@@ -376,8 +376,8 @@ struct FRD001KindContractTests {
             #expect(stored.count == 1)
             #expect(stored.first?.plainText == text)
             let reps = try await rig.representationTypes(of: stored[0].id)
-            #expect(reps.contains(PB.text))
-            #expect(!reps.contains(PB.pdf))
+            // Plain text lives in the item's text column, not as a blob; the PDF is never stored in any form.
+            #expect(reps.isEmpty)
         }
     }
 
@@ -390,7 +390,7 @@ struct FRD001KindContractTests {
             let stored = try await rig.items()
             #expect(stored.count == 1)
             #expect(stored.first?.plainText == first)
-            #expect(try await rig.searchCount(second) == 0)
+            try #expect(await rig.searchCount(second) == 0)
         }
     }
 
@@ -403,7 +403,7 @@ struct FRD001KindContractTests {
             let stored = try await rig.items()
             #expect(stored.count == 1)
             #expect(stored.first?.kind == "bundle")
-            #expect(try await rig.members(of: stored[0].id).map(fileName) == ["c.txt", "a.txt", "b.txt"])
+            try #expect(await rig.members(of: stored[0].id).map(fileName) == ["c.txt", "a.txt", "b.txt"])
         }
     }
 
@@ -416,7 +416,7 @@ struct FRD001KindContractTests {
                 (PB.png, TestImage.make(.png, width: 16, height: 16)),
             ])
             await rig.process()
-            #expect(try await rig.kinds() == ["file"])
+            try #expect(await rig.kinds() == ["file"])
         }
     }
 
@@ -425,7 +425,7 @@ struct FRD001KindContractTests {
         try await withRig { rig in
             rig.pasteboard.copy([(PB.png, TestImage.make(.png, width: 20, height: 10)), (PB.text, PB.data("  \n \n"))])
             await rig.process()
-            #expect(try await rig.kinds() == ["image"])
+            try #expect(await rig.kinds() == ["image"])
         }
     }
 
@@ -435,8 +435,8 @@ struct FRD001KindContractTests {
             let fixtures = ["https://example.com/a", "a@b.co", "#1A2b3C", "rgba(10, 20, 30, 0.5)", "+1 (415) 555-0100",
                             "4155550100", "1234567", "see https://example.com", "www.example.com", "rebeccapurple"]
             for text in fixtures { await rig.copyText(text) }
-            #expect(try await rig.kinds() == ["link", "email", "color", "color", "phone", "phone", "text", "text", "text", "text"])
-            #expect(try await rig.items().map(\.plainText) == fixtures)
+            try #expect(await rig.kinds() == ["link", "email", "color", "color", "phone", "phone", "text", "text", "text", "text"])
+            try #expect(await rig.items().map(\.plainText) == fixtures)
         }
     }
 
@@ -446,8 +446,8 @@ struct FRD001KindContractTests {
             let fixtures = ["  https://example.com/x \n", "ftp://host.example/f", "ftps://host.example/f", "https://",
                             "file:///tmp/x", "https://a.example\nhttps://b.example"]
             for text in fixtures { await rig.copyText(text) }
-            #expect(try await rig.kinds() == ["link", "link", "link", "text", "text", "text"])
-            #expect(try await rig.items().first?.plainText == "  https://example.com/x \n")
+            try #expect(await rig.kinds() == ["link", "link", "link", "text", "text", "text"])
+            try #expect(await rig.items().first?.plainText == "  https://example.com/x \n")
         }
     }
 
@@ -455,11 +455,11 @@ struct FRD001KindContractTests {
     func oc1038() async throws {
         try await withRig { rig in
             await rig.copyText("x-custom:thing", extra: [(PB.url, PB.data("x-custom:thing"))])
-            #expect(try await rig.kinds() == ["link"])
+            try #expect(await rig.kinds() == ["link"])
         }
         try await withRig { rig in
             await rig.copyText("x-custom:thing", extra: [(PB.url, PB.data("x-custom:other"))])
-            #expect(try await rig.kinds() == ["text"])
+            try #expect(await rig.kinds() == ["text"])
         }
     }
 
@@ -469,7 +469,7 @@ struct FRD001KindContractTests {
             let long = String(repeating: "a", count: 250) + "@b.co"
             #expect(long.count == 255)
             for text in ["a@b.c", long, "two@at@x.com"] { await rig.copyText(text) }
-            #expect(try await rig.kinds() == ["text", "text", "text"])
+            try #expect(await rig.kinds() == ["text", "text", "text"])
         }
     }
 
@@ -479,7 +479,7 @@ struct FRD001KindContractTests {
             let fixtures = ["#FFF", "#ffff", "#11223344", "hsl(120, 50%, 50%)", "hsla(120, 50%, 50%, 0.3)",
                             "rgb(10%, 20%, 30%)", "#12345", "#GGGGGG", "0xFF0000", "red"]
             for text in fixtures { await rig.copyText(text) }
-            #expect(try await rig.kinds() == ["color", "color", "color", "color", "color", "color", "text", "text", "text", "text"])
+            try #expect(await rig.kinds() == ["color", "color", "color", "color", "color", "color", "text", "text", "text", "text"])
         }
     }
 
@@ -489,7 +489,7 @@ struct FRD001KindContractTests {
             let fixtures = ["555-0100", "5550100", "1+415 555 0100", "++1 415 555 0100", "123-456",
                             "+1 234 567 890 123 456", "call 415-555-0100", "123456789012345"]
             for text in fixtures { await rig.copyText(text) }
-            #expect(try await rig.kinds() == ["phone", "text", "text", "text", "text", "text", "text", "phone"])
+            try #expect(await rig.kinds() == ["phone", "text", "text", "text", "text", "text", "text", "phone"])
         }
     }
 
@@ -500,7 +500,8 @@ struct FRD001KindContractTests {
             let stored = try await rig.items()
             #expect(stored.map(\.kind) == ["richText"])
             let reps = try await rig.representationTypes(of: stored[0].id)
-            #expect(reps.contains(PB.html) && reps.contains(PB.text))
+            #expect(reps == [PB.html])
+            #expect(stored[0].plainText == "Hello page")
         }
     }
 
@@ -508,7 +509,7 @@ struct FRD001KindContractTests {
     func oc1043() async throws {
         try await withRig { rig in
             await rig.copyText("https://example.com/p", extra: [(PB.url, PB.data("https://example.com/p"))])
-            #expect(try await rig.kinds() == ["link"])
+            try #expect(await rig.kinds() == ["link"])
         }
     }
 
@@ -530,7 +531,7 @@ struct FRD001KindContractTests {
             await rig.copyText("https://example.com/r", extra: [(PB.html, PB.data("<a href=\"https://example.com/r\">r</a>"))])
             let stored = try await rig.items()
             #expect(stored.map(\.kind) == ["link"])
-            #expect(try await rig.representationTypes(of: stored[0].id).contains(PB.html))
+            try #expect(await rig.representationTypes(of: stored[0].id).contains(PB.html))
         }
     }
 
@@ -540,8 +541,8 @@ struct FRD001KindContractTests {
             let marker = uid("Derived")
             rig.pasteboard.copy(PB.rtf, PB.data("{\\rtf1\\ansi \(marker)}"))
             await rig.process()
-            #expect(try await rig.kinds() == ["richText"])
-            #expect(try await rig.searchCount(marker) == 1)
+            try #expect(await rig.kinds() == ["richText"])
+            try #expect(await rig.searchCount(marker) == 1)
         }
     }
 
@@ -551,7 +552,7 @@ struct FRD001KindContractTests {
             rig.pasteboard.copy(PB.html, PB.data("<p> </p><br>"))
             await rig.process()
             #expect(await rig.until { rig.sink.logged(.capVal001).count == 1 })
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -585,7 +586,7 @@ struct FRD001KindContractTests {
             rig.pasteboard.copy(PB.png, Data("not an image".utf8))
             await rig.process()
             #expect(await rig.until { rig.sink.logged(.capVal001).count == 1 })
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -602,7 +603,7 @@ struct FRD001KindContractTests {
             }
             let stored = try await rig.items()
             #expect(stored.map(\.kind) == ["file", "folder", "file", "bundle"])
-            #expect(try await rig.members(of: stored[3].id).map(fileName) == ["A.txt", "B.txt", "C.txt"])
+            try #expect(await rig.members(of: stored[3].id).map(fileName) == ["A.txt", "B.txt", "C.txt"])
         }
     }
 
@@ -618,8 +619,8 @@ struct FRD001KindContractTests {
             let after = try await rig.items()
             #expect(after.count == 1 && before.count == 1)
             #expect(after.first?.id == before.first?.id)
-            #expect(try await rig.members(of: after[0].id).map(fileName) == ["A.txt", "B.txt", "C.txt"])
-            #expect(try await rig.freshItemCount() == 1)
+            try #expect(await rig.members(of: after[0].id).map(fileName) == ["A.txt", "B.txt", "C.txt"])
+            try #expect(await rig.freshItemCount() == 1)
         }
     }
 
@@ -630,7 +631,7 @@ struct FRD001KindContractTests {
             rig.pasteboard.copy(PB.fileURLReps([missing]))
             await rig.process()
             #expect(await rig.until { rig.sink.logged(.capDat001).count == 1 })
-            #expect(try await rig.itemCount() == 0)
+            try #expect(await rig.itemCount() == 0)
         }
     }
 
@@ -643,13 +644,13 @@ struct FRD001KindContractTests {
             await rig.process()
             let stored = try await rig.items()
             #expect(stored.map(\.kind) == ["bundle"])
-            #expect(try await rig.members(of: stored[0].id).map(fileName) == ["a.txt", "c.txt"])
+            try #expect(await rig.members(of: stored[0].id).map(fileName) == ["a.txt", "c.txt"])
         }
         try await withRig { rig in
             let b = try rig.makeFile("b.txt")
             rig.pasteboard.copy(PB.fileURLReps([b, rig.files.appendingPathComponent("gone.txt")]))
             await rig.process()
-            #expect(try await rig.kinds() == ["file"])
+            try #expect(await rig.kinds() == ["file"])
         }
     }
 
@@ -660,7 +661,7 @@ struct FRD001KindContractTests {
             let before = rig.dataFolderBytes()
             rig.pasteboard.copy(PB.fileURLReps([big]))
             await rig.process()
-            #expect(try await rig.kinds() == ["file"])
+            try #expect(await rig.kinds() == ["file"])
             #expect(rig.dataFolderBytes() - before < 1_000_000)
         }
     }

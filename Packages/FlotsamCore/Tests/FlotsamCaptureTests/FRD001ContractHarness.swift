@@ -98,6 +98,8 @@ final class RecordingSink: LogSink, @unchecked Sendable {
     private var storage: [LogRecord] = []
     func write(_ record: LogRecord) { lock.withLock { storage.append(record) } }
     var records: [LogRecord] { lock.withLock { storage } }
+    /// Drops everything recorded so far (the launch check on an empty pasteboard logs one CAP-VAL-001).
+    func reset() { lock.withLock { storage.removeAll() } }
 
     /// Records for this code: an error record whose headline starts with it, or an event record carrying `code=`.
     func logged(_ code: ErrorCode) -> [LogRecord] {
@@ -183,7 +185,13 @@ final class ContractRig {
     static func make(frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true) async throws -> ContractRig {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-frd001-\(UUID().uuidString)")
         let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data")).get()
-        return ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture)
+        let rig = ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture)
+        if startCapture {
+            // Starting on an empty pasteboard logs one CAP-VAL-001 (an empty change). Settle it, then start clean.
+            await rig.flush()
+            rig.sink.reset()
+        }
+        return rig
     }
 
     private init(root: URL, database: FlotsamDatabase, frontmost: SourceApp?, startCapture: Bool) {
