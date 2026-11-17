@@ -109,8 +109,62 @@ public enum LogSafeValue: Sendable, Equatable {
     }
 }
 
-/// The one place `os.Logger` is used (FR-000-09, FR-000-10). Centralising it is what lets a lint prove every
-/// interpolated value carries an explicit privacy qualifier.
+/// One structured log call, as the sink receives it (FR-000-09, FR-000-10).
+///
+/// Why a record and not a string: test seam for FR-000-10 log privacy and the FR-000-09 level contract. `os.Logger`
+/// has no readback API a unit test can use, so the pieces that carry the contract (category, level, which text is
+/// in the clear, which text is redacted, the cause) are kept apart here. The production sink turns `publicText`
+/// into a `.public` interpolation and `privateText` into a `.private` one, so what a test sees in `privateText` is
+/// exactly what a release build shows as `<private>`.
+public struct LogRecord: Sendable, Equatable {
+    public let category: LogCategory
+    public let level: OSLogType
+    /// First public token: `"<code> <severity>"` for an error, the dotted event name for an event, `"trace"`.
+    public let headline: String
+    /// Allowlisted context (FR-000-10), logged in the clear.
+    public let publicContext: String
+    /// Context that is not on the allowlist (item ids, bundle identifiers, unknown pasteboard types).
+    public let privateContext: String
+    /// The error's static developer message, or a trace message. Never public.
+    public let message: String?
+    /// Domain and code of the underlying system error. Never public.
+    public let cause: UnderlyingErrorInfo?
+
+    /// Everything logged in the clear.
+    public var publicText: String { publicContext.isEmpty ? headline : "\(headline) \(publicContext)" }
+
+    /// Everything redacted in a release build: private context, message and `domain:code` of the cause.
+    public var privateText: String {
+        guard message != nil || cause != nil else { return privateContext }
+        let causeText = cause.map { "\($0.domain):\($0.code)" } ?? ""
+        return "\(privateContext) \(message ?? "") \(causeText)"
+    }
+}
+
+/// Receives one `LogRecord` per log call. `OSLogSink` is the production implementation; a test passes its own to
+/// see exactly what would be logged. Injected (`ErrorReporter.init(sink:)`, the `sink:` parameter of `FlotsamLog`)
+/// rather than held in a mutable global, so tests running in parallel cannot see each other's records.
+public protocol LogSink: Sendable {
+    func write(_ record: LogRecord)
+}
+
+/// Writes a record to `os.Logger` under the app subsystem and the record's category. The only `Logger` user.
+public struct OSLogSink: LogSink {
+    public init() {}
+
+    public func write(_ record: LogRecord) {
+        let logger = FlotsamLog.logger(record.category)
+        logger.log(
+            level: record.level,
+            "\(record.publicText, privacy: .public) \(record.privateText, privacy: .private)"
+        )
+    }
+}
+
+/// The one place log records are built and `os.Logger` is used (FR-000-09, FR-000-10). Centralising it is what lets
+/// a lint prove every interpolated value carries an explicit privacy qualifier. Record building is one function per
+/// kind of log call (`record(for:)`), and the sink and the `os.Logger` output both come from it, so a test on the
+/// sink proves the real log.
 public enum FlotsamLog {
     public static let fallbackSubsystem = "io.github.heilo27.Flotsam"
 
@@ -144,40 +198,66 @@ public enum FlotsamLog {
         return (line(true), line(false))
     }
 
-    /// Logs an error's code, severity and safe context. The static message and the underlying cause are logged
-    /// `.private`: neither is on the FR-000-10 allowlist, and the code already identifies the failure.
-    public static func log(_ error: FlotsamError, category: LogCategory? = nil) {
-        let logger = logger(category ?? error.code.logCategory)
+    /// The record for an error: code and severity in the clear, level from the severity, the static message and the
+    /// underlying cause private. Neither message nor cause is on the FR-000-10 allowlist, and the code already
+    /// identifies the failure.
+    static func record(for error: FlotsamError, category: LogCategory? = nil) -> LogRecord {
         let parts = render(error.context)
-        let message = "\(error.internalMessage)"
-        let cause = error.underlying.map { "\($0.domain):\($0.code)" } ?? ""
-        logger.log(
+        return LogRecord(
+            category: category ?? error.code.logCategory,
             level: level(for: error.severity),
-            """
-            \(error.code.rawValue, privacy: .public) \(error.severity.rawValue, privacy: .public) \
-            \(parts.publicPart, privacy: .public) \(parts.privatePart, privacy: .private) \
-            \(message, privacy: .private) \(cause, privacy: .private)
-            """
+            headline: "\(error.code.rawValue) \(error.severity.rawValue)",
+            publicContext: parts.publicPart,
+            privateContext: parts.privatePart,
+            message: "\(error.internalMessage)",
+            cause: error.underlying
         )
     }
 
-    /// Logs a successful or skipped outcome at an instrumented callsite (FR-000-11) at `.info`.
-    public static func log(_ event: LogEvent) {
+    /// The record for an instrumented callsite (FR-000-11): `.info`, outcome and counts only.
+    static func record(for event: LogEvent) -> LogRecord {
         let parts = render(event.fields)
-        logger(event.category).info(
-            "\(event.name, privacy: .public) \(parts.publicPart, privacy: .public) \(parts.privatePart, privacy: .private)"
+        return LogRecord(
+            category: event.category,
+            level: .info,
+            headline: event.name,
+            publicContext: parts.publicPart,
+            privateContext: parts.privatePart,
+            message: nil,
+            cause: nil
         )
+    }
+
+    /// Logs an error's code, severity and safe context. `sink` defaults to `os.Logger`; tests pass their own.
+    public static func log(_ error: FlotsamError, category: LogCategory? = nil, sink: any LogSink = OSLogSink()) {
+        sink.write(record(for: error, category: category))
+    }
+
+    /// Logs a successful or skipped outcome at an instrumented callsite (FR-000-11) at `.info`.
+    public static func log(_ event: LogEvent, sink: any LogSink = OSLogSink()) {
+        sink.write(record(for: event))
     }
 
     /// Verbose developer trace at `.debug`, compiled out of release builds (FR-000-09). Call sites that want the
     /// literal gone from the binary too wrap the call in `#if DEBUG`. The message is a `StaticString`, so it cannot
     /// carry content, and it is logged `.private` like every other non-allowlisted value.
-    public static func trace(_ message: StaticString, category: LogCategory = .core, context: [LogKey: LogSafeValue] = [:]) {
+    public static func trace(
+        _ message: StaticString,
+        category: LogCategory = .core,
+        context: [LogKey: LogSafeValue] = [:],
+        sink: any LogSink = OSLogSink()
+    ) {
         #if DEBUG
         let parts = render(context)
-        logger(category).debug(
-            "\("\(message)", privacy: .private) \(parts.publicPart, privacy: .public) \(parts.privatePart, privacy: .private)"
-        )
+        sink.write(LogRecord(
+            category: category,
+            level: .debug,
+            headline: "trace",
+            publicContext: parts.publicPart,
+            privateContext: parts.privatePart,
+            message: "\(message)",
+            cause: nil
+        ))
         #endif
     }
 }

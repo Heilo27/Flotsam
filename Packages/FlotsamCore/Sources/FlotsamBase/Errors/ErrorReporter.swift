@@ -54,20 +54,24 @@ struct SurfacingThrottle: Sendable {
 public actor ErrorReporter {
     private let presenter: any ErrorPresenter
     private let clock: any WallClock
+    private let sink: any LogSink
     private var throttle = SurfacingThrottle()
     private var board = NoticeBoard()
     private var ring = ErrorRingBuffer()
 
-    public init(presenter: any ErrorPresenter, clock: any WallClock = SystemClock()) {
+    /// `sink` is the test seam for the FR-000-09/10 log contract: production logs to `os.Logger`, a test passes a
+    /// recording sink and asserts the level, the public and private text and the cause of what `report` logged.
+    public init(presenter: any ErrorPresenter, clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink()) {
         self.presenter = presenter
         self.clock = clock
+        self.sink = sink
     }
 
     /// Logs every severity; records and surfaces Warning, Error and Fatal. Logging and the ring buffer come first and
     /// are never throttled, so a throttled occurrence still appears in the log (AC-000-04).
     public func report(_ error: FlotsamError, origin: ErrorOrigin) async {
         let now = clock.now()
-        FlotsamLog.log(error)
+        FlotsamLog.log(error, sink: sink)
 
         switch error.severity {
         case .info:
