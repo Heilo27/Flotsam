@@ -104,8 +104,8 @@ import FlotsamBase
     /// OC-7052, per FRD-007 Decision 5 and FR-007-08: Efficient converts an opaque PNG to JPEG even when it is already
     /// under the ceiling. Given Efficient and a 2000x1000 opaque PNG, then the blob is a JPEG at 2000x1000.
     ///
-    /// The oracle text for 7052 says "byte-identical". That contradicts the FRD, which the implementation follows, so
-    /// this test asserts the FRD. Reported as an oracle/FRD conflict, not silently resolved.
+    /// The contract was amended on 2026-11-16 (Friday ruling, decision 5): Efficient re-encodes every opaque PNG/TIFF,
+    /// so the earlier "byte-identical" text no longer applies to the opaque case; only transparent PNGs stay identical.
     @Test("OC-7052 Efficient sends an opaque PNG to JPEG even without a downscale (FRD-007 Decision 5)")
     func oc7052_efficientOpaqueWithoutDownscale() async throws {
         let rig = try await Rig.make(quality: .efficient)
