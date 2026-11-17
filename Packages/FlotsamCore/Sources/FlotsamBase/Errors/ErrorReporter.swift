@@ -19,6 +19,13 @@ struct NoticeBoard: Sendable, Equatable {
     }
 
     mutating func removeAll() { notices.removeAll() }
+
+    /// Drops the notices of one code; true when any were there.
+    mutating func remove(code: ErrorCode) -> Bool {
+        let before = notices.count
+        notices.removeAll { $0.code == code }
+        return notices.count != before
+    }
 }
 
 /// FR-000-08 throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall.
@@ -109,6 +116,14 @@ public actor ErrorReporter {
     public func dismissAllNotices() async {
         board.removeAll()
         await presenter.noticesChanged([])
+    }
+
+    /// Removes the Notices of `code` once the condition behind them has ended (FRD-002 FR-002-03, FR-002-04: "the warning
+    /// clears"). The owner of a long-lived condition calls this; the user's "Dismiss all" is separate. Does nothing
+    /// when there is no such Notice, so the owner may call it on every recovery without checking.
+    public func clearNotices(code: ErrorCode) async {
+        guard board.remove(code: code) else { return }
+        await presenter.noticesChanged(board.notices)
     }
 
     /// The ring buffer for the diagnostics report (FR-000-14).

@@ -14,6 +14,11 @@ public struct ScreenshotFile: Sendable, Equatable {
         self.createdAt = createdAt
         self.byteSize = byteSize
     }
+
+    /// The one place the date rule lives: birth date, or the modification date when the volume records none.
+    public init(url: URL, info: FileInfo) {
+        self.init(url: url, createdAt: info.createdAt ?? info.modifiedAt, byteSize: info.byteSize)
+    }
 }
 
 /// Lists the qualifying screenshots among the direct children of a folder (FR-002-04, FR-002-06). Subfolders,
@@ -48,7 +53,7 @@ public struct ScreenshotFolderScanner: Sendable {
         guard ScreenshotRecognizer.qualifies(fileName: name, attribute: attribute, customPrefix: customPrefix) else {
             return nil
         }
-        return ScreenshotFile(url: url, createdAt: info.createdAt ?? info.modifiedAt, byteSize: info.byteSize)
+        return ScreenshotFile(url: url, info: info)
     }
 }
 

@@ -3,6 +3,7 @@ import FlotsamBase
 import FlotsamCapture
 import FlotsamLibrary
 import FlotsamPaste
+import FlotsamScreenshots
 import FlotsamStorage
 import Foundation
 
@@ -28,6 +29,9 @@ final class AppContainer {
     private(set) var library: LibraryPanelController?
     private var libraryHotkey: LibraryHotkey?
     private var unsubscribeHotkey: (@Sendable () -> Void)?
+    private var unsubscribeScreenshots: (@Sendable () -> Void)?
+    /// Retained for the life of the app (FRD-002).
+    private(set) var screenshots: ScreenshotWatcher?
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
@@ -87,6 +91,7 @@ final class AppContainer {
             database = opened
             startCapture(database: opened)
             startLibrary(database: opened)
+            startScreenshots(database: opened)
         case .failure(let error): await reporter.report(error, origin: .background)
         }
     }
@@ -113,6 +118,43 @@ final class AppContainer {
             },
         ]
         capture.start()
+    }
+
+    /// FRD-002: wires screenshot pickup. The watcher itself reads `screenshots.enabled`, so with the setting off it
+    /// creates no stream, no timer and touches no folder (FR-002-05).
+    private func startScreenshots(database: FlotsamDatabase) {
+        let reporter = reporter
+        let settings = settings
+        let watcher = ScreenshotWatcher(
+            fileSystem: LocalFileSystem(), preferences: SystemScreenCapturePreferences(),
+            home: FileManager.default.homeDirectoryForCurrentUser, clock: SystemClock(),
+            eventSource: FSEventsFolderSource(), settings: settings,
+            ingest: IngestActor(database: database, settings: settings),
+            watermarkStore: DatabaseWatermarkStore(database: database),
+            report: { error in await reporter.report(error, origin: .background) },
+            clear: { code in await reporter.clearNotices(code: code) })
+        screenshots = watcher
+
+        let watched: Set<String> = [
+            SettingKeys.screenshotsEnabled.name, SettingKeys.screenshotsFolderOverride.name, SettingKeys.captureMode.name,
+        ]
+        unsubscribeScreenshots = settings.subscribe { change in
+            guard watched.contains(change.name) else { return }
+            Task { await watcher.settingsDidChange() }
+        }
+        let center = NotificationCenter.default
+        let workspace = NSWorkspace.shared.notificationCenter
+        observers += [
+            workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+                Task { await watcher.didWake() }
+            },
+            center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+                Task { await watcher.didBecomeActive() }
+            },
+        ]
+        // FR-002-12: onboarding's checkbox and Settings' button both call this. The count is not shown here.
+        actions.importRecentScreenshots = { Task { _ = await watcher.importRecent() } }
+        Task { await watcher.start() }
     }
 
     /// Builds the Library stack over the opened database and registers its hotkey (FR-003-01, FR-005-01).

@@ -3021,6 +3021,16 @@
         }
       }
     },
+    "ui.source.screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot"
+          }
+        }
+      }
+    },
     "ui.source.remoteDevice" : {
       "localizations" : {
         "en" : {
