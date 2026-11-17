@@ -24,6 +24,13 @@ struct BlobStore: Sendable {
         return parts.count == 2 && parts.allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
     }
 
+    /// True for a file name `blobName` could have produced: `<uuid>.<ordinal>`. Reconcile deletes unreferenced files
+    /// only when they match, so a stray file in `blobs/` that Flotsam did not write is never removed.
+    static func isGeneratedFileName(_ file: String) -> Bool {
+        let parts = file.split(separator: ".", omittingEmptySubsequences: false)
+        return parts.count == 2 && UUID(uuidString: String(parts[0])) != nil && Int(parts[1]) != nil
+    }
+
     func url(forBlobName name: String) -> URL { folder.blobsURL.appendingPathComponent(name) }
 
     func write(_ data: Data, itemId: UUID, ordinal: Int) -> FlotsamResult<String> {
