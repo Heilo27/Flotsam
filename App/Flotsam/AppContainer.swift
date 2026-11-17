@@ -3,6 +3,7 @@ import FlotsamBase
 import FlotsamCapture
 import FlotsamLibrary
 import FlotsamPaste
+import FlotsamShortcuts
 import FlotsamStorage
 import Foundation
 
@@ -26,8 +27,10 @@ final class AppContainer {
     private(set) var capture: ClipboardCapture?
     /// The Library panel (FR-003-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var library: LibraryPanelController?
-    private var libraryHotkey: LibraryHotkey?
-    private var unsubscribeHotkey: (@Sendable () -> Void)?
+    /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
+    /// it; the bindings are applied once the Library exists (`startLibrary`).
+    let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
+    private var unsubscribeShortcuts: (@Sendable () -> Void)?
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
@@ -142,21 +145,44 @@ final class AppContainer {
         library = controller
         actions.openLibrary = { [weak controller] in controller?.toggle() }
 
-        let hotkey = LibraryHotkey(
-            registrar: CarbonHotkeyRegistrar(), preferences: SettingsLibraryHotkeyPreferences(settings: settings)
-        ) { [weak controller] in controller?.toggle() }
-        if case .failure(let error) = hotkey.apply() {
-            Task { await reporter.report(error, origin: .background) }
-        }
-        libraryHotkey = hotkey
-        // A rebinding in Settings takes effect at once (FR-005-01).
-        let hotkeyName = SettingKeys.shortcutsOpenLibrary.name
-        unsubscribeHotkey = settings.subscribe { [weak hotkey] change in
-            guard change.name == hotkeyName else { return }
+        startShortcuts(openLibrary: { [weak controller] in controller?.toggle() })
+    }
+
+    /// Points the registry's three global actions at their owners and binds them from Settings (FR-005-01). Save
+    /// Clipboard and Toggle Shelf go through `actions`, so an owner that plugs in later is picked up at the next press;
+    /// until then the press does nothing (FR-005-07). A rebinding in Settings, or the Shelf switch, takes effect at once.
+    private func startShortcuts(openLibrary: @escaping @MainActor () -> Void) {
+        shortcuts.setAction(.openLibrary, openLibrary)
+        shortcuts.setAction(.saveClipboard) { [weak self] in self?.actions.saveClipboard?() }
+        shortcuts.setAction(.toggleShelf) { [weak self] in self?.actions.toggleShelf?() }
+        reportShortcutErrors(shortcuts.applyGlobalSettings(settings))
+
+        let names: Set<String> = [
+            SettingKeys.shortcutsOpenLibrary.name, SettingKeys.shortcutsSaveClipboard.name,
+            SettingKeys.shortcutsToggleShelf.name, SettingKeys.shelfEnabled.name,
+        ]
+        unsubscribeShortcuts = settings.subscribe { [weak self] change in
+            guard names.contains(change.name) else { return }
             Task { @MainActor in
-                if case .failure(let error) = hotkey?.apply() { await reporter.report(error, origin: .background) }
+                guard let self else { return }
+                self.reportShortcutErrors(self.shortcuts.applyGlobalSettings(self.settings))
             }
         }
+        // macOS can drop a hotkey registration across sleep; a refused one is retried at wake (FR-005-03).
+        observers.append(
+            NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.reportShortcutErrors(self.shortcuts.retryFailed())
+                }
+            })
+    }
+
+    private func reportShortcutErrors(_ errors: [FlotsamError]) {
+        let reporter = reporter
+        for error in errors { Task { await reporter.report(error, origin: .background) } }
     }
 }
 

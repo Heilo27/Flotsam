@@ -141,6 +141,56 @@ import FlotsamBase
         #expect(registrar.liveChords == [.ctrlCmdV])
     }
 
+    @Test func clearingAGlobalShortcutKeepsItsActionForTheNextChord() {
+        let (registry, registrar) = make()
+        var ran = 0
+        registry.setAction(.saveClipboard) { ran += 1 }
+        _ = registry.bind(.saveClipboard, to: .cmdK)
+        _ = registry.bind(.saveClipboard, to: nil)
+        _ = registry.bind(.saveClipboard, to: .cmdJ)
+        registrar.press(.cmdJ)
+        #expect(ran == 1)
+    }
+
+    @Test func shelfOffUnbindsToggleShelfAndKeepsTheSetting() {
+        let (registry, registrar) = make()
+        let settings = SettingsStore(store: InMemoryKeyValueStore())
+        settings.set(ChordBinding.chord(.cmdJ), for: SettingKeys.shortcutsToggleShelf)
+        registry.applyGlobalSettings(settings)
+        #expect(registrar.liveChords == [.ctrlCmdV, .cmdJ])
+        settings.set(false, for: SettingKeys.shelfEnabled)
+        registry.applyGlobalSettings(settings)
+        #expect(registrar.liveChords == [.ctrlCmdV])
+        #expect(settings.value(SettingKeys.shortcutsToggleShelf) == .chord(.cmdJ))
+        settings.set(true, for: SettingKeys.shelfEnabled)
+        registry.applyGlobalSettings(settings)
+        #expect(registrar.liveChords == [.ctrlCmdV, .cmdJ])
+    }
+
+    @Test func syncItemHotkeysAddsChangesAndRemoves() {
+        let (registry, registrar) = make()
+        let a = UUID(), b = UUID()
+        var ran: [UUID] = []
+        let action: (UUID) -> @MainActor () -> Void = { id in { ran.append(id) } }
+        #expect(registry.syncItemHotkeys([a: .cmdK, b: .cmdJ], action: action).isEmpty)
+        #expect(registrar.liveChords == [.cmdK, .cmdJ])
+        registrar.press(.cmdK)
+        #expect(ran == [a])
+        #expect(registry.syncItemHotkeys([a: .cmdK], action: action).isEmpty)
+        #expect(registrar.liveChords == [.cmdK])
+        #expect(registry.itemBindingCount == 1)
+    }
+
+    @Test func syncItemHotkeysSkipsACollidingChordWithoutBlockingTheRest() {
+        let (registry, registrar) = make()
+        let a = UUID(), b = UUID()
+        _ = registry.bind(.saveClipboard, to: .cmdK)
+        let errors = registry.syncItemHotkeys([a: .cmdK, b: .cmdJ]) { _ in {} }
+        #expect(errors.map(\.code) == [.trgVal004])
+        #expect(registrar.liveChords == [.cmdK, .cmdJ])
+        #expect(registry.itemBindingCount == 1)
+    }
+
     @Test func unregisterAllLeavesBindingsForRestore() {
         let (registry, registrar) = make()
         _ = registry.bind(.saveClipboard, to: .cmdK)

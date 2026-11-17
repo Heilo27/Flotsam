@@ -17,18 +17,3 @@ public protocol HotkeyRegistrar {
     func unregister(_ registration: HotkeyRegistration)
     func unregisterAll()
 }
-
-/// Where the Library hotkey comes from: the `shortcuts.openLibrary` setting (FR-005-01, FR-008-01), whose default is
-/// ⌃⌘V. `.none` means the user cleared the chord, so nothing is registered.
-@MainActor
-public protocol LibraryHotkeyPreferences {
-    var openLibraryChord: ChordBinding { get }
-}
-
-public struct SettingsLibraryHotkeyPreferences: LibraryHotkeyPreferences {
-    private let settings: SettingsStore
-
-    public init(settings: SettingsStore) { self.settings = settings }
-
-    public var openLibraryChord: ChordBinding { settings.value(SettingKeys.shortcutsOpenLibrary) }
-}

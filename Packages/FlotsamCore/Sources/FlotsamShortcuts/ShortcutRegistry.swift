@@ -88,16 +88,18 @@ public final class ShortcutRegistry {
         return register(id)
     }
 
-    /// Unregisters and forgets `id` (clear, item deleted).
+    /// Unregisters and forgets `id`'s chord (clear, item deleted). A global shortcut keeps its action, so binding it
+    /// again later (the user records a new chord) works; an item's action goes with the item.
     public func remove(_ id: ShortcutID) {
         unregister(id)
         bindings[id] = nil
-        actions[id] = nil
+        if id.isItem { actions[id] = nil }
         failed.remove(id)
     }
 
     /// Loads the three global bindings from their settings (launch, and when a setting changes). A stored value that
-    /// no longer validates is left unbound and reported through the return value, never crashing the load.
+    /// no longer validates is left unbound and reported through the return value, never crashing the load. With the
+    /// Shelf turned off in Settings, `toggleShelf` is unregistered (FR-005-07); its setting is kept.
     @discardableResult
     public func applyGlobalSettings(_ settings: SettingsStore) -> [FlotsamError] {
         var errors: [FlotsamError] = []
@@ -113,6 +115,31 @@ public final class ShortcutRegistry {
             case .chord(let value): chord = value
             }
             if chord == nil, id == .openLibrary { continue }
+            if id == .toggleShelf, !settings.value(SettingKeys.shelfEnabled) {
+                remove(id)
+                continue
+            }
+            if case .failure(let error) = bind(id, to: chord) { errors.append(error) }
+        }
+        return errors
+    }
+
+    /// Makes the item hotkeys equal `wanted` (launch, and whenever items change, FR-005-22): hotkeys of items no longer
+    /// listed come off, new or changed ones are bound with `action(itemId)`, and an unchanged one that macOS refused
+    /// earlier is retried. A chord that fails validation or collides is skipped and returned; it never blocks the rest.
+    @discardableResult
+    public func syncItemHotkeys(
+        _ wanted: [UUID: Chord], action: (UUID) -> @MainActor () -> Void
+    ) -> [FlotsamError] {
+        var errors: [FlotsamError] = []
+        for id in bindings.keys {
+            if case .item(let itemId) = id, wanted[itemId] == nil { remove(id) }
+        }
+        for itemId in wanted.keys.sorted(by: { $0.uuidString < $1.uuidString }) {
+            guard let chord = wanted[itemId] else { continue }
+            let id = ShortcutID.item(itemId)
+            if bindings[id] == chord, status(of: id) == .registered { continue }
+            setAction(id, action(itemId))
             if case .failure(let error) = bind(id, to: chord) { errors.append(error) }
         }
         return errors
