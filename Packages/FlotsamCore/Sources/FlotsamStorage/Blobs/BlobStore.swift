@@ -17,6 +17,13 @@ struct BlobStore: Sendable {
         return "\(id.prefix(2))/\(id).\(ordinal)"
     }
 
+    /// True for exactly `<shard>/<file>` with no empty, `.` or `..` component: what `blobName` always is when this
+    /// store wrote it. Deletion checks it so a damaged row cannot point `remove` outside `blobs/`.
+    static func isWellFormed(blobName: String) -> Bool {
+        let parts = blobName.split(separator: "/", omittingEmptySubsequences: false)
+        return parts.count == 2 && parts.allSatisfy { !$0.isEmpty && $0 != "." && $0 != ".." }
+    }
+
     func url(forBlobName name: String) -> URL { folder.blobsURL.appendingPathComponent(name) }
 
     func write(_ data: Data, itemId: UUID, ordinal: Int) -> FlotsamResult<String> {
