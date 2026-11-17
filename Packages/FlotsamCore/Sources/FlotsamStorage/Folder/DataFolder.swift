@@ -22,6 +22,24 @@ public struct DataFolder: Sendable {
         ["", "-wal", "-shm"].map { root.appendingPathComponent("flotsam.sqlite" + $0) }
     }
 
+    /// Name of the pre-migration copy of a version-`fromVersion` database (FR-007-17).
+    static func preMigrationCopyName(fromVersion: Int) -> String { "flotsam-v\(fromVersion).sqlite" }
+
+    /// True only for a file Flotsam itself writes into `pre-migration/`: exactly `flotsam-v<int>.sqlite`, or that name
+    /// plus `-wal` / `-shm`. Pruning deletes through this test alone, so anything else a user or another tool put in
+    /// the folder is never touched (FR-007-17, decision 6). Digits are ASCII-only and must parse as an `Int`, so
+    /// `flotsam-v1.sqlite.bak` or `flotsam-vx.sqlite` do not match.
+    static func isPreMigrationCopyFile(named name: String) -> Bool {
+        var stem = Substring(name)
+        for suffix in ["-wal", "-shm"] where stem.hasSuffix(suffix) {
+            stem = stem.dropLast(suffix.count)
+            break
+        }
+        guard stem.hasPrefix("flotsam-v"), stem.hasSuffix(".sqlite") else { return false }
+        let digits = stem.dropFirst("flotsam-v".count).dropLast(".sqlite".count)
+        return !digits.isEmpty && digits.allSatisfy { ("0"..."9").contains($0) } && Int(digits) != nil
+    }
+
     /// Creates the folder and its subfolders (0700) and empties `tmp/`, whose contents are in-flight writes from a
     /// previous run that can never complete (FR-007-01). Failure is `STO-IO-002`, a Fatal (the app cannot run).
     func prepare(fileSystem: any FileSystemPort) -> FlotsamResult<Void> {

@@ -171,7 +171,10 @@ public final class FlotsamDatabase: Sendable {
 
     // MARK: Migration backup
 
-    /// FR-007-17: copy the database aside before migrating an existing one, keeping only the latest copy.
+    /// FR-007-17: copy the database aside before migrating an existing one, keeping only the latest copy. Pruning is
+    /// limited to files Flotsam created (`DataFolder.isPreMigrationCopyFile`); the folder is user-visible, so any other
+    /// file in it is left alone. Stale `-wal`/`-shm` files beside the new copy's name are pruned too, because SQLite
+    /// would replay them into the fresh copy when it is opened.
     private static func preMigrationCopy(
         pool: DatabasePool, layout: DataFolder, fromVersion: Int, fileSystem: any FileSystemPort
     ) -> FlotsamResult<Void> {
@@ -184,14 +187,17 @@ public final class FlotsamDatabase: Sendable {
         if case .failure = fileSystem.createDirectory(at: backupFolder, permissions: DataFolder.folderPermissions) {
             return .failure(FlotsamError(.stoDb003, "Pre-migration folder could not be created"))
         }
-        let name = "flotsam-v\(fromVersion).sqlite"
+        let name = DataFolder.preMigrationCopyName(fromVersion: fromVersion)
         let destination = backupFolder.appendingPathComponent(name)
         if fileSystem.fileExists(at: destination) { _ = fileSystem.removeItem(at: destination) }
         guard case .success = fileSystem.copyItem(at: layout.databaseURL, to: destination) else {
             return .failure(FlotsamError(.stoDb003, "Pre-migration copy failed"))
         }
         if case .success(let others) = fileSystem.contentsOfDirectory(at: backupFolder) {
-            for url in others where url.lastPathComponent != name { _ = fileSystem.removeItem(at: url) }
+            for url in others
+            where url.lastPathComponent != name && DataFolder.isPreMigrationCopyFile(named: url.lastPathComponent) {
+                _ = fileSystem.removeItem(at: url)
+            }
         }
         return .success(())
     }
