@@ -13,7 +13,7 @@ final class ManualClock: WallClock, @unchecked Sendable {
 
     func now() -> Date { lock.withLock { current } }
     func advance(by seconds: TimeInterval) { lock.withLock { current = current.addingTimeInterval(seconds) } }
-    func sleep(for duration: Duration) async throws {}
+    func sleep(for duration: Duration) async {}
 }
 
 /// Records everything the reporter draws. `notices` is the last list the menu-bar Notices submenu would show.
