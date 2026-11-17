@@ -7,29 +7,26 @@ struct Migration {
     let apply: @Sendable (Database) throws -> Void
 }
 
-/// All migrations, in order. Migration 1 is the skeleton `meta` table; the item schema (FRD-007 FR-007-03,
-/// sketched in docs/ARCHITECTURE.md) arrives with the FRD-007 build ticket as migration 2.
+/// All migrations, in order. Version 1 is the FR-007-03 schema. A later release appends (the FTS5 index, if spike S-1
+/// calls for it, is version 2); it never edits an earlier entry.
 enum Migrations {
     static let all: [Migration] = [
-        Migration(version: 1) { db in
-            try db.execute(sql: """
-                CREATE TABLE meta (
-                    key TEXT PRIMARY KEY NOT NULL,
-                    value TEXT NOT NULL
-                ) WITHOUT ROWID
-                """)
-        },
+        Migration(version: 1, apply: Schema.createVersion1),
     ]
+
+    /// The newest version this build understands. A database above it came from a newer app (FR-007-17).
+    static func newestVersion(in migrations: [Migration]) -> Int { migrations.map(\.version).max() ?? 0 }
 }
 
-/// Runs migrations under `PRAGMA user_version` (FR-007-17, ADR-0002). Each migration and its version bump share
-/// one transaction. Before the first pending migration on an existing database, `beforeMigrating` is called so the
-/// caller can take the pre-migration copy.
+/// Runs migrations under `PRAGMA user_version` (FR-007-17, ADR-0002). Each migration, its version bump and the
+/// `meta.schemaVersion` mirror share one transaction, so a failure leaves the previous version intact.
 enum MigrationRunner {
     static func currentVersion(_ db: Database) throws -> Int {
         try Int.fetchOne(db, sql: "PRAGMA user_version") ?? 0
     }
 
+    /// `beforeMigrating` runs once, before the first pending migration, with the version being left. The caller
+    /// decides whether a copy is warranted (it knows whether the file existed before this launch).
     static func migrate(
         _ pool: DatabasePool,
         migrations: [Migration] = Migrations.all,
@@ -38,11 +35,15 @@ enum MigrationRunner {
         let current = try pool.read { try currentVersion($0) }
         let pending = migrations.filter { $0.version > current }.sorted { $0.version < $1.version }
         guard !pending.isEmpty else { return .success(()) }
-        if current > 0, case .failure(let error) = beforeMigrating(current) { return .failure(error) }
+        if case .failure(let error) = beforeMigrating(current) { return .failure(error) }
         for migration in pending {
             try pool.write { db in
                 try migration.apply(db)
                 try db.execute(sql: "PRAGMA user_version = \(migration.version)")
+                try db.execute(
+                    sql: "INSERT INTO meta(key, value) VALUES ('schemaVersion', ?) "
+                        + "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    arguments: [String(migration.version)])
             }
         }
         return .success(())

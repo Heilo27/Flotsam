@@ -65,4 +65,23 @@ public protocol FileSystemPort: Sendable {
     func removeItem(at url: URL) -> FlotsamResult<Void>
     func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]>
     func extendedAttribute(named name: String, at url: URL) -> Data?
+    /// Writes `data` to `url` with the given POSIX permissions and flushes it to disk before returning, so a
+    /// following rename publishes a complete file (FR-007-04).
+    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void>
+    func readFile(at url: URL) -> FlotsamResult<Data>
+    /// Size and modification time, nil when the file does not exist. Reconcile uses the age; budget uses neither.
+    func fileInfo(at url: URL) -> FileInfo?
+    /// Bytes available for important usage on the volume holding `url` (FR-007-14); nil when unknown.
+    func availableCapacity(at url: URL) -> Int64?
+}
+
+/// Size and modification time of one file.
+public struct FileInfo: Sendable, Equatable {
+    public let byteSize: Int
+    public let modifiedAt: Date
+
+    public init(byteSize: Int, modifiedAt: Date) {
+        self.byteSize = byteSize
+        self.modifiedAt = modifiedAt
+    }
 }

@@ -1,6 +1,36 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "error.CAP-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy was too large to save (over {limit}). It is still on your clipboard." } } }
+    },
+    "error.CAP-LIM-003" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A copy of {n} files was trimmed to the first 500." } } }
+    },
+    "error.SHF-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A dropped item was too large to save (over {limit})." } } }
+    },
+    "error.SSP-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A screenshot was too large to import (over {limit})." } } }
+    },
+    "error.STO-DB-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't save your history. Free up disk space and try again." } } }
+    },
+    "error.STO-DB-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your history database was damaged. A fresh one was created and the old file was kept in the data folder." } } }
+    },
+    "error.STO-DB-004" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Couldn't read your history. Try again." } } }
+    },
+    "error.STO-IO-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam couldn't write to its data folder. Check free disk space." } } }
+    },
+    "error.STO-LIM-001" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned and shortcut items alone exceed your image budget." } } }
+    },
+    "error.STO-LIM-002" : {
+      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Disk space is low, so Flotsam isn't saving images." } } }
+    },
     "error.STO-DB-003" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder." } } }
     },

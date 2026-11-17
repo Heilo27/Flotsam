@@ -13,7 +13,7 @@ imports_of() { grep -rhoE '^(@testable )?import [A-Za-z0-9_]+' "$SRC/$1" 2>/dev/
 allowed_for() {
   case "$1" in
     FlotsamBase) echo "Foundation os" ;;
-    FlotsamStorage) echo "Foundation FlotsamBase GRDB" ;;
+    FlotsamStorage) echo "Foundation FlotsamBase GRDB ImageIO" ;;
     FlotsamPayload) echo "Foundation FlotsamBase" ;;
     FlotsamPaste) echo "Foundation FlotsamBase FlotsamStorage" ;;
     FlotsamCapture|FlotsamScreenshots|FlotsamShelf) echo "Foundation FlotsamBase FlotsamStorage FlotsamPayload" ;;
