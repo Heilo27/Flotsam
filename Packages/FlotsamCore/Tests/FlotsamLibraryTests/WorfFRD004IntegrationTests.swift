@@ -658,3 +658,122 @@ private final class Rig {
         #expect(bulk < 1000, "bulk tag \(bulk) ms")
     }
 }
+
+// TASK-392 (FR-004-01): the context-menu Pin/Unpin label must say what the action will do. These run the label predicate
+// (`pinActionUnpins`) and then the action as the row's `act` helper does (select the row when it is outside the selection,
+// then `togglePinSelected`), against a REAL database, and read pinned state back through a fresh connection. Red if the
+// label reads only the clicked row, or if the label and the applied state disagree.
+@MainActor
+@Suite struct WorfPinLabelTests {
+    private func pinned(_ rig: Rig) throws -> Set<Int> {
+        try rig.fresh { db in Set(try String.fetchAll(db, sql: "SELECT id FROM item WHERE pinned = 1").map { Int(String($0.suffix(12)))! }) }
+    }
+
+    /// Right-click on `row`: the label, then the action, as the app does. Returns (label says Unpin, state the action applied).
+    private func rightClick(_ rig: Rig, row: Int) async -> (unpins: Bool, applied: Bool?) {
+        let isPinned = rig.model.loadedRows.first { $0.id == n(row) }!.isPinned
+        let unpins = rig.model.pinActionUnpins(menuRowID: n(row), isPinned: isPinned)
+        if !rig.model.selection.contains(n(row)) { rig.model.select(id: n(row)) }
+        return (unpins, await rig.model.togglePinSelected())
+    }
+
+    private func rig() async throws -> Rig {
+        try await Rig([.init(n: 1, hours: 1, pinned: true), .init(n: 2, hours: 2), .init(n: 3, hours: 3, pinned: true),
+                       .init(n: 4, hours: 4), .init(n: 5, hours: 5, pinned: true)])
+    }
+
+    @Test("OC-4003 given one pinned row selected, when the menu opens on it, then the label says Unpin and the action unpins only it")
+    func singlePinned() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        rig.select(1)
+        let result = await rightClick(rig, row: 1)
+        #expect(result.unpins == true)
+        #expect(result.applied == false)
+        #expect(try pinned(rig) == [3, 5])
+    }
+
+    @Test("OC-4003 given one unpinned row selected, then the label says Pin and the action pins only it")
+    func singleUnpinned() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        rig.select(2)
+        let result = await rightClick(rig, row: 2)
+        #expect(result.unpins == false)
+        #expect(result.applied == true)
+        #expect(try pinned(rig) == [1, 2, 3, 5])
+    }
+
+    @Test("OC-4003 given all-pinned multi-selection, then the label says Unpin and every one unpins")
+    func allPinned() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        rig.select(1, 3, 5)
+        let result = await rightClick(rig, row: 3)
+        #expect(result.unpins == true)
+        #expect(result.applied == false)
+        #expect(try pinned(rig).isEmpty)
+    }
+
+    @Test("OC-4003 given all-unpinned multi-selection, then the label says Pin and every one pins")
+    func allUnpinned() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        rig.select(2, 4)
+        let result = await rightClick(rig, row: 4)
+        #expect(result.unpins == false)
+        #expect(result.applied == true)
+        #expect(try pinned(rig) == [1, 2, 3, 4, 5])
+    }
+
+    // The old label read the clicked row only: on the pinned row of a mixed selection it said Unpin while the action pins all.
+    @Test("OC-4003 given a mixed selection, when the menu opens on a pinned row or an unpinned row, then both say Pin and the action pins all")
+    func mixed() async throws {
+        for clicked in [1, 2] {
+            let rig = try await rig()
+            defer { rig.cleanUp() }
+            rig.select(1, 2)
+            let result = await rightClick(rig, row: clicked)
+            #expect(result.unpins == false, "clicked row \(clicked)")
+            #expect(result.applied == true, "clicked row \(clicked)")
+            #expect(try pinned(rig) == [1, 2, 3, 5], "clicked row \(clicked)")
+        }
+    }
+
+    // Right-click outside the selection: the action re-targets to the clicked row alone, so the label reads that row alone.
+    @Test("OC-4003 given a pinned selection and a right-click on an unpinned row outside it, then Pin, and only that row changes")
+    func outsideSelectionUnpinnedRow() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        rig.select(1, 3)
+        let result = await rightClick(rig, row: 4)
+        #expect(result.unpins == false)
+        #expect(result.applied == true)
+        #expect(rig.model.selection == [n(4)])
+        #expect(try pinned(rig) == [1, 3, 4, 5])
+    }
+
+    @Test("OC-4003 given an unpinned selection and a right-click on a pinned row outside it, then Unpin, and only that row changes")
+    func outsideSelectionPinnedRow() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        rig.select(2, 4)
+        let result = await rightClick(rig, row: 5)
+        #expect(result.unpins == true)
+        #expect(result.applied == false)
+        #expect(rig.model.selection == [n(5)])
+        #expect(try pinned(rig) == [1, 3])
+    }
+
+    // B6: nothing selected at all; the label reads the clicked row.
+    @Test("OC-4003 given no selection, when the menu opens on a pinned row, then Unpin; on an unpinned row, Pin")
+    func noSelection() async throws {
+        let rig = try await rig()
+        defer { rig.cleanUp() }
+        for id in rig.model.selection { rig.model.toggle(id: id) }  // opening a list auto-selects the first row
+        #expect(rig.model.selection.isEmpty)
+        #expect(rig.model.pinActionUnpins(menuRowID: n(1), isPinned: true) == true)
+        #expect(rig.model.pinActionUnpins(menuRowID: n(2), isPinned: false) == false)
+        #expect(try pinned(rig) == [1, 3, 5])  // reading the label changed nothing
+    }
+}
