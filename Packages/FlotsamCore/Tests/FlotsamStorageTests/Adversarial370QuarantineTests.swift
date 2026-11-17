@@ -354,11 +354,7 @@ struct Adversarial370QuarantineTests {
         let size = V370.size(V370.dbURL(root))
 
         let outcome = try await V370.open(root)
-        // TASK-372: the read-only probe cannot open a WAL-mode file without -shm (SQLITE_CANTOPEN), so this is
-        // refused with STO-DB-003 instead of quarantined. Remove the wrapper when TASK-372 lands.
-        withKnownIssue("TASK-372: probe CANTOPEN on a sidecar-less WAL-mode file") {
-            expectQuarantined(root: root, mainSHA: sha, walSHA: nil, outcome: outcome, sizeBefore: size)
-        }
+        expectQuarantined(root: root, mainSHA: sha, walSHA: nil, outcome: outcome, sizeBefore: size)
     }
 
     /// OC-370-04: given a file cut to two whole pages (header intact, the rest of the tree gone), when opened, then
@@ -608,12 +604,9 @@ struct Adversarial370QuarantineTests {
 
         let outcome = try await V370.open(root)
 
-        // TASK-372: refused with STO-DB-003 today. Remove the wrapper when TASK-372 lands.
-        withKnownIssue("TASK-372: probe CANTOPEN on a sidecar-less WAL-mode file") {
-            #expect(outcome.failure == nil, "healthy file refused: \(String(describing: outcome.failure?.code)) \(String(describing: outcome.failure?.underlying))")
-            #expect(outcome.notice == nil)
-            #expect(outcome.itemCount == 300)
-        }
+        #expect(outcome.failure == nil, "healthy file refused: \(String(describing: outcome.failure?.code)) \(String(describing: outcome.failure?.underlying))")
+        #expect(outcome.notice == nil)
+        #expect(outcome.itemCount == 300)
         #expect(V370.corruptFolders(root).isEmpty, "a healthy file is never quarantined")
     }
 

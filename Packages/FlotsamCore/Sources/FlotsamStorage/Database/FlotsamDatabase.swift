@@ -100,7 +100,7 @@ public final class FlotsamDatabase: Sendable {
                 // A read-only probe comes first and runs the integrity check (FR-007-13), so a newer-version or damaged
                 // database is refused or quarantined while still byte-identical: opening the pool would switch the
                 // journal mode, rewrite the header and VACUUM (AC-007-15).
-                switch try probe(layout.databaseURL) {
+                switch try probe(layout: layout, fileSystem: fileSystem) {
                 case .damaged: return .damaged
                 case .version(let version) where version > Migrations.newestVersion(in: migrations):
                     return .failed(FlotsamError(.stoDb003, "Database was written by a newer version"))
@@ -127,16 +127,48 @@ public final class FlotsamDatabase: Sendable {
 
     private enum Probe { case version(Int), damaged }
 
-    private static func probe(_ url: URL) throws -> Probe {
-        var readOnly = Configuration()
-        readOnly.readonly = true
+    private static func probe(layout: DataFolder, fileSystem: any FileSystemPort) throws -> Probe {
         do {
-            let queue = try DatabaseQueue(path: url.path, configuration: readOnly)
-            defer { try? queue.close() }
-            return try queue.read { db in
-                // `quick_check` runs before the version is trusted: a damaged file can report any user_version.
-                try integrityCheckPasses(db) ? .version(try MigrationRunner.currentVersion(db)) : .damaged
-            }
+            return try probeFile(at: layout.databaseURL, readonly: true)
+        } catch {
+            if isDamage(error) { return .damaged }
+            // WHY: a read-only connection cannot open a WAL-mode file that has no `-shm` beside it (SQLITE_CANTOPEN),
+            // which is the normal state after a clean shutdown or when the file was copied alone. The healthy file
+            // must still open, and the damaged one must still be quarantined untouched, so the check moves to a
+            // private copy and the user's file is never written to.
+            guard isCannotOpen(error) else { throw error }
+            return try probeCopy(of: layout, fileSystem: fileSystem, original: error)
+        }
+    }
+
+    private static func probeFile(at url: URL, readonly: Bool) throws -> Probe {
+        var configuration = Configuration()
+        configuration.readonly = readonly
+        let queue = try DatabaseQueue(path: url.path, configuration: configuration)
+        defer { try? queue.close() }
+        return try queue.read { db in
+            // `quick_check` runs before the version is trusted: a damaged file can report any user_version.
+            try integrityCheckPasses(db) ? .version(try MigrationRunner.currentVersion(db)) : .damaged
+        }
+    }
+
+    /// Runs the probe on a copy of the main file and its `-wal` (the committed state SQLite would read) in
+    /// `tmp/probe-<uuid>/`, inside the data folder (FR-007-01) and removed afterwards. SQLite may create `-shm` and
+    /// checkpoint there; the original is only ever read. A copy that cannot be made rethrows the original error.
+    private static func probeCopy(of layout: DataFolder, fileSystem: any FileSystemPort, original: Error) throws -> Probe {
+        let scratch = layout.tmpURL.appendingPathComponent("probe-\(UUID().uuidString)")
+        guard case .success = fileSystem.createDirectory(at: scratch, permissions: DataFolder.folderPermissions) else {
+            throw original
+        }
+        defer { _ = fileSystem.removeItem(at: scratch) }
+        let copy = scratch.appendingPathComponent(FlotsamDatabase.fileName)
+        let sources = [layout.databaseURL, URL(fileURLWithPath: layout.databaseURL.path + "-wal")]
+        for source in sources where fileSystem.fileExists(at: source) {
+            let target = scratch.appendingPathComponent(source.lastPathComponent)
+            guard case .success = fileSystem.copyItem(at: source, to: target) else { throw original }
+        }
+        do {
+            return try probeFile(at: copy, readonly: false)
         } catch {
             if isDamage(error) { return .damaged }
             throw error
@@ -147,6 +179,10 @@ public final class FlotsamDatabase: Sendable {
     /// decide quarantine, and on every open after migration, to verify the migrated file.
     private static func integrityCheckPasses(_ db: Database) throws -> Bool {
         try String.fetchAll(db, sql: "PRAGMA quick_check") == ["ok"]
+    }
+
+    private static func isCannotOpen(_ error: Error) -> Bool {
+        (error as? DatabaseError)?.resultCode == .SQLITE_CANTOPEN
     }
 
     /// SQLite reports a non-database file as NOTADB and a broken one as CORRUPT. Both mean "quarantine".
