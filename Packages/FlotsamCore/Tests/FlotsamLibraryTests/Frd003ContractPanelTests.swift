@@ -75,8 +75,8 @@ import Testing
         // then: never below 560 x 360, each axis independently, and the placed frame agrees
         #expect(clamped.width == expectedW)
         #expect(clamped.height == expectedH)
-        #expect(frame.width == expectedW)
-        #expect(frame.height == expectedH)
+        #expect(Double(frame.width) == expectedW)
+        #expect(Double(frame.height) == expectedH)
     }
 
     // OC-3011. Mutation: keep the size in memory only (never write the setting).
@@ -151,7 +151,7 @@ import Testing
         h.model.handle(key(.down, .command))
         await h.model.settled()
         // then: the selection is the oldest item and the count is the full 10,000
-        #expect(h.model.selection == [rows[9_999].id])
+        #expect(selectedIndex(h, in: rows) == 9_999)
         #expect(h.model.footer().countText == "10000 items")
     }
 
