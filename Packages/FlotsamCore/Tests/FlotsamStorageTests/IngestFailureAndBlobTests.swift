@@ -165,6 +165,67 @@ import FlotsamBase
         #expect(rig.store.names(in: rig.store.root.appendingPathComponent("tmp")).isEmpty)
     }
 
+    /// Counts file writes once armed and says whether the current one is the Nth, from any thread.
+    private final class WriteCounter: @unchecked Sendable {
+        private let lock = NSLock()
+        private var armed = false
+        private var writes = 0
+        func arm() { lock.withLock { armed = true } }
+        var count: Int { lock.withLock { writes } }
+        func isWrite(_ n: Int) -> Bool {
+            lock.withLock {
+                guard armed else { return false }
+                writes += 1
+                return writes == n
+            }
+        }
+    }
+
+    /// OC-7025. Given one rich-text item stored (blob set B0), when a three-representation copy is ingested and its second blob
+    /// write fails, then the copy fails with STO-IO-001, the blob already written for it is removed so the blob files
+    /// are exactly B0, the item and representation counts are unchanged and tmp/ is empty.
+    @Test("OC-7025 a blob write failure part-way removes the blobs already written")
+    func oc7025_secondBlobWriteFailureRemovesTheFirst() async throws {
+        // given one image stored, then the file system armed to fail the second write
+        let counter = WriteCounter()
+        let store = try await Store.make(fileSystem: FaultyFileSystem(failWrite: { _ in counter.isWrite(2) }))
+        defer { store.cleanUp() }
+        let settings = SettingsStore(store: MemoryKV())
+        let rig = Rig(
+            store: store, settings: settings, ingest: IngestActor(database: store.database, settings: settings),
+            fileSystem: CapacityFileSystem(capacity: nil))
+        // (rich text, not an image: an image warms thumbnails unawaited, and those writes would race the counter)
+        let existing = try await rig.create(rig.rich("k-7025-keep", plain: "kept", rtf: Data("kept-rtf".utf8)))
+        let existingRep = try #require(try rig.reps(existing).first)
+        let baseline = rig.blobFiles()
+        #expect(baseline == [existingRep.blobName])
+        #expect(try rig.itemCount() == 1)
+        counter.arm()
+
+        // when a copy with three representations is ingested
+        let result = await rig.ingest.ingest(IngestCandidate(
+            kind: .richText, contentKey: "k-7025-three", plainText: "three reps",
+            representations: [
+                PasteboardRepresentation(uti: "public.rtf", data: Data("rtf-bytes".utf8)),
+                PasteboardRepresentation(uti: "public.html", data: Data("html-bytes".utf8)),
+                PasteboardRepresentation(uti: "com.example.custom", data: Data("custom-bytes".utf8)),
+            ],
+            origin: .pasteboard, occurredAt: Date(timeIntervalSince1970: Double(store.clock.millis) / 1000)))
+
+        // then it fails as a file error, stopped at the second write, and nothing it wrote is left behind
+        guard case .failure(let error) = result else {
+            Issue.record("expected a failure")
+            return
+        }
+        #expect(error.code == .stoIo001)
+        #expect(counter.count == 2, "the third write is never attempted")
+        #expect(rig.blobFiles() == baseline)
+        #expect(try rig.itemCount() == 1)
+        #expect(try rig.store.count("representation") == 1)
+        #expect(try rig.reps(existing) == [existingRep])
+        #expect(rig.store.names(in: rig.store.root.appendingPathComponent("tmp")).isEmpty)
+    }
+
     // MARK: OC-7031 (storage half)
 
     /// OC-7031, the part Storage owns. Given item count N=2 and blob count B0=1, when a write failure is forced and an

@@ -32,13 +32,17 @@ struct FaultyFileSystem: FileSystemPort {
     var failList: @Sendable (URL) -> Bool = { _ in false }
     /// The file is listed and exists, but inspecting it (size, modification time) reports nothing.
     var failInfo: @Sendable (URL) -> Bool = { _ in false }
+    /// Writing a file to this path fails (a blob staged under tmp/, for instance).
+    var failWrite: @Sendable (URL) -> Bool = { _ in false }
     private let real = LocalFileSystem()
 
     init(
         failRemove: @escaping @Sendable (URL) -> Bool = { _ in false },
         failList: @escaping @Sendable (URL) -> Bool = { _ in false },
-        failInfo: @escaping @Sendable (URL) -> Bool = { _ in false }
+        failInfo: @escaping @Sendable (URL) -> Bool = { _ in false },
+        failWrite: @escaping @Sendable (URL) -> Bool = { _ in false }
     ) {
+        self.failWrite = failWrite
         self.failRemove = failRemove
         self.failList = failList
         self.failInfo = failInfo
@@ -55,7 +59,9 @@ struct FaultyFileSystem: FileSystemPort {
         failList(url) ? .failure(FlotsamError(.stoIo003, "injected list failure")) : real.contentsOfDirectory(at: url)
     }
     func extendedAttribute(named name: String, at url: URL) -> Data? { real.extendedAttribute(named: name, at: url) }
-    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { real.writeFile(data, to: url, permissions: permissions) }
+    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> {
+        failWrite(url) ? .failure(FlotsamError(.stoIo001, "injected write failure")) : real.writeFile(data, to: url, permissions: permissions)
+    }
     func readFile(at url: URL) -> FlotsamResult<Data> { real.readFile(at: url) }
     func fileInfo(at url: URL) -> FileInfo? { failInfo(url) ? nil : real.fileInfo(at: url) }
     func availableCapacity(at url: URL) -> Int64? { real.availableCapacity(at: url) }
@@ -234,13 +240,20 @@ extension Store {
 final class EventCollector: @unchecked Sendable {
     private let lock = NSLock()
     private var batches: [[UUID]] = []
+    private var published: [ItemEvent] = []
     private var unsubscribe: (@Sendable () -> Void)?
 
     init(_ bus: ItemEventBus) {
         unsubscribe = bus.subscribe { [self] event in
-            if case .itemsDeleted(let ids) = event { lock.withLock { batches.append(ids) } }
+            lock.withLock {
+                published.append(event)
+                if case .itemsDeleted(let ids) = event { batches.append(ids) }
+            }
         }
     }
+
+    /// Every event, in publish order.
+    var events: [ItemEvent] { lock.withLock { published } }
 
     var deletedBatches: [[UUID]] { lock.withLock { batches } }
     var deletedIds: Set<UUID> { Set(deletedBatches.flatMap { $0 }) }

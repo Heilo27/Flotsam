@@ -221,6 +221,29 @@ import FlotsamBase
         #expect(try rig.store.count("representation") == 10)
     }
 
+    /// OC-7027. Given a subscriber on the event bus, when one new text is copied, then exactly one `.itemsChanged` is
+    /// published and nothing else, and a second new text makes it exactly two. Goes red if a created ingest stops
+    /// publishing (Library and Shelf would never refresh).
+    @Test("OC-7027 a created item publishes exactly one itemsChanged")
+    func oc7027_createPublishesOneItemsChanged() async throws {
+        // given a store with a subscriber and no events yet
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let events = EventCollector(rig.store.database.events)
+        #expect(events.events.isEmpty)
+
+        // when one new text is copied
+        _ = try await rig.create(rig.text("k-7027-event-a", "first"))
+
+        // then exactly one itemsChanged was published
+        #expect(events.events == [.itemsChanged])
+
+        // and a second distinct copy adds exactly one more
+        _ = try await rig.create(rig.text("k-7027-event-b", "second"))
+        #expect(events.events == [.itemsChanged, .itemsChanged])
+        #expect(try rig.itemCount() == 2)
+    }
+
     /// OC-7033, OC-7015. Given a store that holds no row for a key, when four identical copies of that key race
     /// through ingest at once (repeated over eight keys so the interleaving actually happens), then each key ends with
     /// exactly one row whose copyCount is 4, exactly one call reported created and three bumped, and no second row

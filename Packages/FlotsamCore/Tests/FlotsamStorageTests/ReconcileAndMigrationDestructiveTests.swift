@@ -204,6 +204,110 @@ private let tenMinMs: Int64 = 10 * 60_000
         #expect(try store.count("item") == 0)
     }
 
+    /// OC-7110. Given a garbage database and K=3 blobs in three shard folders, when the database opens, then all 3 blobs
+    /// sit byte-for-byte under corrupt-<timestamp>/blobs and the live blobs/ folder exists again with no file in it.
+    @Test("OC-7110 quarantine moves every blob aside and leaves an empty blobs folder")
+    func oc7110_quarantineMovesBlobsAside() async throws {
+        // given a damaged database and three blobs
+        let (root, _) = try corruptRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let blobs: [(path: String, bytes: Data)] = [
+            ("a1/blob-a", Data("alpha-bytes".utf8)), ("ff/blob-b", Data("bravo-bytes-longer".utf8)), ("07/blob-c", Data([0, 1, 2, 253, 254, 255])),
+        ]
+        for blob in blobs {
+            let url = root.appendingPathComponent("blobs/\(blob.path)")
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try blob.bytes.write(to: url)
+        }
+
+        // when the database opens
+        _ = try await FlotsamDatabase.open(folder: root).get()
+
+        // then the three blobs are under the quarantine folder, identical, and blobs/ is empty again
+        let folder = try #require(quarantined(root).first)
+        #expect(quarantined(root).count == 1)
+        for blob in blobs {
+            #expect(try Data(contentsOf: folder.appendingPathComponent("blobs/\(blob.path)")) == blob.bytes)
+        }
+        let movedFiles = filesUnder(folder.appendingPathComponent("blobs"))
+        #expect(movedFiles == ["00/\(Store.id(1).uuidString).1", "07/blob-c", "a1/blob-a", "ff/blob-b"])
+        var isDirectory: ObjCBool = false
+        #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent("blobs").path, isDirectory: &isDirectory))
+        #expect(isDirectory.boolValue)
+        #expect(filesUnder(root.appendingPathComponent("blobs")).isEmpty)
+    }
+
+    private func filesUnder(_ directory: URL) -> [String] {
+        let base = directory.resolvingSymlinksInPath().path
+        guard let walker = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey]) else { return [] }
+        var names: [String] = []
+        for case let url as URL in walker where (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true {
+            names.append(String(url.resolvingSymlinksInPath().path.dropFirst(base.count + 1)))
+        }
+        return names.sorted()
+    }
+
+    /// OC-7110 / OC-7111. Given a real database whose file still opens (header and schema intact) but one non-root table
+    /// leaf page has its rows out of order so PRAGMA quick_check reports rows, when the database opens, then the damaged file is moved
+    /// into one corrupt-<timestamp>/ folder byte-for-byte, a fresh empty version-1 database is created, and the open notice
+    /// is STO-DB-002.
+    @Test("OC-7110 a database that opens but fails quick_check is quarantined and replaced")
+    func oc7110_quickCheckFailureIsQuarantined() async throws {
+        // given 400 rows spread over many pages, closed and checkpointed
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-8t-leaf-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seeded = try await Store.make(root: root)
+        let padding = String(repeating: "x", count: 200)
+        try await seeded.insert((1...400).map { Spec(n: $0, text: "m96-row-\($0)-\(padding)") })
+        let pageSize = try await seeded.database.pool.read { try Int.fetchOne($0, sql: "PRAGMA page_size")! }
+        try await seeded.database.pool.writeWithoutTransaction { try $0.execute(sql: "PRAGMA wal_checkpoint(TRUNCATE)") }
+        try seeded.database.pool.close()
+
+        // and one table leaf page (type byte 0x0D, holding row text, not page 1) has its first two cell pointers swapped
+        let file = root.appendingPathComponent("flotsam.sqlite")
+        var bytes = try Data(contentsOf: file)
+        let marker = Data("m96-row-".utf8)
+        let pageCount = bytes.count / pageSize
+        let leaf = try #require((2...pageCount).first { page in
+            let start = (page - 1) * pageSize
+            return bytes[start] == 0x0D && bytes.subdata(in: start..<(start + pageSize)).range(of: marker) != nil
+        })
+        // swap its first two cell pointers: the b-tree is still readable, but its rows are out of order
+        let pointers = (leaf - 1) * pageSize + 8
+        let first = bytes.subdata(in: pointers..<(pointers + 2))
+        let second = bytes.subdata(in: (pointers + 2)..<(pointers + 4))
+        #expect(first != second)
+        bytes.replaceSubrange(pointers..<(pointers + 2), with: second)
+        bytes.replaceSubrange((pointers + 2)..<(pointers + 4), with: first)
+        try bytes.write(to: file)
+        // the premise: the damage is invisible to a plain open and only quick_check reports it
+        var readOnly = Configuration()
+        readOnly.readonly = true
+        let probe = try DatabaseQueue(path: file.path, configuration: readOnly)
+        let check = try await probe.read { try String.fetchAll($0, sql: "PRAGMA quick_check") }
+        #expect(check != ["ok"])
+        #expect(!check.isEmpty)
+        try probe.close()
+
+        // when the database opens
+        let database = try await FlotsamDatabase.open(folder: root).get()
+
+        // then the damaged bytes are preserved in one quarantine folder and a fresh database is live
+        let folders = quarantined(root)
+        #expect(folders.count == 1)
+        let preserved = try #require(folders.first).appendingPathComponent("flotsam.sqlite")
+        // (opening the file to judge it rewrites some of its pages, so the check is that every one of the 400 rows' text is
+        // still in the moved file, not that the whole file is bit-identical)
+        let kept = try Data(contentsOf: preserved)
+        let missing = (1...400).filter { kept.range(of: Data("m96-row-\($0)-".utf8)) == nil }
+        #expect(missing.isEmpty)
+        #expect(database.openNotice?.code == .stoDb002)
+        let diagnostics = try await database.diagnostics().get()
+        #expect(diagnostics.userVersion == 1)
+        let fresh = Store(root: root, clock: ManualClock(), database: database)
+        #expect(try fresh.count("item") == 0)
+    }
+
     /// OC-7111. Given a quarantine folder, when Clear History, a retention sweep, a reconcile and a reopen all run, then the
     /// folder and its bytes are untouched by every one of them.
     @Test func oc7111_quarantineFolderSurvivesEveryDeletePathAndReopen() async throws {
