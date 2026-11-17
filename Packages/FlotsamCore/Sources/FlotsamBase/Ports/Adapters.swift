@@ -2,8 +2,6 @@ import Foundation
 
 /// `FileManager`-backed `FileSystemPort`. Foundation only, so it lives in Base.
 public struct LocalFileSystem: FileSystemPort {
-    private static let domain = "FlotsamFileSystem"
-
     public init() {}
 
     public func fileExists(at url: URL) -> Bool {
