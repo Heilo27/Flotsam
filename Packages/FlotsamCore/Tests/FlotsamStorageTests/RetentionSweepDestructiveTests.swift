@@ -91,8 +91,12 @@ import FlotsamBase
     }
 
     /// OC-7076 (functional part). Given 1,200 eligible items and 100 pinned ones, when a sweep runs, then exactly 1,200
-    /// go in batches of at most 500 (so at least 3) and the 100 remain.
+    /// go in batches of at most 500 (so at least 3) and the 100 remain, and the sweep logs exactly one STO-POL-001
+    /// "Retention sweep" line carrying count=1200. Red if the logged count is not the deleted total (a hard-coded 0, or
+    /// the last batch size 200): no line with count=1200 appears. 1200 is a total no other test in the suite deletes in
+    /// one sweep, so the process-wide log cannot hold a matching line from anywhere else.
     @Test func oc7076_sweepDeletesInBatchesOfAtMost500() async throws {
+        let logged = ProcessLogProbe()
         let s = try await Store.make()
         defer { s.cleanUp() }
         var specs = (1...1_200).map { Spec(n: $0, ageMs: 31 * dayMs) }
@@ -108,6 +112,8 @@ import FlotsamBase
         #expect(events.deletedBatches.count >= 3)
         #expect(events.deletedBatches.allSatisfy { $0.count <= 500 })
         #expect(events.deletedBatches.reduce(0) { $0 + $1.count } == 1_200)
+        let lines = await logged.waitForEntries(containing: ["STO-POL-001", "Retention sweep", "count=1200"])
+        #expect(lines.count == 1)
     }
 
     // MARK: Exemption grace
