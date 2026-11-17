@@ -198,7 +198,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | HUD | transient floating label | top-centre of pointer's screen | message text, 2.5 s, no focus, VoiceOver announces |
 | Menu-bar badge dot | icon overlay | menu-bar icon | shown while unacknowledged Warning/Error Notices exist |
-| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text; "Dismiss all" |
+| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so the code follows the message on the same line); "Dismiss all" |
 | Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder", "Quit" |
 | Copy Diagnostics button | button | Settings › About | builds and copies report; confirms with HUD "Diagnostics copied" |
 | Inline validation text | label | beside the invalid field | catalogue message, red text plus icon, role alert for VoiceOver |

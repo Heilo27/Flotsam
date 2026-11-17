@@ -29,7 +29,7 @@ struct FlotsamApp: App {
                 Text(verbatim: FlotsamStrings.text(forKey: "ui.menu.noNotices") ?? "")
             } else {
                 ForEach(container.presenter.notices) { notice in
-                    Text(verbatim: notice.message)
+                    Text(verbatim: Self.noticeRowText(notice))
                 }
                 Divider()
                 Button(FlotsamStrings.text(forKey: "ui.menu.dismissAll") ?? "") {
@@ -37,5 +37,12 @@ struct FlotsamApp: App {
                 }
             }
         }
+    }
+
+    /// One Notices row: the message, then the code as secondary text (FRD-000 section 9). A menu-style
+    /// `MenuBarExtra` renders each item as a single styled string and ignores secondary foreground styles, so the
+    /// code follows the message on the same line after a separator.
+    private static func noticeRowText(_ notice: Notice) -> String {
+        "\(notice.message) · \(notice.code.rawValue)"
     }
 }
