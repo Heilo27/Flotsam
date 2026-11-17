@@ -42,8 +42,11 @@ import Testing
         store.replace(snapshot([a: ";aa", b: ";bb"]), token: store.beginRebuild())
         let token = store.beginRebuild()  // a rebuild begins and reads the database...
         store.remove(itemIds: [a])  // ...a delete lands before it finishes...
-        #expect(store.replace(snapshot([a: ";aa", b: ";bb"]), token: token) == false)  // ...its stale result is refused
+        // ...its result still installs (FR-005-22: the delete drops only its own trigger) but without the deleted one
+        #expect(store.replace(snapshot([a: ";aa", b: ";bb", c: ";cc"]), token: token))
         #expect(store.policy.triggers.itemId(forKey: ";aa") == nil)
+        #expect(store.policy.triggers.itemId(forKey: ";bb") == b)
+        #expect(store.policy.triggers.itemId(forKey: ";cc") == c)
     }
 
     @Test func theNewestRebuildWinsOverAnOlderOne() {

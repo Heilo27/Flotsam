@@ -43,8 +43,8 @@ public enum MatcherResult: Sendable, Equatable {
 ///
 /// Deliberately not `Sendable`: it is confined to the tap thread (ADR-0007) and holds mutable state with no lock. It
 /// does no I/O and no logging, so the callback stays inside its 1 ms budget (FR-005-21); it returns a value and the
-/// engine acts on it off the tap thread. The only calls out are the three `KeyboardEnvironment` reads, and only when a
-/// word has already matched a trigger.
+/// engine acts on it off the tap thread. The only calls out are the `KeyboardEnvironment` reads: three when a word has already matched a trigger, and
+/// `frontmostApp()` once at the start of each word.
 public final class TriggerMatcher {
     private let store: TriggerSnapshotStore
     private let environment: any KeyboardEnvironment
@@ -58,6 +58,10 @@ public final class TriggerMatcher {
     /// A word that can no longer match until the next boundary or reset (FR-005-11). Its buffer is always empty.
     private var isDead = false
     private var lastEventAt: Date?
+    /// The frontmost application when the current word got its first character (FR-005-11: a change of frontmost
+    /// application clears the word). Compared at the boundary key; the engine's `frontmostApplicationDidChange()`
+    /// signal clears the word sooner. Set once per word, so it survives Backspace to an empty buffer.
+    private var wordApp: FrontmostApp??
     /// Boundary keys whose key-down was swallowed and whose key-up has not arrived yet.
     private var heldBoundaryKeys: Set<UInt16> = []
 
@@ -121,6 +125,7 @@ public final class TriggerMatcher {
 
     private func append(_ characters: String) {
         guard !isDead else { return }
+        if wordApp == nil { wordApp = .some(environment.frontmostApp()) }
         let added = characters.count
         guard bufferCount + added <= TriggerGrammar.maximumLength else {
             clearWord()
@@ -143,14 +148,19 @@ public final class TriggerMatcher {
     private func boundary(_ event: KeyEvent) -> MatcherResult {
         let typed = buffer
         let wasDead = isDead
+        let startedIn = wordApp
         clearWord()
         guard !wasDead, typed.count >= TriggerGrammar.minimumLength else { return .pass }
 
         let policy = store.policy
         guard let itemId = policy.triggers.itemId(forKey: TriggerGrammar.canonicalKey(typed)) else { return .pass }
 
+        // The word began in another application: nothing was typed here, so it is not a match and not logged.
+        let frontmost = environment.frontmostApp()
+        guard startedIn == .some(frontmost) else { return .pass }
+
         if environment.isSecureEventInputEnabled() { return .suppressed(.secureInput) }
-        guard let app = environment.frontmostApp(), let bundleId = app.bundleId else { return .suppressed(.unknownApp) }
+        guard let app = frontmost, let bundleId = app.bundleId else { return .suppressed(.unknownApp) }
         if policy.excludes(bundleId: bundleId, ownBundleId: ownBundleId) { return .suppressed(.excludedApp) }
         if environment.isInputMethodActive() { return .suppressed(.inputMethod) }
 
@@ -163,6 +173,7 @@ public final class TriggerMatcher {
         buffer = ""
         bufferCount = 0
         isDead = false
+        wordApp = nil
     }
 }
 
