@@ -45,14 +45,14 @@ Known test noise (ignore it, but always name it in reports):
 | 000 | Error system | S1 | merged | on `main` |
 | 007 | Retention / storage | S1 | merged | on `main` |
 | 009 | Distribution (`bin/release.sh`) | S1 | merged | on `main`; DMG signing waits on Ryan's Developer ID |
-| 001 | Capture | S1 | `frd001` | building |
-| 003 | Library: paste-back | S1 | `frd003` | **ready: 6fe1d6e** — S2: A3 app build + launch (S1 machine overloaded; app target never built here). Package tests 21/21 Paste. **S2 A3: pass** (see `s2/log`). |
-| 003 | Library: panel UI | S1 | `frd003ui` | building |
-| 008 | Onboarding / settings / menu bar | S1 | `frd008` | building |
-| 002 | Screenshot pickup | **S2** | `s2/frd002` | S2 building: part 1 pushed (b983b9d); watcher + import wait on `frd001` + `frd008` reaching `main` |
+| 001 | Capture | S1 | merged | merged, on `main` (via `integration`) |
+| 003 | Library: paste-back | S1 | merged | merged, on `main` (via `integration`). S2 A3 on 6fe1d6e: pass (see `s2/log`). |
+| 003ui | Library: panel UI | S1 | merged | merged, on `main` (via `integration`) |
+| 008 | Onboarding / settings / menu bar | S1 | merged | merged, on `main` (via `integration`); first working MVP build, launch smoke passed for menu bar, capture, Library and Settings |
+| 002 | Screenshot pickup | **S2** | `s2/frd002` | S2 building: part 1 pushed (b983b9d); `frd001` + `frd008` are now on `main`, so part 2 is unblocked: rebase on `main` (see C1 note below) |
 | 006 | Shelf | **S2** | `s2/frd006` | open: S2 lane C, after 002 |
-| 004 | Organize (tags, bundles) | S1 | `frd004` | after 003 merges |
-| 005 | Shortcuts / triggers | S1 | `frd005` | after 003 merges |
+| 004 | Organize (tags, bundles) | S1 | `frd004` | S1: building next |
+| 005 | Shortcuts / triggers | S1 | `frd005` | S1: building next |
 
 "Ready for S2" = S1 has marked a builder branch here as `ready: <sha>`. Before that it's mid-build; don't verify it.
 
@@ -118,10 +118,17 @@ Builds follow the per-FRD loop in the FRD: implement → unit tests → green �
 
 Ryan's order is working first, then efficient, then pretty. Lane D never starts early.
 
+## S1 replies to S2 (2026-11-17)
+
+- **C1 blockers are on `main`.** `ContentKey.image` and `SettingKeys.screenshotsEnabled` / `screenshotsFolderOverride` landed with the merge of `integration` (c18cfac). `s2/frd002` can rebase on `main` and continue with part 2. Don't copy code from the builder branches.
+- **D1 (StorageEdgeTests.swift:218 type-check timeout): fixed at c18cfac.** The closure parameter now has an explicit type. S1 runs Swift 6.4.2 / Xcode 27.2, so S1 could not reproduce the timeout; S2 should confirm on 6.2.4.
+- **D2 (uncompiled catalogue under `swift test` on SwiftPM 6.2.4): fixed at c18cfac.** On 6.4.2 SwiftPM compiles `en.lproj/Localizable.strings` itself, so the 36 failures do not occur here. `FlotsamStrings.text(forKey:)` now falls back to the English value in the raw `Localizable.xcstrings` inside the module bundle when the compiled table lacks the key. One catalogue, no copied strings. S1 simulated the 6.2.4 bundle layout (raw catalogue only) and `FlotsamBaseTests` passed; S2 should confirm the full suite on 6.2.4.
+- **Test counts.** Swift 6.4 `swift test` prints one summary per test bundle, ten of them; the last line ("287 tests in 44 suites") is only `FlotsamBaseTests`. The real total at c18cfac is 638 tests (632 swift-testing in 92 suites, 6 XCTest), same with `--no-parallel`. Sum the per-bundle lines when comparing against a single-summary toolchain.
+
 ## S1 queue (for S2's awareness)
 
-- Finish the FRD-001, FRD-003 (paste + UI) and FRD-008 builders, then merge them to `main`.
-- Build FRD-004 and FRD-005 once FRD-003 is on `main`.
+- FRD-001, FRD-003 (paste + UI) and FRD-008 are merged to `main`.
+- Build FRD-004 and FRD-005 (S1: building next).
 - Merge S2's `s2/*` branches after review.
 - The FRD-007 efficiency tickets come after MVP works.
 - Release signing (FRD-009) needs Ryan's go.
