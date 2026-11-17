@@ -59,6 +59,16 @@ hits=$(grep -rnE '(fatalError|preconditionFailure|precondition)\(' "$SRC" App --
 hits=$(grep -rn 'localizedDescription' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
 [ -n "$hits" ] && fail "localizedDescription used (use UnderlyingErrorInfo): $hits"
 
+# FR-000-05: the String Catalog is the only home for user-facing text. A literal handed to a view or an AppKit text
+# property bypasses it (and the 140-character and interpolation checks), so it fails the build. Heuristic by design:
+# it catches the common SwiftUI and AppKit entry points; code review and the catalogue test cover the rest.
+hits=$(grep -rnE '(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup)\("|\.(help|navigationTitle|accessibilityLabel|accessibilityHint|badge|confirmationDialog|alert)\("|\.(messageText|informativeText|title|stringValue|toolTip|placeholderString|label) = "|withTitle: "' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+[ -n "$hits" ] && fail "user-facing string literal outside the catalogue (use FlotsamStrings.text(forKey:)): $hits"
+# Catalogue keys are 'error.<code>' or 'ui.<screen>.<name>' (FR-000-05).
+CATALOGUE="$SRC/FlotsamBase/Resources/Localizable.xcstrings"
+hits=$(grep -E '^    "[^"]+" : \{' "$CATALOGUE" | sed -E 's/^    "([^"]+)".*/\1/' | grep -vE '^(error\.[A-Z]{3}-[A-Z]{2,3}-[0-9]{3}|ui\.[a-z][A-Za-z0-9]*\.[a-z][A-Za-z0-9]*)$')
+[ -n "$hits" ] && fail "catalogue key does not match error.<code> or ui.<screen>.<name>: $hits"
+
 # UserDefaults only behind SettingsStore adapters (ADR-0009): Base/Ports/Adapters.swift is the single adapter.
 hits=$(grep -rn 'UserDefaults' "$SRC" App 2>/dev/null | grep -v 'Ports/Adapters.swift')
 [ -n "$hits" ] && fail "UserDefaults used outside Ports/Adapters.swift: $hits"
