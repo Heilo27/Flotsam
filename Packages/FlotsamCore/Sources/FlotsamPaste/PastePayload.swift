@@ -7,8 +7,6 @@ enum PastePayload {
     static let plainTextType = "public.utf8-plain-text"
     static let fileURLType = "public.file-url"
 
-    /// Kinds whose content is text, so "plain text only" has meaning (FR-003-15).
-    private static let textKinds: Set<ItemKind> = [.text, .richText, .link, .color, .phone, .email]
     private static let fileKinds: Set<ItemKind> = [.file, .folder, .bundle]
 
     /// The representations to write, or `LIB-DAT-001` when a file item has no member left on disk.
@@ -22,7 +20,7 @@ enum PastePayload {
             }
             return .success(urls.map { PasteboardRepresentation(uti: fileURLType, data: Data($0.absoluteString.utf8)) })
         }
-        guard textKinds.contains(content.kind) else { return .success(content.representations) }
+        guard content.kind.isTextBearing else { return .success(content.representations) }
         let text = PasteboardRepresentation(uti: plainTextType, data: Data((content.plainText ?? "").utf8))
         return .success(mode == .plainText ? [text] : [text] + content.representations)
     }
