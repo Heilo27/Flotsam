@@ -46,10 +46,10 @@ Known test noise (ignore it, but always name it in reports):
 | 007 | Retention / storage | S1 | merged | on `main` |
 | 009 | Distribution (`bin/release.sh`) | S1 | merged | on `main`; DMG signing waits on Ryan's Developer ID |
 | 001 | Capture | S1 | `frd001` | building |
-| 003 | Library: paste-back | S1 | `frd003` | **ready: 6fe1d6e** — S2: A3 app build + launch (S1 machine overloaded; app target never built here). Package tests 21/21 Paste. |
+| 003 | Library: paste-back | S1 | `frd003` | **ready: 6fe1d6e** — S2: A3 app build + launch (S1 machine overloaded; app target never built here). Package tests 21/21 Paste. **S2 A3: pass** (see `s2/log`). |
 | 003 | Library: panel UI | S1 | `frd003ui` | building |
 | 008 | Onboarding / settings / menu bar | S1 | `frd008` | building |
-| 002 | Screenshot pickup | **S2** | `s2/frd002` | open: S2 lane C |
+| 002 | Screenshot pickup | **S2** | `s2/frd002` | S2 building: part 1 pushed (b983b9d); watcher + import wait on `frd001` + `frd008` reaching `main` |
 | 006 | Shelf | **S2** | `s2/frd006` | open: S2 lane C, after 002 |
 | 004 | Organize (tags, bundles) | S1 | `frd004` | after 003 merges |
 | 005 | Shortcuts / triggers | S1 | `frd005` | after 003 merges |
@@ -58,18 +58,20 @@ Known test noise (ignore it, but always name it in reports):
 
 ## S2 queue, in priority order
 
+S2 marks each task here: `[S2: claimed <date>]` when it starts and `[S2: done <date> @ <sha>]` when it finishes (details in `s2/log`).
+
 ### Lane A: verify landed work (heaviest; always first)
 
 Re-run this whenever `main` moves or a builder branch is marked `ready`:
 
-- **A1** `main` health:
+- **A1** `main` health: **[S2: done 2026-11-17 @ 3878487; defects D1, D2 in `s2/log`]**
   - clean clone, `bin/bootstrap.sh`;
   - full `swift test` (no scratch path, so the lint harness runs too);
   - `bin/check-architecture.sh`;
   - `bin/build.sh`.
 
   Log the counts.
-- **A2** Launch smoke:
+- **A2** Launch smoke: **[S2: done 2026-11-17 @ 3878487, launch/menu bar/quit only; copy checks wait on FRD-001]**
   - build the Debug app and launch it;
   - copy text, a URL, an image and a file, and confirm each appears in storage once FRD-001 has landed;
   - copy from a password manager (concealed type) and confirm nothing is stored;
@@ -77,7 +79,7 @@ Re-run this whenever `main` moves or a builder branch is marked `ready`:
   - quit cleanly.
 
   Note any crash logs (`~/Library/Logs/DiagnosticReports/Flotsam*`).
-- **A3** Same as A1 + A2 on each branch marked `ready`, before S1 merges it.
+- **A3** Same as A1 + A2 on each branch marked `ready`, before S1 merges it. **[S2: done 2026-11-17: `frd003` @ 6fe1d6e, pass; build clean, tests = main baseline, launch OK; paste not drivable until adapters are wired (`s2/log` b8e7469)]**
 - **A4** Performance baseline on `main`, per the PRD/TRUTHS budgets:
   - idle CPU and RSS of the running app over 10 min;
   - capture latency;
@@ -98,7 +100,7 @@ The blind pass criteria live in `.claude/oracle/frd-NNN-contract.json`.
 
 Builds follow the per-FRD loop in the FRD: implement → unit tests → green → build the app.
 
-- **C1** FRD-002 Screenshot Pickup on `s2/frd002`, from `main`. Read `docs/frd/FRD-002-ScreenshotPickup.md` and ADR-0008.
+- **C1** FRD-002 Screenshot Pickup on `s2/frd002`, from `main`. **[S2: claimed; part 1 done @ b983b9d (recognizer, resolver, selection, stability, watermark); part 2 blocked on `frd001` + `frd008`]** Read `docs/frd/FRD-002-ScreenshotPickup.md` and ADR-0008.
   - The `FlotsamScreenshots` target may import only Foundation, FlotsamBase, FlotsamStorage and FlotsamPayload (`bin/check-architecture.sh` enforces this).
   - Do the §9 spikes first.
 - **C2** FRD-006 Shelf on `s2/frd006`, from `main`. Read `docs/frd/FRD-006-Shelf.md`. Same import rule.
