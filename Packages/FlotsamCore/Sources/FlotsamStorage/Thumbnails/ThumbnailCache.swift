@@ -38,6 +38,12 @@ actor ThumbnailCache {
         }
     }
 
+    func removeAll() {
+        entries = [:]
+        order = []
+        totalBytes = 0
+    }
+
     func evict(itemId: UUID) {
         for size in ThumbnailSize.allCases { drop(Self.key(itemId, size)) }
     }
@@ -69,10 +75,52 @@ extension FlotsamDatabase {
             await thumbnails.store(onDisk, for: key)
             return onDisk
         }
-        return await regenerateThumbnail(itemId: itemId, size: size, url: url, key: key)
+        return await regenerateThumbnail(itemId: itemId, size: size, key: key)
     }
 
-    private func regenerateThumbnail(itemId: UUID, size: ThumbnailSize, url: URL, key: String) async -> Data? {
+    /// Frees what only a visible panel needs (S5: Flotsam idles at under 60 MB): the thumbnail LRU and SQLite's page
+    /// caches. The disk thumbnails stay, so the next open reads them back. Call when the Library and Shelf panels close.
+    public func releaseMemory() async {
+        await thumbnails.removeAll()
+        pool.releaseMemory()
+    }
+
+    /// Ingest warm-up (S5): writes both thumbnails of a new image to disk and nowhere else, since nobody is looking at
+    /// it yet and it must not sit in the memory LRU. `source` is the stored image, already in memory at ingest, so there
+    /// is no re-read. Skips a deleted item, and cleans up if the delete lands while it renders: the delete's own
+    /// `discardThumbnails` can run before a write completes, which would leave an orphan file.
+    func warmThumbnails(itemId: UUID, source: Data) async {
+        guard await itemExists(itemId) else { return }
+        await writeThumbnails(itemId: itemId, source: source)
+        if await !itemExists(itemId) { await discardThumbnails(itemIds: [itemId]) }
+    }
+
+    func writeThumbnails(itemId: UUID, source: Data) async {
+        for size in ThumbnailSize.allCases { _ = await renderThumbnail(source, itemId: itemId, size: size) }
+    }
+
+    private func itemExists(_ itemId: UUID) async -> Bool {
+        do {
+            return try await pool.read { db in
+                try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM item WHERE id = ?)", arguments: [itemId.uuidString]) ?? false
+            }
+        } catch {
+            FlotsamLog.log(Self.readFailure(error), category: .storage)
+            return true  // unknown: keep the thumbnail, it is regenerable and reconcile sweeps orphans
+        }
+    }
+
+    /// The one place a thumbnail is rendered and written: JPEG from `source`, then to disk. Best effort: a failed disk
+    /// write only means it is rebuilt next time, but it is logged (FRD-000).
+    private func renderThumbnail(_ source: Data, itemId: UUID, size: ThumbnailSize) async -> Data? {
+        guard let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue) else { return nil }
+        if case .failure(let error) = blobs.writeAtomically(jpeg, to: folder.thumbnailURL(itemId: itemId, edge: size.rawValue)) {
+            FlotsamLog.log(error, category: .storage)
+        }
+        return jpeg
+    }
+
+    private func regenerateThumbnail(itemId: UUID, size: ThumbnailSize, key: String) async -> Data? {
         let blobName: String?
         do {
             // The lowest ordinal is the item's primary representation (FR-007-04).
@@ -83,12 +131,8 @@ extension FlotsamDatabase {
             }
         } catch { return nil }
         guard let blobName, case .success(let source) = blobs.read(blobName: blobName),
-              let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue)
+              let jpeg = await renderThumbnail(source, itemId: itemId, size: size)
         else { return nil }
-        // Best effort: a failed disk write only means it is rebuilt next time, but it is logged (FRD-000).
-        if case .failure(let error) = blobs.writeAtomically(jpeg, to: url) {
-            FlotsamLog.log(error, category: .storage)
-        }
         await thumbnails.store(jpeg, for: key)
         return jpeg
     }
