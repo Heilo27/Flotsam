@@ -356,6 +356,59 @@ import FlotsamBase
         #expect(try s.count("item") == 6)
     }
 
+    /// OC-7058, boundary. Given 600 MiB of pinned images only and a first STO-LIM-001 Notice at T, when the budget is
+    /// checked 24 h minus 1 ms later, then no Notice; when checked exactly 24 h after T, then the Notice is due again; and
+    /// immediately after that one, none. Red if the throttle suppresses at exactly 24 h (`<=` instead of `<`): the check
+    /// at T + 24 h returns no Notice.
+    @Test func oc7058_noticeThrottleBoundaryIsExactlyTwentyFourHours() async throws {
+        let s = try await Store.make()
+        defer { s.cleanUp() }
+        try await s.insert(images(1...6, extra: { Spec(n: $0, pinned: true) }))
+
+        let first = try await s.database.enforceImageBudget(.mib500).get()
+        s.clock.advance(ms: 24 * hourMs - 1)
+        let justBefore = try await s.database.enforceImageBudget(.mib500).get()
+        s.clock.advance(ms: 1)
+        let atBoundary = try await s.database.enforceImageBudget(.mib500).get()
+        let rightAfter = try await s.database.enforceImageBudget(.mib500).get()
+
+        #expect(first.notice?.code == .stoLim001)
+        #expect(justBefore.notice == nil)
+        #expect(atBoundary.notice?.code == .stoLim001)
+        #expect(rightAfter.notice == nil)
+        #expect(first.evictedCount == 0 && justBefore.evictedCount == 0 && atBoundary.evictedCount == 0)
+        #expect(try s.count("item") == 6)
+    }
+
+    /// OC-7054 / OC-7066, boundary. Given five unpinned 100 MiB images (exactly 500 MiB, the budget), when the budget is
+    /// enforced, then nothing is evicted, all five stay with their blobs and no Notice is raised; given the same five with
+    /// one extra byte on the newest (500 MiB + 1 B), then only the oldest goes (500 MiB + 1 B minus 100 MiB is already under the
+    /// 450 MiB target) and the other four stay. At the limit is within budget; one byte over is not.
+    @Test func oc7054_oc7066_totalExactlyAtBudgetEvictsNothingOneByteOverEvicts() async throws {
+        let s = try await Store.make()
+        defer { s.cleanUp() }
+        try await s.insert(images(1...5))
+
+        let atLimit = try await s.database.enforceImageBudget(.mib500).get()
+
+        #expect(try s.sumRepresentationBytes() == 500 * mib)
+        #expect(atLimit.evictedCount == 0)
+        #expect(atLimit.notice == nil)
+        #expect(try s.presentIds() == [1, 2, 3, 4, 5])
+        #expect((1...5).allSatisfy { s.exists(s.blobURL($0, 1)) })
+
+        try await s.database.pool.write { db in
+            try db.execute(sql: "UPDATE representation SET byteSize = byteSize + 1 WHERE itemId = ?", arguments: [Store.id(5).uuidString])
+        }
+        let overByOne = try await s.database.enforceImageBudget(.mib500).get()
+
+        #expect(overByOne.evictedCount == 1)
+        #expect(try s.presentIds() == [2, 3, 4, 5])
+        #expect(!s.exists(s.blobURL(1, 1)))
+        #expect((2...5).allSatisfy { s.exists(s.blobURL($0, 1)) })
+        #expect(overByOne.notice == nil)
+    }
+
     /// OC-7059. Given 450 MiB of pinned, triggered and hotkeyed images plus 200 MiB of non-exempt images, when the
     /// budget is enforced, then every non-exempt image goes, every exempt one stays and no notice is raised.
     @Test func oc7059_budgetTakesAllNonExemptAndSparesExemptWithoutNotice() async throws {
