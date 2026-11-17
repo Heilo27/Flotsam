@@ -91,4 +91,12 @@ hits=$(awk '
 hits=$(grep -hE '\.package\(url:' Packages/FlotsamCore/Package.swift | grep -v 'groue/GRDB.swift')
 [ -n "$hits" ] && fail "dependency outside the allowlist in Package.swift: $hits"
 
+# FR-000-15: no crash reporter, analytics or remote-logging SDK (anti-truth A1). The package allowlist above covers
+# SwiftPM; this also catches an SDK declared in project.yml (the App target) or imported in source.
+SDKS='Sentry|Crashlytics|Firebase|Mixpanel|Amplitude|Bugsnag|PostHog|TelemetryDeck|AppCenter|Datadog|NewRelic|Segment|Rollbar|Instabug|Countly|Flurry|Heap|Smartlook|LogRocket|Embrace|Honeycomb|Raygun|PLCrashReporter|CocoaLumberjack|SwiftyBeaver'
+hits=$(grep -rnEi "($SDKS)" Packages/FlotsamCore/Package.swift project.yml 2>/dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*#')
+[ -n "$hits" ] && fail "crash/analytics/logging SDK referenced in a manifest: $hits"
+hits=$(grep -rnE "^(@testable )?import ($SDKS)" "$SRC" App --include='*.swift' 2>/dev/null)
+[ -n "$hits" ] && fail "crash/analytics/logging SDK imported: $hits"
+
 if [ "$failures" -eq 0 ]; then echo "architecture checks passed"; else echo "$failures violation(s)"; exit 1; fi
