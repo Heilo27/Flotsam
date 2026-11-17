@@ -16,6 +16,11 @@ enum Exemption {
     /// `graceCutoff(now:)`. Clear History uses `notExemptSQL` alone: it is the user's explicit, counted action.
     static let autoDeletableSQL = "(\(notExemptSQL) AND (exemptReleasedAt IS NULL OR exemptReleasedAt < ?))"
 
+    /// `autoDeletableSQL` bound to `now`, as the guard the automatic passes re-apply inside the delete transaction.
+    static func autoDeletableGuard(now: Int64) -> DeletionGuard {
+        DeletionGuard(sql: autoDeletableSQL, arguments: [graceCutoff(now: now)])
+    }
+
     /// The value for `autoDeletableSQL`'s placeholder: an `exemptReleasedAt` older than this is out of grace.
     static func graceCutoff(now: Int64) -> Int64 { now - graceMillis }
 }

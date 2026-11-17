@@ -77,10 +77,10 @@ extension FlotsamDatabase {
         }
     }
 
-    /// Clear History (FR-007-11): deletes every item whose `lastCopiedAt` is in `range` through `delete(ids:)`
-    /// (FR-007-15), in batches of 500 so the writer is never held long. Tags are kept (`itemTag` rows go by cascade,
-    /// `tag` rows are never touched), `screenshots.lastScanAt` is not reset so cleared screenshots are not
-    /// re-imported, and files held by reference and screenshot originals are never read, as in every deletion.
+    /// Clear History (FR-007-11): deletes every item whose `lastCopiedAt` is in `range` through the deletion path
+    /// (FR-007-15, `deleteWhileEligible`), in batches of 500 so the writer is never held long. Tags are kept
+    /// (`itemTag` rows go by cascade, `tag` rows are never touched), `screenshots.lastScanAt` is not reset so cleared
+    /// screenshots are not re-imported, and files held by reference and screenshot originals are never read, as in every deletion.
     ///
     /// Afterwards the database is scrubbed: `incremental_vacuum` returns the freed pages to the file system, then
     /// `wal_checkpoint(TRUNCATE)` folds the write-ahead log in and empties it. With `secure_delete` on (FR-007-02) the
@@ -131,12 +131,15 @@ extension FlotsamDatabase {
                 return .failure(Self.readFailure(error))
             }
             guard !ids.isEmpty else { break batches }
-            switch await delete(ids: ids) {
+            // The selection is the guard: an item pinned (when exempt items are kept) or copied again since the read
+            // is skipped.
+            switch await deleteWhileEligible(ids: ids, guard: DeletionGuard(sql: selection, arguments: arguments)) {
             case .failure(let error): return .failure(error)
             case .success(let removed):
                 deleted += removed.count
                 progress?(deleted, total)
-                // Nothing removed means the rows vanished under us; looping again would only re-read them. The label
+                // Nothing removed means the batch vanished or became exempt under us; looping again would only re-read
+                // it. The label
                 // matters: a bare `break` would only leave this `switch`.
                 if removed.isEmpty { break batches }
             }

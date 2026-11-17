@@ -39,6 +39,12 @@ extension FlotsamDatabase {
         return [Exemption.graceCutoff(now: now), now - period]
     }
 
+    /// The selection, re-applied at deletion: an item pinned, given a shortcut, or copied again since the read is
+    /// skipped (`deleteWhileEligible`).
+    private func eligibleGuard(_ period: Int64) -> DeletionGuard {
+        DeletionGuard(sql: Self.eligibleSQL(), arguments: eligibleArguments(period))
+    }
+
     /// What a sweep under `preset` would delete right now, for the shorter-preset confirmation (FR-007-09). Deletes
     /// nothing. Forever, or nothing eligible, returns `.none` and the caller applies the setting without asking.
     public func retentionPreview(_ preset: RetentionPreset) async -> FlotsamResult<DeletionPreview> {
@@ -66,8 +72,8 @@ extension FlotsamDatabase {
     /// Forever (FR-007-09). The whole sweep is one `retention.sweep` signpost interval and each batch is an event
     /// inside it, so Instruments shows one bar with the batch cadence rather than many short bars.
     ///
-    /// Items are re-selected per batch instead of listing every eligible id up front: memory stays bounded and a
-    /// batch never works from a stale list if the user pins something mid-sweep.
+    /// Items are re-selected per batch instead of listing every eligible id up front, so memory stays bounded. A
+    /// batch can still go stale between its read and its delete, so the delete re-checks eligibility itself.
     public func runRetentionSweep(preset: RetentionPreset, budget: ImageBudget) async -> FlotsamResult<SweepOutcome> {
         await FlotsamSignpost.measure("retention.sweep") { () async -> FlotsamResult<SweepOutcome> in
             var deleted = 0
@@ -93,13 +99,14 @@ extension FlotsamDatabase {
     private func sweepOldItems(period: Int64) async -> FlotsamResult<Int> {
         var total = 0
         while true {
-            let arguments = eligibleArguments(period) + [Self.sweepBatchSize]
+            let deletionGuard = eligibleGuard(period)
+            let arguments = deletionGuard.arguments + [Self.sweepBatchSize]
             let ids: [UUID]
             do {
                 ids = try await pool.read { db in
                     try String.fetchAll(
                         db,
-                        sql: "SELECT id FROM item WHERE \(Self.eligibleSQL()) ORDER BY lastCopiedAt ASC, id ASC LIMIT ?",
+                        sql: "SELECT id FROM item WHERE \(deletionGuard.sql) ORDER BY lastCopiedAt ASC, id ASC LIMIT ?",
                         arguments: arguments
                     ).compactMap(UUID.init(uuidString:))
                 }
@@ -108,11 +115,12 @@ extension FlotsamDatabase {
             }
             guard !ids.isEmpty else { return .success(total) }
             FlotsamSignpost.event("retention.sweep.batch")
-            switch await delete(ids: ids) {
+            switch await deleteWhileEligible(ids: ids, guard: deletionGuard) {
             case .failure(let error): return .failure(error)
             case .success(let removed):
                 total += removed.count
-                // Nothing removed means the rows vanished under us; looping again would only re-read them.
+                // Nothing removed means the batch vanished or became exempt under us; stop and let the next sweep
+                // look again rather than spin on a library that is changing faster than we read it.
                 if removed.isEmpty { return .success(total) }
             }
         }

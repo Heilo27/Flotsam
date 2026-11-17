@@ -41,7 +41,7 @@ extension FlotsamDatabase {
     /// time sweep honours: an image un-pinned an hour ago must not be evicted just because the budget is full. If
     /// they and `protecting` alone still exceed the budget, that is surfaced as `STO-LIM-001` rather than solved by deleting what the user pinned.
     ///
-    /// Deletion goes through `delete(ids:)` in batches, so each transaction holds the writer briefly and blobs,
+    /// Deletion goes through `deleteWhileEligible(ids:guard:)` in batches, so each transaction holds the writer briefly and blobs,
     /// thumbnails and `itemsDeleted` are handled in one place.
     public func enforceImageBudget(_ budget: ImageBudget, protecting: UUID? = nil) async -> FlotsamResult<BudgetOutcome> {
         guard let limit = budget.limitBytes else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
@@ -59,7 +59,8 @@ extension FlotsamDatabase {
 
         var evicted = 0
         for batch in chosen.chunked(into: Self.evictionBatchSize) {
-            switch await delete(ids: batch) {
+            // Re-checked at deletion: an image pinned or given a shortcut since the plan was made is kept.
+            switch await deleteWhileEligible(ids: batch, guard: Exemption.autoDeletableGuard(now: now)) {
             case .success(let removed): evicted += removed.count
             case .failure(let error): return .failure(error)
             }
