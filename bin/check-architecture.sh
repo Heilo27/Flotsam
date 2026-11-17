@@ -73,6 +73,20 @@ hits=$(grep -E '^    "[^"]+" : \{' "$CATALOGUE" | sed -E 's/^    "([^"]+)".*/\1/
 hits=$(grep -rn 'UserDefaults' "$SRC" App 2>/dev/null | grep -v 'Ports/Adapters.swift')
 [ -n "$hits" ] && fail "UserDefaults used outside Ports/Adapters.swift: $hits"
 
+# FR-000-09: one logging entry point. Logger, os_log and .debug( live only in Logging/FlotsamLog.swift, so categories,
+# levels and the privacy policy (FR-000-10) cannot be bypassed by a call site that builds its own Logger.
+hits=$(grep -rnE '\bLogger\(|os_log\(|\.debug\(' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT" | grep -v 'FlotsamBase/Logging/FlotsamLog.swift')
+[ -n "$hits" ] && fail "Logger/os_log/.debug used outside Logging/FlotsamLog.swift (use FlotsamLog): $hits"
+# FR-000-10: every interpolation inside a Logger call carries an explicit privacy: qualifier, so the policy is visible
+# at the call site. awk tracks the span from a logger call to its closing ")" line; interpolations elsewhere (plain
+# string building) are not log messages and are not checked.
+hits=$(awk '
+  /(logger|Logger\(.*\))[^"]*\.(log|info|notice|error|fault|debug)\(/ { inlog = 1 }
+  inlog && /\\\(/ && !/privacy:/ { print FILENAME ":" NR ": " $0 }
+  inlog && /^[[:space:]]*\)[[:space:]]*$/ { inlog = 0 }
+' "$SRC/FlotsamBase/Logging/FlotsamLog.swift")
+[ -n "$hits" ] && fail "Logger interpolation without a privacy: qualifier in FlotsamLog.swift: $hits"
+
 # Third-party packages: GRDB only (ADR-0010).
 hits=$(grep -hE '\.package\(url:' Packages/FlotsamCore/Package.swift | grep -v 'groue/GRDB.swift')
 [ -n "$hits" ] && fail "dependency outside the allowlist in Package.swift: $hits"
