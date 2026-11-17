@@ -2910,7 +2910,8 @@
    "original": "private static let domain = \"FlotsamFileSystem\"",
    "mutated": "private static let domain = \"FlotsamFileSystem~\"",
    "result": "SURVIVED",
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "removed: dead constant deleted (Friday ruling TASK-378)"
   },
   {
    "id": "X229",
@@ -2954,7 +2955,8 @@
    "original": "let size = getxattr(url.path, name, nil, 0, 0, 0)",
    "mutated": "let size = getxattr(url.path, name, nil, 1, 0, 0)",
    "result": "SURVIVED",
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "equivalent: getxattr ignores size/position when value is NULL (Friday ruling TASK-378)"
   },
   {
    "id": "X233",
@@ -2964,7 +2966,8 @@
    "original": "let size = getxattr(url.path, name, nil, 0, 0, 0)",
    "mutated": "let size = getxattr(url.path, name, nil, 0, 1, 0)",
    "result": "SURVIVED",
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "equivalent: getxattr ignores size/position when value is NULL (Friday ruling TASK-378)"
   },
   {
    "id": "X234",
@@ -3056,7 +3059,8 @@
    "original": "return read >= 0 ? Data(buffer.prefix(read)) : nil",
    "mutated": "return read >= 0 ? Data(buffer.suffix(read)) : nil",
    "result": "SURVIVED",
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "equivalent: prefix/suffix differ only if the xattr shrinks between calls; no seam per S5 (Friday ruling TASK-378)"
   },
   {
    "id": "X243",
@@ -4156,7 +4160,8 @@
    "id": "X228",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
    "line": 5,
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "removed: dead constant deleted (Friday ruling TASK-378)"
   },
   {
    "id": "X230",
@@ -4168,13 +4173,15 @@
    "id": "X232",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
    "line": 39,
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "equivalent: getxattr ignores size/position when value is NULL (Friday ruling TASK-378)"
   },
   {
    "id": "X233",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
    "line": 39,
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "equivalent: getxattr ignores size/position when value is NULL (Friday ruling TASK-378)"
   },
   {
    "id": "X234",
@@ -4216,7 +4223,8 @@
    "id": "X242",
    "file": "Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift",
    "line": 43,
-   "ticket": "TASK-378"
+   "ticket": "TASK-378",
+   "accepted": "equivalent: prefix/suffix differ only if the xattr shrinks between calls; no seam per S5 (Friday ruling TASK-378)"
   },
   {
    "id": "X243",
