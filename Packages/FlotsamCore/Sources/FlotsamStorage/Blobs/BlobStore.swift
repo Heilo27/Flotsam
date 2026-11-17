@@ -42,6 +42,9 @@ struct BlobStore: Sendable {
     }
 
     /// tmp, fsync, rename. Also used for thumbnails so a crash never leaves a half-written file that looks valid.
+    /// An existing file at `destination` is replaced: `moveItem` fails onto an existing path, which is what kept a
+    /// repaired thumbnail from ever reaching disk (OC-7044). The old file is removed only after the new bytes are
+    /// fully staged, and if the removal fails nothing is changed.
     func writeAtomically(_ data: Data, to destination: URL) -> FlotsamResult<Void> {
         let failure = FlotsamError(.stoIo001, "File could not be written", context: [.byteSize: .bytes(data.count)])
         let staging = folder.tmpURL.appendingPathComponent(UUID().uuidString)
@@ -51,6 +54,10 @@ struct BlobStore: Sendable {
             return .failure(failure)
         }
         if case .failure = fileSystem.writeFile(data, to: staging, permissions: DataFolder.filePermissions) {
+            _ = fileSystem.removeItem(at: staging)
+            return .failure(failure)
+        }
+        if fileSystem.fileExists(at: destination), case .failure = fileSystem.removeItem(at: destination) {
             _ = fileSystem.removeItem(at: staging)
             return .failure(failure)
         }

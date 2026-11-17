@@ -58,14 +58,14 @@ actor ThumbnailCache {
 
 extension FlotsamDatabase {
     /// JPEG thumbnail bytes for an item, or nil when there is none to make (not an image, or the blob is missing or
-    /// undecodable). Memory, then disk, then regenerated from the item's image blob (FR-007-07): a deleted or
-    /// corrupt thumbnail file heals itself on the next request.
+    /// undecodable). Memory, then disk (only a complete JPEG is served), then regenerated from the item's image blob
+    /// (FR-007-07): a deleted, emptied or corrupt thumbnail file is rebuilt and rewritten on the next request.
     public func thumbnail(itemId: UUID, size: ThumbnailSize) async -> Data? {
         let key = ThumbnailCache.key(itemId, size)
         if let hit = await thumbnails.cached(key) { return hit }
 
         let url = folder.thumbnailURL(itemId: itemId, edge: size.rawValue)
-        if case .success(let onDisk) = fileSystem.readFile(at: url), !onDisk.isEmpty {
+        if case .success(let onDisk) = fileSystem.readFile(at: url), await imageWorker.isCompleteJPEG(onDisk) {
             await thumbnails.store(onDisk, for: key)
             return onDisk
         }
@@ -85,8 +85,10 @@ extension FlotsamDatabase {
         guard let blobName, case .success(let source) = blobs.read(blobName: blobName),
               let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue)
         else { return nil }
-        // Best effort: a failed disk write only means it is rebuilt next time.
-        _ = blobs.writeAtomically(jpeg, to: url)
+        // Best effort: a failed disk write only means it is rebuilt next time, but it is logged (FRD-000).
+        if case .failure(let error) = blobs.writeAtomically(jpeg, to: url) {
+            FlotsamLog.log(error, category: .storage)
+        }
         await thumbnails.store(jpeg, for: key)
         return jpeg
     }

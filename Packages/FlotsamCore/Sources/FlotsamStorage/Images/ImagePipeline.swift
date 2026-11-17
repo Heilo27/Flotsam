@@ -93,6 +93,18 @@ actor ImageWorker {
         return Self.encode(scaled, type: Self.jpegType, quality: Self.thumbnailJPEGQuality)
     }
 
+    /// True when `data` is a complete, decodable JPEG: the only thing a thumbnail file may hold. ImageIO reports a
+    /// truncated JPEG as complete and decodes the part it has, so the end-of-image marker (FF D9) is checked first;
+    /// the decode then rejects random bytes and corrupt streams. Thumbnails are at most 512 px, so it is cheap.
+    func isCompleteJPEG(_ data: Data) -> Bool {
+        guard data.suffix(2) == Data([0xFF, 0xD9]),
+              let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(source) > 0,
+              CGImageSourceGetType(source) as String? == Self.jpegType,
+              CGImageSourceCreateImageAtIndex(source, 0, nil) != nil
+        else { return false }
+        return true
+    }
+
     // MARK: ImageIO helpers
 
     /// Decodes straight to the target size (never the full bitmap first), honouring EXIF orientation.
