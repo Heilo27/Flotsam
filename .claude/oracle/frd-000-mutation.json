@@ -506,7 +506,17 @@
       "target": "SystemClock.sleep: sleeps .zero instead of duration",
       "oc": [],
       "result": "SURVIVED",
-      "note": "no test calls SystemClock.sleep; no contract id covers its runtime behaviour"
+      "note": "no test calls SystemClock.sleep; no contract id covers its runtime behaviour",
+      "rerun_8T_OC-0077": {
+        "date": "2026-11-17",
+        "by": "Worf",
+        "oc": [
+          "OC-0077"
+        ],
+        "result": "KILLED",
+        "killed_by": "OC-0077 live 50 ms sleep (elapsed >= 50 ms) and cancel-during-sleep (elapsed >= 25 ms)",
+        "tests": "SystemClockTests.swift"
+      }
     },
     {
       "id": "N8c",
@@ -514,7 +524,17 @@
       "target": "SystemClock.sleep: on cancellation, sleeps the full duration again (no early return)",
       "oc": [],
       "result": "SURVIVED",
-      "note": "no test cancels a SystemClock.sleep; OC-0003 only checks the signature does not throw"
+      "note": "no test cancels a SystemClock.sleep; OC-0003 only checks the signature does not throw",
+      "rerun_8T_OC-0077": {
+        "date": "2026-11-17",
+        "by": "Worf",
+        "oc": [
+          "OC-0077"
+        ],
+        "result": "KILLED",
+        "killed_by": "OC-0077 cancel-before-start and cancel-during-sleep: elapsed < 1 s (mutant took 10 s)",
+        "tests": "SystemClockTests.swift"
+      }
     },
     {
       "id": "N8d",
@@ -522,7 +542,17 @@
       "target": "SystemClock.sleep: body is a no-op",
       "oc": [],
       "result": "SURVIVED",
-      "note": "no test calls SystemClock.sleep"
+      "note": "no test calls SystemClock.sleep",
+      "rerun_8T_OC-0077": {
+        "date": "2026-11-17",
+        "by": "Worf",
+        "oc": [
+          "OC-0077"
+        ],
+        "result": "KILLED",
+        "killed_by": "OC-0077 live 50 ms sleep (elapsed >= 50 ms) and cancel-during-sleep (elapsed >= 25 ms, isCancelled)",
+        "tests": "SystemClockTests.swift"
+      }
     },
     {
       "id": "N9",
@@ -559,7 +589,7 @@
       "killed_by": "exactly-one-record tests (15 issues)"
     }
   ],
-  "survivors": 3,
+  "survivors": 0,
   "discarded_equivalent": [
     {
       "id": "M31",
@@ -571,11 +601,7 @@
     "by": "Worf",
     "note": "8V survivors M14 M22 M23 M34 M30 re-run one at a time against the new tests, each reverted; all KILLED. Data re-runs 8V independently."
   },
-  "survivor_ids": [
-    "N8b",
-    "N8c",
-    "N8d"
-  ],
+  "survivor_ids": [],
   "rerun_8V": {
     "by": "Data",
     "date": "2026-11-16",
@@ -602,5 +628,16 @@
     "ErrorCatalogueTests.swift:50": "RESOLVED: SYS-INT-001 compared to verbatim section 7 text",
     "DiagnosticsTests.swift:161-162": "RESOLVED: Set of utis plus first-by-uti lookups, no positional index"
   },
-  "OC-0021_verdict": "MET as written (see report)"
+  "OC-0021_verdict": "MET as written (see report)",
+  "rerun_8T_OC-0077": {
+    "by": "Worf",
+    "date": "2026-11-17",
+    "note": "N8b N8c N8d re-applied one at a time against SystemClockTests (3 tests, 108 total in FlotsamBaseTests), each reverted, git status clean after each; all KILLED. Data re-runs 8V independently.",
+    "baseline_tests": 108,
+    "killed": [
+      "N8b",
+      "N8c",
+      "N8d"
+    ]
+  }
 }
