@@ -25,6 +25,15 @@ pasted, OR any feature requires a network call carrying clip content. Either →
    Space/Tab/Return) with date/time/clipboard variables. *Serves primary: the most-recalled clips
    become zero-search.* Falsifier: triggers misfire in common apps (terminal, browser, IDE).
 
+5. **Invisible on the machine** — Flotsam runs all day in the background, so it costs almost
+   nothing while you're not using it, and the code stays pithy: when two approaches both work, the
+   one with less CPU, memory, wake-ups, disk writes or code wins. Idle means no panel open: the only
+   recurring work is the pasteboard `changeCount` poll and the hourly maintenance pass, and memory
+   built for a panel (thumbnails, row caches) is released when it closes. *Serves primary: a
+   history you'd switch off for its cost recalls nothing.*
+   Falsifier: idle over 10 min averages > 0.2 % of one core, > 2.5 wake-ups/s, or > 60 MB resident
+   with 10,000 items; or the panel open exceeds 150 MB.
+
 ## ANTI-TRUTHS
 1. **Not a sync service.** No iCloud, no account, no server. Paste owns cross-device. A sync request
    is CUT, not deferred.
@@ -42,3 +51,4 @@ light/dark · Mac App Store build (sandbox breaks paste-back & accessibility).
 | Date | Change | Reason | FRDs re-tested |
 |---|---|---|---|
 | 2026-11-16 | Initial truths; primary confirmed by Ryan | — | — |
+| 2026-11-17 | Added S5 "Invisible on the machine" (resource budget, pithy code) | Ryan: runs constantly; must be light on resources, most efficient method wins | all FRDs, re-test in TASK-373 |
