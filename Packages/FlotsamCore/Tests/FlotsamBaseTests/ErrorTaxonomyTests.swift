@@ -53,7 +53,7 @@ private let section7: [Row] = [
     ("SHF-VAL-001", .warning, "Flotsam can't store that kind of content."),
     ("STO-DB-001", .error, "Flotsam couldn't save your history. Free up disk space and try again."),
     ("STO-DB-002", .error, "Your history database was damaged. A fresh one was created and the old file was kept in the data folder."),
-    ("STO-DB-003", .fatal, "Flotsam can't open its history after an update. Your data is untouched. Reinstall the previous version or reveal the data folder."),
+    ("STO-DB-003", .fatal, "Flotsam can't open its history after an update. Your data is untouched; reinstall the previous version or reveal the data folder."),
     ("STO-DB-004", .error, "Couldn't read your history. Try again."),
     ("STO-IO-001", .error, "Flotsam couldn't write to its data folder. Check free disk space."),
     ("STO-IO-002", .fatal, "Flotsam can't create its data folder, so it can't run."),
@@ -289,10 +289,10 @@ private func verifyModule(_ prefix: String, expectedCount: Int) throws {
         #expect(FlotsamStrings.message(for: error) == "A copy of 501 files was trimmed to the first 500.")
     }
 
-    /// OC-0019 formatter control. given a round decimal size, then it formats without a fraction (guards the
+    /// OC-0019 formatter control. given a round binary size (25 MiB), then it formats without a fraction (guards the
     /// formatter style itself, so a red OC-0019 test above is attributable).
-    @Test("OC-0019 formatter renders 25,000,000 bytes as '25 MB'")
+    @Test("OC-0019 formatter renders 26,214,400 bytes (25 MiB) as '25 MB'")
     func formatterRoundSize() {
-        #expect(MessageArgument.formatBytes(25_000_000) == "25 MB")
+        #expect(MessageArgument.formatBytes(26_214_400) == "25 MB")
     }
 }

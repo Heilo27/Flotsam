@@ -11,7 +11,7 @@ private let t0 = 1_800_000_000.0
 /// SYS-INT-001 text without it). Not an expectation.
 private func raise(_ code: ErrorCode) -> FlotsamError {
     switch code {
-    case .capLim001, .sspLim001: FlotsamError(code, "test", context: [.limitBytes: .bytes(25_000_000)])
+    case .capLim001, .sspLim001: FlotsamError(code, "test", context: [.limitBytes: .bytes(26_214_400)])
     case .capLim003: FlotsamError(code, "test", context: [.count: .int(501)])
     default: FlotsamError(code, "test")
     }
@@ -138,6 +138,34 @@ private struct Rig {
         #expect(rig.presenter.huds.last == "Couldn't drag that item out. Try again or paste it from the Library.")
     }
 
+    // MARK: Throttle window boundary (mutation gate M3c, FR-000-08)
+
+    /// OC-0023 boundary. given a code surfaced at +0, when it recurs 59 s later it is suppressed and 60 s later it
+    /// surfaces. FR-000-08 says "at most once per 60 s" without naming the exact second; the reporter treats a 60 s old
+    /// surfacing as expired, and this pins that so an off-by-one on the window turns red. [Spec ambiguity reported.]
+    @Test("OC-0023 per-code window: suppressed at 59 s, surfaces at exactly 60 s", arguments: [(59.0, 1), (60.0, 2)])
+    func perCodeWindowBoundary(gap: Double, noticesAfter: Int) async {
+        let rig = Rig()
+        await rig.reporter.report(raise(.capOs001), origin: .background)
+        rig.clock.advance(by: gap)
+        await rig.reporter.report(raise(.capOs001), origin: .background)
+        #expect(rig.presenter.notices.count == noticesAfter)
+    }
+
+    /// OC-0024 boundary. given 3 HUDs at +0, when a 4th HUD (a new code) is raised 59 s later it is suppressed and
+    /// 60 s later it shows: the HUD cap is per rolling minute.
+    @Test("OC-0024 HUD cap: 4th HUD suppressed at 59 s, shown at exactly 60 s", arguments: [(59.0, 3), (60.0, 4)])
+    func hudWindowBoundary(gap: Double, hudsAfter: Int) async {
+        let rig = Rig()
+        for code in [ErrorCode.libOs001, .orgVal001, .trgVal001] {
+            await rig.reporter.report(raise(code), origin: .userInitiated)
+        }
+        #expect(rig.presenter.huds.count == 3, "precondition: the cap is reached")
+        rig.clock.advance(by: gap)
+        await rig.reporter.report(raise(.shfOs001), origin: .userInitiated)
+        #expect(rig.presenter.huds.count == hudsAfter)
+    }
+
     // MARK: OC-0027
 
     private static let twelve: [ErrorCode] = [
@@ -191,6 +219,20 @@ private struct Rig {
         let after = await rig.reporter.recentErrors()
         #expect(after == before)
         #expect(after.count == 3)
+    }
+
+    /// OC-0028 follow-up. given 3 notices dismissed, when a new background notice arrives, then the list holds only
+    /// the new one: dismissal emptied the reporter's own list, not just the screen it last drew.
+    @Test("OC-0028 after dismiss all, the next notice is the only one listed")
+    func dismissAllClearsTheReportersList() async {
+        let rig = Rig()
+        for code in [ErrorCode.capPrm001, .capOs001, .libDat001] {
+            await rig.reporter.report(raise(code), origin: .background)
+        }
+        await rig.reporter.dismissAllNotices()
+        await rig.reporter.report(raise(.trgOs003), origin: .background)
+        #expect(rig.presenter.notices.count == 1)
+        #expect(rig.presenter.notices.map(\.code.rawValue) == ["TRG-OS-003"])
     }
 
     /// OC-0029 / OC-0030 / OC-0044. given errors raised on one reporter, when a fresh reporter is created (a quit and
