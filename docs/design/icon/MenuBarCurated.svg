@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18">
+  <!-- template glyph: black + alpha only. Dashed plank = three segments. -->
+  <g transform="rotate(-18 9 6.7)" fill="#000">
+    <rect x="2.2" y="4.6" width="3.8" height="4.2" rx="1.1"/>
+    <rect x="7.1" y="4.6" width="3.8" height="4.2" rx="1.1"/>
+    <rect x="12" y="4.6" width="3.8" height="4.2" rx="1.1"/>
+  </g>
+  <path d="M1,13.2 C3,11.2 5,11.2 6.5,13.2 S10,15.2 11.5,13.2 S15,11.2 17,13.2" fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round"/>
+</svg>
