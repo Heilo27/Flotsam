@@ -3,6 +3,7 @@ import FlotsamBase
 import FlotsamCapture
 import FlotsamLibrary
 import FlotsamPaste
+import FlotsamPayload
 import FlotsamStorage
 import Foundation
 
@@ -124,19 +125,29 @@ final class AppContainer {
             store: database, pasteboard: SystemPasteboard(), files: LocalFileSystem(), frontmost: frontmost,
             accessibility: probe, keys: CGEventKeyPoster(), clock: SystemClock(), ownWrites: ownWrites)
 
+        // FRD-004: the coordinator and the organizer need each other (rejected input shows inline), so the organizer is
+        // handed over after both exist.
+        let organize = OrganizeCoordinator(
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+            loadContent: { await database.content(of: $0) },
+            shortcutAndTrigger: { [weak self] ids in self?.actions.editShortcutAndTrigger?(ids) })
+        let organizer = LibraryOrganizer(
+            store: database, classifiers: .live, report: { [weak organize] error in organize?.surface(error) })
+        organize.organizer = organizer
+
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             reveal: { paths in
                 NSWorkspace.shared.activateFileViewerSelecting(paths.map { URL(fileURLWithPath: $0) })
             },
-            // The organise/trigger commands (FRD-004, FRD-005) are not built yet: inert until then.
             openSettings: { [weak self] in self?.actions.openSettings?() },
-            external: { _, _ in },
+            // Pin, tags, note, edit, delete and ungroup are FRD-004; ⌘K reaches FRD-005 through `actions`.
+            external: { [weak organize] command, ids in organize?.perform(command, ids: ids) },
             isAccessibilityTrusted: { probe.isAccessibilityTrusted })
         let capture = capture
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
-            effects: effects, frontmost: frontmost,
+            effects: effects, organizer: organizer, organize: organize, frontmost: frontmost,
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller
@@ -167,6 +178,8 @@ struct AppActions {
     var openLibrary: (@MainActor () -> Void)?
     /// FRD-005 Save Clipboard.
     var saveClipboard: (@MainActor () -> Void)?
+    /// FRD-005 ⌘K in the Library: edit the selected item's shortcut and trigger. Inert until FRD-005 fills it.
+    var editShortcutAndTrigger: (@MainActor ([UUID]) -> Void)?
     /// FRD-006 Shelf.
     var toggleShelf: (@MainActor () -> Void)?
     /// FR-008-03 Settings window; assigned by `installSettings`. The menu row and the Library both call this one closure.
