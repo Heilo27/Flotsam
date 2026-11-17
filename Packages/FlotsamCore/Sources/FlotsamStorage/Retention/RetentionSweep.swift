@@ -6,7 +6,7 @@ extension RetentionPreset {
     /// How long an item may go uncopied before the sweep may delete it; nil for Forever. The day counts live here,
     /// in Storage, because the sweep and its confirmation count are the only users (FR-007-09).
     var periodMillis: Int64? {
-        let day: Int64 = 24 * 60 * 60 * 1000
+        let day = TimeSpan.dayMillis
         switch self {
         case .d7: return 7 * day
         case .d30: return 30 * day

@@ -27,7 +27,7 @@ extension FlotsamDatabase {
     /// headroom for several more images instead of re-running on every ingest (FR-007-08).
     private static let evictionTargetPercent: Int64 = 90
     /// At most one `STO-LIM-001` Notice per this window (FR-007-08, `budget.lastNoticeAt`).
-    private static let noticeThrottleMillis: Int64 = 24 * 60 * 60 * 1000
+    private static let noticeThrottleMillis: Int64 = TimeSpan.dayMillis
     private static let evictionBatchSize = 500
 
     /// Keeps stored image bytes within `budget` (FR-007-08). Called after each image ingest and by every retention sweep.

@@ -9,8 +9,8 @@ public enum ClearRange: Sendable, Equatable, CaseIterable {
     /// How far back from now the range reaches; nil for all time.
     var lookbackMillis: Int64? {
         switch self {
-        case .lastHour: 60 * 60 * 1000
-        case .last24Hours: 24 * 60 * 60 * 1000
+        case .lastHour: TimeSpan.hourMillis
+        case .last24Hours: TimeSpan.dayMillis
         case .allTime: nil
         }
     }

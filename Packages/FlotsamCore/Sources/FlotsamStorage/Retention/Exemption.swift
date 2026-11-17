@@ -9,7 +9,7 @@ enum Exemption {
     static let sqlPredicate = "(pinned = 1 OR \"trigger\" IS NOT NULL OR hotkeyCode IS NOT NULL)"
     static let notExemptSQL = "(pinned = 0 AND \"trigger\" IS NULL AND hotkeyCode IS NULL)"
     /// After the last exemption is released, the item stays safe from automatic deletion for this long (FR-007-10).
-    static let graceMillis: Int64 = 24 * 60 * 60 * 1000
+    static let graceMillis: Int64 = TimeSpan.dayMillis
 
     /// What an automatic pass (time sweep, budget eviction) may delete as far as exemption goes: not exempt, and not
     /// within the grace window after an exemption was released (FR-007-09, FR-007-08). Exactly one `?`, bound to
