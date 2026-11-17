@@ -39,8 +39,9 @@ extension FlotsamDatabase {
     ///   triggers and thumbnails are cleaned up the same way as any other deletion.
     /// - A thumbnail whose item no longer exists is deleted silently: it is regenerable and not a fault.
     ///
-    /// Safety valve: if any part of `blobs/` could not be listed, the missing-blob pass is skipped. "Not listed" is
-    /// not "not there", and treating an unreadable folder as proof that every blob is missing would wipe the library.
+    /// Safety valve: if any part of `blobs/` could not be listed or read (a folder, or a listed file that would not
+    /// stat), the missing-blob pass is skipped. "Not listed" is not "not there", and treating an unreadable folder
+    /// as proof that every blob is missing would wipe the library.
     public func reconcile() async -> FlotsamResult<ReconcileOutcome> {
         let referenced: [ReferencedBlob]
         do {
@@ -85,12 +86,13 @@ extension FlotsamDatabase {
 
     private struct ListedBlob {
         let name: String
-        let modifiedAt: Date
+        /// Nil when the file was listed but could not be stat'ed. Its age is then unknown, so it is never an orphan.
+        let modifiedAt: Date?
     }
 
     private struct BlobListing {
         var files: [ListedBlob] = []
-        /// False when any shard folder could not be read, so absence from `files` proves nothing.
+        /// False when any shard folder or any listed file could not be read, so absence from `files` proves nothing.
         var complete = true
     }
 
@@ -109,9 +111,14 @@ extension FlotsamDatabase {
             }
             for entry in entries {
                 let file = entry.lastPathComponent
-                guard BlobStore.isGeneratedFileName(file), let info = fileSystem.fileInfo(at: entry) else { continue }
+                guard BlobStore.isGeneratedFileName(file) else { continue }
+                // A file the directory listing returned exists. A failed stat is a transient fault, not absence: keep
+                // it in `files` (so it counts as present) and mark the listing incomplete, so the missing-blob repair
+                // does not run on evidence we know is partial. Only the size and age checks may skip it.
+                let info = fileSystem.fileInfo(at: entry)
+                if info == nil { listing.complete = false }
                 listing.files.append(
-                    ListedBlob(name: "\(shard.lastPathComponent)/\(file)", modifiedAt: info.modifiedAt))
+                    ListedBlob(name: "\(shard.lastPathComponent)/\(file)", modifiedAt: info?.modifiedAt))
             }
         }
         return listing
@@ -121,7 +128,7 @@ extension FlotsamDatabase {
         let cutoff = clock.now().epochMillis - Self.orphanGraceMillis
         var removed = 0
         for blob in listing.files
-        where !referencedNames.contains(blob.name) && blob.modifiedAt.epochMillis < cutoff {
+        where !referencedNames.contains(blob.name) && (blob.modifiedAt.map { $0.epochMillis < cutoff } ?? false) {
             guard case .success = blobs.remove(blobName: blob.name) else { continue }
             removed += 1
             FlotsamLog.log(FlotsamError(.stoIo003, "Orphan blob removed by reconcile"), category: .storage)
