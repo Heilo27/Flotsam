@@ -31,6 +31,11 @@ final class AppContainer {
     /// it; the bindings are applied once the Library exists (`startLibrary`).
     let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
     private var unsubscribeShortcuts: (@Sendable () -> Void)?
+    private var unsubscribeItemEvents: (@Sendable () -> Void)?
+    private var itemHotkeyAction: ItemHotkeyAction?
+    /// One resync reads the item bindings at a time; a change that arrives meanwhile queues exactly one more.
+    private var itemSyncRunning = false
+    private var itemSyncPending = false
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
@@ -150,6 +155,61 @@ final class AppContainer {
         actions.openLibrary = { [weak controller] in controller?.toggle() }
 
         startShortcuts(openLibrary: { [weak controller] in controller?.toggle() })
+        startItemHotkeys(database: database, paster: paster, frontmost: frontmost)
+    }
+
+    /// Item hotkeys (FR-005-05): bound from the stored bindings at launch, re-synced when items change or go (FR-005-22),
+    /// and off while any Flotsam window (the Library panel, Settings) is key.
+    private func startItemHotkeys(database: FlotsamDatabase, paster: PasteService, frontmost: any FrontmostAppProvider) {
+        let reporter = reporter
+        itemHotkeyAction = ItemHotkeyAction(
+            paster: paster, frontmost: frontmost,
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } })
+        syncItemHotkeys(database: database)
+
+        unsubscribeItemEvents = database.events.subscribe { [weak self] event in
+            // Delivery is synchronous and may be off the main actor; the registry is main-actor.
+            Task { @MainActor in
+                guard let self else { return }
+                if case .itemsDeleted(let ids) = event {
+                    for id in ids { self.shortcuts.remove(.item(id)) }
+                }
+                self.syncItemHotkeys(database: database)
+            }
+        }
+
+        // Any key window of this app is a Flotsam window. After a resign the next window may already be taking over, so
+        // the state is read once the run loop has settled (FR-005-05).
+        let center = NotificationCenter.default
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            observers.append(
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    Task { @MainActor in self?.shortcuts.setItemHotkeysSuspended(NSApp.keyWindow != nil) }
+                })
+        }
+    }
+
+    /// Reads the stored item hotkeys and makes the registry match them. Overlapping calls coalesce, so an older read
+    /// can never be applied after a newer one.
+    private func syncItemHotkeys(database: FlotsamDatabase) {
+        if itemSyncRunning {
+            itemSyncPending = true
+            return
+        }
+        itemSyncRunning = true
+        Task { @MainActor in
+            repeat {
+                itemSyncPending = false
+                switch await database.itemBindings() {
+                case .success(let bindings):
+                    guard let action = itemHotkeyAction else { break }
+                    reportShortcutErrors(shortcuts.syncItemHotkeys(bindings.hotkeys) { id in { Task { await action.run(itemId: id) } } })
+                case .failure(let error):
+                    await reporter.report(error, origin: .background)
+                }
+            } while itemSyncPending
+            itemSyncRunning = false
+        }
     }
 
     /// Points the registry's three global actions at their owners and binds them from Settings (FR-005-01). Save
