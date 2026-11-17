@@ -124,12 +124,14 @@ final class OrganizeCoordinator {
     private func requestDelete(_ model: LibraryViewModel) {
         let rows = model.selectedRows
         guard !rows.isEmpty else { return }
+        // What the user was asked about, re-checked when they confirm: the list can reload under an open question.
+        let asked = Set(rows.map(\.id))
         if LibraryOrganizer.deleteNeedsConfirmation(rows) {
             confirm(message: LibraryText.confirmDelete(count: rows.count), button: LibraryText.buttonDelete) {
-                _ = await model.deleteSelected()
+                _ = await model.deleteSelected(expecting: asked)
             }
         } else {
-            Task { _ = await model.deleteSelected() }
+            Task { _ = await model.deleteSelected(expecting: asked) }
         }
     }
 
@@ -141,10 +143,10 @@ final class OrganizeCoordinator {
             let hasNote = await organizer.note(of: row.id) != nil
             if LibraryOrganizer.ungroupNeedsConfirmation(row, hasNote: hasNote) {
                 confirm(message: LibraryText.string(LibraryText.confirmUngroup), button: LibraryText.buttonUngroup) {
-                    _ = await model.ungroupSelected()
+                    _ = await model.ungroupSelected(expecting: row.id)
                 }
             } else {
-                _ = await model.ungroupSelected()
+                _ = await model.ungroupSelected(expecting: row.id)
             }
         }
     }
