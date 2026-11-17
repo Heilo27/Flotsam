@@ -49,11 +49,8 @@ public final class PasteService {
         case .success(let built): representations = built
         case .failure(let error): return .failure(error)
         }
-        // Step 3: the own-write marker rides on the same write, and its `changeCount` is recorded straight away.
-        switch pasteboard.write(representations + OwnWrite.markers) {
-        case .success(let changeCount): ownWrites.record(changeCount: changeCount)
-        case .failure(let error): return .failure(error)
-        }
+        // Step 3: the ledger adds the own-write markers to the same write and records its `changeCount` (FR-001-03).
+        if case .failure(let error) = ownWrites.write(representations, to: pasteboard) { return .failure(error) }
         // Step 4. The item is on the pasteboard already, so a bookkeeping failure is logged, not shown.
         if case .failure(let error) = await store.recordPaste(of: itemId) { FlotsamLog.log(error, category: .library) }
         // Step 5.
