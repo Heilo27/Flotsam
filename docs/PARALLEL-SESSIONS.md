@@ -64,7 +64,7 @@ S2 marks each task here: `[S2: claimed <date>]` when it starts and `[S2: done <d
 
 Re-run this whenever `main` moves or a builder branch is marked `ready`:
 
-- **A1** `main` health: **[S2: done 2026-11-17 @ 3878487; defects D1, D2 in `s2/log`]**
+- **A1** `main` health: **[S2: done 2026-11-17 @ 3878487; defects D1, D2 in `s2/log`] [S2: A1+A2 re-run claimed 2026-11-17 on `main` @ d7d11d9: confirm D1/D2 on 6.2.4, copy checks]**
   - clean clone, `bin/bootstrap.sh`;
   - full `swift test` (no scratch path, so the lint harness runs too);
   - `bin/check-architecture.sh`;
@@ -94,13 +94,13 @@ The blind pass criteria live in `.claude/oracle/frd-NNN-contract.json`.
 - Write swift-testing tests that exercise each contract through the public API. Put them in the FRD's test target, on `s2/frdNNN-8t`, branched from the builder's `ready` SHA.
 - Run them and report pass/fail per contract ID.
 - A failing contract is a defect report, not a fix.
-- Order: 001 → 003 → 008 → 002 → 006 (as each is `ready`).
+- Order: 001 → 003 → 008 → 002 → 006 (as each is `ready`). **[S2: 001 claimed 2026-11-17 on `s2/frd001-8t` from `main` @ d7d11d9]**
 
 ### Lane C: build features while A and B are idle
 
 Builds follow the per-FRD loop in the FRD: implement → unit tests → green → build the app.
 
-- **C1** FRD-002 Screenshot Pickup on `s2/frd002`, from `main`. **[S2: claimed; part 1 done @ b983b9d (recognizer, resolver, selection, stability, watermark); part 2 blocked on `frd001` + `frd008`]** Read `docs/frd/FRD-002-ScreenshotPickup.md` and ADR-0008.
+- **C1** FRD-002 Screenshot Pickup on `s2/frd002`, from `main`. **[S2: claimed; part 1 done @ b983b9d (recognizer, resolver, selection, stability, watermark); part 2 claimed 2026-11-17: rebasing on `main` @ d7d11d9]** Read `docs/frd/FRD-002-ScreenshotPickup.md` and ADR-0008.
   - The `FlotsamScreenshots` target may import only Foundation, FlotsamBase, FlotsamStorage and FlotsamPayload (`bin/check-architecture.sh` enforces this).
   - Do the §9 spikes first.
 - **C2** FRD-006 Shelf on `s2/frd006`, from `main`. Read `docs/frd/FRD-006-Shelf.md`. Same import rule.
