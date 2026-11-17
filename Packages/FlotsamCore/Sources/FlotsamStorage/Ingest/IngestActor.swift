@@ -205,7 +205,8 @@ public actor IngestActor {
     ) throws {
         let id = itemId.uuidString
         let at = candidate.occurredAt.epochMillis
-        let byteSize = (candidate.plainText?.utf8.count ?? 0) + stored.reduce(0) { $0 + $1.byteSize }
+        // Sum of stored representations only: plain text lives in `item.plainText`, thumbnails are not counted (FRD-007 data model).
+        let byteSize = stored.reduce(0) { $0 + $1.byteSize }
         try db.execute(
             sql: """
                 INSERT INTO item (id, kind, createdAt, lastCopiedAt, contentKey, plainText, sourceBundleId, sourceName,
