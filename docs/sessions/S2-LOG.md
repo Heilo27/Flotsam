@@ -181,15 +181,15 @@ Rebased onto `main` d7d11d9; part 1 is now a8c525e.
 
 **Open:** a 500-file backfill takes about 125 s (0.5 s stability wait, 2 in flight); this needs a spec ruling. Spike 3 is still unverified.
 
-### B FRD-001 8T, part 1, on `s2/frd001-8t` (local and uncommitted)
-- Harness `FRD001ContractHarness.swift`, plus tests drafted for OC-1002, 1004–1006 and 1008–1021.
+### B FRD-001 8T, part 1, on `s2/frd001-8t` @ 7d8a4d2 (WIP, "NOT COMPILED, NOT RUN")
+- Harness `FRD001ContractHarness.swift`, plus 49 tests covering every reachable ID in OC-1002..1055. Ten of them (OC-1005, 1006, 1008..1010, 1030, 1042, 1044, 1045, 1055) test only the reachable half.
 - Unreachable from the package:
   - OC-1001: CPU profile.
   - OC-1003: menu tracking.
   - OC-1022 and OC-1023: Secure Event Input.
   - OC-1033: system screenshot.
   - OC-1007: the panel half only.
-- Next ID: OC-1024.
+- Next: compile and run with `--filter FRD001Contract`; OC-1056..1110 is the next lane.
 - Lead L-A: the CAP-LIM-003 context count may be the 500 limit rather than the actual count. Unconfirmed.
 - Lead L-B: CAP-LIM-001 carries `.byteSize`, but the message reads `.limitBytes`. Unconfirmed.
 
