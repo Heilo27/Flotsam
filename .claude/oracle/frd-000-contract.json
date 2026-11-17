@@ -780,6 +780,17 @@
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
+    },
+    {
+      "id": "OC-0077",
+      "requirement": "FR-000-01 (ruling 2026-11-16 b: non-throwing clock port)",
+      "given": "The production clock (SystemClock)",
+      "when": "sleep(for: 50 ms) is awaited in a live task, and separately in a task cancelled before or during the sleep",
+      "then": "The live sleep returns after at least 50 ms of real elapsed time; the cancelled sleep returns early (well under the requested duration) without throwing, and the caller observes Task.isCancelled == true",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "amended": "2026-11-17 added by Friday after FRD-000 8V re-run: SystemClock.sleep had no runtime coverage (survivors N8b/N8c/N8d)"
     }
   ]
 }
