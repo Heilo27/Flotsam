@@ -863,9 +863,7 @@ struct Adversarial000KillCheckPins {
     func divisionAtLineStartHidesViolation() async throws {
         // given fatalError between two slashes on a line that starts with `/`, when linted, then it should fail (today it exits 0)
         let hidden = try await status("let r = total\n    /n + g(fatalError(\"x\"))/2")
-        withKnownIssue("lint treats a line-start / as a regex opener; fatalError between the slashes is stripped") {
-            #expect(hidden == 1)
-        }
+        #expect(hidden == 1)
         // control: the same body without the slashes fails, so the shape above is the only thing hiding it
         #expect(try await status("let r = total\n    + g(fatalError(\"x\"))") == 1)
     }

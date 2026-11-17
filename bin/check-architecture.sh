@@ -38,12 +38,14 @@ function hashes_follow(s, p, h,   k) {
   return 1
 }
 # Does a "/" at position i of s open a regex literal? Only in an expression-start position (after = ( , : ; { [ ! & | ? < or
-# a keyword such as return), never as division or the /= operator, and never when followed by a space or tab.
+# a keyword such as return), never as division or the /= operator, and never when followed by a space or tab. At the start of a
+# line the position is judged by the code that ended the previous line (prevcode): `total` then `/n + ...` is a continued
+# division, `let r =` then `/x/` is a regex. First code line of a file: a regex.
 function regex_start(out, s, i,   o, p, nx) {
   nx = substr(s, i + 1, 1)
   if (nx == "" || nx == " " || nx == "\t" || nx == "/" || nx == "*") return 0
   o = out; sub(/[ \t]+$/, "", o)
-  if (o == "") return 1
+  if (o == "") { o = prevcode; if (o == "") return 1 }
   p = substr(o, length(o), 1)
   if (index("=(,:;{[!&|?<", p) > 0) return 1
   return (o ~ /(^|[^A-Za-z0-9_$.])(return|in|case|try|await|throw|where)$/)
@@ -75,7 +77,7 @@ function yaml_line(s,   n, i, c, q, out) {
   }
   return out
 }
-function san_line(s,   n, i, c, two, out, h, j, k, m) {
+function san_line(s,   n, i, c, two, out, h, j, k, m, o) {
   out = ""; lcom = ""; n = length(s); i = 1
   while (i <= n) {
     c = substr(s, i, 1); m = mk[sp]
@@ -135,6 +137,7 @@ function san_line(s,   n, i, c, two, out, h, j, k, m) {
   }
   # A single-line string cannot span lines: drop an unterminated one (and anything inside it) at end of line.
   for (k = 1; k <= sp; k++) if (mk[k] == "S") { sp = k - 1; break }
+  o = out; sub(/[ \t]+$/, "", o); if (o != "") prevcode = o       # the code a following line-start "/" is judged against
   gsub(/[\200-\377]/, "A", out)                 # non-ASCII bytes: identifier characters
   gsub(/(private|fileprivate|internal|public|package|open)[ \t]*\([ \t]*set[ \t]*\)/, "", out)   # private(set) is not an access level for the declaration
   return out
@@ -330,7 +333,7 @@ BEGIN {
   split("if guard for while switch return throw defer do try", a, " "); for (k in a) START[a[k]] = 1
   LOGCALL = "(logger|Logger\\(.*\\))[^\"]*\\.(log|info|notice|error|fault|debug)[ \t]*\\("
 }
-FNR == 1 { if (fname != "") finish(); fname = FILENAME; sp = 0; mk[0] = "C"; ip[0] = 0; split("", seen); split("", san); split("", orig); split("", lcm) }
+FNR == 1 { if (fname != "") finish(); fname = FILENAME; sp = 0; prevcode = ""; mk[0] = "C"; ip[0] = 0; split("", seen); split("", san); split("", orig); split("", lcm) }
 { nl = FNR; orig[FNR] = $0; san[FNR] = (yaml ? yaml_line($0) : san_line($0)); lcm[FNR] = lcom }
 END { if (fname != "") finish() }
 AWK_EOF
