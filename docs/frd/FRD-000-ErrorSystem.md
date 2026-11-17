@@ -132,8 +132,8 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | ORG-VAL-001 | Error | Tag names must be 1 to 32 characters and unique. | edit rejected inline |
 | ORG-VAL-002 | Error | Notes can be up to 2,000 characters. | edit rejected inline |
 | ORG-VAL-003 | Error | Only text items can be edited, and they can't be empty. | edit rejected |
-| ORG-VAL-004 | Error | Select at least two files, folders or images to group. | action disabled/HUD |
-| ORG-VAL-005 | Error | Names must be 1 to 80 characters. | edit rejected inline |
+| ORG-VAL-004 | retired | — (retired 2026-11-16: no group action exists; FRD-004 offers ungroup only) | never raised |
+| ORG-VAL-005 | retired | — (retired 2026-11-16: no rename exists; tag names use ORG-VAL-001) | never raised |
 | ORG-LIM-001 | Error | An item can have up to 10 tags. | assignment rejected |
 | ORG-LIM-002 | Error | You can have up to 100 tags. | creation rejected |
 | ORG-LIM-003 | Error | That text is over the {limit} limit. Shorten it and try again. | edit rejected inline |

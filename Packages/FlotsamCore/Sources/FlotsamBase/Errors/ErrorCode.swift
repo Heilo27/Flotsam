@@ -73,10 +73,6 @@ public enum ErrorCode: String, CaseIterable, Sendable {
     case orgVal002 = "ORG-VAL-002"
     /// Edit rejected.
     case orgVal003 = "ORG-VAL-003"
-    /// Action disabled/HUD.
-    case orgVal004 = "ORG-VAL-004"
-    /// Edit rejected inline.
-    case orgVal005 = "ORG-VAL-005"
     /// Assignment rejected.
     case orgLim001 = "ORG-LIM-001"
     /// Creation rejected.
@@ -164,8 +160,8 @@ public enum ErrorCode: String, CaseIterable, Sendable {
         switch self {
         case .stoDb003, .stoIo002:
             .fatal
-        case .sysInt001, .capIo001, .libOs001, .libIo001, .orgVal001, .orgVal002, .orgVal003, .orgVal004,
-             .orgVal005, .orgLim001, .orgLim002, .orgLim003, .trgVal001, .trgVal002, .trgVal003, .trgVal004,
+        case .sysInt001, .capIo001, .libOs001, .libIo001, .orgVal001, .orgVal002, .orgVal003,
+             .orgLim001, .orgLim002, .orgLim003, .trgVal001, .trgVal002, .trgVal003, .trgVal004,
              .trgOs001, .trgOs002, .shfOs001, .stoDb001, .stoDb002, .stoDb004, .stoIo001, .setOs001,
              .setVal001, .setVal002:
             .error

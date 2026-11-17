@@ -43,12 +43,6 @@
     "error.ORG-VAL-003" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Only text items can be edited, and they can't be empty." } } }
     },
-    "error.ORG-VAL-004" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select at least two files, folders or images to group." } } }
-    },
-    "error.ORG-VAL-005" : {
-      "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Names must be 1 to 80 characters." } } }
-    },
     "error.SET-DAT-001" : {
       "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A setting had an invalid value and was reset to its default." } } }
     },
