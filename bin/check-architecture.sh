@@ -42,6 +42,23 @@ hits=$(grep -rnE 'URLSession|NWConnection|NWPathMonitor|WKWebView|CFNetwork|Spar
 hits=$(grep -rnE '(^|[^A-Za-z_.])(print|NSLog|dump)\(|try!' "$SRC" App 2>/dev/null)
 [ -n "$hits" ] && fail "print/NSLog/dump/try! used: $hits"
 
+# FR-000-02 / AC-000-01: no thrown errors across a module boundary, no force-cast, no force-unwrap, and
+# fatalError only where it is annotated. Comment lines are ignored so doc comments can name the banned APIs.
+NOT_COMMENT='^[^:]+:[0-9]+:[[:space:]]*//'
+hits=$(grep -rnE '(public|package|open)[^{=]* throws' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT" | grep -v 'Ports/Ports.swift')
+[ -n "$hits" ] && fail "public/package API declared 'throws' (return FlotsamResult; only WallClock.sleep may throw, for cancellation): $hits"
+hits=$(grep -rnE '[[:space:](]as!' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+[ -n "$hits" ] && fail "force cast (as!) used: $hits"
+hits=$(grep -rnE '[A-Za-z0-9_)]!([.,)]|[[:space:]]*$)' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+[ -n "$hits" ] && fail "force unwrap (!) used: $hits"
+# Only the two Fatal codes (FR-000-04) and unreachable programmer-error invariants may stop the process; the latter
+# must say why on the same line with 'fatal-ok:'.
+hits=$(grep -rnE '(fatalError|preconditionFailure|precondition)\(' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT" | grep -v 'fatal-ok:')
+[ -n "$hits" ] && fail "fatalError/precondition without a 'fatal-ok: <reason>' annotation: $hits"
+# localizedDescription can embed file paths (FR-000-01, FR-000-10); UnderlyingErrorInfo is the only way to carry a cause.
+hits=$(grep -rn 'localizedDescription' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+[ -n "$hits" ] && fail "localizedDescription used (use UnderlyingErrorInfo): $hits"
+
 # UserDefaults only behind SettingsStore adapters (ADR-0009): Base/Ports/Adapters.swift is the single adapter.
 hits=$(grep -rn 'UserDefaults' "$SRC" App 2>/dev/null | grep -v 'Ports/Adapters.swift')
 [ -n "$hits" ] && fail "UserDefaults used outside Ports/Adapters.swift: $hits"
