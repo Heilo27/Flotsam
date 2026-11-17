@@ -75,7 +75,7 @@ public actor IngestActor {
             database.events.publish(.itemsChanged)
             var warnings = prepared.warnings
             if prepared.pixelWidth != nil {
-                warmThumbnails(itemId)
+                warmThumbnails(itemId, source: prepared.representations[0].data)
                 warnings += await enforceBudget(protecting: itemId)
             }
             return .success(IngestResult(outcome: .created(itemId), warnings: warnings))
@@ -154,13 +154,11 @@ public actor IngestActor {
             pixelWidth: image.width, pixelHeight: image.height, warnings: limited.warnings))
     }
 
-    /// Thumbnails are built right after commit so the grid never waits on a decode (FR-007-07). Unstructured and
+    /// Thumbnails are written to disk right after commit so the grid never waits on a decode (FR-007-07). Unstructured and
     /// unawaited on purpose: a failure only means the thumbnail is built on first view instead.
-    private func warmThumbnails(_ itemId: UUID) {
+    private func warmThumbnails(_ itemId: UUID, source: Data) {
         let database = self.database
-        Task.detached(priority: .utility) {
-            for size in ThumbnailSize.allCases { _ = await database.thumbnail(itemId: itemId, size: size) }
-        }
+        Task.detached(priority: .utility) { await database.writeThumbnails(itemId: itemId, source: source) }
     }
 
     /// Step 7: the image budget (FR-007-08). The item is already committed, so a failure here is logged and never

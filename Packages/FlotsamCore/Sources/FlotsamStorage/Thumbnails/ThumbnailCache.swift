@@ -38,6 +38,12 @@ actor ThumbnailCache {
         }
     }
 
+    func removeAll() {
+        entries = [:]
+        order = []
+        totalBytes = 0
+    }
+
     func evict(itemId: UUID) {
         for size in ThumbnailSize.allCases { drop(Self.key(itemId, size)) }
     }
@@ -70,6 +76,24 @@ extension FlotsamDatabase {
             return onDisk
         }
         return await regenerateThumbnail(itemId: itemId, size: size, url: url, key: key)
+    }
+
+    /// Frees what only a visible panel needs (S5: Flotsam idles at under 60 MB): the thumbnail LRU and SQLite's page
+    /// caches. The disk thumbnails stay, so the next open reads them back. Call when the Library and Shelf panels close.
+    public func releaseMemory() async {
+        await thumbnails.removeAll()
+        pool.releaseMemory()
+    }
+
+    /// Writes both thumbnails of a new image to disk and nowhere else: nobody is looking at it yet, so it must not
+    /// sit in the memory LRU (S5). `source` is the stored image, already in memory at ingest, so there is no re-read.
+    func writeThumbnails(itemId: UUID, source: Data) async {
+        for size in ThumbnailSize.allCases {
+            guard let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue) else { continue }
+            if case .failure(let error) = blobs.writeAtomically(jpeg, to: folder.thumbnailURL(itemId: itemId, edge: size.rawValue)) {
+                FlotsamLog.log(error, category: .storage)
+            }
+        }
     }
 
     private func regenerateThumbnail(itemId: UUID, size: ThumbnailSize, url: URL, key: String) async -> Data? {

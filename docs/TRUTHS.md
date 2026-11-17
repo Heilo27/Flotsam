@@ -51,4 +51,4 @@ light/dark · Mac App Store build (sandbox breaks paste-back & accessibility).
 | Date | Change | Reason | FRDs re-tested |
 |---|---|---|---|
 | 2026-11-16 | Initial truths; primary confirmed by Ryan | — | — |
-| 2026-11-17 | Added S5 "Invisible on the machine" (resource budget, pithy code) | Ryan: runs constantly; must be light on resources, most efficient method wins | all FRDs, re-test in TASK-373 |
+| 2026-11-17 | Added S5 "Invisible on the machine" (resource budget, pithy code) | Ryan: runs constantly; must be light on resources, most efficient method wins | all FRDs re-tested in TASK-373 (docs/research/S5-resource-audit.md): CPU and idle memory held; wake-ups are 2.0/s for the poll alone and 2.7 to 2.9/s with the watchdog and re-resolve as separate timers (over 2.5); FR-001-20, AC-001-01/16, FR-003-13, FR-007-07 edited; periodic-timer consolidation and Paused-timer changes ticketed |
