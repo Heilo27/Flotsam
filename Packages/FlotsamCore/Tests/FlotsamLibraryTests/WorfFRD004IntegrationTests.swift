@@ -419,3 +419,242 @@ private final class Rig {
         #expect(rig.prefs.sort == .recent)
     }
 }
+
+// MARK: - FRD-004 second pass: tag rules, filter + query, confirm-time re-check, model-level performance
+
+@MainActor private func code(_ rig: Rig) -> [String] { rig.reported.errors.map(\.code.rawValue) }
+
+@MainActor
+@Suite struct WorfFRD004RulesIntegrationTests {
+
+    // OC-4201 (AC-004-02). Red if the model path skips validation, folds only case and not diacritics, or leaves a tag or link
+    // behind on a rejected name.
+    @Test("OC-4201 given tag Work and Résumé, when work, RESUME, 33 chars, empty and spaces are created, then each is ORG-VAL-001 and nothing is stored")
+    func tagNameRulesThroughModel() async throws {
+        let rig = try await Rig((1...2).map { .init(n: $0, hours: $0) })
+        defer { rig.cleanUp() }
+        rig.select(1)
+        let work = try #require(await rig.model.createTagOnSelection(name: "Work"))
+        let resume = try #require(await rig.model.createTagOnSelection(name: "Résumé"))
+        #expect(try rig.count("tag") == 2)
+        #expect(try rig.count("itemTag") == 2)
+        rig.select(2)
+
+        let attempts = ["work", "WORK ", "resume", "RESUME", String(repeating: "x", count: 33), "", "   "]
+        var created: [Int64?] = []
+        for name in attempts { created.append(await rig.model.createTagOnSelection(name: name)) }
+
+        #expect(created.allSatisfy { $0 == nil })
+        #expect(code(rig) == Array(repeating: "ORG-VAL-001", count: 7))
+        #expect(try rig.count("tag") == 2)
+        #expect(try rig.count("itemTag") == 2, "a rejected name must not apply anything to the selected item")
+        #expect(try rig.fresh { try String.fetchAll($0, sql: "SELECT name FROM tag ORDER BY id") } == ["Work", "Résumé"])
+        #expect(work != resume)
+    }
+
+    // OC-4202. Red if the 32 boundary is off by one, or a duplicate check compares against the tag being renamed.
+    @Test("OC-4202 given a 32-char name, when created, then it is stored; renaming a tag to another's name is rejected and to its own case is allowed")
+    func tagNameBoundaryAndRename() async throws {
+        let rig = try await Rig([.init(n: 1, hours: 1)])
+        defer { rig.cleanUp() }
+        rig.select(1)
+        let thirtyTwo = String(repeating: "q", count: 32)
+        let long = try #require(await rig.model.createTagOnSelection(name: thirtyTwo))
+        let other = try #require(await rig.model.createTagOnSelection(name: "Other"))
+        #expect(rig.reported.errors.isEmpty)
+
+        let clash = await rig.model.renameTag(other, to: thirtyTwo.uppercased())
+        let sameCase = await rig.model.renameTag(other, to: "OTHER")
+
+        #expect(clash == false)
+        #expect(sameCase == true)
+        #expect(code(rig) == ["ORG-VAL-001"])
+        #expect(try rig.fresh { try String.fetchAll($0, sql: "SELECT name FROM tag ORDER BY id") } == [thirtyTwo, "OTHER"])
+        #expect(long != other)
+    }
+
+    // OC-4203 (AC-004-03, per item). Red if the cap is 11, is checked after the write, or a rejected multi-item action
+    // applies to the items that were under the cap.
+    @Test("OC-4203 given item 1 with 10 tags, when an 11th is toggled on items 1 and 2, then ORG-LIM-001 and neither item changes")
+    func eleventhTagRejectedAtomically() async throws {
+        let rig = try await Rig((1...2).map { .init(n: $0, hours: $0) })
+        defer { rig.cleanUp() }
+        var tags: [Int64] = []
+        for value in 1...11 { tags.append(try await rig.database.createTag(name: "t\(value)").get()) }
+        rig.select(1)
+        for tag in tags.prefix(9) { #expect(await rig.model.toggleTagOnSelection(tag) == true) }
+        #expect(try rig.count("itemTag") == 9)
+        #expect(await rig.model.toggleTagOnSelection(tags[9]) == true, "the 10th is the last one allowed")
+        #expect(try rig.count("itemTag") == 10)
+        rig.select(1, 2)
+
+        let result = await rig.model.toggleTagOnSelection(tags[10])
+
+        #expect(result == nil)
+        #expect(code(rig) == ["ORG-LIM-001"])
+        #expect(try rig.count("itemTag") == 10)
+        #expect(try rig.fresh { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM itemTag WHERE itemId = ?", arguments: [n(2).uuidString]) } == 0)
+    }
+
+    // OC-4204. Red if Create-and-apply leaves the new tag behind when the apply is rejected (FR-004-03).
+    @Test("OC-4204 given item 1 with 10 tags, when a new tag is created on it, then ORG-LIM-001 and no 11th tag exists")
+    func createOnFullItemLeavesNoOrphan() async throws {
+        let rig = try await Rig([.init(n: 1, hours: 1)])
+        defer { rig.cleanUp() }
+        rig.select(1)
+        for value in 1...10 { _ = try #require(await rig.model.createTagOnSelection(name: "t\(value)")) }
+        #expect(try rig.count("tag") == 10)
+
+        let created = await rig.model.createTagOnSelection(name: "t11")
+
+        #expect(created == nil)
+        #expect(code(rig) == ["ORG-LIM-001"])
+        #expect(try rig.count("tag") == 10)
+        #expect(try rig.count("itemTag") == 10)
+    }
+
+    // OC-4205 (AC-004-03, library). Red if the library cap is 101 or ORG-LIM-002 is reported as ORG-VAL-001.
+    @Test("OC-4205 given 100 tags, when a 101st is created on the selection, then ORG-LIM-002 and the selected item has no tag")
+    func hundredAndFirstTagRejected() async throws {
+        let rig = try await Rig([.init(n: 1, hours: 1)])
+        defer { rig.cleanUp() }
+        for value in 1...100 { _ = try await rig.database.createTag(name: "tag \(value)").get() }
+        rig.select(1)
+
+        let created = await rig.model.createTagOnSelection(name: "tag 101")
+
+        #expect(created == nil)
+        #expect(code(rig) == ["ORG-LIM-002"])
+        #expect(try rig.count("tag") == 100)
+        #expect(try rig.count("itemTag") == 0)
+    }
+
+    // OC-4210 (AC-004-11). Red if the filter and the query are not combined, All also clears the query, or a second filter
+    // adds to the first instead of replacing it.
+    @Test("OC-4210 given a Pinned filter, when a query is typed, All chosen, then a Tag chosen, then exactly one filter applies and the query persists")
+    func oneFilterAtATimeQueryIndependent() async throws {
+        let rig = try await Rig([
+            .init(n: 1, hours: 1, pinned: true, text: "apple red"), .init(n: 2, hours: 2, text: "apple green"),
+            .init(n: 3, hours: 3, pinned: true, text: "banana yellow"), .init(n: 4, hours: 4, text: "cherry apple"),
+        ])
+        defer { rig.cleanUp() }
+        rig.select(2, 3)
+        let tag = try #require(await rig.model.createTagOnSelection(name: "Mix"))
+
+        rig.model.select(filter: .pinned)
+        await rig.model.settled()
+        #expect(rig.listed == [1, 3])
+
+        rig.model.setSearchText("apple")
+        await rig.model.settled()
+        #expect(rig.model.filter == .pinned)
+        #expect(rig.listed == [1], "the query narrows within the filter: pinned AND apple")
+
+        rig.model.select(filter: .all)
+        await rig.model.settled()
+        #expect(rig.model.filter == .all)
+        #expect(rig.model.searchText == "apple")
+        #expect(rig.listed == [1, 2, 4], "All clears the filter, not the query")
+
+        rig.model.select(filter: .tag(tag))
+        await rig.model.settled()
+        #expect(rig.model.filter == .tag(tag))
+        #expect(rig.listed == [2], "the tag replaces any earlier filter; only tagged apple items list")
+
+        rig.model.setSearchText("")
+        await rig.model.settled()
+        #expect(rig.model.filter == .tag(tag), "clearing the query keeps the filter")
+        #expect(rig.listed == [2, 3])
+    }
+
+    // OC-4220 (FR-004-09 re-check, over the real DB). Red if the confirmed set is compared with contains/isSubset, or ignored.
+    @Test("OC-4220 given a confirmed delete of item 1, when the selection is now {2} or {1,2}, then nothing is deleted; when it is {1}, only 1 goes")
+    func confirmedDeleteReChecksSelection() async throws {
+        let rig = try await Rig((1...4).map { .init(n: $0, hours: $0) })
+        defer { rig.cleanUp() }
+        let asked: Set<UUID> = [n(1)]
+
+        rig.select(2)
+        #expect(await rig.model.deleteSelected(expecting: asked) == nil)
+        rig.select(1, 2)
+        #expect(await rig.model.deleteSelected(expecting: asked) == nil)
+        rig.model.select(id: n(1))
+        rig.model.toggle(id: n(1))
+        #expect(rig.model.selection.isEmpty)
+        #expect(await rig.model.deleteSelected(expecting: asked) == nil)
+
+        #expect(try rig.ids() == [1, 2, 3, 4])
+        #expect(rig.reported.errors.isEmpty)
+
+        rig.select(1)
+        let removed = await rig.model.deleteSelected(expecting: asked)
+
+        #expect(removed == [n(1)])
+        #expect(try rig.ids() == [2, 3, 4])
+        #expect(rig.model.selection == [n(2)])
+    }
+
+    // OC-4221 (FR-004-11 re-check). Red if the expected bundle is ignored, or a multi-selection containing it passes.
+    @Test("OC-4221 given a confirmed ungroup of bundle 1, when bundle 3 or {1,3} is selected, then nothing changes; when 1 is, it ungroups")
+    func confirmedUngroupReChecksSelection() async throws {
+        let rig = try await Rig([
+            .init(n: 1, kind: .bundle, hours: 1, members: ["/a/1", "/a/2"]),
+            .init(n: 2, hours: 2),
+            .init(n: 3, kind: .bundle, hours: 3, members: ["/b/1", "/b/2", "/b/3"]),
+        ])
+        defer { rig.cleanUp() }
+
+        rig.select(3)
+        #expect(await rig.model.ungroupSelected(expecting: n(1)) == nil)
+        rig.select(1, 3)
+        #expect(await rig.model.ungroupSelected(expecting: n(1)) == nil)
+
+        #expect(try rig.ids() == [1, 2, 3])
+        #expect(try rig.count("bundleMember") == 5)
+        #expect(rig.reported.errors.isEmpty)
+
+        rig.select(1)
+        let created = await rig.model.ungroupSelected(expecting: n(1))
+
+        #expect(created?.count == 2)
+        #expect(try rig.count("item") == 4)
+        #expect(try rig.fresh { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item WHERE id = ?", arguments: [n(1).uuidString]) } == 0)
+        #expect(try rig.fresh { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item WHERE id = ?", arguments: [n(3).uuidString]) } == 1)
+    }
+
+    // OC-4230 (AC-004-13 at the model: includes the list refresh the user waits for). Red if an organise action reloads or
+    // rescans the whole library per item, or the 500-item tag loops with one read per item.
+    @Test("OC-4230 given 10,000 items, when pin, tag and delete repeat through the model, then p95 is under 100 ms and tagging 500 is under 1 s")
+    func modelPerformanceAtTenThousand() async throws {
+        let rig = try await Rig((1...10_000).map { .init(n: $0, hours: $0) })
+        defer { rig.cleanUp() }
+        #expect(try rig.count("item") == 10_000)
+        let tag = try await rig.database.createTag(name: "perf").get()
+        let clock = ContinuousClock()
+        func millis(_ d: Duration) -> Double { Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15 }
+        func p95(_ samples: [Double]) -> Double { samples.sorted()[Int((Double(samples.count) * 0.95).rounded(.up)) - 1] }
+
+        var pin: [Double] = [], toggle: [Double] = [], delete: [Double] = []
+        for step in 1...20 {
+            rig.model.select(id: n(step * 10))
+            pin.append(millis(await clock.measure { _ = await rig.model.togglePinSelected() }))
+            rig.model.select(id: n(step * 10 + 1))
+            toggle.append(millis(await clock.measure { _ = await rig.model.toggleTagOnSelection(tag) }))
+            rig.model.select(id: n(step * 10 + 2))
+            delete.append(millis(await clock.measure { _ = await rig.model.deleteSelected() }))
+        }
+        rig.model.select(id: n(5_001))
+        for value in 5_002...5_500 { rig.model.toggle(id: n(value)) }
+        #expect(rig.model.selection.count == 500)
+        let bulk = millis(await clock.measure { _ = await rig.model.toggleTagOnSelection(tag) })
+
+        #expect(try rig.fresh { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item WHERE pinned = 1") } == 20)
+        #expect(try rig.count("item") == 9_980)
+        #expect(try rig.count("itemTag") == 520)
+        #expect(rig.reported.errors.isEmpty)
+        #expect(p95(pin) < 100, "pin p95 \(p95(pin)) ms")
+        #expect(p95(toggle) < 100, "tag p95 \(p95(toggle)) ms")
+        #expect(p95(delete) < 100, "delete p95 \(p95(delete)) ms")
+        #expect(bulk < 1000, "bulk tag \(bulk) ms")
+    }
+}
