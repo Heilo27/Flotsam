@@ -50,8 +50,8 @@ hits=$(grep -rnE '(^|[^A-Za-z_.])(print|NSLog|dump)\(|try!' "$SRC" App 2>/dev/nu
 # FR-000-02 / AC-000-01: no thrown errors across a module boundary, no force-cast, no force-unwrap, and
 # fatalError only where it is annotated. Comment lines are ignored so doc comments can name the banned APIs.
 NOT_COMMENT='^[^:]+:[0-9]+:[[:space:]]*//'
-hits=$(grep -rnE '(public|package|open)[^{=]* throws' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT" | grep -v 'Ports/Ports.swift')
-[ -n "$hits" ] && fail "public/package API declared 'throws' (return FlotsamResult; only WallClock.sleep may throw, for cancellation)" "$hits"
+hits=$(grep -rnE '(public|package|open)[^{=]* throws' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
+[ -n "$hits" ] && fail "public/package API declared 'throws' (return FlotsamResult; nothing in the package throws, WallClock.sleep returns early on cancellation)" "$hits"
 hits=$(grep -rnE '[[:space:](]as!' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")
 [ -n "$hits" ] && fail "force cast (as!) used" "$hits"
 hits=$(grep -rnE '[A-Za-z0-9_)]!([.,)]|[[:space:]]*$)' "$SRC" App --include='*.swift' 2>/dev/null | grep -vE "$NOT_COMMENT")

@@ -6,13 +6,18 @@ import Foundation
 /// Time. Tests advance a manual clock instead of sleeping.
 public protocol WallClock: Sendable {
     func now() -> Date
-    func sleep(for duration: Duration) async throws
+    /// Suspends for `duration`. Never throws: on task cancellation it returns early, so a caller that must stop on
+    /// cancellation checks `Task.isCancelled` after the call.
+    func sleep(for duration: Duration) async
 }
 
 public struct SystemClock: WallClock {
     public init() {}
     public func now() -> Date { Date() }
-    public func sleep(for duration: Duration) async throws { try await Task.sleep(for: duration) }
+    public func sleep(for duration: Duration) async {
+        // Cancellation is the only error Task.sleep throws; the port contract is to return early (callers check Task.isCancelled).
+        try? await Task.sleep(for: duration)
+    }
 }
 
 /// One pasteboard representation: a UTI and its bytes.
