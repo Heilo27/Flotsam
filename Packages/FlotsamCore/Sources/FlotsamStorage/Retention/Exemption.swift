@@ -76,9 +76,39 @@ extension FlotsamDatabase {
                         """,
                     arguments: [now, wasExempt, now, key])
                 return true
-            })
+            }).map { applied in
+                // The registry and the trigger snapshot rebuild from this; published after the commit (FR-005-22).
+                if applied { events.publish(.itemsChanged) }
+                return applied
+            }
         } catch {
             return .failure(Self.writeFailure(error))
+        }
+    }
+}
+
+extension FlotsamDatabase: ItemBindingSource {
+    /// Every stored item hotkey and trigger, for the hotkey registry and the trigger snapshot (FR-005-01, FR-005-12).
+    /// Read from the same columns `Exemption` is derived from, so the three can never disagree.
+    public func itemBindings() async -> FlotsamResult<ItemBindings> {
+        do {
+            return .success(try await pool.read { db in
+                var bindings = ItemBindings()
+                let rows = try Row.fetchAll(
+                    db,
+                    sql: "SELECT id, \"trigger\", hotkeyCode, hotkeyModifiers FROM item WHERE \"trigger\" IS NOT NULL OR hotkeyCode IS NOT NULL")
+                for row in rows {
+                    guard let id = UUID(uuidString: row["id"] as String) else { continue }
+                    if let trigger: String = row["trigger"] { bindings.triggers[id] = trigger }
+                    if let code: Int = row["hotkeyCode"], let modifiers: Int = row["hotkeyModifiers"] {
+                        bindings.hotkeys[id] = Chord(
+                            keyCode: UInt16(truncatingIfNeeded: code), modifiers: ChordModifiers(rawValue: UInt8(truncatingIfNeeded: modifiers)))
+                    }
+                }
+                return bindings
+            })
+        } catch {
+            return .failure(Self.readFailure(error))
         }
     }
 }
