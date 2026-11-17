@@ -104,6 +104,10 @@ final class AppContainer {
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) })
         self.capture = capture
+        // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
+        let presenter = presenter
+        let saveClipboard = SaveClipboardAction(saver: capture, hud: { presenter.showHUD(message: $0) })
+        actions.saveClipboard = { Task { await saveClipboard.run() } }
 
         let center = NotificationCenter.default
         let workspace = NSWorkspace.shared.notificationCenter

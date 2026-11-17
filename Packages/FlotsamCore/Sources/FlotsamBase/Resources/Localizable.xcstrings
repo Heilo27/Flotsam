@@ -3021,6 +3021,46 @@
         }
       }
     },
+    "ui.shortcuts.saved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved to Flotsam"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.notSavedConcealed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not saved: the app that copied it marked it private"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.notSavedIgnoredApp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not saved: that app is on your ignored list"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.notSavedEmpty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing on the clipboard Flotsam can save"
+          }
+        }
+      }
+    },
     "ui.source.remoteDevice" : {
       "localizations" : {
         "en" : {
