@@ -31,7 +31,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
   - **Fatal** — Flotsam cannot run safely. Show a modal alert with the user message, a "Reveal Data Folder" button and a "Quit" button, then terminate. Closed list: `STO-IO-002`, `STO-DB-003`. No other code may be Fatal.
   - **Error** — the user's action or a background save failed. Propagate to the caller, surface per FR-000-08, never crash.
   - **Warning** — the app is degraded but working (permission off, limit hit, fallback active). Log at notice, continue, surface per FR-000-08.
-  - **Info** — an expected, policy-driven or benign skip (for example a concealed pasteboard item). Log only; never shown to the user.
+  - **Info** — an expected, policy-driven or benign skip (for example a concealed pasteboard item). Log only; never shown to the user and never recorded in the ring buffer (FR-000-13).
 
 **Catalogue and strings**
 - **FR-000-05** One catalogue: the Xcode String Catalog `Localizable.xcstrings`. Every user-facing string in the app (errors and normal UI) is a catalogue key; no user-facing string literal appears in a view or model. Error messages use keys `error.<code>` (for example `error.SET-PRM-001`). Source language English; plural and count variations use catalogue variations, not string concatenation.
@@ -66,7 +66,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 | Every Warning / Error / Fatal raised | `FlotsamLog.log(error)` via `ErrorReporter` | FR-000-08 | TASK-027 | [x] |
 
 **Diagnostics**
-- **FR-000-13** An in-memory ring buffer holds the last 100 raised errors (code, severity, timestamp). It is never written to disk and is cleared on quit.
+- **FR-000-13** An in-memory ring buffer holds the last 100 raised Warning, Error and Fatal errors (code, severity, timestamp). Info codes are logged but never recorded, so a high-frequency Info skip cannot evict real failures. It is never written to disk and is cleared on quit.
 - **FR-000-14** Settings › About › "Copy Diagnostics" builds a plain-text report on user action only: app version and build, macOS version, CPU architecture, permission states (Accessibility, Input Monitoring, screenshot folder access, pasteboard access), setting values that are not content (retention preset, budget preset, toggle states; never ignored-app lists), item counts by kind, database and blob byte sizes, and the ring buffer. It is copied to the clipboard marked with the pasteboard types in FR-001-03 so Flotsam does not capture its own report. It is never sent anywhere.
 - **FR-000-15** No third-party crash reporting, analytics or logging service is linked (A4). macOS-generated crash reports are the only crash data.
 

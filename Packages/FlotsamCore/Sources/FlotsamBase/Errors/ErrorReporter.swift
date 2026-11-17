@@ -63,19 +63,22 @@ public actor ErrorReporter {
         self.clock = clock
     }
 
-    /// Logs, records and (for Warning, Error and Fatal) surfaces. Logging and the ring buffer come first and are
-    /// never throttled, so a throttled occurrence still appears in the log (AC-000-04).
+    /// Logs every severity; records and surfaces Warning, Error and Fatal. Logging and the ring buffer come first and
+    /// are never throttled, so a throttled occurrence still appears in the log (AC-000-04).
     public func report(_ error: FlotsamError, origin: ErrorOrigin) async {
         let now = clock.now()
         FlotsamLog.log(error)
-        ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))
 
         switch error.severity {
         case .info:
+            // Log only (FR-000-04). Not recorded: Info codes such as TRG-POL-001 fire per keystroke in a secure
+            // field and would evict the Warning/Error history the diagnostics report exists to show (FR-000-13).
             return
         case .fatal:
+            ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))
             await presenter.presentFatal(error)
         case .warning, .error:
+            ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))
             guard throttle.admit(error.code, isHUD: origin == .userInitiated, now: now) else { return }
             let message = FlotsamStrings.message(for: error)
             switch origin {
