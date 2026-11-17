@@ -1,4 +1,5 @@
 import FlotsamBase
+import FlotsamShortcuts
 import FlotsamStorage
 import Foundation
 import Observation
@@ -49,6 +50,8 @@ struct SettingsEnvironment: Sendable {
     let login: LoginItemController
     let openLoginItems: @MainActor @Sendable () -> Void
     let permissions: any PermissionProbe
+    /// The one hotkey registry (FR-005-01): the Shortcuts pane's recorder validates against it and suspends it.
+    let shortcuts: ShortcutRegistry
     let storage: SettingsStorage
     let dataFolder: URL
     /// Opens the data folder in Finder (the Fatal alert reveals the same folder).

@@ -69,7 +69,7 @@ final class AppContainer {
         let environment = SettingsEnvironment(
             settings: settings, login: loginItem,
             openLoginItems: { loginItem.openLoginItemsSettings() },
-            permissions: permissions, storage: storage, dataFolder: Self.dataFolder,
+            permissions: permissions, shortcuts: shortcuts, storage: storage, dataFolder: Self.dataFolder,
             revealDataFolder: { NSWorkspace.shared.open(Self.dataFolder) },
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             hud: { message in presenter.showHUD(message: message) },
