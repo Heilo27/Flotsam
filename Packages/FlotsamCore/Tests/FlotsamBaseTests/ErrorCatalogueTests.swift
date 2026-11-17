@@ -100,6 +100,41 @@ import Testing
         #expect(Check.violations(catalogue: try Repo.catalogue(), codes: doubled) == ["duplicate:CAP-IO-001"])
     }
 
+    /// OC-0021 (6), FR-000-05, TASK-347. given a template whose specifier disagrees with the argument kinds its code
+    /// declares, then the check fails naming that key. Each row is a different way to drift: text slot turned into a
+    /// count slot, count slot turned into a text slot, a placeholder added to a code that takes none, a placeholder
+    /// dropped from one that takes one, an unsupported `%d` specifier.
+    @Test(
+        "OC-0021 (6) a template that disagrees with its code's argument kinds fails the check",
+        arguments: [
+            ("CAP-LIM-001", "Too large (over %lld).", "error.CAP-LIM-001"),
+            ("CAP-LIM-003", "Trimmed %@ files.", "error.CAP-LIM-003"),
+            ("CAP-IO-001", "Could not save %@.", "error.CAP-IO-001"),
+            ("CAP-LIM-001", "Too large.", "error.CAP-LIM-001"),
+            ("CAP-LIM-003", "Trimmed %d files.", "error.CAP-LIM-003"),
+        ]
+    )
+    func argumentKindMismatchFails(raw: String, template: String, key: String) throws {
+        // given the shipped catalogue with one template rewritten
+        let data = try Check.mutatedShippedData { $0["error.\(raw)"] = Check.entry(template) }
+        let catalogue = try FlotsamCatalogue.englishStrings(from: data).get()
+        #expect(catalogue["error.\(raw)"] == template, "precondition: the mutation reached the reader")
+        // when the consistency check runs, then exactly that key is reported
+        #expect(Check.violations(catalogue: catalogue, codes: Check.shippedCodes) == ["argumentKinds:\(key)"])
+    }
+
+    /// OC-0021 (6) control. given a rewritten template that still matches its code's kinds (`%@` stays `%@`, a literal
+    /// percent is not a placeholder), then the check stays green, so the red rows above are about kinds only.
+    @Test("OC-0021 (6) a reworded template with matching specifiers passes")
+    func argumentKindMatchPasses() throws {
+        let data = try Check.mutatedShippedData {
+            $0["error.CAP-LIM-001"] = Check.entry("100%% too big (%@).")
+            $0["error.CAP-LIM-003"] = Check.entry("Only %lld kept.")
+        }
+        let catalogue = try FlotsamCatalogue.englishStrings(from: data).get()
+        #expect(Check.violations(catalogue: catalogue, codes: Check.shippedCodes) == [])
+    }
+
     /// OC-0021 reader. given a key whose English value is stripped (only a German value left), then the reader leaves
     /// it out, so the check reports it missing rather than reading another language.
     @Test("OC-0021 a key with no English value reads as missing")

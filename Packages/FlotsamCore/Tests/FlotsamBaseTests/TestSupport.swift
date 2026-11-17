@@ -111,7 +111,8 @@ final class RecordingLogSink: LogSink {
 }
 
 /// The FR-000-07 consistency check, run against any catalogue and any code list: every non-Info code has a message of
-/// at most 140 characters, no Info code has one, every `error.` key has a code, no two codes share a raw value.
+/// at most 140 characters, no Info code has one, every `error.` key has a code, no two codes share a raw value, and the
+/// argument kinds each code declares match the specifiers in its template (`FlotsamStrings.argumentKindViolations`).
 /// Returns one tag per violation (empty means consistent) so a test can feed a mutated catalogue and name what broke.
 enum CatalogueConsistency {
     static let maxMessageLength = 140
@@ -136,6 +137,8 @@ enum CatalogueConsistency {
             }
         }
         for key in catalogue.keys where key.hasPrefix("error.") && !keys.contains(key) { found.append("orphan:\(key)") }
+        let enumCodes = Set(codes.compactMap { ErrorCode(rawValue: $0.raw) })
+        found += FlotsamStrings.argumentKindViolations(catalogue: catalogue, codes: Array(enumCodes))
         return found.sorted()
     }
 

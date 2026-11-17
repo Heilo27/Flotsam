@@ -253,21 +253,14 @@ struct Adversarial000RingTests {
 
 @Suite("8A FRD-000 strings")
 struct Adversarial000StringsTests {
-    // OC: FR-000-05. 8A break, ticket TASK-347. %@ template handed an Int argument crashes the process (SIGSEGV),
-    // so it stays disabled; re-enable when the ticket lands.
-    @Test(
-        "a count handed to a %@ template returns the fallback, never crashes (FR-000-05, TASK-347)",
-        .disabled("8A break: TASK-347 String(format:) %@ with Int segfaults")
-    )
+    // OC: FR-000-05. 8A break, ticket TASK-347. %@ template handed an Int argument crashed the process (SIGSEGV).
+    @Test("a count handed to a %@ template returns the fallback, never crashes (FR-000-05, TASK-347)")
     func countIntoStringPlaceholder() {
         #expect(FlotsamStrings.message(for: .capLim001, arguments: [.count(5)]) == advFallbackText)
     }
 
     // OC: FR-000-05. 8A break, ticket TASK-347. Same crash through the reporter path (context .count on a %@ code).
-    @Test(
-        "a context count on a %@ code returns the fallback, never crashes (FR-000-05, TASK-347)",
-        .disabled("8A break: TASK-347 String(format:) %@ with Int segfaults")
-    )
+    @Test("a context count on a %@ code returns the fallback, never crashes (FR-000-05, TASK-347)")
     func contextCountIntoStringPlaceholder() {
         let error = FlotsamError(.capLim001, "x", context: [.count: .int(5)])
         #expect(FlotsamStrings.message(for: error) == advFallbackText)
@@ -299,6 +292,48 @@ struct Adversarial000StringsTests {
     func zeroByteSize() {
         let message = FlotsamStrings.message(for: .capLim001, arguments: [.byteSize(0)])
         #expect(!message.contains("Zero"))
+    }
+
+    // OC: FR-000-06. TASK-347. Mutation: dropping `max(0, value)` from the `.count` argument turns this red.
+    @Test("a negative count renders as 0, never with a minus sign (FR-000-06, TASK-347)")
+    func negativeCount() {
+        // given a count of -5 for a %lld template, when rendered, then the user reads 0
+        let message = FlotsamStrings.message(for: .capLim003, arguments: [.count(-5)])
+        #expect(message == "A copy of 0 files was trimmed to the first 500.")
+        // and the boundary one step up is untouched: 0 stays 0, 1 stays 1
+        #expect(FlotsamStrings.message(for: .capLim003, arguments: [.count(0)]) == "A copy of 0 files was trimmed to the first 500.")
+        #expect(FlotsamStrings.message(for: .capLim003, arguments: [.count(1)]) == "A copy of 1 files was trimmed to the first 500.")
+    }
+
+    // OC: FR-000-06. TASK-347. Mutation: dropping `max(0, milliseconds)` from `formatDuration` turns this red.
+    @Test("a negative duration renders as 0 seconds, never with a minus sign (FR-000-06, TASK-347)")
+    func negativeDuration() {
+        let message = FlotsamStrings.message(for: .capLim001, arguments: [.duration(milliseconds: -5_000)])
+        #expect(message == "A copy was too large to save (over 0 seconds). It is still on your clipboard.")
+        #expect(FlotsamStrings.message(for: .capLim001, arguments: [.duration(milliseconds: 5_000)])
+            == "A copy was too large to save (over 5 seconds). It is still on your clipboard.")
+    }
+
+    // OC: FR-000-06. TASK-347. Literal expectation for the clamp and the digit zero, beside the weaker contains checks.
+    // Mutations: dropping `max(0, bytes)`, or `allowsNonnumericFormatting = false`, turns this red.
+    @Test("byte sizes -1, 0 and 1 read as 0 bytes, 0 bytes and 1 byte in digits")
+    func byteSizeLiterals() {
+        let negative = FlotsamStrings.message(for: .capLim001, arguments: [.byteSize(-1)])
+        let zero = FlotsamStrings.message(for: .capLim001, arguments: [.byteSize(0)])
+        let one = FlotsamStrings.message(for: .capLim001, arguments: [.byteSize(1)])
+        #expect(negative == "A copy was too large to save (over 0 bytes). It is still on your clipboard.")
+        #expect(zero == "A copy was too large to save (over 0 bytes). It is still on your clipboard.")
+        #expect(one == "A copy was too large to save (over 1 byte). It is still on your clipboard.")
+    }
+
+    // OC: FR-000-06. TASK-347. The cut must keep the sentence: ellipsis present, template tail present, exactly 140.
+    // Mutation: dropping the truncation loop (or cutting the template instead of the name) turns this red.
+    @Test("an over-long app name is cut with an ellipsis and the rest of the sentence survives")
+    func truncationKeepsTemplate() {
+        let message = FlotsamStrings.message(for: .capLim001, arguments: [.appName(String(repeating: "A", count: 500))])
+        #expect(message.count == 140)
+        #expect(message.hasPrefix("A copy was too large to save (over AAAA"))
+        #expect(message.hasSuffix("\u{2026}). It is still on your clipboard."))
     }
 
     // OC: FR-000-05 guard. Substituted values are data: %@, {count}, newlines, RTL and emoji must come out verbatim.
