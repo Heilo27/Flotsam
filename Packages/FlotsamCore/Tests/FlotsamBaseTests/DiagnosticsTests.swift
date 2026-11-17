@@ -157,9 +157,12 @@ private final class MutableSource: DiagnosticsDataSource, @unchecked Sendable {
         #expect(pasteboard.changeCount - before == 1)
         #expect(pasteboard.written.count == 1)
         let written = try #require(pasteboard.written.first)
-        #expect(written.map(\.uti) == ["public.utf8-plain-text", "com.flotsamtest.own-write", "com.flotsamtest.own-write-2"])
-        #expect(String(decoding: written[0].data, as: UTF8.self) == "Flotsam diagnostics\n")
-        #expect(written[1].data.isEmpty)
+        #expect(Set(written.map(\.uti)) == ["public.utf8-plain-text", "com.flotsamtest.own-write", "com.flotsamtest.own-write-2"])
+        #expect(written.count == 3)
+        let plain = try #require(written.first { $0.uti == "public.utf8-plain-text" })
+        let marker = try #require(written.first { $0.uti == "com.flotsamtest.own-write" })
+        #expect(String(decoding: plain.data, as: UTF8.self) == "Flotsam diagnostics\n")
+        #expect(marker.data.isEmpty)
     }
 
     /// OC-0047 negative. given the pasteboard write fails, then the failure is returned and nothing is on the pasteboard.

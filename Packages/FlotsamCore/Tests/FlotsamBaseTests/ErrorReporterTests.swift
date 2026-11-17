@@ -21,9 +21,10 @@ private func raise(_ code: ErrorCode) -> FlotsamError {
 private struct Rig {
     let clock = ManualClock()
     let presenter = RecordingPresenter()
+    let sink = RecordingLogSink()
     let reporter: ErrorReporter
 
-    init() { reporter = ErrorReporter(presenter: presenter, clock: clock) }
+    init() { reporter = ErrorReporter(presenter: presenter, clock: clock, sink: sink) }
 }
 
 @MainActor
@@ -336,5 +337,132 @@ private struct Rig {
         #expect(rig.presenter.notices.isEmpty)
         #expect(rig.presenter.noticeUpdates == 0)
         #expect(rig.presenter.fatals.isEmpty)
+    }
+}
+
+// MARK: - Log contract (FR-000-04, FR-000-09, FR-000-10, FR-000-11): what `report` writes to the log sink
+
+/// One raised code with its literal expectations: the headline `"<code> <severity>"`, the OSLog level raw value
+/// (Info 1, Default 0, Error 16, Fault 17) and the category.
+struct LoggedCase: Sendable, CustomTestStringConvertible {
+    let code: ErrorCode
+    let headline: String
+    let level: UInt8
+    let category: String
+    var testDescription: String { headline }
+}
+
+let loggedCases: [LoggedCase] = [
+    LoggedCase(code: .capPol001, headline: "CAP-POL-001 info", level: 1, category: "capture"),
+    LoggedCase(code: .capLim001, headline: "CAP-LIM-001 warning", level: 0, category: "capture"),
+    LoggedCase(code: .capIo001, headline: "CAP-IO-001 error", level: 16, category: "capture"),
+    LoggedCase(code: .stoIo002, headline: "STO-IO-002 fatal", level: 17, category: "storage"),
+]
+
+@MainActor
+@Suite struct ErrorReporterLogTests {
+    /// OC-0040, OC-0013, OC-0014. given one raise of a code of each severity (Info included), when reported, then the
+    /// sink receives exactly one record for it with that code and severity in the clear. Red if the log call is
+    /// removed, or Info is skipped.
+    @Test("OC-0040 OC-0013 OC-0014 every severity, Info included, writes exactly one log record", arguments: loggedCases)
+    func everySeverityWritesOneRecord(logged: LoggedCase) async throws {
+        let rig = Rig()
+        await rig.reporter.report(raise(logged.code), origin: .background)
+        let records = rig.sink.records
+        #expect(records.count == 1)
+        #expect(records.filter { $0.headline == logged.headline }.count == 1)
+    }
+
+    /// OC-0032, OC-0013. given each severity reported through the reporter, then the record carries the FR-000-09
+    /// level: Info `.info`, Warning notice, Error `.error`, Fatal `.fault`, in the module's category.
+    @Test("OC-0032 OC-0013 the record's level and category follow the code's severity and module", arguments: loggedCases)
+    func recordLevelAndCategory(logged: LoggedCase) async throws {
+        let rig = Rig()
+        await rig.reporter.report(raise(logged.code), origin: .background)
+        let record = try #require(rig.sink.records.first { $0.headline == logged.headline })
+        #expect(record.level.rawValue == logged.level)
+        #expect(record.category.rawValue == logged.category)
+    }
+
+    /// OC-0013, OC-0014, OC-0040, OC-0033, OC-0035 (unit-reachable part). given an error carrying a static message, a
+    /// private item id, a bundle id, a public byte size and a system cause, when reported, then the public text is
+    /// the code, severity and byte size only, and the private text holds the id, bundle id, message and cause
+    /// `domain:code`. Red if message, cause or private context moves into the public text, or the cause loses its
+    /// domain.
+    @Test("OC-0013 OC-0035 user data, message and cause domain:code appear only in the private text")
+    func privacySplitAtTheSink() async {
+        let rig = Rig()
+        let itemId = UUID(uuidString: "6F9619FF-8B86-D011-B42D-00C04FC964FF")!
+        let bundle = BundleIdentifier("com.flotsamtest.markbid1")!
+        let error = FlotsamError(
+            .capIo001, "marker-message-q7",
+            context: [.itemId: .id(itemId), .bundleId: .bundleId(bundle), .byteSize: .bytes(12)],
+            underlying: UnderlyingErrorInfo(domain: "NSCocoaErrorDomain", code: 640)
+        )
+        await rig.reporter.report(error, origin: .background)
+        let records = rig.sink.records
+        #expect(records.count == 1)
+        guard let record = records.first else { return }
+        #expect(record.publicText == "CAP-IO-001 error byteSize=12B")
+        #expect(record.privateText == "bundleId=com.flotsamtest.markbid1 itemId=6F9619FF-8B86-D011-B42D-00C04FC964FF marker-message-q7 NSCocoaErrorDomain:640")
+        for secret in ["markbid1", "6F9619FF", "marker-message-q7", "NSCocoaErrorDomain", "640"] {
+            #expect(!record.publicText.contains(secret), "\(secret) leaked into the public text")
+        }
+    }
+
+    /// OC-0035 negative. given an error with no cause and no context, then the private text carries only the message
+    /// and no stray `domain:code` separator.
+    @Test("OC-0035 an error with no cause logs no cause text")
+    func noCauseNoCauseText() async {
+        let rig = Rig()
+        await rig.reporter.report(FlotsamError(.capIo001, "plain-message"), origin: .background)
+        let records = rig.sink.records
+        #expect(records.count == 1)
+        #expect(records.first?.publicText == "CAP-IO-001 error")
+        #expect(records.first?.cause == nil)
+        #expect(records.first?.privateText.contains(":") == false)
+        #expect(records.first?.privateText.contains("plain-message") == true)
+    }
+
+    /// AC-000-04, OC-0040. given the same background Warning raised three times within 6 s, then one Notice shows (two
+    /// are throttled) and the sink still has three records.
+    @Test("AC-000-04 a throttled occurrence is still logged")
+    func throttledBackgroundOccurrencesAreLogged() async {
+        let rig = Rig()
+        for _ in 0..<3 {
+            await rig.reporter.report(raise(.capLim001), origin: .background)
+            rig.clock.advance(by: 2)
+        }
+        #expect(rig.presenter.notices.count == 1, "precondition: two of the three were throttled")
+        #expect(rig.sink.records.count == 3)
+        #expect(rig.sink.records.filter { $0.headline == "CAP-LIM-001 warning" }.count == 3)
+    }
+
+    /// AC-000-04, OC-0040. given four different user-initiated Errors inside one minute, then the fourth HUD is
+    /// suppressed by the cap, but all four codes are logged, the suppressed one included.
+    @Test("AC-000-04 a HUD suppressed by the three-per-minute cap is still logged")
+    func capSuppressedHUDIsLogged() async {
+        let rig = Rig()
+        let codes: [ErrorCode] = [.libOs001, .libIo001, .libDat001, .shfOs001]
+        for code in codes {
+            await rig.reporter.report(raise(code), origin: .userInitiated)
+            rig.clock.advance(by: 1)
+        }
+        #expect(rig.presenter.huds.count == 3, "precondition: the fourth HUD was suppressed")
+        #expect(rig.sink.records.count == 4)
+        #expect(rig.sink.records.filter { $0.headline == "SHF-OS-001 error" }.count == 1, "the suppressed SHF-OS-001 is logged")
+    }
+
+    /// OC-0040. given one Warning, one Error and one Fatal raised in a session, then each of the three codes has
+    /// exactly one record, and nothing else was logged.
+    @Test("OC-0040 a Warning, an Error and a Fatal each have a record")
+    func sessionOfThreeSeverities() async {
+        let rig = Rig()
+        await rig.reporter.report(raise(.capLim001), origin: .background)
+        await rig.reporter.report(raise(.capIo001), origin: .background)
+        await rig.reporter.report(raise(.stoIo002), origin: .background)
+        let headlines = rig.sink.records.map(\.headline)
+        #expect(headlines.count == 3)
+        #expect(Set(headlines) == ["CAP-LIM-001 warning", "CAP-IO-001 error", "STO-IO-002 fatal"])
     }
 }

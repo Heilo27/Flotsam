@@ -1,4 +1,6 @@
 import Foundation
+import os
+import Testing
 @testable import FlotsamBase
 
 /// Shared fakes and file helpers for the FRD-000 suites. Fakes sit on the ports (ErrorPresenter, WallClock,
@@ -78,21 +80,85 @@ enum Repo {
         packageRoot(file: file).deletingLastPathComponent().deletingLastPathComponent()
     }
 
-    /// The shipped string catalogue, `key -> en value`, read straight from the JSON on disk.
-    static func catalogue(file: String = #filePath) throws -> [String: String] {
-        let url = packageRoot(file: file).appendingPathComponent("Sources/FlotsamBase/Resources/Localizable.xcstrings")
-        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
-        let strings = json?["strings"] as? [String: [String: Any]] ?? [:]
-        return strings.compactMapValues { entry in
-            let en = (entry["localizations"] as? [String: Any])?["en"] as? [String: Any]
-            return (en?["stringUnit"] as? [String: Any])?["value"] as? String
-        }
+    /// The shipped string catalogue, `key -> en value`, read through the production reader (`FlotsamCatalogue`), so the
+    /// tests and the app parse the format one way (Rule 9). A read failure fails the calling test.
+    static func catalogue() throws -> [String: String] {
+        try FlotsamCatalogue.englishStrings(at: shippedCatalogueURL).get()
     }
 
-    static func catalogueSourceLanguage(file: String = #filePath) throws -> String? {
-        let url = packageRoot(file: file).appendingPathComponent("Sources/FlotsamBase/Resources/Localizable.xcstrings")
-        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+    /// The shipped catalogue's location, resolved by the production `FlotsamCatalogue.shippedURL(file:)` rule. The
+    /// production default argument `#filePath` is expanded in the CALLER's file, so a call from the tests would resolve
+    /// to `Tests/Resources/`; passing the production source file explicitly gives the rule its intended anchor.
+    static var shippedCatalogueURL: URL {
+        FlotsamCatalogue.shippedURL(file: packageRoot().appendingPathComponent("Sources/FlotsamBase/Strings/FlotsamCatalogue.swift").path)
+    }
+
+    /// `sourceLanguage` of the shipped catalogue. The file location comes from `FlotsamCatalogue`, not a second path.
+    static func catalogueSourceLanguage() throws -> String? {
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: Repo.shippedCatalogueURL)) as? [String: Any]
         return json?["sourceLanguage"] as? String
+    }
+}
+
+/// Records every `LogRecord` written to it, in arrival order. The lock makes it safe to share with the reporter actor;
+/// `OSAllocatedUnfairLock` is itself `Sendable`, so the compiler checks this class (no `@unchecked`).
+final class RecordingLogSink: LogSink {
+    private let storage = OSAllocatedUnfairLock<[LogRecord]>(initialState: [])
+
+    func write(_ record: LogRecord) { storage.withLock { $0.append(record) } }
+
+    var records: [LogRecord] { storage.withLock { $0 } }
+}
+
+/// The FR-000-07 consistency check, run against any catalogue and any code list: every non-Info code has a message of
+/// at most 140 characters, no Info code has one, every `error.` key has a code, no two codes share a raw value.
+/// Returns one tag per violation (empty means consistent) so a test can feed a mutated catalogue and name what broke.
+enum CatalogueConsistency {
+    static let maxMessageLength = 140
+
+    static func violations(
+        catalogue: [String: String],
+        codes: [(raw: String, severity: ErrorSeverity)]
+    ) -> [String] {
+        var found: [String] = []
+        var seen = Set<String>()
+        for code in codes where !seen.insert(code.raw).inserted { found.append("duplicate:\(code.raw)") }
+        let keys = Set(codes.map { "error.\($0.raw)" })
+        for code in codes {
+            let key = "error.\(code.raw)"
+            let message = catalogue[key]
+            if code.severity == .info {
+                if message != nil { found.append("infoHasMessage:\(key)") }
+            } else if let message {
+                if message.count > maxMessageLength { found.append("tooLong:\(key)") }
+            } else {
+                found.append("missing:\(key)")
+            }
+        }
+        for key in catalogue.keys where key.hasPrefix("error.") && !keys.contains(key) { found.append("orphan:\(key)") }
+        return found.sorted()
+    }
+
+    /// The shipped enum as the checker's input.
+    static var shippedCodes: [(raw: String, severity: ErrorSeverity)] {
+        ErrorCode.allCases.map { (raw: $0.rawValue, severity: $0.severity) }
+    }
+
+    /// Bytes of the shipped catalogue after `edit` has changed its `strings` table. The mutation is applied to the real
+    /// file's JSON, so everything the edit does not touch stays exactly as shipped.
+    static func mutatedShippedData(_ edit: (inout [String: Any]) -> Void) throws -> Data {
+        var root = try #require(
+            JSONSerialization.jsonObject(with: Data(contentsOf: Repo.shippedCatalogueURL)) as? [String: Any]
+        )
+        var strings = try #require(root["strings"] as? [String: Any])
+        edit(&strings)
+        root["strings"] = strings
+        return try JSONSerialization.data(withJSONObject: root)
+    }
+
+    /// A catalogue entry with only an English value.
+    static func entry(_ value: String) -> [String: Any] {
+        ["localizations": ["en": ["stringUnit": ["state": "translated", "value": value]]]]
     }
 }
 

@@ -218,6 +218,8 @@ private let sources = "Packages/FlotsamCore/Sources"
     static let publicThrowsMutants: [Mutant] = [
         Mutant(name: "public throws in a module file", path: "\(sources)/FlotsamBase/Ports/Adapters.swift", line: "public func mutantThrows() throws {}"),
         Mutant(name: "public throws in Ports.swift (the file the lint exempts)", path: "\(sources)/FlotsamBase/Ports/Ports.swift", line: "public func mutantPortsThrows() throws {}"),
+        Mutant(name: "package throws in a module file", path: "\(sources)/FlotsamBase/Ports/Adapters.swift", line: "package func mutantPackageThrows() throws {}"),
+        Mutant(name: "open throws in a module file", path: "\(sources)/FlotsamBase/Ports/Adapters.swift", line: "open func mutantOpenThrows() throws {}"),
     ]
 
     /// OC-0003 lint half. Given a public function declared `throws` added to the sources, when the lint runs, then it

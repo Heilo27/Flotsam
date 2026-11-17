@@ -129,9 +129,13 @@
     {
       "id": "M14",
       "target": "ErrorReporter.report: FlotsamLog.log(error) call deleted",
-      "oc": [],
-      "result": "SURVIVED",
-      "killed_by": null
+      "oc": [
+        "OC-0040",
+        "OC-0013",
+        "OC-0014"
+      ],
+      "result": "KILLED",
+      "killed_by": "ErrorReporterLogTests: everySeverityWritesOneRecord (x4), throttledBackgroundOccurrencesAreLogged, capSuppressedHUDIsLogged, sessionOfThreeSeverities"
     },
     {
       "id": "M15",
@@ -201,16 +205,23 @@
     {
       "id": "M22",
       "target": "FlotsamLog.log(error): message/cause privacy .private to .public",
-      "oc": [],
-      "result": "SURVIVED",
-      "killed_by": null
+      "oc": [
+        "OC-0013",
+        "OC-0035",
+        "OC-0040"
+      ],
+      "result": "KILLED",
+      "killed_by": "ErrorReporterLogTests.privacySplitAtTheSink (private context into publicContext; message into headline also red). The OSLogSink .private qualifier itself is a 9F integration check, not unit-reachable"
     },
     {
       "id": "M23",
       "target": "FlotsamLog.log(error): level fixed to .info instead of level(for: severity)",
-      "oc": [],
-      "result": "SURVIVED",
-      "killed_by": null
+      "oc": [
+        "OC-0032",
+        "OC-0013"
+      ],
+      "result": "KILLED",
+      "killed_by": "ErrorReporterLogTests.recordLevelAndCategory (levels 0/16/17 for Warning/Error/Fatal)"
     },
     {
       "id": "M24",
@@ -268,9 +279,11 @@
     {
       "id": "M30",
       "target": "check-architecture.sh: public throws rule drops `package`",
-      "oc": [],
-      "result": "SURVIVED",
-      "killed_by": null
+      "oc": [
+        "OC-0003"
+      ],
+      "result": "KILLED",
+      "killed_by": "LintHarnessTests OC-0003 \"package throws in a module file\" mutant (open throws mutant added too)"
     },
     {
       "id": "M32",
@@ -295,17 +308,24 @@
     {
       "id": "M34",
       "target": "FlotsamLog.log(error): underlying cause drops domain",
-      "oc": [],
-      "result": "SURVIVED",
-      "killed_by": null
+      "oc": [
+        "OC-0013",
+        "OC-0035"
+      ],
+      "result": "KILLED",
+      "killed_by": "ErrorReporterLogTests.privacySplitAtTheSink (privateText ends NSCocoaErrorDomain:640)"
     }
   ],
-  "survivors": 5,
+  "survivors": 0,
   "discarded_equivalent": [
     {
       "id": "M31",
       "target": "check-architecture.sh: as! rule drops `(` from [[:space:](]",
       "reason": "`(as!` cannot occur in valid Swift; equivalent mutant, not counted"
     }
-  ]
+  ],
+  "rerun_8T": {
+    "by": "Worf",
+    "note": "8V survivors M14 M22 M23 M34 M30 re-run one at a time against the new tests, each reverted; all KILLED. Data re-runs 8V independently."
+  }
 }
