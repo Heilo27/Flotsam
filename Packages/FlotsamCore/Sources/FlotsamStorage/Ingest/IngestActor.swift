@@ -119,13 +119,16 @@ public actor IngestActor {
 
     // MARK: Step 2
 
-    /// Limits (FR-007-06), then the image pipeline (FR-007-07); the disk guard hooks in here (FR-007-14).
+    /// Limits (FR-007-06), the disk guard (FR-007-14), then the image pipeline (FR-007-07). The guard runs before the
+    /// image decode so a full disk costs no CPU, and before any blob is written.
     private func prepare(_ candidate: IngestCandidate) async -> FlotsamResult<PreparedItem> {
         let limited: LimitedPayload
         switch IngestLimits.apply(to: candidate) {
         case .failure(let error): return .failure(error)
         case .success(let value): limited = value
         }
+        let available = database.fileSystem.availableCapacity(at: database.folder.root)
+        if let refusal = DiskGuard.check(kind: candidate.kind, available: available) { return .failure(refusal) }
         guard candidate.kind == .image || candidate.kind == .screenshot,
               let primary = limited.representations.first
         else {
