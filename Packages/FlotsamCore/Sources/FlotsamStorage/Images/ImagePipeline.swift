@@ -2,14 +2,14 @@ import FlotsamBase
 import Foundation
 import ImageIO
 
-/// An image after the FR-007-07 pipeline: the bytes to store, and the source's own dimensions.
+/// An image after the FR-007-07 pipeline: the bytes to store, and the pixel size of those bytes.
 struct ProcessedImage: Sendable {
     let data: Data
     let uti: String
-    /// The source's dimensions, not the stored image's: `pixelWidth` and `pixelHeight` describe what was copied
-    /// (FR-007-07 step 2 records them before any downscale).
-    let sourceWidth: Int
-    let sourceHeight: Int
+    /// The stored blob's dimensions, after any downscale (FR-007-07 step 2). They are what the Library shows and what
+    /// the budget's bytes correspond to; the copied original's size is deliberately not kept.
+    let width: Int
+    let height: Int
 }
 
 /// Decode, convert, downscale and thumbnail with ImageIO only, one image at a time (FR-007-07).
@@ -40,6 +40,10 @@ actor ImageWorker {
     /// Only PNG, JPEG and TIFF are ever re-encoded. Anything else ImageIO can read (GIF, HEIC, WebP) is stored as
     /// received and never downscaled: re-encoding would drop animation or colour profile and the FRD defines a
     /// downscaled format only for PNG and JPEG.
+    ///
+    /// Format rule (FR-007-07 step 3, FR-007-08): a TIFF becomes PNG; then an opaque PNG becomes JPEG when it was
+    /// downscaled or the preset is Efficient, and an image with transparency stays PNG. A JPEG is only re-encoded when
+    /// it is downscaled, so an untouched JPEG never loses quality.
     func process(_ data: Data, receivedUTI: String, quality: ImageQuality) -> ProcessedImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetCount(source) > 0,
               let sourceType = CGImageSourceGetType(source) as String?,
@@ -48,29 +52,37 @@ actor ImageWorker {
               let height = properties[kCGImagePropertyPixelHeight] as? Int, width > 0, height > 0
         else { return nil }
 
-        let reencodable = [Self.pngType, Self.jpegType, Self.tiffType].contains(sourceType)
-        let sourceStored = ProcessedImage(data: data, uti: receivedUTI, sourceWidth: width, sourceHeight: height)
-        guard reencodable else { return sourceStored }
+        let asReceived = ProcessedImage(data: data, uti: receivedUTI, width: width, height: height)
+        guard [Self.pngType, Self.jpegType, Self.tiffType].contains(sourceType) else { return asReceived }
 
-        let ceiling = Self.edgeCeiling(for: quality)
-        if let ceiling, max(width, height) > ceiling {
-            guard let scaled = Self.scaledImage(source, longestEdge: ceiling) else { return nil }
-            // Opaque PNG becomes JPEG; transparency keeps PNG; a JPEG stays a JPEG (FR-007-08).
-            let keepsPNG = sourceType != Self.jpegType && Self.hasTransparency(scaled)
-            let encoded = keepsPNG
-                ? Self.encode(scaled, type: Self.pngType, quality: nil)
-                : Self.encode(scaled, type: Self.jpegType, quality: Self.storedJPEGQuality)
-            guard let encoded else { return nil }
-            return ProcessedImage(
-                data: encoded, uti: keepsPNG ? Self.pngType : Self.jpegType, sourceWidth: width, sourceHeight: height)
+        var scaled: CGImage?
+        if let ceiling = Self.edgeCeiling(for: quality), max(width, height) > ceiling {
+            guard let image = Self.scaledImage(source, longestEdge: ceiling) else { return nil }
+            scaled = image
         }
 
-        guard sourceType == Self.tiffType else { return sourceStored }
-        // TIFF is converted to lossless PNG whatever the preset (FR-007-07 step 3).
-        guard let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
-              let png = Self.encode(image, type: Self.pngType, quality: nil)
-        else { return nil }
-        return ProcessedImage(data: png, uti: Self.pngType, sourceWidth: width, sourceHeight: height)
+        if sourceType == Self.jpegType {
+            guard let scaled else { return asReceived }
+            guard let jpeg = Self.encode(scaled, type: Self.jpegType, quality: Self.storedJPEGQuality) else { return nil }
+            return ProcessedImage(data: jpeg, uti: Self.jpegType, width: scaled.width, height: scaled.height)
+        }
+
+        // PNG or TIFF. Nothing to change: a PNG that was neither downscaled nor converted keeps its exact bytes
+        // (Original and Balanced, or an Efficient PNG that has transparency and is already small enough).
+        let opaqueToJPEG = scaled != nil || quality == .efficient
+        if sourceType == Self.pngType, !opaqueToJPEG { return asReceived }
+        // The decode is bounded: an image that was not downscaled is at or under the preset's ceiling, and the
+        // un-capped Original preset only reaches this line for a TIFF, which has to be decoded to become PNG anyway.
+        guard let image = scaled ?? CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+
+        if opaqueToJPEG, !Self.hasTransparency(image) {
+            guard let jpeg = Self.encode(image, type: Self.jpegType, quality: Self.storedJPEGQuality) else { return nil }
+            return ProcessedImage(data: jpeg, uti: Self.jpegType, width: image.width, height: image.height)
+        }
+        // A PNG whose pixels were not touched keeps its received bytes; anything decoded or resized is re-encoded.
+        if sourceType == Self.pngType, scaled == nil { return asReceived }
+        guard let png = Self.encode(image, type: Self.pngType, quality: nil) else { return nil }
+        return ProcessedImage(data: png, uti: Self.pngType, width: image.width, height: image.height)
     }
 
     /// A JPEG thumbnail whose longest edge is `edge`, or nil if the bytes cannot be decoded.

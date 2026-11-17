@@ -151,7 +151,7 @@ public actor IngestActor {
         representations[0] = PasteboardRepresentation(uti: image.uti, data: image.data)
         return .success(PreparedItem(
             representations: representations, members: limited.members,
-            pixelWidth: image.sourceWidth, pixelHeight: image.sourceHeight, warnings: limited.warnings))
+            pixelWidth: image.width, pixelHeight: image.height, warnings: limited.warnings))
     }
 
     /// Thumbnails are built right after commit so the grid never waits on a decode (FR-007-07). Unstructured and
