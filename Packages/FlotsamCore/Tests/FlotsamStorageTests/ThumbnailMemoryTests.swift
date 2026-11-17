@@ -132,4 +132,27 @@ import FlotsamBase
         // a 100x60 source is never upscaled
         #expect(TestImage.inspect(try Data(contentsOf: thumbPath(rig, good, 256)))?.width == 100)
     }
+
+    /// TASK-387 F2. Given an image item that was deleted while its warm-up had not written yet, when the warm-up runs,
+    /// then no thumbnail file exists afterwards (the delete's own cleanup already ran, so a write here is an orphan).
+    /// Goes red if `warmThumbnails` writes for an item whose row is gone. A live item still gets both files.
+    @Test("TASK-387 warmThumbnails writes nothing for a deleted item, both sizes for a live one")
+    func warmSkipsDeletedItem() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let db = rig.store.database
+        let png = TestImage.make(width: 1200, height: 800, format: .png)
+        let id = try await ingestWarmed(rig)
+        try #require(try await db.delete(ids: [id]).get() == [id])
+        #expect(!rig.store.exists(thumbPath(rig, id, 256)) && !rig.store.exists(thumbPath(rig, id, 512)))
+
+        await db.warmThumbnails(itemId: id, source: png)
+        #expect(!rig.store.exists(thumbPath(rig, id, 256)), "warm-up wrote a grid thumbnail for a deleted item")
+        #expect(!rig.store.exists(thumbPath(rig, id, 512)), "warm-up wrote a preview thumbnail for a deleted item")
+
+        let live = try await ingestWarmed(rig, key: "live")
+        try FileManager.default.removeItem(at: thumbPath(rig, live, 256))
+        await db.warmThumbnails(itemId: live, source: png)
+        #expect(rig.store.exists(thumbPath(rig, live, 256)))
+    }
 }

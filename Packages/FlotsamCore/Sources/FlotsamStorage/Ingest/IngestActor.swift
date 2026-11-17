@@ -158,7 +158,7 @@ public actor IngestActor {
     /// unawaited on purpose: a failure only means the thumbnail is built on first view instead.
     private func warmThumbnails(_ itemId: UUID, source: Data) {
         let database = self.database
-        Task.detached(priority: .utility) { await database.writeThumbnails(itemId: itemId, source: source) }
+        Task.detached(priority: .utility) { await database.warmThumbnails(itemId: itemId, source: source) }
     }
 
     /// Step 7: the image budget (FR-007-08). The item is already committed, so a failure here is logged and never

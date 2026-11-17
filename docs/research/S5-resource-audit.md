@@ -23,7 +23,7 @@ Truth S5, "Invisible on the machine": idle (no panel open, 10,000 items, 10 minu
 | Idle, no settle (launch sweeps at 15 s / 30 s), before | 0.894 % | 0.05 | 7.5 MB | 6.8 MB |
 | Idle, no settle, after | 0.404 % | 0.05 | 13.8 MB | 6.5 MB |
 | After 200 live image ingests, idle, before | 0.468 % | 0.04 | **63.7 MB** | 18.3 MB |
-| After 200 live image ingests + `releaseMemory()`, idle, after | 0.728 %* | 0.27* | **14.5 MB** | 9.1 MB |
+| After 200 live image ingests (disk-only thumbnails) and a `releaseMemory()` call, idle, after; the two changes are not isolated | 0.728 %* | 0.27* | **14.5 MB** | 9.1 MB |
 | Panel browsed 1,000 images, then closed, before | 0.422 % | 0.05 | 60.7 MB | 10.6 MB (47.4 MB while open) |
 | Same, with `releaseMemory()`, after | 0.405 % | 0.07 | 59.6 MB | 10.7 MB (47.4 MB while open) |
 
@@ -45,7 +45,9 @@ Poll prototype (45 s windows, except combo rows at 120 s; machine busy during co
 Reading:
 - **The one real win is ingest.** Warming thumbnails through the memory LRU filled it with data nobody was looking
   at: 200 image copies left 63.7 MB resident, over the 60 MB line. Ingest now writes thumbnail files only; the same
-  run idles at 14.5 MB.
+  run, with `releaseMemory()` also called, idles at 14.5 MB. The two were not measured separately: since
+  `releaseMemory()` showed no effect of its own in the panel scenario (below), the drop is attributed to the ingest
+  change by inference, not isolated.
 - The poll alone costs about 2.0 wake-ups/s of the 2.5/s budget and 0.015 % CPU. Timer tolerance and leeway do not
   reduce it; a 1 s poll would halve it but breaks the 0.6 s detection latency of FR-001-20.
 - Adding the 5 s tap watchdog and the 30 s re-resolve as separate timers measured 2.71 to 2.90/s: over budget.
@@ -75,13 +77,13 @@ M = measured here, S = spec-only (code does not exist yet or was not isolated).
 | 000 | Log sink writes | KEEP | S, only on events, no periodic flush |
 | 001 | FR-001-01 0.5 s poll, `changeCount` only | KEEP | M (prototype): 2.0 wake-ups/s, 0.015 % |
 | 001 | FR-001-19 Paused keeps the timer running | CHANGE | S: stop the timer while Paused (ticket) |
-| 001 | FR-001-20 / AC-001-01 / AC-001-16 budgets | CHANGE | edited to the S5 numbers in this commit |
+| 001 | FR-001-20 / AC-001-01 / AC-001-16 budgets | CHANGE | edited to the S5 numbers in this commit; the single wake-up source is target state (TASK-381) |
 | 002 | FR-002-02 30 s folder re-resolve | CHANGE | M (prototype): fold into the poll tick (ticket) |
 | 002 | FR-002-04 FSEvents 0.3 s latency | KEEP | S, event-driven, no idle cost |
 | 002 | FR-002-04 5 s polling fallback | KEEP | S, only after the stream fails; rare |
 | 002 | FR-002-14 pickup CPU | KEEP | S |
-| 003 | FR-003-05 50 newest rows held in memory | CHANGE | S: released when the last panel closes (edited here; wiring ticketed) |
-| 003 | FR-003-13 64 MB thumbnail LRU | CHANGE | M: emptied on panel close; ingest no longer fills it |
+| 003 | FR-003-05 50 newest rows held in memory | CHANGE | S: released when the last panel closes (stated in FRD-003's in-memory data list, not in FR-003-05's text; wiring TASK-383) |
+| 003 | FR-003-13 64 MB thumbnail LRU | CHANGE | M: emptied on panel close (target state, TASK-383); ingest no longer fills it |
 | 004 | Actions are single transactions, no timers | KEEP | S |
 | 005 | FR-005-11 typed-word buffer, tap on its own thread | KEEP | S, event-driven; verify when built |
 | 005 | FR-005-19 5 s tap watchdog | CHANGE | M (prototype): fold into the poll tick or make event-driven (ticket) |
@@ -103,4 +105,4 @@ M = measured here, S = spec-only (code does not exist yet or was not isolated).
   ingest writes thumbnail files only (`writeThumbnails`).
 - Spec, same commit: FRD-001 FR-001-20, AC-001-01, AC-001-16; FRD-003 FR-003-13 and the in-memory list;
   FRD-007 FR-007-07; ADR-0004 image-pipeline row.
-- Not wired: calling `releaseMemory()` on last-panel-close. The panel UI does not exist yet (ticketed).
+- Not wired: calling `releaseMemory()` on last-panel-close. The panel UI does not exist yet (TASK-383).
