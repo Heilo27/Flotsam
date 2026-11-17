@@ -31,6 +31,8 @@ final class AppContainer {
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
+    /// The Settings window (FR-008-03). Retained here; `actions.openSettings` holds it weakly.
+    private var settingsWindow: SettingsWindowController?
 
     init() {
         let presenter = ErrorPresenterAdapter(dataFolder: Self.dataFolder)
@@ -44,6 +46,32 @@ final class AppContainer {
         permissions = SystemPermissionProbe()
         loginItem = LoginItemController(service: SMLoginItemService())
         Task { await openDatabase() }
+    }
+
+    /// Builds the Settings window over this container's objects and points `actions.openSettings` at it, so every
+    /// "Open Settings" caller (the menu row, the Library, a Notice) takes the one path (FR-008-03). The window is
+    /// created at first use; the database it reads is asked for on each call, because it opens after launch.
+    func installSettings(showSetupGuide: @escaping @MainActor @Sendable () -> Void) {
+        let reporter = reporter
+        let presenter = presenter
+        let settings = settings
+        let permissions = permissions
+        let storage = SettingsStorage(database: { [weak self] in self?.database })
+        let loginItem = loginItem
+        let environment = SettingsEnvironment(
+            settings: settings, login: loginItem,
+            openLoginItems: { loginItem.openLoginItemsSettings() },
+            permissions: permissions, storage: storage, dataFolder: Self.dataFolder,
+            revealDataFolder: { NSWorkspace.shared.open(Self.dataFolder) },
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+            hud: { message in presenter.showHUD(message: message) },
+            showSetupGuide: showSetupGuide,
+            copyDiagnostics: {
+                await SettingsDiagnostics.copy(settings: settings, probe: permissions, storage: storage, reporter: reporter)
+            })
+        let window = SettingsWindowController(env: environment)
+        settingsWindow = window
+        actions.openSettings = { [weak window] in window?.openSettings() }
     }
 
     /// The data folder, also what the Fatal alert reveals. One definition so "reveal" always opens the folder the
@@ -141,7 +169,7 @@ struct AppActions {
     var saveClipboard: (@MainActor () -> Void)?
     /// FRD-006 Shelf.
     var toggleShelf: (@MainActor () -> Void)?
-    /// FR-008-03 Settings window; assigned in `SettingsHook.swift`.
+    /// FR-008-03 Settings window; assigned by `installSettings`. The menu row and the Library both call this one closure.
     var openSettings: (@MainActor () -> Void)?
     /// FRD-002 FR-002-12 "import screenshots from the last 30 days"; called from onboarding when the box is checked.
     var importRecentScreenshots: (@MainActor () -> Void)?

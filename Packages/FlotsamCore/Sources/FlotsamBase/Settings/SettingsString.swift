@@ -20,7 +20,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
 
     // Triggers and permissions
     case expandTriggers, permissionAccessibility, permissionInputMonitoring
-    case permissionGranted, permissionNotGranted
+    case permissionGranted, permissionNotGranted, permissionUnknown
     case permissionAccessibilityHelp, permissionInputMonitoringHelp, openSystemSettings
     case excludedApps, excludedAppsHelp
 
@@ -40,7 +40,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case captureMode, modeActive, modePaused, modeCurated, modeActiveHelp, modePausedHelp, modeCuratedHelp
     case usageItems, usageImages, usageDatabase, usageUnavailable
     case clearHistory, clearRange, rangeLastHour, rangeLast24Hours, rangeAllTime
-    case clearIncludeExempt, clearNothing, clearCount, clearDelete, clearDeleting, cancel
+    case clearIncludeExempt, clearNothing, clearCount, clearDelete, clearDeleting, clearDone, cancel
     case confirmShortenTitle, confirmShorten, confirmBudgetTitle, confirmBudget
     case revealDataFolder
 
