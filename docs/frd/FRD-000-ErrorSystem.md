@@ -28,7 +28,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 
 **Severity and recovery**
 - **FR-000-04** Four severities, fixed per code in §7:
-  - **Fatal** — Flotsam cannot run safely. Show a modal alert with the user message, a "Reveal Data Folder" button and a "Quit" button, then terminate. Closed list: `STO-IO-002`, `STO-DB-003`. No other code may be Fatal.
+  - **Fatal** — Flotsam cannot run safely. Show a modal alert with the user message, a "Reveal Data Folder" button and a "Quit" button, then terminate. If the data folder does not exist (`STO-IO-002`), "Reveal Data Folder" reveals its nearest existing ancestor and never creates the folder. Closed list: `STO-IO-002`, `STO-DB-003`. No other code may be Fatal.
   - **Error** — the user's action or a background save failed. Propagate to the caller, surface per FR-000-08, never crash.
   - **Warning** — the app is degraded but working (permission off, limit hit, fallback active). Log at notice, continue, surface per FR-000-08.
   - **Info** — an expected, policy-driven or benign skip (for example a concealed pasteboard item). Log only; never shown to the user and never recorded in the ring buffer (FR-000-13).
@@ -199,7 +199,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | HUD | transient floating label | top-centre of pointer's screen | message text, 2.5 s, no focus, VoiceOver announces |
 | Menu-bar badge dot | icon overlay | menu-bar icon | shown while unacknowledged Warning/Error Notices exist |
 | Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so the code follows the message on the same line); "Dismiss all" |
-| Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder", "Quit" |
+| Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder" (nearest existing ancestor if the folder is missing), "Quit" |
 | Copy Diagnostics button | button | Settings › About | builds and copies report; confirms with HUD "Diagnostics copied" |
 | Inline validation text | label | beside the invalid field | catalogue message, red text plus icon, role alert for VoiceOver |
 
