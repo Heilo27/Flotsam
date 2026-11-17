@@ -43,7 +43,7 @@ let package = Package(
             name: "FlotsamPaste",
             dependencies: ["FlotsamBase", "FlotsamStorage"]
         ),
-        .testTarget(name: "FlotsamPasteTests", dependencies: ["FlotsamPaste", "FlotsamBase"]),
+        .testTarget(name: "FlotsamPasteTests", dependencies: ["FlotsamPaste", "FlotsamBase", "FlotsamStorage"]),
         .target(
             name: "FlotsamCapture",
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload"]
