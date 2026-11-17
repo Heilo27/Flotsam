@@ -117,6 +117,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | ORG-VAL-005 | Error | Names must be 1 to 80 characters. | edit rejected inline |
 | ORG-LIM-001 | Error | An item can have up to 10 tags. | assignment rejected |
 | ORG-LIM-002 | Error | You can have up to 100 tags. | creation rejected |
+| ORG-LIM-003 | Error | That text is over the {limit} limit. Shorten it and try again. | edit rejected inline |
 
 **TRG** (FRD-005)
 | Code | Sev | User message | Recovery |

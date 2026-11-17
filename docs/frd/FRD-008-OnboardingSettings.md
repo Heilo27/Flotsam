@@ -1,0 +1,191 @@
+# FRD-008 — Onboarding, Permissions and Settings
+
+**Status:** Draft · 2026-11-16 · Constitution: [TRUTHS.md](../TRUTHS.md) · PRD: [PRD.md](../PRD.md) (feature F8) · Errors: [FRD-000](FRD-000-ErrorSystem.md)
+**Owns:** the settings registry (the single list of every setting key, type and default), settings persistence and validation, the Settings window and its panes, the permission model and its fallbacks, first-run onboarding, launch at login, the menu-bar item (icon states and menu), the ignored-apps list and its defaults, the screenshot-folder override picker, the About pane.
+**Does not own:** the behaviour behind any setting (each registry row names its owner FR); hotkey recording and conflict rules ([FRD-005](FRD-005-ShortcutsTriggers.md)); retention, budget and capture-mode semantics ([FRD-007](FRD-007-RetentionStorage.md)); Shelf behaviour ([FRD-006](FRD-006-Shelf.md)); the error catalogue and Notices mechanism ([FRD-000](FRD-000-ErrorSystem.md)).
+
+## Truth Test
+- Serves: P1 — "anything you copied or screenshotted in the past 30 days is back": capture only works once the pasteboard-access setting and the screenshot folder are right, so first-run must get the user there in a few clicks, and the Library must keep working (copy-only) when Accessibility is refused.
+- Supports: S4 — typed triggers and paste-back depend on Accessibility and Input Monitoring; this FRD is where those are requested, explained and recovered from. S3 — Shelf placement and enablement are set here.
+- Violates: none. There is no account or sign-in (A1), no licence screen, update check, usage statistics or crash reporting (A4); v1.0 makes zero network calls, and Sparkle auto-update is DEFER (see `docs/CUT.md`).
+- Verdict: KEEP. Settings are the cheapest place for scope to grow, so the registry in FR-008-01 is the gate: a key without an owner FR in another FRD, or without a row here, does not exist.
+
+## 1. Purpose
+Get a new user from "just installed" to "capturing and recoverable" without reading documentation, keep every preference in one typed registry so no two parts of the app disagree about a default, and degrade gracefully, never silently, when macOS withholds a permission.
+
+## 2. User Stories
+- As a new user, I am walked through the few permissions that matter, can skip any of them, and end up with a working Library either way.
+- As a user who refused Accessibility, I can still search and copy my history, and the app tells me exactly what is reduced and how to fix it.
+- As a user, I find every preference in one Settings window grouped as General, Shortcuts, Triggers, Privacy, Storage.
+- As a user, I tell Flotsam to ignore my password manager and any other app I name.
+- As a user, I choose whether Flotsam starts at login, and if macOS blocks it I see why.
+- As a user, I see at a glance from the menu-bar icon whether capture is on, paused or curated, and whether something needs attention.
+
+## 3. Functional Requirements
+
+**Registry and persistence**
+- **FR-008-01** Settings registry (single definition of every setting). The registry is one typed declaration in code (key, value type, default, validator, owner FR) and this table. A setting not in this table must not be added to the code, and no default value is written anywhere else (FR-000-05 applies to labels).
+
+  | Key | Type | Default | Owner of meaning | Pane |
+  |---|---|---|---|---|
+  | `capture.mode` | enum `active`, `paused`, `curated` | `active` | FRD-007 FR-007-12 | Storage; menu bar |
+  | `screenshots.enabled` | bool | true | FRD-002 FR-002-05 | General |
+  | `screenshots.folderOverride` | security-scoped bookmark, or none | none | FRD-002 FR-002-01 | General |
+  | `shelf.enabled` | bool | true | FRD-006 FR-006-01 | General |
+  | `shelf.placement` | enum `rightEdge`, `leftEdge`, `bottomEdge`, `menuBar` | `rightEdge` | FRD-006 FR-006-01 | General |
+  | `shelf.revealOnEdgeHover` | bool | false | FRD-006 FR-006-01 | General |
+  | `shortcuts.openLibrary` | chord (key code and modifiers) or none | ⌃⌘V | FRD-005 FR-005-01 | Shortcuts |
+  | `shortcuts.saveClipboard` | chord or none | none | FRD-005 FR-005-01 | Shortcuts |
+  | `shortcuts.toggleShelf` | chord or none | none | FRD-005 FR-005-01 | Shortcuts |
+  | `triggers.enabled` | bool | true | FRD-005 FR-005-10 | Triggers |
+  | `triggers.excludedApps` | list of bundle identifiers | list in FRD-005 FR-005-13 | FRD-005 FR-005-13 | Triggers |
+  | `privacy.ignoredApps` | list of bundle identifiers | list in FR-008-11 | FR-008-11 | Privacy |
+  | `storage.retention` | enum `d7`, `d30`, `d90`, `y1`, `forever` | `d30` | FRD-007 FR-007-09 | Storage |
+  | `storage.imageBudget` | enum `mib500`, `gib2`, `gib10`, `unlimited` | `gib2` | FRD-007 FR-007-08 | Storage |
+  | `storage.imageQuality` | enum `original`, `balanced`, `efficient` | `original` | FRD-007 FR-007-08 | Storage |
+  | `library.sort` | enum | `recent` | FRD-004 FR-004-12 | none (set in the Library) |
+  | `library.viewMode` | enum `list`, `grid` | `list` | FRD-003 FR-003-07 | none (set in the Library) |
+  | `library.panelSize` | size in points | 760 x 480 | FRD-003 FR-003-03 | none (set by resizing) |
+  | `onboarding.completed` | bool | false | FR-008-12 | none |
+  | `settings.lastPane` | enum of pane ids | `general` | FR-008-03 | none |
+
+  Not in the registry: launch at login (owned by macOS, FR-008-15), item data, the screenshot scan watermark and every other value stored in the database `meta` table (FRD-007 FR-007-03). The registry holds preferences only.
+- **FR-008-02** Persistence, validation, change delivery. Values live in the app's `UserDefaults` under the keys above. Every read goes through the typed registry accessor, never a raw string key. A stored value that fails its validator (wrong type, unknown enum case, unresolvable bookmark, unusable chord) is replaced by the default and `SET-DAT-001` is raised once per launch per key (Notice, no HUD). A change is delivered to subscribers as an event with the key and new value and takes effect immediately, without restart; the settings control that made the change is the only writer, and a failed apply (for example `SET-OS-001`) reverts the stored value and the control.
+
+**Settings window**
+- **FR-008-03** Window. One Settings window, opened by ⌘, from the Library, by "Settings…" in the menu-bar menu, and by any "Open Settings" action in a Notice or alert. It is a single window (reopening focuses it), with a sidebar or toolbar of panes in this order: General, Shortcuts, Triggers, Privacy, Storage, About. It reopens on the last pane (`settings.lastPane`). Closing it with ⌘W or Escape discards nothing: every control applies at once; there is no Apply or Save button. All controls are reachable by keyboard, have VoiceOver labels from the catalogue, and the window follows the system appearance. Each pane's controls are exactly those listed in FR-008-04 to -09.
+- **FR-008-04** General pane. Controls in order: Launch at Login (switch, FR-008-15); Pick up screenshots (switch, `screenshots.enabled`); Screenshot folder (shows the effective folder name; "Choose…" and "Use System Default", FR-008-10); Shelf (switch `shelf.enabled`; placement popup `shelf.placement`; "Reveal when the pointer rests at the edge" switch `shelf.revealOnEdgeHover`, disabled when the Shelf is off or placement is Menu Bar); "Show Setup Guide…" (reopens onboarding, FR-008-12).
+- **FR-008-05** Shortcuts pane. One row per registry shortcut (Open Library, Save Clipboard, Toggle Shelf): label, the recorder control and a clear button. Recording, validation, conflict detection and the unbound state are FRD-005's (FR-005-01 to -04); this pane renders those rows from the FRD-005 registry and adds nothing. A footnote states that per-item shortcuts and triggers are set from the Library (⌘K).
+- **FR-008-06** Triggers pane. Controls: "Expand typed triggers" switch (`triggers.enabled`); the permission status rows for Accessibility and Input Monitoring (FR-008-13) with "Open System Settings" buttons; the excluded-apps list (`triggers.excludedApps`) with add (application picker as in FR-008-11), remove, and "Reset to Defaults". While `triggers.enabled` is on but a permission is missing, the pane shows the matching `SET-PRM-001` or `SET-PRM-002` message inline. The behaviour of triggers is FRD-005's.
+- **FR-008-07** Privacy pane. Controls: the ignored-apps list (`privacy.ignoredApps`, FR-008-11); a read-only statement of what is never stored (concealed, transient and auto-generated pasteboard types, FRD-001 FR-001-04); the "Paste from Other Apps" status and guidance row (FR-008-13); a one-line statement that Flotsam makes no network connections. The pane has no control that sends anything anywhere.
+- **FR-008-08** Storage pane. Layout only; every control, default and behaviour is FRD-007's (FR-007-08, -09, -11, -12 and §8 of that FRD): Keep history for; Image storage limit; Image quality; Capture mode; usage labels; Clear History…; Reveal Data Folder.
+- **FR-008-09** About pane. App name, version and build, the licence line (MIT) with a "View Licence" button that opens the bundled licence text in a sheet, a "Copy Diagnostics" button (FRD-000 FR-000-14, HUD "Diagnostics copied"), and "Reveal Data Folder". There is no update check, no "Check for Updates" button and no link that Flotsam opens by itself; a "Project Page" link is allowed only as a user-clicked button that opens the default browser.
+- **FR-008-10** Screenshot folder override. "Choose…" opens an `NSOpenPanel` limited to folders. The chosen folder is validated (exists, is a directory, readable and listable); failure → `SET-VAL-001` inline and the previous value stays. On success a security-scoped bookmark is stored in `screenshots.folderOverride` and the watcher restarts per FRD-002 FR-002-01. "Use System Default" clears the override. Reading a protected folder (Desktop, Documents, Downloads) may cause macOS to show its own folder-access prompt; the app triggers that prompt only when the user enables pickup, chooses a folder, or reaches the onboarding screenshots step, never at launch. If access is refused, pickup is paused and `SSP-IO-003` is shown by FRD-002; this pane shows the same message beside the folder name with a button to System Settings › Privacy & Security › Files and Folders.
+
+**Privacy: ignored apps**
+- **FR-008-11** Ignored apps (single definition of the list and its defaults). `privacy.ignoredApps` is a list of application bundle identifiers whose copies are never stored (FRD-001 FR-001-04 gate 4). Defaults: `com.apple.keychainaccess`, `com.apple.Passwords`, `com.1password.1password`, `com.agilebits.onepassword7`, `com.bitwarden.desktop`, `org.keepassxc.keepassxc`. The list shows each app's icon and name when installed, otherwise the bundle identifier. "Add…" opens an `NSOpenPanel` limited to `.app` bundles (starting in /Applications) and reads the bundle identifier; a bundle without one, or a non-application → `SET-VAL-002`; duplicates are ignored silently. Remove deletes the row; "Reset to Defaults" restores the list above after a confirmation (`settings.confirm.resetIgnored`, "Replace your list with the default apps?"). Changes take effect on the next pasteboard change. An item already in history is never deleted by adding its source app to the list; that is the user's explicit delete or Clear History (FRD-007).
+
+**Onboarding**
+- **FR-008-12** First-run onboarding. Shown automatically in its own window on first launch (`onboarding.completed` false) and from General › "Show Setup Guide…". Every step is skippable, nothing is requested before its step, and each step states in one sentence what the permission is for and what stops working without it. Steps in order: (1) Welcome: one sentence of what Flotsam does and the statement that it never sends anything off the Mac; (2) Clipboard access: on macOS versions that gate pasteboard reads (FRD-001 FR-001-18) it shows the "Paste from Other Apps" instruction with a button to System Settings and a live status; otherwise the step is skipped; (3) Paste for you (Accessibility, FR-008-13): "Allow" calls the system prompt for `AXIsProcessTrusted`; "Not Now" continues with the copy-only fallback of FR-008-14; (4) Typed triggers (Input Monitoring): offered, explained as optional, with "Not Now" as the visible default; (5) Screenshots: a switch for pickup (`screenshots.enabled`, default on), the effective folder, a "Choose Folder…" button (FR-008-10) and a checked box "Import screenshots from the last 30 days" (FRD-002 FR-002-12), the first folder read happens here; (6) Hotkey: shows the Open Library chord with the recorder (FRD-005) and its default; (7) Launch at login: switch, default on, applied by FR-008-15 only when the user continues; (8) Done: shows how to open the Library and where the menu-bar icon is, and offers to open it. "Back" and "Skip" are available on each step; closing the window at any point counts as finished and sets `onboarding.completed`, except that closing before step 8 leaves nothing half-applied (each step applies only what its own control set). Onboarding never blocks capture: capture is on from launch under default settings.
+
+**Permissions**
+- **FR-008-13 Permission model** (single definition). Flotsam asks for exactly these, in this order of importance:
+
+  | Permission | Needed for | Detected by | Requested | If missing |
+  |---|---|---|---|---|
+  | Paste from Other Apps (macOS 15.4+, gated pasteboard reads) | capture | FRD-001 FR-001-18 (`CAP-PRM-001`) | never programmatically; guidance only | capture suspended, warning dot, Notice |
+  | Accessibility | paste-back, typed-trigger expansion | `AXIsProcessTrusted()` | onboarding step 3, first paste attempt, first trigger saved | copy-only fallback below |
+  | Input Monitoring | typed-trigger detection | `CGPreflightListenEventAccess()` | when the first trigger is saved or `triggers.enabled` is turned on | triggers inert, `SET-PRM-002` |
+  | Folder access (Desktop, Documents, Downloads, other) | screenshot pickup | listing the folder | FR-008-10 | pickup paused, `SSP-IO-003` |
+
+  Rules: (a) no permission prompt appears at launch outside onboarding; (b) permission state is read fresh on every use and on app activation, never cached across launches; while the Settings window is visible it is re-read every 2 s so the status rows update after the user returns from System Settings; (c) every permission row in Settings shows state (Granted, Not granted), what it enables, and a button that opens the matching System Settings pane; (d) a missing permission never disables unrelated features.
+- **FR-008-14** Accessibility-denied fallback (copy-only mode). When Accessibility is not granted: the Library still opens, searches, previews and edits; choosing an item (Return, double-click) writes it to the system pasteboard with the app's own-write marker (FRD-001 FR-001-03), closes the Library, shows the HUD `SET-PRM-001` ("Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V."), and does not synthesise a keystroke; the Library footer shows the copy-only hint (`library.footer.copyOnly`, FRD-003) with an "Enable" button that opens the Accessibility pane of System Settings; typed triggers are inert (FRD-005 FR-005-10); global hotkeys that use the Carbon hotkey API keep working. Granting Accessibility takes effect without relaunch, detected by FR-008-13 rule (b). The HUD is shown at most once per paste attempt and repeated attempts keep copying.
+- **FR-008-15** Launch at login. Implemented with `SMAppService.mainApp`. The switch state is read from `SMAppService.mainApp.status` every time the General pane appears, never from a stored copy; `.enabled` is on, `.requiresApproval` is shown as on with the caption "Waiting for approval in System Settings" and a button to Login Items, anything else is off. Toggling calls `register()` or `unregister()`; failure → `SET-OS-001` (HUD, toggle reverts). It is never registered silently: only the General switch or the onboarding switch (default on, applied when the user continues) can register it. A Flotsam build that is not in /Applications may be refused by the system; that outcome is `SET-OS-001`.
+
+**Menu bar**
+- **FR-008-16** Menu-bar item. Flotsam is a menu-bar agent (no Dock icon, no main window). The status item shows a template icon in one of four states, each distinguishable without colour (distinct glyph shape plus the accessibility label): active; paused (capture mode `paused`); curated (capture mode `curated`); and a warning dot overlay while unacknowledged Warning or Error Notices exist (FRD-000 §9), combinable with any mode. Clicking the icon opens its menu; dropping a payload on it follows FRD-006 FR-006-03. Menu contents in order: Open Library (shows the current chord); Save Clipboard (chord); Toggle Shelf (chord, hidden when `shelf.enabled` is off); separator; Pause Capture or Resume Capture (toggles `capture.mode` between `paused` and `active`; when the mode is `curated` the item reads "Resume Capture" and sets `active`); Notices submenu (FRD-000 §9); separator; Settings… (⌘,); Show Setup Guide…; separator; Quit Flotsam (⌘Q). A menu item that has a chord shows the chord live, updating when it is changed in Settings. The menu is built from the registry and the capture mode at the time it opens, so it is never stale.
+
+**Quality**
+- **FR-008-17** Accessibility and copy. Every control is operable by keyboard alone and labelled for VoiceOver; status is never conveyed by colour alone; text sizes follow the system; all strings are catalogue keys (FRD-000 FR-000-05). Control labels use sentence case and plain words (for example "Pick up screenshots", not "Enable screenshot monitoring"). No setting appears twice in the UI except Capture mode (Storage pane and menu bar, both writing `capture.mode`) and Open Library's chord (Shortcuts pane and onboarding step 6, both writing `shortcuts.openLibrary`).
+- **FR-008-18** Zero network. This FRD adds no network code of any kind. About, onboarding and Settings contain no remote content, no web view and no automatic link fetch; the only outbound action is a user click on a link that hands a URL to the default browser. A project check (grep for `URLSession`, `NWConnection`, `WKWebView`, Sparkle in the target) is part of the release checklist (A4).
+
+## 4. Data Requirements
+- Persisted: the registry values above in `UserDefaults` (no database, no iCloud key-value store); onboarding completion; the last settings pane. A bookmark is persisted for the folder override only.
+- Not persisted: permission states (read live), the Notices list (FRD-000 FR-000-13), launch-at-login (owned by macOS).
+- Export, import or sync of settings: none.
+
+## 5. Business Rules
+- One key, one owner: the registry row names the FR that defines meaning and default; this FRD defines where and how it is shown. Changing a default means changing the registry row and the owner FR in the same commit.
+- A permission can only be requested from a step or action that explains it first; the app never requests a permission to "see what happens".
+- Settings never make a destructive change without a confirmation. The destructive controls (Clear History, shortening retention, reset ignored apps) live in FRD-007 and FR-008-11 and always confirm.
+- Defaults are chosen so that the app is useful without opening Settings: capture on, 30 days, screenshots on, Shelf on, Open Library on ⌃⌘V.
+
+## 6. Error States (codes in FRD-000 §7)
+| Condition | Code | Behaviour |
+|---|---|---|
+| Accessibility not granted when pasting | SET-PRM-001 | HUD; item copied; copy-only footer (FR-008-14) |
+| Input Monitoring not granted with triggers on | SET-PRM-002 | triggers inert; Notice and inline text (FR-008-06) |
+| Launch at Login register or unregister failed | SET-OS-001 | HUD; toggle reverts (FR-008-15) |
+| Screenshot folder unusable | SET-VAL-001 | inline text; previous value kept (FR-008-10) |
+| Chosen app cannot be added to a list | SET-VAL-002 | inline text; list unchanged (FR-008-11) |
+| Stored setting invalid | SET-DAT-001 | reset to default; one Notice per key per launch (FR-008-02) |
+| Pasteboard reads blocked | CAP-PRM-001 | defined in FRD-001; shown here as guidance (FR-008-13, FR-008-12 step 2) |
+| Screenshot folder access refused | SSP-IO-003 | defined in FRD-002; shown beside the folder (FR-008-10) |
+
+## 7. Acceptance Criteria
+- **AC-008-01** (FR-008-01) Given the code, then a unit test enumerates the registry and asserts its keys, types and defaults equal the table in FR-008-01, and a source scan finds no `UserDefaults` access outside the registry accessor and no literal default repeated elsewhere.
+- **AC-008-02** (FR-008-02) Given `storage.retention` is written as an unknown string, then at next read the value is `d30` and exactly one `SET-DAT-001` Notice exists; given an unresolvable folder bookmark, then `screenshots.folderOverride` reads none; given a setting is changed, then its subscribers receive the new value without relaunch.
+- **AC-008-03** (FR-008-03) Given Settings is opened with ⌘, then a single window shows panes in the order General, Shortcuts, Triggers, Privacy, Storage, About; opening it again focuses the same window; it reopens on the pane last used; every control is reachable with Tab and Space and has a VoiceOver label.
+- **AC-008-04** (FR-008-04 to -09) Given each pane, then its controls equal the lists in FR-008-04 to -09 and nothing else (checked against the UI Inventory); the About pane contains no update check; "Copy Diagnostics" copies a report and Flotsam does not capture that copy (FRD-000 AC-000-06).
+- **AC-008-05** (FR-008-10) Given a folder without read access chosen as the override, then `SET-VAL-001` appears inline and the previous folder remains; given a valid folder, then pickup watches it and "Use System Default" restores the macOS location; given a fresh install, then no folder-access prompt appears before the onboarding screenshots step.
+- **AC-008-06** (FR-008-11) Given a fresh install, then the ignored list equals the six defaults; given 1Password is the frontmost app and the user copies, then nothing is stored (`CAP-POL-002`); given a non-app file is added, then `SET-VAL-002` appears and the list is unchanged; given "Reset to Defaults" is cancelled, then the list is unchanged.
+- **AC-008-07** (FR-008-12) Given a first launch, then onboarding opens before any permission prompt appears, each prompt appears only on its own step, every step has Skip, skipping all eight steps leaves Flotsam capturing (a copied sentence appears in the Library), and quitting midway never re-shows steps already finished; "Show Setup Guide…" reopens it.
+- **AC-008-08** (FR-008-13) Given the permission table, then with each permission revoked in System Settings the corresponding row shows Not granted within 2 s of returning to Settings, no prompt appears at launch, and unrelated features keep working.
+- **AC-008-09** (FR-008-14) Given Accessibility is not granted, when the user chooses an item, then the item is on the pasteboard, no keystroke was synthesised, the HUD text is the `SET-PRM-001` message, the Library footer shows the copy-only hint with an Enable button, and that copy is not duplicated in history; given Accessibility is then granted, the next choice pastes without relaunch.
+- **AC-008-10** (FR-008-15) Given the switch is turned on, then `SMAppService.mainApp.status` is `.enabled` or `.requiresApproval` and the control matches it; given registration fails, then the toggle reverts and `SET-OS-001` shows; given the user removes the login item in System Settings, then the control is off the next time the pane appears.
+- **AC-008-11** (FR-008-16) Given each of the three modes and an unacknowledged Warning Notice, then the icon differs in glyph shape for each mode and shows the dot overlay; the menu lists the items of FR-008-16 in order with live chords; Pause Capture switches to Resume Capture and back; with the Shelf disabled, Toggle Shelf is absent.
+- **AC-008-12** (FR-008-17) Given a VoiceOver pass over all panes, onboarding and the menu, then every control is announced with a role and label and no state is conveyed by colour alone.
+- **AC-008-13** (FR-008-18) Given the release checklist, then a scan of the app target finds no `URLSession`, `NWConnection`, `WKWebView` or Sparkle, and a packet capture during a 10-minute session that opens every pane records zero outbound connections from the app.
+
+## 8. UI Inventory
+**Settings window** (⌘,; toolbar panes: General, Shortcuts, Triggers, Privacy, Storage, About)
+| Element | Type | Pane | Behavior |
+|---|---|---|---|
+| Launch at Login | switch | General | FR-008-15; caption when approval pending |
+| Pick up screenshots | switch | General | `screenshots.enabled` |
+| Screenshot folder | label, "Choose…" button, "Use System Default" button, inline error | General | FR-008-10 |
+| Shelf | switch | General | `shelf.enabled` |
+| Shelf placement | popup (Right Edge, Left Edge, Bottom Edge, Menu Bar) | General | `shelf.placement` |
+| Reveal at edge | switch | General | `shelf.revealOnEdgeHover` |
+| Show Setup Guide… | button | General | reopens onboarding |
+| Shortcut rows (Open Library, Save Clipboard, Toggle Shelf) | label, recorder, clear button, inline conflict text | Shortcuts | FRD-005 |
+| Expand typed triggers | switch | Triggers | `triggers.enabled` |
+| Accessibility and Input Monitoring status | two status rows with "Open System Settings" buttons | Triggers | FR-008-13 |
+| Excluded apps | list, "+", "-", Reset to Defaults | Triggers | `triggers.excludedApps` |
+| Ignored apps | list with icons, "+", "-", Reset to Defaults, inline error | Privacy | FR-008-11 |
+| Paste from Other Apps | status row with guidance and System Settings button (macOS 15.4+ only) | Privacy | FRD-001 FR-001-18 |
+| Never-stored statement and no-network statement | static text | Privacy | FR-008-07 |
+| Storage controls | as FRD-007 §8 | Storage | FRD-007 |
+| Version and build | label | About | FR-008-09 |
+| View Licence | button, sheet | About | bundled MIT text |
+| Copy Diagnostics | button | About | FRD-000 FR-000-14 |
+| Reveal Data Folder | button | About, Storage | opens Finder |
+| Project Page | link button | About | opens default browser on click only |
+
+**Onboarding window** (steps 1 to 8, FR-008-12)
+| Element | Type | Where | Behavior |
+|---|---|---|---|
+| Step title and one-sentence purpose | text | each step | what it is for, what stops without it |
+| Continue / Back / Skip | buttons | each step | navigation; Skip leaves the step's setting unchanged |
+| Paste from Other Apps instruction and status | text, button, live status | step 2 | 15.4+ only |
+| Allow Accessibility / Not Now | buttons | step 3 | system prompt or copy-only |
+| Allow Input Monitoring / Not Now | buttons | step 4 | system prompt or triggers off |
+| Pickup switch, folder label, Choose Folder…, import checkbox | controls | step 5 | FR-008-10, FRD-002 FR-002-12 |
+| Hotkey recorder | recorder | step 6 | `shortcuts.openLibrary` |
+| Launch at login switch | switch | step 7 | FR-008-15 |
+| Open Library | button | step 8 | closes onboarding, opens the Library |
+| Progress indicator | dots | footer | position in the 8 steps |
+
+**Menu-bar item**
+| Element | Type | Where | Behavior |
+|---|---|---|---|
+| Status icon (active, paused, curated, warning dot) | template image | menu bar | FR-008-16 |
+| Open Library, Save Clipboard, Toggle Shelf | menu items with chords | menu | FRD-003, FRD-005, FRD-006 |
+| Pause Capture / Resume Capture | menu item | menu | toggles `capture.mode` |
+| Notices | submenu | menu | FRD-000 §9 |
+| Settings…, Show Setup Guide…, Quit Flotsam | menu items | menu | ⌘, and ⌘Q |
+
+**Other**: HUD for `SET-PRM-001`, `SET-OS-001` (FRD-000); confirmation alert `settings.confirm.resetIgnored`; Copy-only footer hint and Enable button (FRD-003, text from FR-008-14).
+
+## 9. Assumptions and open items (flagged for Friday)
+1. Flotsam is a menu-bar agent app with no Dock icon (`LSUIElement`); the PRD says "menu-bar icon" and never mentions a Dock presence. If a Dock icon is wanted, FR-008-16 changes.
+2. Default ignored-apps list (FR-008-11) uses bundle identifiers recalled from memory, not verified against installed apps (1Password 7 and 8, Bitwarden, KeePassXC, Keychain Access, Passwords). They must be checked against real installs before release; a wrong identifier silently fails to protect that app.
+3. Launch at login is on by default in onboarding step 7 (applied only on Continue). The PRD lists "launch at login" in first-run without a default; a clipboard history that is not running loses history, so the default favours P1. Ryan may prefer off.
+4. Onboarding closing early counts as complete (no nagging). Re-offer exists via General › "Show Setup Guide…".
+5. Settings live in `UserDefaults`, not the database, so a damaged database (`STO-DB-002`) never loses preferences.
+6. Pane order and the "no Apply button" model follow macOS convention; no other app's Settings was consulted or copied.
+7. The Carbon-based hotkey registration keeps working without Accessibility; this is the architect's reading of the platform and must be verified on macOS 14, 15 and 26 before FR-008-14's "hotkeys keep working" line is relied on.
+8. `TASTE.md` was not applied to visual choices; this FRD specifies behaviour and inventory, and visual design is Phase 6.
+
+## 10. Out of Scope
+Accounts (A1), licence or activation screens (A4); update checking and Sparkle (DEFER, `docs/CUT.md`); telemetry or usage statistics consent screens (A4: there is nothing to consent to); settings sync, import or export; per-app capture rules beyond ignored apps; theming, accent colour or menu-bar icon customisation; a Dock icon or main window; localisation beyond English (strings are catalogue-ready, FRD-000 FR-000-05).
