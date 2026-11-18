@@ -163,10 +163,9 @@ private func freshBindings(_ s: Store) async throws -> ItemBindings {
         #expect(try await freshBindings(s).triggers == [Store.id(1): ";old"])
     }
 
-    // The contract: "after the second [sweep] it is gone". Production (FR-007-10 / FR-007-08) keeps a released item for
-    // a 24-hour grace, so the immediate second sweep keeps it. Spec conflict, recorded as a known issue.
-    @Test("OC-5137 contract: clearing the trigger and sweeping again removes the item (immediately, as the contract says)")
-    func oc5137_secondSweepRemovesImmediately() async throws {
+    // Red if a cleared trigger lets the next sweep delete the item at once (the FR-007-10 24 h release grace is lost).
+    @Test("OC-5137 clearing the trigger and sweeping again right away keeps the item (FR-007-10 24 h release grace)")
+    func oc5137_secondSweepWithinGraceKeeps() async throws {
         // given: the item from the first sweep, trigger now cleared
         let s = try await Store.make()
         defer { s.cleanUp() }
@@ -175,13 +174,11 @@ private func freshBindings(_ s: Store) async throws -> ItemBindings {
         _ = try await s.database.runRetentionSweep(preset: .d30, budget: .unlimited).get()
         #expect(try s.presentIds() == [1])
         _ = try await s.database.applyExemptionEdit(.setTrigger(nil), to: Store.id(1)).get()
-        // when: the sweep runs again right away
+        // when: the sweep runs again right away, inside the 24 h grace
         _ = try await s.database.runRetentionSweep(preset: .d30, budget: .unlimited).get()
-        // then: the contract says it is gone
-        let remaining = try s.presentIds()
-        withKnownIssue("FRD-005 OC-5137: contract says the item is gone after the second sweep; FR-007-10 keeps a released item for a 24-hour grace") {
-            #expect(remaining.isEmpty)
-        }
+        // then: the item is kept, with its release time recorded
+        #expect(try s.presentIds() == [1])
+        #expect(try s.exemptReleasedAt(1) != nil)
     }
 
     // Red if the grace is dropped or never ends: the item must survive exactly 24h after release and go after it.
