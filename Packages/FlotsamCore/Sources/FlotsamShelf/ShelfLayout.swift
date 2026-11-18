@@ -39,6 +39,9 @@ public enum ShelfLayout {
     /// A text card shows the first three lines, at most 120 characters (FR-006-07).
     public static let cardTextLineLimit = 3
     public static let cardTextCharacterLimit = 120
+    /// How much stored text is read for a card: far more than three lines of 120 characters need, so text that is
+    /// mostly blank lines still yields its three lines, and a huge text item is never read in full.
+    public static let cardTextReadLimit = 1_000
     /// Each section lists at most this many cards (FR-006-06).
     public static let sectionLimit = 20
 
