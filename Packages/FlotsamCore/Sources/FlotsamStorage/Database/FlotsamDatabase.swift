@@ -69,7 +69,8 @@ public final class FlotsamDatabase: Sendable {
     }
 
     private enum Attempt {
-        case opened(DatabasePool)
+        /// `migratedThisLaunch`: a migration ran (or the file was new) in this very launch (FR-007-17 expiry).
+        case opened(DatabasePool, migratedThisLaunch: Bool)
         case damaged
         case failed(FlotsamError)
     }
@@ -87,8 +88,9 @@ public final class FlotsamDatabase: Sendable {
         // itself reported damaged is a real fault, not something another quarantine can fix.
         for attemptNumber in 0..<2 {
             switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations) {
-            case .opened(let pool):
-                layout.restrictDatabaseFilePermissions()
+            case .opened(let pool, let migratedThisLaunch):
+                // FR-007-17 / FR-007-13: a clean open on a launch that did not migrate ends the life of old plaintext copies.
+                if !migratedThisLaunch { layout.expirePlaintextCopies(fileSystem: fileSystem, now: clock.now()) }
                 return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink))
             case .failed(let error):
                 return .failure(error)
@@ -118,7 +120,9 @@ public final class FlotsamDatabase: Sendable {
                 case .version: break
                 }
             }
+            if case .failure(let error) = layout.prepareDatabaseFiles(fileSystem: fileSystem) { return .failed(error) }
             let pool = try DatabasePool(path: layout.databaseURL.path, configuration: configuration())
+            let versionBefore = try pool.read { try MigrationRunner.currentVersion($0) }
             try ensureIncrementalVacuum(pool)
             let migrated = try MigrationRunner.migrate(pool, migrations: migrations) { fromVersion in
                 existed
@@ -130,7 +134,8 @@ public final class FlotsamDatabase: Sendable {
             // failure here is a migration bug (or the open itself writing a bad file), not user damage. It still takes
             // the damaged path, because a database that fails its integrity check must not stay live, but the file has
             // been written to by now: that quarantined copy is not the bytes the user had.
-            return try pool.read { try integrityCheckPasses($0) } ? .opened(pool) : .damaged
+            let versionAfter = try pool.read { try MigrationRunner.currentVersion($0) }
+            return try pool.read { try integrityCheckPasses($0) } ? .opened(pool, migratedThisLaunch: versionAfter != versionBefore) : .damaged
         } catch {
             return isDamage(error) ? .damaged : .failed(mapped(error))
         }
@@ -216,10 +221,11 @@ public final class FlotsamDatabase: Sendable {
 
     // MARK: Damaged database
 
-    /// Moves `flotsam.sqlite*` and `blobs/` into `corrupt-<timestamp>/` and never deletes them (FR-007-13).
+    /// Moves `flotsam.sqlite*` and `blobs/` into `corrupt-<timestamp>/` (FR-007-13). Nothing here deletes them: they are
+    /// kept for recovery until the window in `DataFolder.quarantineRetentionMillis` passes or Clear History runs.
     private static func quarantine(layout: DataFolder, fileSystem: any FileSystemPort) -> Bool {
         let stamp = Int64((Date().timeIntervalSince1970 * 1000).rounded())
-        let destination = layout.root.appendingPathComponent("corrupt-\(stamp)")
+        let destination = layout.quarantineURL(stamp: stamp)
         guard case .success = fileSystem.createDirectory(at: destination, permissions: DataFolder.folderPermissions)
         else { return false }
         for url in layout.databaseFileURLs + [layout.blobsURL] where fileSystem.fileExists(at: url) {
@@ -233,7 +239,7 @@ public final class FlotsamDatabase: Sendable {
     // MARK: Migration backup
 
     /// FR-007-17: copy the database aside before migrating an existing one, keeping only the latest copy. Pruning is
-    /// limited to files Flotsam created (`DataFolder.isPreMigrationCopyFile`); the folder is user-visible, so any other
+    /// limited to regular files Flotsam created (`DataFolder.preMigrationCopyInfo`); the folder is user-visible, so any other
     /// file in it is left alone. Stale `-wal`/`-shm` files beside the new copy's name are pruned too, because SQLite
     /// would replay them into the fresh copy when it is opened.
     private static func preMigrationCopy(
@@ -248,7 +254,15 @@ public final class FlotsamDatabase: Sendable {
         if case .failure = fileSystem.createDirectory(at: backupFolder, permissions: DataFolder.folderPermissions) {
             return .failure(FlotsamError(.stoDb003, "Pre-migration folder could not be created"))
         }
-        let name = DataFolder.preMigrationCopyName(fromVersion: fromVersion)
+        // A regular file on the name is a stale copy: replaced. Anything else (a folder, a link) is the user's: never
+        // deleted, never an error; the copy goes under the next free `flotsam-v<from>-<n>.sqlite` instead, a name the
+        // prune and the purge still recognise.
+        var name = DataFolder.preMigrationCopyName(fromVersion: fromVersion)
+        var alternate = 0
+        while let occupant = fileSystem.fileInfo(at: backupFolder.appendingPathComponent(name)), occupant.kind != .regular {
+            alternate += 1
+            name = DataFolder.preMigrationCopyName(fromVersion: fromVersion, alternate: alternate)
+        }
         let destination = backupFolder.appendingPathComponent(name)
         if fileSystem.fileExists(at: destination) { _ = fileSystem.removeItem(at: destination) }
         guard case .success = fileSystem.copyItem(at: layout.databaseURL, to: destination) else {
@@ -256,7 +270,8 @@ public final class FlotsamDatabase: Sendable {
         }
         if case .success(let others) = fileSystem.contentsOfDirectory(at: backupFolder) {
             for url in others
-            where url.lastPathComponent != name && DataFolder.isPreMigrationCopyFile(named: url.lastPathComponent) {
+            where url.lastPathComponent != name
+                && DataFolder.preMigrationCopyInfo(at: url, fileSystem: fileSystem) != nil {
                 _ = fileSystem.removeItem(at: url)
             }
         }
