@@ -41,6 +41,27 @@ extension DataFolder {
         }
     }
 
+    /// Written into a quarantine folder when moving the database aside failed partway (FR-007-13), because that launch
+    /// fails closed before it can raise `STO-DB-002`. The next launch that opens cleanly raises the notice and removes it.
+    static let noticePendingMarkerName = "notice-pending"
+
+    func markNoticePending(in quarantine: URL, fileSystem: any FileSystemPort) {
+        _ = fileSystem.writeFile(Data(), to: quarantine.appendingPathComponent(Self.noticePendingMarkerName), permissions: 0o600)
+    }
+
+    /// True when a quarantine folder carries the marker; the markers are removed so the notice is raised once. A marker
+    /// that cannot be removed is still reported, and is retried at the next launch.
+    func consumePendingNotices(fileSystem: any FileSystemPort) -> Bool {
+        var found = false
+        for folder in existingQuarantineFolders(fileSystem: fileSystem) {
+            let marker = folder.appendingPathComponent(Self.noticePendingMarkerName)
+            guard fileSystem.fileInfo(at: marker)?.kind == .regular else { continue }
+            found = true
+            _ = fileSystem.removeItem(at: marker)
+        }
+        return found
+    }
+
     /// Clear History: removes every pre-migration copy and every quarantine, whatever the range. A copy made at time T
     /// holds the items as of T, and an item the user clears from "the last hour" may have been in a copy made days ago
     /// (a re-copy only bumps `lastCopiedAt`), so no range can be proven safe to skip. Files in `pre-migration/` that
