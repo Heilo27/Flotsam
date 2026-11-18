@@ -377,3 +377,30 @@ Clipboard: restored after the run.
 
 ## 2026-11-17: Merge origin/main into `s2/frd006` @ 4c1e70b (from `origin/main` 86fc162)
 - Clean merge, no conflicts. `swift test` 295 tests in 46 suites passed (8 known issues, 0 failures); `bin/check-architecture.sh` pass.
+
+## 2026-11-17: FRD-006 C2a slice 4, drag-out planner on `s2/frd006` @ 7b497ac (on top of 4c1e70b)
+
+**Verdict: pushed, suite green (912 tests across all targets, 0 failures, no flake), architecture check passes.** Drag half of OC-6062 done; the AppKit drag source is C2b.
+
+**What it is.** `ShelfDragPlanner` (pure, no AppKit): from the dragged cards and their loaded content it returns the drag-pasteboard items in on-screen order (text plus stored representations, an image payload for `NSImage`, one file URL per existing bundle member), the contributing cards for `pasteCount` accounting, and `LIB-DAT-001` when nothing is left to drag. `ShelfModel.covered(by:)` is now public and is the one rule for which cards an action covers (Pin, Delete, drag).
+
+**OCs covered:** 6062 (drag half), 6067, 6068, 6069, 6072, 6073, 6075, 6076, 6078, 6079, 6080. Not covered here (app layer, C2b): 6070, 6071 (copy-only operation), 6074 (drag image badge; `cardCount` supplies the number), 6077 (drag threshold), 6081, 6082 (the `SHF-OS-001` HUD for an aborted session), and the changeCount and no-own-write checks (AC-006-10), which need a real pasteboard.
+
+**Tests:** 19 new (15 planner, 4 selection), Shelf suite only; 19 mutants run over them, all killed.
+
+**Rule 9 extractions (no behavior change; existing Paste tests are the guard)**
+- Base: `ItemKind.isTextBearing`, `isFileBacked`, `isImage`, and `PasteboardUTI` (`plainText`, `fileURL`). Payload's `PasteboardTypes`, the diagnostics copy and Paste now point at it instead of repeating the strings.
+- Storage: `ItemContent.storedRepresentations`, `plainTextRepresentation`, `fileURLRepresentation(for:)`, `existingMemberURLs(files:)`, `ItemMember.existingURL(files:)` (moved from `PastePayload`). `PastePayload` is a thin wrapper.
+- Payload: `PasteboardTypes.imagePriority` is public so the Shelf picks the best image the way capture does.
+- Left apart deliberately: `ItemKind.isTextEditable` has the same kind set as `isTextBearing` today but is a different rule (FR-004-07 versus FR-003-15); comments say so.
+
+**FRD edits:** none.
+
+**Assumptions (FRD silent, not written into it)**
+- Dragging a card outside the selection drags that card alone and leaves the selection as it is; a card inside the selection drags the whole selection.
+- In a multi-card drag, a card with nothing left (all members gone, or an image with no usable image data) is skipped; `LIB-DAT-001` only when no card contributes. FR-006-11 states the single-card case only.
+- No cards at all is `SHF-OS-001` (a drag that cannot be created).
+- A bundle counts once for `pasteCount` and the `shelf.dragOut` count; the count is cards, not pasteboard items.
+- C2b owes: loading content, the copy-only operation, NSImage conversion, lazy provision, accounting on an accepted drop, hiding a transient Shelf, HUDs and the `shelf.dragOut` log line.
+
+**Drift:** none new. The duplicated `public.utf8-plain-text` and `public.file-url` literals (Payload, Paste, diagnostics) are consolidated by the above.
