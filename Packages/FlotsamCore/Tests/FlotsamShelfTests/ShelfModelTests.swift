@@ -113,11 +113,25 @@ import Testing
     }
 
     // The Missing rule itself (moved, deleted, partial, empty, and agreement with the Library) is in
-    // ShelfMissingTests. This one only pins that the inert port marks nothing, as FR-006-07 says.
-    @Test func inertDetailsPortMarksNothingMissing() async {
-        let rig = ShelfRig(rows: [makeShelfRow(1, kind: .file), makeShelfRow(2, kind: .bundle)])
+    // ShelfMissingTests. These pin only that the card shows the row's flag, and nothing else.
+    @Test func cardShowsTheRowsMissingFlagAndNoOther() async {
+        let rig = ShelfRig(rows: [
+            makeShelfRow(1, kind: .file, missing: true), makeShelfRow(2, kind: .bundle, memberCount: 2),
+            makeShelfRow(3, kind: .folder, missing: true),
+        ])
         await rig.openSticky()
-        #expect(rig.model.sections()[0].cards.allSatisfy { !$0.isMissing })
+        let cards = rig.model.sections()[0].cards
+        #expect(cards.map(\.isMissing) == [true, false, true])
+    }
+
+    @Test func aFailedTextReadIsReportedAndTheCardsFallBackToThePrimaryLine() async {
+        let failure = FlotsamError(.stoDb004, "Database read failed")
+        let details = FakeShelfDetails(texts: [shelfID(1): "full text"], failure: failure)
+        let rig = ShelfRig(rows: [makeShelfRow(1, primary: "primary one")], details: details)
+        await rig.openSticky()
+        #expect(rig.probe.reports.map(\.code) == [.stoDb004])
+        #expect(rig.model.sections()[0].cards[0].text == "primary one")
+        #expect(rig.model.loadState == .loaded)
     }
 
     // MARK: FR-006-08 keyboard

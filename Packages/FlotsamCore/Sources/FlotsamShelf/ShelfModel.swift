@@ -50,13 +50,10 @@ public final class ShelfModel {
     @ObservationIgnored private let host: any ShelfPasteHost
     @ObservationIgnored private let events: ItemEventBus
     @ObservationIgnored private let effects: ShelfEffects
-    /// The file system the Missing badge reads through `ItemMember.anyExists` (FR-003-07).
-    @ObservationIgnored private let files: any FileSystemPort
 
     // MARK: Private state
 
     @ObservationIgnored private var texts: [UUID: String] = [:]
-    @ObservationIgnored private var missing: Set<UUID> = []
     @ObservationIgnored private var cursor: UUID?
     @ObservationIgnored private var anchor: UUID?
     @ObservationIgnored private var target: FrontmostApp?
@@ -69,8 +66,7 @@ public final class ShelfModel {
 
     public init(
         source: any ShelfDataSource, paster: any ShelfPasting, host: any ShelfPasteHost, events: ItemEventBus,
-        details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects(),
-        files: any FileSystemPort = LocalFileSystem()
+        details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects()
     ) {
         self.source = source
         self.paster = paster
@@ -78,7 +74,6 @@ public final class ShelfModel {
         self.events = events
         self.details = details
         self.effects = effects
-        self.files = files
     }
 
     // MARK: Derived
@@ -96,7 +91,7 @@ public final class ShelfModel {
     public func sections() -> [ShelfSection] {
         let now = effects.now()
         func cards(_ rows: [ItemRow]) -> [ShelfCardPresentation] {
-            rows.map { ShelfCardPresentation(row: $0, text: texts[$0.id], isMissing: missing.contains($0.id), now: now) }
+            rows.map { ShelfCardPresentation(row: $0, text: texts[$0.id], isMissing: $0.isMissing, now: now) }
         }
         var result: [ShelfSection] = []
         if !pinnedRows.isEmpty {
@@ -194,28 +189,23 @@ public final class ShelfModel {
                 // Recent is the first unfiltered page with pinned items removed (FR-006-06).
                 let recentRows = Array(all.rows.filter { !$0.isPinned }.prefix(limit))
                 let rows = pinnedRows + recentRows
-                let loadedTexts = await details.cardTexts(for: rows.map(\.id))
-                let fileRows = rows.filter { $0.kind.referencesFiles }
-                let members = await details.fileMembers(of: fileRows.map(\.id))
+                let textResult = await details.cardTexts(for: rows.map(\.id))
                 guard !Task.isCancelled, generation == self.generation else { return }
-                apply(pinned: pinnedRows, recent: recentRows, texts: loadedTexts, fileMembers: members, selection: policy)
+                var loadedTexts: [UUID: String] = [:]
+                switch textResult {
+                case .success(let texts): loadedTexts = texts
+                // The cards still show, on their primary line; the failure is reported like the list's own.
+                case .failure(let error): effects.report(error)
+                }
+                apply(pinned: pinnedRows, recent: recentRows, texts: loadedTexts, selection: policy)
             }
         }
     }
 
-    private func apply(
-        pinned: [ItemRow], recent: [ItemRow], texts: [UUID: String], fileMembers: [UUID: [ItemMember]],
-        selection policy: SelectionPolicy
-    ) {
+    private func apply(pinned: [ItemRow], recent: [ItemRow], texts: [UUID: String], selection policy: SelectionPolicy) {
         pinnedRows = pinned
         recentRows = recent
         self.texts = texts
-        // The Library's rule, not a Shelf one (FR-003-07): a file, folder or bundle card is Missing when none of its
-        // members exist (a moved one is found by its bookmark; a listed bundle with no members is Missing). Only the
-        // members' source is the Shelf's port (see `ShelfCardDetails`): an item the port did not list is never marked,
-        // so with the inert port no card shows Missing.
-        let fileIDs = Set((pinned + recent).filter { $0.kind.referencesFiles }.map(\.id))
-        missing = Set(fileMembers.filter { fileIDs.contains($0.key) && !$0.value.anyExists(files: files) }.keys)
         loadState = .loaded
         applySelection(policy, rows: pinned + recent)
     }

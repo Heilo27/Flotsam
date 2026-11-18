@@ -6,7 +6,9 @@ import Testing
 
 // FRD-006 FR-006-07 / FRD-003 FR-003-07 (AC-003-05a): the Shelf badge and the Library list and grid share one Missing
 // state. An item is Missing when none of its members exist (a moved member whose bookmark resolves exists; an empty
-// bundle is Missing). Real files, real bookmarks, real LocalFileSystem; the Library side is a real database.
+// bundle is Missing). Real files, real bookmarks, real LocalFileSystem. Both surfaces read a real database: the Shelf
+// shows `ItemRow.isMissing` from the same query the Library uses (S1 ruling 2026-11-17), it has no Missing rule of its
+// own to test beyond that.
 
 private final class NullSink: LogSink, @unchecked Sendable {
     func write(_ record: LogRecord) {}
@@ -33,14 +35,8 @@ private final class NullSink: LogSink, @unchecked Sendable {
         try FileManager.default.moveItem(at: url, to: dir.appendingPathComponent(name))
     }
 
-    private func shelfMissing(kind: ItemKind, members: [ItemMember]) async -> Bool {
-        let row = makeShelfRow(1, kind: kind, memberCount: members.count)
-        let rig = ShelfRig(rows: [row], details: FakeShelfDetails(members: [row.id: members]))
-        await rig.openSticky()
-        return rig.model.sections().flatMap(\.cards).first { $0.id == row.id }?.isMissing ?? false
-    }
-
-    private func libraryMissing(kind: ItemKind, members: [ItemMember]) async throws -> Bool {
+    /// A real database holding one item of `kind` with `members`.
+    private func database(kind: ItemKind, members: [ItemMember]) async throws -> (database: FlotsamDatabase, id: UUID) {
         let root = dir.appendingPathComponent("library-\(UUID().uuidString)")
         let database = try await FlotsamDatabase.open(folder: root, logSink: NullSink()).get()
         let id = UUID()
@@ -54,13 +50,26 @@ private final class NullSink: LogSink, @unchecked Sendable {
                     arguments: [id.uuidString, ordinal, member.path, member.bookmark, member.isDirectory ? 1 : 0])
             }
         }
+        return (database, id)
+    }
+
+    /// The card the real Shelf model draws for the item.
+    private func shelfMissing(kind: ItemKind, members: [ItemMember]) async throws -> Bool {
+        let (database, id) = try await database(kind: kind, members: members)
+        let model = ShelfModel(source: database, paster: FakeShelfPaster(), host: FakeShelfHost(), events: ItemEventBus(), details: database)
+        await model.open(target: textEdit, sticky: true)
+        return try #require(model.sections().flatMap(\.cards).first { $0.id == id }, "the item is not on the Shelf").isMissing
+    }
+
+    private func libraryMissing(kind: ItemKind, members: [ItemMember]) async throws -> Bool {
+        let (database, id) = try await database(kind: kind, members: members)
         let page = try await database.items(matching: LibraryQuery()).get()
         return try #require(page.rows.first { $0.id == id }, "the item is not on the Library page").isMissing
     }
 
     /// The item's state on the Shelf and in the Library, which must be the same.
     private func both(kind: ItemKind = .bundle, _ members: [ItemMember]) async throws -> (shelf: Bool, library: Bool) {
-        (await shelfMissing(kind: kind, members: members), try await libraryMissing(kind: kind, members: members))
+        (try await shelfMissing(kind: kind, members: members), try await libraryMissing(kind: kind, members: members))
     }
 
     // MARK: FR-003-07 through the Shelf
@@ -72,7 +81,7 @@ private final class NullSink: LogSink, @unchecked Sendable {
         let a = try member("a.txt")
         try relocate(a.url, to: "a-moved.txt")
 
-        #expect(await shelfMissing(kind: .bundle, members: [a.member]) == false)
+        #expect(try await shelfMissing(kind: .bundle, members: [a.member]) == false)
     }
 
     // Red if the Shelf treats a bookmark as proof of existence, or ignores the member entirely.
@@ -82,19 +91,16 @@ private final class NullSink: LogSink, @unchecked Sendable {
         let a = try member("a.txt")
         try FileManager.default.removeItem(at: a.url)
 
-        #expect(await shelfMissing(kind: .bundle, members: [a.member]) == true)
+        #expect(try await shelfMissing(kind: .bundle, members: [a.member]) == true)
     }
 
-    // Red if the Shelf marks a file card whose members it was never told about (the inert port), or marks a text card.
-    @Test("OC-S2-M3 a card the members port does not describe, and a non-file card, are never Missing")
-    func undescribedAndNonFileCards() async {
-        let rig = ShelfRig(
-            rows: [makeShelfRow(1, kind: .file), makeShelfRow(2, kind: .text)],
-            details: FakeShelfDetails(members: [
-                shelfID(2): [ItemMember(path: dir.appendingPathComponent("nope").path, bookmark: nil, isDirectory: false)]]))
-        await rig.openSticky()
+    // Red if the Shelf marks a non-file card, or a file card the storage query did not mark.
+    @Test("OC-S2-M3 a text card is never Missing, even when stray members point at nothing")
+    func nonFileCardIsNeverMissing() async throws {
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let gone = ItemMember(path: dir.appendingPathComponent("nope").path, bookmark: nil, isDirectory: false)
 
-        #expect(rig.model.sections().flatMap(\.cards).allSatisfy { !$0.isMissing })
+        #expect(try await shelfMissing(kind: .text, members: [gone]) == false)
     }
 
     // MARK: Shelf and Library agree (Rule 9)
