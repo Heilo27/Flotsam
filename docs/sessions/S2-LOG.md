@@ -1461,3 +1461,21 @@ Setup: fresh clones, Debug builds with `PRODUCT_BUNDLE_IDENTIFIER=io.github.heil
 ### TASK-453 ⌘A/⌘C/⌘V in Library search: PASS (ea9b4af)
 - Typed `hello453`, then ⌘A and ⌘C: the pasteboard read `hello453`.
 - Cleared the field, put `SENTINEL453` on the pasteboard, then ⌘V: the field read `SENTINEL453`.
+
+## 2026-11-18: TASK-460 recheck on obrien-460 @ 5267479 (log only, nothing fixed)
+
+The build used a new bundle ID (`io.github.heilo27.FlotsamWalk460b`) and a fresh scratch home. A streaming `log` capture ran with timestamped markers at each onboarding step.
+
+| Window | BTM events (Flotsam) |
+|---|---|
+| Launch → steps 1–6 (09:43:13.8 → 09:43:41.275) | 0 |
+| Arriving at step 7 | one `userDataDidChange` burst at 09:43:41.804–.824, with BTM "updating item name=Flotsam", ~0.5 s after the first status read (41.309) |
+| While step 7 is visible | status is re-read about every 2.1 s; no further events |
+| Uncheck Launch at Login (51.07) and Continue (54.67) | 0 |
+| Relaunch with onboarding done (09:44:33.8) | 0 |
+
+- **Meets S1's stated expectation:** 0 events on steps 1–6, one on arriving at step 7, 0 on relaunch.
+- **The banner still shows:** "Login Item Added" appears on arriving at step 7, before the user touches the checkbox. It stays on screen through the uncheck. The fix moves the banner from step 1 to step 7; it does not remove it. A user who unchecks still sees it.
+- **Caveat: this was not a first registration for macOS.** BTM already held an app item named Flotsam (`2.Flotsam`) from earlier walk builds. It re-pointed that item's path to the new build. A clean first-registration test needs a different PRODUCT_NAME as well. `launchctl print` does not show this BTM item. It was left in place: it was created by an earlier walk build and has no launchd job.
+- **Control build:** not run, because nothing fired before step 7.
+- **End state:** no Flotsam process is running. The walk prefs domains are removed. The real DB, -wal and prefs hashes are unchanged (03fc64cf…, c1189741…, f20f539d…).
