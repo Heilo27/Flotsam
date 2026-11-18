@@ -118,7 +118,7 @@ final class RecordingSink: LogSink, @unchecked Sendable {
 }
 
 @MainActor
-final class RecordingPresenter: ErrorPresenter {
+final class FRD001RecordingPresenter: ErrorPresenter {
     private(set) var huds: [String] = []
     private(set) var noticeLists: [[Notice]] = []
     private(set) var fatals: [FlotsamError] = []
@@ -160,7 +160,7 @@ final class ContractRig {
     let ledger = OwnWriteLedger()
     let settings: SettingsStore
     let sink = RecordingSink()
-    let presenter = RecordingPresenter()
+    let presenter = FRD001RecordingPresenter()
     let clock = ManualClock()
     let reporter: ErrorReporter
     private(set) var capture: ClipboardCapture!
