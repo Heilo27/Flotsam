@@ -5,10 +5,25 @@ import Foundation
 /// touches the database.
 public struct TriggerSnapshot: Sendable, Equatable {
     private let itemsByKey: [String: UUID]
+    /// Every non-empty prefix of every key in `itemsByKey`, the keys themselves included. Built with the snapshot, off
+    /// the tap thread, so the tap's per-character question (FR-005-20: "is this word still the start of a trigger?")
+    /// is one hash lookup. Derived from `itemsByKey` only, so it cannot disagree with it.
+    private let keyPrefixes: Set<String>
 
     public static let empty = TriggerSnapshot(itemsByKey: [:])
 
-    private init(itemsByKey: [String: UUID]) { self.itemsByKey = itemsByKey }
+    private init(itemsByKey: [String: UUID]) {
+        self.itemsByKey = itemsByKey
+        var prefixes: Set<String> = []
+        for key in itemsByKey.keys {
+            var prefix = ""
+            for character in key {
+                prefix.append(character)
+                prefixes.insert(prefix)
+            }
+        }
+        keyPrefixes = prefixes
+    }
 
     /// Builds from stored bindings. A trigger that fails the grammar is skipped, and so are all triggers that collide
     /// case-insensitively: the database's unique index should make that impossible, and a match must be exactly one
@@ -22,7 +37,7 @@ public struct TriggerSnapshot: Sendable, Equatable {
             if byKey.updateValue(id, forKey: key) != nil { ambiguous.insert(key) }
         }
         for key in ambiguous { byKey[key] = nil }
-        itemsByKey = byKey
+        self.init(itemsByKey: byKey)
     }
 
     public var isEmpty: Bool { itemsByKey.isEmpty }
@@ -30,6 +45,10 @@ public struct TriggerSnapshot: Sendable, Equatable {
 
     /// `key` must already be `TriggerGrammar.canonicalKey`.
     func itemId(forKey key: String) -> UUID? { itemsByKey[key] }
+
+    /// True when `key` is the start of some trigger, or a whole trigger (FR-005-20). `key` must already be
+    /// `TriggerGrammar.canonicalKey`. Triggers are ASCII (FR-005-08), so a word with any other character is never one.
+    func isPrefixOfSomeKey(_ key: String) -> Bool { keyPrefixes.contains(key) }
 
     func removing(_ ids: Set<UUID>) -> TriggerSnapshot {
         TriggerSnapshot(itemsByKey: itemsByKey.filter { !ids.contains($0.value) })
