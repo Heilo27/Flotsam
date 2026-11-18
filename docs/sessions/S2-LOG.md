@@ -1557,3 +1557,53 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
 - **`bin/check-architecture.sh`:** exit 0.
 - **Load:** 1-min load ranged 3-93, mostly 40-75. No other swift-test, swift-build or xctest was running during the runs.
 - Nothing was fixed or committed. Logs are in the session scratchpad (`runs/461b-run{1,2,3}.txt`).
+
+### Correction to the b6f83ec entry above (5520b21)
+- The correct count is **2547 tests per run**, as the run agent reported.
+- My "2562" was an awk bug. It also added the N from "with N known issues" and "with N issues" on each summary line, so it overcounted by 15.
+- Every other figure in that entry stands.
+
+## 2026-11-18 · FRD-005 8T (Shortcuts and Triggers) complete on s2/frd005-8t, ready for S1
+
+- **Branch:** `s2/frd005-8t` @ 1d8c1a0, pushed. It merged origin/main at 5ce3c78 (which includes contract fix 89866d2). It does not include main 01fed85 (TASK-459).
+- **Commits:** 85561e0, 13eaf18, 83c6ad2, 5853044, 76a41a6, d02670e, 251d91b, 0621ff4, 62ac018, ccf5797, 45f5c3b (OC-5137), 5ce3c78 (merge of main), 5c175c6 (S9 remainder), 77a9148 (Triggers gap tests), 19c8c04 (editor citations, OC-5055 test), 1d8c1a0 (serialized the OC-5134 editor test).
+- **Slices:** S1-S9 follow the plan. The OC counts per slice were 11/16/11/7/11/15/19/14/8.
+  - Each slice had one mutation check. Each one turned the named test red and was then reverted with `git checkout`, leaving no source diff. The mutations:
+    - S1 ChordValidator accepts a reserved letter → 5006/5007 red
+    - S2 `bind(.openLibrary, to: nil)` succeeds → 5003 red
+    - S3 ItemHotkeyAction skips the permission check → 5028 red
+    - S4 saveClipboardNow keeps Concealed → 5036 red
+    - S5 max length 24→25 → boundary OC red
+    - S6 tap starts without Input Monitoring → 5064 red
+    - S7 secure input is no longer treated as suppression → 5091 red
+    - S8 `{clipboard}` re-expands → 5116 red
+    - S9 `hasShortcut` and `ShortcutRegistry.remove` mutations → 5060 and 5134 red
+    - gap slice: drop `resetSignal.request()` in `TriggerEngine.systemDidResume` → `oc5125WakeClearsTheWord` red (3 issues)
+- **Coverage (145 OCs):** 119 are covered by a test and 21 are cited to existing tests, leaving 5 untestable at package level and 0 uncovered.
+  - Cited: 5054, 5056-5059, 5061, 5063, 5076-5079, 5081-5083, 5101-5106, 5108.
+- **Full run at 1d8c1a0:** 2678 tests, verified by summing the 12 summary lines by hand. 15 known issues, unchanged from the baseline.
+  - The only failure is OC-5055, with 3 issues: the help line lacks `{date}`, `{time}` and `{clipboard}`.
+  - S1 ruled that this is a product bug, **TASK-463**, expected until obrien-463 merges. It is a plain assert, with no `withKnownIssue`.
+- **Flake fixed in test code:**
+  - The OC-5134 editor test failed 2 of 3 parallel runs. A recorder's key monitor covers the whole process, so a key press reached another suite's recorder.
+  - The test now nests under the serialized `WorfEditorRecorderTests`. It passed 6 of 6 parallel runs.
+- **Resolved:**
+  - OC-5137: per S1, FR-007-10 wins, so the 24 h release grace is asserted. A wording drift remains at the exact boundary: the contract says "24 h or more", while FR-007-09 and the code keep the item at exactly 24 h.
+  - OC-5055: product bug, TASK-463.
+- **[Spec Drift], nothing edited:**
+  - OC-5099 is contract drift (D3). The contract makes it conditional; the FRD wins.
+  - OC-5108: the oracle predates FR-005-16; the test follows the FRD.
+  - D1: the OC-5036/5037 tags sit on FR-005-16 clipboard tests that assert OC-5108 behaviour.
+- **Untestable at package level, with the missing seam:**
+  - 5020: no permission probe on `ShortcutRegistry` for Carbon registration under denied TCC.
+  - 5021: the real registrar teardown at `applicationWillTerminate`.
+  - 5100: CGEventTap timing of 10 ms or less, observed from a second process.
+  - 5131: a timing harness over the real Carbon hotkey and CGEvent post.
+  - 5132: a launch benchmark in the App target.
+- **Real-app halves only (the package half is tested):**
+  - 5055: opening via the popover or NSMenu
+  - 5086: "no line break" in a real document
+  - 5098: the Messages compose field
+  - 5120: a real NSTextView
+  - Plus earlier ones: 5141, the 5117 drag, 5119, 5142, the 5094 Settings UI, the signpost halves of 5127/5130, and the S5 saved/badge half.
+- **Next:** FRD-004 8T on a new `s2/frd004-8t` from current origin/main.
