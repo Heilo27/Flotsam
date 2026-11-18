@@ -84,7 +84,8 @@ private func carbonHotkeyCallback(
     let status = GetEventParameter(
         event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
         MemoryLayout<EventHotKeyID>.size, nil, &hotKeyId)
-    guard status == noErr else { return status }
+    // An unreadable event isn't ours to claim: pass it down the handler chain.
+    guard status == noErr else { return OSStatus(eventNotHandledErr) }
     guard hotKeyId.signature == carbonHotkeySignature else { return OSStatus(eventNotHandledErr) }
     let registrar = Unmanaged<CarbonHotkeyRegistrar>.fromOpaque(userData).takeUnretainedValue()
     let handled = MainActor.assumeIsolated { registrar.fire(id: hotKeyId.id) }
