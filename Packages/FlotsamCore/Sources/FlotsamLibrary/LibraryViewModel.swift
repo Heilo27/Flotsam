@@ -35,6 +35,9 @@ public final class LibraryViewModel {
     public private(set) var viewMode: LibraryViewMode
     /// Incremented whenever the list is reset to its top (open, new search, new filter), so the view scrolls there.
     public private(set) var scrollResetToken = 0
+    /// Incremented when a fresh Accessibility read differs from the last one, so the footer re-renders without a
+    /// relaunch (FR-008-14, FR-008-13 rule b). `footer()` reads it to subscribe the view.
+    public private(set) var accessibilityRevision = 0
     /// Set by the grid view so ↑/↓ move by a row of cells.
     public var gridColumns = 1
 
@@ -50,6 +53,7 @@ public final class LibraryViewModel {
     // MARK: Private state
 
     @ObservationIgnored private var sort: LibrarySort
+    @ObservationIgnored private var lastAccessibilityTrusted: Bool?
     @ObservationIgnored private var cursor: UUID?
     @ObservationIgnored private var anchor: UUID?
     @ObservationIgnored private var target: FrontmostApp?
@@ -93,7 +97,8 @@ public final class LibraryViewModel {
     public var cursorID: UUID? { cursor }
 
     public func footer(now: Date = Date()) -> LibraryFooter {
-        LibraryFooter(
+        _ = accessibilityRevision
+        return LibraryFooter(
             totalCount: totalCount, selectionCount: selection.count, isPreviewOpen: isPreviewOpen,
             isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort)
     }
@@ -116,6 +121,7 @@ public final class LibraryViewModel {
     /// `target` is the app that was frontmost before the panel, recorded by the caller (FR-003-02).
     public func open(target: FrontmostApp?) async {
         self.target = target
+        refreshAccessibility()
         searchText = ""
         filter = .all
         isPreviewOpen = false
@@ -132,6 +138,24 @@ public final class LibraryViewModel {
 
     /// The panel hid, for any reason: drop in-flight work and let storage free what only a visible panel needs
     /// (FR-003-13).
+    /// Reads Accessibility fresh (never cached, FR-008-13 rule b) and bumps `accessibilityRevision` when it changed
+    /// since the last read. The view polls this while the copy-only footer shows; `open` calls it on every show.
+    @discardableResult
+    public func refreshAccessibility() -> Bool {
+        let trusted = effects.isAccessibilityTrusted()
+        if trusted != lastAccessibilityTrusted {
+            lastAccessibilityTrusted = trusted
+            accessibilityRevision += 1
+        }
+        return trusted
+    }
+
+    /// The footer's "Enable" button: open the Accessibility pane (FR-008-14). It does not prompt; the grant is
+    /// noticed by `refreshAccessibility`.
+    public func enableAccessibility() {
+        effects.openAccessibilitySettings()
+    }
+
     public func panelDidHide() {
         loadTask?.cancel()
         previewTask?.cancel()

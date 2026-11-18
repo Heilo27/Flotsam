@@ -192,10 +192,23 @@ struct LibraryFooterView: View {
             if let notice = footer.notice {
                 Text(verbatim: notice).font(.caption).foregroundStyle(.orange)
             }
+            if let enableLabel = footer.enableLabel {
+                Button(enableLabel) { model.enableAccessibility() }
+                    .buttonStyle(.link)
+                    .font(.caption)
+            }
             Spacer()
             Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
+        // Picks up a grant made in System Settings without a relaunch (FR-008-14). Runs only while the copy-only
+        // footer shows; the task restarts when the footer changes and ends once Accessibility is granted.
+        .task(id: footer.enableLabel != nil) {
+            guard footer.enableLabel != nil else { return }
+            while !Task.isCancelled, !model.refreshAccessibility() {
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
     }
 }
