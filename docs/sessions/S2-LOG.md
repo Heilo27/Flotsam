@@ -418,3 +418,32 @@ Clipboard: restored after the run.
 **Open point:** FR-006-18 says `shelf.dragOut` carries the "item count"; the code counts cards (bundle once). Not edited, since it was not in the rulings.
 
 **Resolved (fe35d9a, s2/frd006):** per S1's rulings, FR-006-18 now says `shelf.dragOut` carries the card count (a bundle counts once), and contract OC-6040 says `ui.shelf.empty`, marked `"amended": "S1 ruling 2026-11-17"`. The architecture check passes and the JSON is valid.
+
+## 2026-11-17: FRD-006 C2a slice 5, drop acceptance on `s2/frd006` @ fee890f (on top of merge a5c331e)
+
+**Verdict: pushed, suite green (about 1001 tests across Swift Testing and XCTest, 0 failures, no flake fired), architecture check passes, mutation 55/55 killed.** The drop-in half of FR-006-12 to -14 and the log line of FR-006-18 are done as pure logic; the AppKit drop target is C2b. Main (448a15c) was merged first as a5c331e and the suite re-run on the merge.
+
+**What it is.**
+- `ShelfDropPlanner` (pure): `acceptance(types:originatesInShelf:)` returns `.accepted`, `.refused` or `.refusedSilently` (own drag). `plan(...)` returns the `IngestCandidate` plus one `SHF-IO-001` per skipped file, mapping capture's `CAP-VAL-001` to `SHF-VAL-001` and `CAP-DAT-001` to `SHF-IO-001`.
+- `ShelfDropService`: `drop(...)` returns `.ignored`, `.failed` or `.stored(itemId:skippedFiles:)`. It reports skipped files (user-initiated) and ingest warnings (background) through `ErrorReporter`, writes the `shelf.dropIn` log line and calls `dropCompleted`. It goes through a new `ShelfIngesting` port, which `IngestActor` conforms to.
+- Rule 9 extractions, no behavior change: `Classification` and `ClassifiedMember` moved from Payload into Base. `IngestCandidate.init(classification:source:origin:occurredAt:)` is now the one mapping, shared by `IngestWorker` (clipboard) and the Shelf drop. `PasteboardTypes.fileURL(from:)` is the one file-URL parse.
+- Not touched, per S1: `ItemKind.isFileBacked` and the Storage `ItemMember` existence helpers (S1 folds those in with TASK-397).
+
+**OCs covered:** 6083 to 6087, 6090 to 6095, 6097 to 6106, 6109, 6110, 6117, 6118. 6089 and 6108 are covered structurally (the module imports only Base, Storage, Payload and Foundation, and there is no AppKit in the planner or service). Deferred: 6020, 6096, 6114 (app layer or real pasteboard, C2b).
+
+**Tests:** 50 net new for the slice. Shelf 42 (planner 21, service 21), Storage 4 (`IngestCandidateClassificationInitTests`, with the existing IngestWorker tests unedited), Payload 4 (`PasteboardFileURLTests`, fixtures use `/srv/example/...`). The repo is public, so no personal paths.
+- Mutation: 55 mutants (compilable only) over the planner, service, shared init, classifier and file-URL parse. First run 49 killed; survivors P10, P11, P19, V04, U01, U02. I added 12 tests to close them (Storage 4, Payload 4, planner `nothingStorable`, `goneAtClassification` and `allUnreadableCountsFiles`, service `trimmedBundleIsNotPartial`); re-run 55/55 killed. No source file was left mutated (byte-identical restore checked with `cmp`).
+- Caveat: those 12 are tests of my own code, written from the FRD to close mutation gaps, not the blind oracle. Worf should review them.
+
+**FRD edits (same commit):** FR-006-12 and AC-006-13: a drag from the Shelf itself is refused silently (no highlight, no HUD). FR-006-14, AC-006-16 and the SHF-LIM-001 row in the error table: files and folders are held by reference and never size-checked, so `SHF-LIM-001` applies only to dropped text over 10 MiB and image data over 100 MiB; AC-006-16 now has one unreadable, one huge but readable and one readable file giving a 2-member bundle with one `SHF-IO-001` and no `SHF-LIM-001`.
+
+**Contract edits (`.claude/oracle/frd-006-contract.json`), each marked `"amended": "S1 ruling 2026-11-17"`:** OC-6087 (own drag refused silently, no HUD) and OC-6099 (the 3-file case above).
+
+**Assumptions (FRD silent, not written into it)**
+- OC-6087's own drag is silent and writes no log line.
+- Capture mode and ignored apps do not apply to drops, so OC-6090, 6093 and 6094 are stored regardless.
+- Ingest warnings (for example `CAP-LIM-003` on a bundle trimmed to 500 members) do not count as a partial store; only skipped files do.
+- All files unreadable produces one `SHF-IO-001`; a partial drop produces one `SHF-IO-001` per skipped file (throttling applies at the HUD).
+- C2b owes: the NSDraggingDestination and hover highlight, reading the drag pasteboard, HUD display, and the 6020, 6096 and 6114 checks.
+
+**Drift / observations (surfaced, not fixed):** the classifier's file `contentKey` depends on member order, so the same files dropped in a different order store a different item (dedupe miss). Left as is; S1 to decide whether it should sort.
