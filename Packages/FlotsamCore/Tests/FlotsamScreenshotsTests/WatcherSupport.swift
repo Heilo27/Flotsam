@@ -121,12 +121,17 @@ final class IngestRecorder: ScreenshotIngesting, @unchecked Sendable {
     private var heldNow = 0
     func holdIngests() { lock.withLock { gated = true } }
     func releaseIngests() { lock.withLock { gated = false } }
+    // WORF-461b: hold only the named files, so one job can end while another stays in flight.
+    private var heldNames: Set<String> = []
+    func holdIngest(named name: String) { lock.withLock { _ = heldNames.insert(name) } }
+    func releaseIngest(named name: String) { lock.withLock { _ = heldNames.remove(name) } }
     var heldIngests: Int { lock.withLock { heldNow } }
 
     func ingest(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult> {
-        if lock.withLock({ gated }) {
+        let heldName = URL(fileURLWithPath: candidate.originalPath ?? "").lastPathComponent
+        if lock.withLock({ gated || heldNames.contains(heldName) }) {
             lock.withLock { heldNow += 1 }
-            while lock.withLock({ gated }) { try? await Task.sleep(for: .milliseconds(5)) }
+            while lock.withLock({ gated || heldNames.contains(heldName) }) { try? await Task.sleep(for: .milliseconds(5)) }
             lock.withLock { heldNow -= 1 }
         }
         lock.withLock {
