@@ -67,6 +67,7 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     private func start(_ plan: ShelfDragPlan, from view: NSView, event: NSEvent) {
         providers = []
         var dragItems: [NSDraggingItem] = []
+        var written: Set<UUID> = []
         let frame = view.bounds
         let image = Self.stackedImage(of: view, count: plan.cardCount)
         for item in plan.items {
@@ -74,12 +75,15 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
             let dragItem = NSDraggingItem(pasteboardWriter: writer)
             dragItem.setDraggingFrame(frame, contents: dragItems.isEmpty ? image : nil)
             dragItems.append(dragItem)
+            written.insert(item.itemId)
         }
         guard !dragItems.isEmpty else {
             ports?.report(FlotsamError(.libDat001, "Nothing left to drag"))
             return
         }
-        draggedItemIds = plan.draggedItemIds
+        // A card whose only item had no writer (an image `NSImage` cannot read) is not dragged, so it is not counted as
+        // pasted when the drop is accepted (FR-006-10, FR-006-11).
+        draggedItemIds = plan.draggedItemIds.filter(written.contains)
         let session = view.beginDraggingSession(with: dragItems, event: event, source: self)
         session.animatesToStartingPositionsOnCancelOrFail = true
     }

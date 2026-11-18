@@ -154,6 +154,14 @@ public struct ShelfRevealMachine: Sendable, Equatable {
         switch event {
         case let .configure(enabled, placement, revealOnEdgeHover):
             let changed = enabled != self.enabled || placement != self.placement
+            // While disabled the App layer has no monitors, so the pointer, drag and button state it last reported is
+            // stale; enabling starts from none of them and the next report sets them (FR-006-03).
+            if enabled && !self.enabled {
+                pointer = .away
+                isDragging = false
+                isButtonDown = false
+                rearmOnLeave = false
+            }
             self.enabled = enabled
             self.placement = placement
             self.revealOnEdgeHover = revealOnEdgeHover
