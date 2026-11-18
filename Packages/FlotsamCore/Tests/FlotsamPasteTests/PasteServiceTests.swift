@@ -230,6 +230,20 @@ import FlotsamStorage
         #expect(r.pasteboard.written.isEmpty)
     }
 
+    /// Security F4 (TASK-345): ⌘V is addressed to the recorded target, so a focus change after the check cannot send
+    /// the clip to another app.
+    @Test func postPasteAddressesTheEventToTheTarget() async throws {
+        let r = rig(.success(richContent))
+        try await r.service.postPaste(target: Self.target).get()
+        #expect(r.keys.targets == [Self.target])
+    }
+
+    @Test func aTargetThatNeverReturnsIsNeverAddressed() async {
+        let r = rig(.success(richContent), pollsUntilTarget: nil)
+        _ = await r.service.postPaste(target: Self.target)
+        #expect(r.keys.targets.isEmpty)
+    }
+
     private func failureCode<T>(_ result: FlotsamResult<T>) -> ErrorCode? {
         if case .failure(let error) = result { return error.code }
         return nil

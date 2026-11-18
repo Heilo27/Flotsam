@@ -20,9 +20,12 @@ public protocol FrontmostAppProvider {
     func frontmost() -> FrontmostApp?
 }
 
-/// Posts ⌘V (key code 9 with the Command flag, key down then key up) to the session event tap (FR-003-15 step 6).
+/// Posts ⌘V (key code 9 with the Command flag, key down then key up) to the paste target's process (FR-003-15 step 6).
 @MainActor
 public protocol KeyEventPoster {
-    /// False when the events could not be created or posted.
-    func postPaste() -> Bool
+    /// Addresses ⌘V to `target` itself, never to whichever application holds focus when the event is delivered, so a
+    /// focus change after the caller's check cannot send the clip elsewhere (FR-003-16). The adapter re-checks that
+    /// `target` is still frontmost immediately before posting. False when `target` is no longer the frontmost
+    /// application, or the events could not be created or posted; nothing is posted then.
+    func postPaste(to target: FrontmostApp) -> Bool
 }

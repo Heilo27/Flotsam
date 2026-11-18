@@ -47,7 +47,7 @@ final class ContractFrontmost: FrontmostAppProvider {
 final class ContractKeys: KeyEventPoster {
     var succeeds = true
     private(set) var posts = 0
-    func postPaste() -> Bool { posts += 1; return succeeds }
+    func postPaste(to target: FrontmostApp) -> Bool { posts += 1; return succeeds }
 }
 
 final class ContractTrust: PermissionProbe, @unchecked Sendable {
