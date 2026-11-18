@@ -6,7 +6,9 @@ import FlotsamPaste
 import FlotsamPayload
 import FlotsamScreenshots
 import FlotsamShelf
+import FlotsamShortcuts
 import FlotsamStorage
+import FlotsamTriggers
 import Foundation
 
 /// Composition root: builds the long-lived objects once at launch. Failure here is the Fatal path
@@ -31,18 +33,36 @@ final class AppContainer {
     private(set) var library: LibraryPanelController?
     /// The Shelf panel (FR-006-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var shelf: ShelfPanelController?
-    private var libraryHotkey: LibraryHotkey?
-    private var shelfHotkey: LibraryHotkey?
-    private var unsubscribeHotkey: (@Sendable () -> Void)?
-    private var unsubscribeShelfHotkey: (@Sendable () -> Void)?
     private var unsubscribeScreenshots: (@Sendable () -> Void)?
     /// Retained for the life of the app (FRD-002).
     private(set) var screenshots: ScreenshotWatcher?
+    /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
+    /// it; the bindings are applied once the Library exists (`startLibrary`).
+    let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
+    private var unsubscribeShortcuts: (@Sendable () -> Void)?
+    private var unsubscribeItemEvents: (@Sendable () -> Void)?
+    private var itemHotkeyAction: ItemHotkeyAction?
+    /// The typed-trigger engine (FR-005-10). Nil until the database has opened. Retained: its loops run until `stop()`.
+    private(set) var triggerEngine: TriggerEngine?
+    /// Asks the tap thread to clear the typed word (FR-005-11): shared by the tap adapter and the engine, whose
+    /// `frontmostApplicationDidChange()` and `systemDidResume()` are the app's "the word is no longer trustworthy" paths.
+    private let triggerReset = TriggerResetSignal()
+    private var unsubscribeTriggerSetting: (@Sendable () -> Void)?
+    /// Told when the engine's status changes, so the menu-bar icon can show or clear the tap's warning dot (FR-005-19).
+    /// Set by the status item; read through the engine, so it needs no engine to exist yet.
+    var onTriggerStatusChange: (@MainActor () -> Void)?
+    /// True while the tap is latched off after repeated disablement (FR-005-19).
+    var showsTriggerWarning: Bool { triggerEngine?.showsWarningDot ?? false }
+    /// One resync reads the item bindings at a time; a change that arrives meanwhile queues exactly one more.
+    private var itemSyncRunning = false
+    private var itemSyncPending = false
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
     /// The Settings window (FR-008-03). Retained here; `actions.openSettings` holds it weakly.
     private var settingsWindow: SettingsWindowController?
+    /// The shortcut-and-trigger editor (FR-005-09). Nil until the database has opened.
+    private var itemEditor: ItemBindingsEditorWindowController?
 
     init() {
         let presenter = ErrorPresenterAdapter(dataFolder: Self.dataFolder)
@@ -71,7 +91,7 @@ final class AppContainer {
         let environment = SettingsEnvironment(
             settings: settings, login: loginItem,
             openLoginItems: { loginItem.openLoginItemsSettings() },
-            permissions: permissions, storage: storage, dataFolder: Self.dataFolder,
+            permissions: permissions, shortcuts: shortcuts, storage: storage, dataFolder: Self.dataFolder,
             revealDataFolder: { NSWorkspace.shared.open(Self.dataFolder) },
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             hud: { message in presenter.showHUD(message: message) },
@@ -98,11 +118,13 @@ final class AppContainer {
             startCapture(database: opened)
             // The Library and the Shelf paste through one service and read one frontmost app (FR-006-08).
             let frontmost = WorkspaceFrontmostAppProvider()
+            let pasteboard = SystemPasteboard()
+            let keys = CGEventKeyPoster()
             let paster = PasteService(
-                store: opened, pasteboard: SystemPasteboard(), files: LocalFileSystem(), frontmost: frontmost,
-                accessibility: permissions, keys: CGEventKeyPoster(), clock: SystemClock(), ownWrites: ownWrites)
+                store: opened, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
+                accessibility: permissions, keys: keys, clock: SystemClock(), ownWrites: ownWrites)
             startShelf(database: opened, paster: paster, frontmost: frontmost)
-            startLibrary(database: opened, paster: paster, frontmost: frontmost)
+            startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
         case .failure(let error): await reporter.report(error, origin: .background)
         }
@@ -118,6 +140,10 @@ final class AppContainer {
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) })
         self.capture = capture
+        // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
+        let presenter = presenter
+        let saveClipboard = SaveClipboardAction(saver: capture, hud: { presenter.showHUD(message: $0) })
+        actions.saveClipboard = { Task { await saveClipboard.run() } }
 
         let center = NotificationCenter.default
         let workspace = NSWorkspace.shared.notificationCenter
@@ -187,26 +213,14 @@ final class AppContainer {
             })
         shelf = controller
         // Only one Flotsam panel is open at a time: showing the Shelf hides the Library (FR-006-04). The reverse is
-        // `actions.openLibrary` and the Library hotkey below.
+        // `actions.openLibrary`, which the Library hotkey also runs.
         controller.onReveal = { [weak self] in self?.library?.hidePanel() }
         actions.toggleShelf = { [weak controller] in controller?.toggle() }
 
-        // The Toggle Shelf hotkey (FR-006-03c, FR-005-07): unbound by default, and unregistered while the Shelf is off.
-        // `LibraryHotkey` is the one registration path; only the chord it reads differs.
-        let hotkey = LibraryHotkey(
-            registrar: CarbonHotkeyRegistrar(), preferences: SettingsShelfHotkeyPreferences(settings: settings)
-        ) { [weak controller] in controller?.toggle(.hotkey) }
-        if case .failure(let error) = hotkey.apply() {
-            Task { await reporter.report(error, origin: .background) }
-        }
-        shelfHotkey = hotkey
-        let watched: Set<String> = [SettingKeys.shortcutsToggleShelf.name, SettingKeys.shelfEnabled.name]
-        unsubscribeShelfHotkey = settings.subscribe { [weak hotkey] change in
-            guard watched.contains(change.name) else { return }
-            Task { @MainActor in
-                if case .failure(let error) = hotkey?.apply() { await reporter.report(error, origin: .background) }
-            }
-        }
+        // The Toggle Shelf hotkey (FR-006-03c, FR-005-07) goes through the one registry (`startShortcuts` binds it from
+        // Settings and unregisters it while the Shelf is off). The hotkey passes its own trigger so the reveal log
+        // tells a hotkey toggle from the menu item.
+        shortcuts.setAction(.toggleShelf) { [weak controller] in controller?.toggle(.hotkey) }
     }
 
     /// The delete confirmation (FR-004-09) as a modal alert; the Shelf's panel is not key, so a sheet has no parent.
@@ -220,7 +234,10 @@ final class AppContainer {
     }
 
     /// Builds the Library stack over the opened database and registers its hotkey (FR-003-01, FR-005-01).
-    private func startLibrary(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
+    private func startLibrary(
+        database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster,
+        frontmost: WorkspaceFrontmostAppProvider
+    ) {
         let reporter = reporter
         let probe = permissions
 
@@ -233,6 +250,24 @@ final class AppContainer {
         let organizer = LibraryOrganizer(
             store: database, classifiers: .live, report: { [weak organize] error in organize?.surface(error) })
         organize.organizer = organizer
+
+        // One snapshot-expand-write-restore home for item hotkeys and typed triggers (FR-005-16, FR-005-17).
+        let clock = SystemClock()
+        let files = LocalFileSystem()
+        let codec = AppKitRichTextCodec()
+        let preserver = ClipboardPreserver(pasteboard: pasteboard, ownWrites: ownWrites, clock: clock)
+        let expansion = PasteExpansion(
+            pasteboard: pasteboard, files: files, codec: codec, preserver: preserver, ownWrites: ownWrites, clock: clock)
+
+        let presenter = presenter
+        let editor = ItemBindingsEditorWindowController(
+            services: ItemBindingsEditorServices(
+                database: database, registry: shortcuts,
+                // The engine is built after this; read at call time (FR-005-10: the prompt follows the first saved trigger).
+                didSaveTrigger: { [weak self] in await self?.triggerEngine?.userDidSaveTrigger() },
+                report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+                hud: { presenter.showHUD(message: $0) }))
+        itemEditor = editor
 
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
@@ -256,24 +291,163 @@ final class AppContainer {
             controller?.toggle()
         }
 
-        let hotkey = LibraryHotkey(
-            registrar: CarbonHotkeyRegistrar(), preferences: SettingsLibraryHotkeyPreferences(settings: settings)
-        ) { [weak controller, weak self] in
-            self?.shelf?.libraryOpened()
-            controller?.toggle()
+        // ⌘K reaches the shortcut-and-trigger editor through `actions` (FR-005-09); a selection that is not exactly one
+        // item opens nothing.
+        actions.editShortcutAndTrigger = { [weak editor] ids in
+            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: ids) else { return }
+            editor?.open(itemId: id)
         }
-        if case .failure(let error) = hotkey.apply() {
-            Task { await reporter.report(error, origin: .background) }
-        }
-        libraryHotkey = hotkey
-        // A rebinding in Settings takes effect at once (FR-005-01).
-        let hotkeyName = SettingKeys.shortcutsOpenLibrary.name
-        unsubscribeHotkey = settings.subscribe { [weak hotkey] change in
-            guard change.name == hotkeyName else { return }
+        startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })
+        startItemHotkeys(database: database, paster: paster, expansion: expansion, frontmost: frontmost)
+        startTriggers(
+            database: database, paster: paster, pasteboard: pasteboard, keys: keys, files: files, codec: codec,
+            preserver: preserver)
+    }
+
+    /// FRD-005 typed triggers: builds the engine over the adapters and starts it. Starting never installs a tap by
+    /// itself and never prompts (FR-005-10): the engine installs one only when triggers are on, an item has a trigger and
+    /// both permissions are already granted. The prompts come from `userDidSaveTrigger()` and `userDidEnableTriggers()`.
+    private func startTriggers(
+        database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster,
+        files: LocalFileSystem, codec: AppKitRichTextCodec, preserver: ClipboardPreserver
+    ) {
+        let clock = SystemClock()
+        let keyboard = SystemKeyboardEnvironment()
+        let snapshot = TriggerSnapshotStore()
+        let ownBundleId = Bundle.main.bundleIdentifier ?? FlotsamLog.fallbackSubsystem
+        let expander = TriggerExpander(
+            store: database, pasteboard: pasteboard, files: files, codec: codec, preserver: preserver,
+            ownWrites: ownWrites, paste: paster, keys: keys, keyboard: keyboard, snapshot: snapshot,
+            permissions: permissions, reporter: reporter, clock: clock, ownBundleId: ownBundleId)
+        let engine = TriggerEngine(
+            source: EventTapKeySource(resetSignal: triggerReset), snapshot: snapshot, bindings: database,
+            settings: settings, bus: database.events, expander: expander, keyboard: keyboard,
+            permissions: permissions, reporter: reporter, clock: clock, resetSignal: triggerReset,
+            ownBundleId: ownBundleId)
+        triggerEngine = engine
+        // A change of frontmost application clears the typed word (FR-005-11).
+        keyboard.onFrontmostChange = { [weak engine] in engine?.frontmostApplicationDidChange() }
+        engine.onStatusChange = { [weak self] _ in self?.onTriggerStatusChange?() }
+        Task { await engine.start() }
+
+        // The permission prompt appears when the user turns triggers on, never at launch (FR-005-10).
+        let settings = settings
+        unsubscribeTriggerSetting = settings.subscribe { change in
+            guard change.name == SettingKeys.triggersEnabled.name else { return }
             Task { @MainActor in
-                if case .failure(let error) = hotkey?.apply() { await reporter.report(error, origin: .background) }
+                if settings.value(SettingKeys.triggersEnabled) { await engine.userDidEnableTriggers() }
             }
         }
+
+        // Waking, or this session coming back after fast user switching, drops the typed word and re-verifies the tap
+        // at once instead of at the next watchdog tick (FR-005-19). Stopping happens in `stopTriggers()`.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
+            observers.append(
+                workspace.addObserver(forName: name, object: nil, queue: .main) { _ in
+                    Task { @MainActor in await engine.systemDidResume() }
+                })
+        }
+    }
+
+    /// Quit: removes the tap and stops the engine's loops (FR-005-03, FR-005-10).
+    func stopTriggers() {
+        unsubscribeTriggerSetting?()
+        unsubscribeTriggerSetting = nil
+        triggerEngine?.stop()
+    }
+
+    /// Item hotkeys (FR-005-05): bound from the stored bindings at launch, re-synced when items change or go (FR-005-22),
+    /// and off while any Flotsam window (the Library panel, Settings) is key.
+    private func startItemHotkeys(
+        database: FlotsamDatabase, paster: PasteService, expansion: PasteExpansion, frontmost: any FrontmostAppProvider
+    ) {
+        let reporter = reporter
+        itemHotkeyAction = ItemHotkeyAction(
+            paster: paster, expansion: expansion, frontmost: frontmost,
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } })
+        syncItemHotkeys(database: database)
+
+        unsubscribeItemEvents = database.events.subscribe { [weak self] event in
+            // Delivery is synchronous and may be off the main actor; the registry is main-actor.
+            Task { @MainActor in
+                guard let self else { return }
+                if case .itemsDeleted(let ids) = event {
+                    for id in ids { self.shortcuts.remove(.item(id)) }
+                }
+                self.syncItemHotkeys(database: database)
+            }
+        }
+
+        // Any key window of this app is a Flotsam window. After a resign the next window may already be taking over, so
+        // the state is read once the run loop has settled (FR-005-05).
+        let center = NotificationCenter.default
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            observers.append(
+                center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    Task { @MainActor in self?.shortcuts.setItemHotkeysSuspended(NSApp.keyWindow != nil) }
+                })
+        }
+    }
+
+    /// Reads the stored item hotkeys and makes the registry match them. Overlapping calls coalesce, so an older read
+    /// can never be applied after a newer one.
+    private func syncItemHotkeys(database: FlotsamDatabase) {
+        if itemSyncRunning {
+            itemSyncPending = true
+            return
+        }
+        itemSyncRunning = true
+        Task { @MainActor in
+            repeat {
+                itemSyncPending = false
+                switch await database.itemBindings() {
+                case .success(let bindings):
+                    guard let action = itemHotkeyAction else { break }
+                    reportShortcutErrors(shortcuts.syncItemHotkeys(bindings.hotkeys) { id in { Task { await action.run(itemId: id) } } })
+                case .failure(let error):
+                    await reporter.report(error, origin: .background)
+                }
+            } while itemSyncPending
+            itemSyncRunning = false
+        }
+    }
+
+    /// Points the registry's global actions at their owners and binds them from Settings (FR-005-01). Save Clipboard
+    /// goes through `actions`, so an owner that plugs in later is picked up at the next press; Toggle Shelf's action is
+    /// set by `startShelf`, and until it is the press does nothing (FR-005-07). A rebinding in Settings, or the Shelf
+    /// switch, takes effect at once.
+    private func startShortcuts(openLibrary: @escaping @MainActor () -> Void) {
+        shortcuts.setAction(.openLibrary, openLibrary)
+        shortcuts.setAction(.saveClipboard) { [weak self] in self?.actions.saveClipboard?() }
+        reportShortcutErrors(shortcuts.applyGlobalSettings(settings))
+
+        let names: Set<String> = [
+            SettingKeys.shortcutsOpenLibrary.name, SettingKeys.shortcutsSaveClipboard.name,
+            SettingKeys.shortcutsToggleShelf.name, SettingKeys.shelfEnabled.name,
+        ]
+        unsubscribeShortcuts = settings.subscribe { [weak self] change in
+            guard names.contains(change.name) else { return }
+            Task { @MainActor in
+                guard let self else { return }
+                self.reportShortcutErrors(self.shortcuts.applyGlobalSettings(self.settings))
+            }
+        }
+        // macOS can drop a hotkey registration across sleep; a refused one is retried at wake (FR-005-03).
+        observers.append(
+            NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.reportShortcutErrors(self.shortcuts.retryFailed())
+                }
+            })
+    }
+
+    private func reportShortcutErrors(_ errors: [FlotsamError]) {
+        let reporter = reporter
+        for error in errors { Task { await reporter.report(error, origin: .background) } }
     }
 }
 

@@ -63,6 +63,10 @@ public struct Chord: Sendable, Hashable {
         self.keyCode = keyCode
         self.modifiers = modifiers
     }
+
+    /// FR-005-02 (a): a global shortcut must carry ⌘ or ⌃. The one home of that test: `ChordBinding.isUsable` (stored
+    /// data) and Shortcuts' `ChordValidator` (recording) both call it (Rule 9).
+    public var hasCommandOrControl: Bool { !modifiers.isDisjoint(with: [.command, .control]) }
 }
 
 /// The one definition of "matches" for search (FR-003-09): case- and diacritic-insensitive.

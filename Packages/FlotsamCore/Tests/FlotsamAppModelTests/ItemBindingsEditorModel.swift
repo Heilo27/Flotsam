@@ -1,0 +1,1 @@
+../../../../App/Flotsam/Library/ItemBindingsEditorModel.swift

@@ -18,6 +18,10 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case shortcutOpenLibrary, shortcutSaveClipboard, shortcutToggleShelf
     case shortcutNotSet, shortcutRecord, shortcutRecording, shortcutClear, shortcutNeedsModifier, shortcutsFootnote
 
+    // Item editor: shortcut and trigger (FR-005-09)
+    case editorWindow, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
+    case editorNoTrigger, editorSave, editorItemGone, editorLoadFailed
+
     // Triggers and permissions
     case expandTriggers, permissionAccessibility, permissionInputMonitoring
     case permissionGranted, permissionNotGranted, permissionUnknown

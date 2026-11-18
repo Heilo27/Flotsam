@@ -75,7 +75,7 @@ public enum ChordBinding: SettingValue {
     var isUsable: Bool {
         switch self {
         case .none: true
-        case .chord(let chord): !chord.modifiers.isDisjoint(with: [.command, .control])
+        case .chord(let chord): chord.hasCommandOrControl
         }
     }
 }

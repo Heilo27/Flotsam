@@ -19,5 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if OnboardingFlow.shouldShowAutomatically(settings: container.settings) { onboarding.show() }
     }
 
+    func applicationWillTerminate(_ notification: Notification) { container?.stopTriggers() }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }

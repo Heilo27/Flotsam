@@ -891,6 +891,16 @@
         }
       }
     },
+    "ui.library.menuShortcutAndTrigger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut and Trigger…"
+          }
+        }
+      }
+    },
     "ui.library.missing" : {
       "localizations" : {
         "en" : {
@@ -1911,146 +1921,6 @@
         }
       }
     },
-    "ui.permission.accessibility" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accessibility"
-          }
-        }
-      }
-    },
-    "ui.permission.inputMonitoring" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Input Monitoring"
-          }
-        }
-      }
-    },
-    "ui.permission.pasteboard" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste from Other Apps"
-          }
-        }
-      }
-    },
-    "ui.permission.screenshotFolder" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screenshot folder access"
-          }
-        }
-      }
-    },
-    "ui.row.bundleCount" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld items"
-          }
-        }
-      }
-    },
-    "ui.organize.confirmDelete" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete %lld items permanently? This cannot be undone."
-          }
-        }
-      }
-    },
-    "ui.organize.confirmDeleteOne" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete this item permanently? This cannot be undone."
-          }
-        }
-      }
-    },
-    "ui.organize.confirmDeleteTag" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove tag '%@' from %lld items?"
-          }
-        }
-      }
-    },
-    "ui.organize.confirmUngroup" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ungroup this bundle? Its note, pin, trigger and hotkey are not carried over to the new items."
-          }
-        }
-      }
-    },
-    "ui.organize.editFormattingRemoved" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saving removes the formatting. Only plain text is kept."
-          }
-        }
-      }
-    },
-    "ui.organize.sortAlphabetical" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A to Z"
-          }
-        }
-      }
-    },
-    "ui.organize.sortMostUsed" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Most Used"
-          }
-        }
-      }
-    },
-    "ui.organize.sortOldest" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oldest"
-          }
-        }
-      }
-    },
-    "ui.organize.sortRecent" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recent"
-          }
-        }
-      }
-    },
     "ui.organize.buttonCancel" : {
       "localizations" : {
         "en" : {
@@ -2181,6 +2051,56 @@
         }
       }
     },
+    "ui.organize.confirmDelete" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete %lld items permanently? This cannot be undone."
+          }
+        }
+      }
+    },
+    "ui.organize.confirmDeleteOne" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this item permanently? This cannot be undone."
+          }
+        }
+      }
+    },
+    "ui.organize.confirmDeleteTag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove tag '%@' from %lld items?"
+          }
+        }
+      }
+    },
+    "ui.organize.confirmUngroup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ungroup this bundle? Its note, pin, trigger and hotkey are not carried over to the new items."
+          }
+        }
+      }
+    },
+    "ui.organize.editFormattingRemoved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving removes the formatting. Only plain text is kept."
+          }
+        }
+      }
+    },
     "ui.organize.editTitle" : {
       "localizations" : {
         "en" : {
@@ -2301,6 +2221,46 @@
         }
       }
     },
+    "ui.organize.sortAlphabetical" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A to Z"
+          }
+        }
+      }
+    },
+    "ui.organize.sortMostUsed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most Used"
+          }
+        }
+      }
+    },
+    "ui.organize.sortOldest" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oldest"
+          }
+        }
+      }
+    },
+    "ui.organize.sortRecent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent"
+          }
+        }
+      }
+    },
     "ui.organize.tagCreate" : {
       "localizations" : {
         "en" : {
@@ -2327,6 +2287,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tags"
+          }
+        }
+      }
+    },
+    "ui.permission.accessibility" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility"
+          }
+        }
+      }
+    },
+    "ui.permission.inputMonitoring" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Monitoring"
+          }
+        }
+      }
+    },
+    "ui.permission.pasteboard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste from Other Apps"
+          }
+        }
+      }
+    },
+    "ui.permission.screenshotFolder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot folder access"
+          }
+        }
+      }
+    },
+    "ui.row.bundleCount" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items"
           }
         }
       }
@@ -2461,6 +2471,16 @@
         }
       }
     },
+    "ui.settings.clearDone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld items deleted"
+          }
+        }
+      }
+    },
     "ui.settings.clearHistory" : {
       "localizations" : {
         "en" : {
@@ -2587,6 +2607,96 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Done"
+          }
+        }
+      }
+    },
+    "ui.settings.editorItemGone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This item no longer exists."
+          }
+        }
+      }
+    },
+    "ui.settings.editorLoadFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This item could not be opened."
+          }
+        }
+      }
+    },
+    "ui.settings.editorNoTrigger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Triggers expand text, so this kind of item can have a shortcut only."
+          }
+        }
+      }
+    },
+    "ui.settings.editorSave" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
+          }
+        }
+      }
+    },
+    "ui.settings.editorShortcut" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut"
+          }
+        }
+      }
+    },
+    "ui.settings.editorTrigger" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trigger"
+          }
+        }
+      }
+    },
+    "ui.settings.editorTriggerHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type the trigger anywhere, then Space, Tab or Return, to paste this item. Leave empty for none."
+          }
+        }
+      }
+    },
+    "ui.settings.editorTriggerPlaceholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ";sig"
+          }
+        }
+      }
+    },
+    "ui.settings.editorWindow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcut and Trigger"
           }
         }
       }
@@ -2987,6 +3097,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Not granted"
+          }
+        }
+      }
+    },
+    "ui.settings.permissionUnknown" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unknown"
           }
         }
       }
@@ -3461,46 +3581,6 @@
         }
       }
     },
-    "ui.source.screenshot" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screenshot"
-          }
-        }
-      }
-    },
-    "ui.source.remoteDevice" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Another device"
-          }
-        }
-      }
-    },
-    "ui.settings.permissionUnknown" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unknown"
-          }
-        }
-      }
-    },
-    "ui.settings.clearDone" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld items deleted"
-          }
-        }
-      }
-    },
     "ui.shelf.close" : {
       "localizations" : {
         "en" : {
@@ -3577,6 +3657,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Recent"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.notSavedConcealed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not saved: the app that copied it marked it private"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.notSavedEmpty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing on the clipboard Flotsam can save"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.notSavedIgnoredApp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not saved: that app is on your ignored list"
+          }
+        }
+      }
+    },
+    "ui.shortcuts.saved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved to Flotsam"
+          }
+        }
+      }
+    },
+    "ui.source.remoteDevice" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another device"
+          }
+        }
+      }
+    },
+    "ui.source.screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot"
           }
         }
       }

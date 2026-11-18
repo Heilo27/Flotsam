@@ -17,31 +17,3 @@ public protocol HotkeyRegistrar {
     func unregister(_ registration: HotkeyRegistration)
     func unregisterAll()
 }
-
-/// Where the Library hotkey comes from: the `shortcuts.openLibrary` setting (FR-005-01, FR-008-01), whose default is
-/// ⌃⌘V. `.none` means the user cleared the chord, so nothing is registered.
-@MainActor
-public protocol LibraryHotkeyPreferences {
-    var openLibraryChord: ChordBinding { get }
-}
-
-public struct SettingsLibraryHotkeyPreferences: LibraryHotkeyPreferences {
-    private let settings: SettingsStore
-
-    public init(settings: SettingsStore) { self.settings = settings }
-
-    public var openLibraryChord: ChordBinding { settings.value(SettingKeys.shortcutsOpenLibrary) }
-}
-
-/// The Toggle Shelf chord (FR-005-01, FR-006-03c) in the shape `LibraryHotkey` registers: the `shortcuts.toggleShelf`
-/// setting, or none while `shelf.enabled` is off (FR-005-07). The name on the protocol says "Library" because the one
-/// registration path was written first for the Library; the chord is whatever the adapter returns.
-public struct SettingsShelfHotkeyPreferences: LibraryHotkeyPreferences {
-    private let settings: SettingsStore
-
-    public init(settings: SettingsStore) { self.settings = settings }
-
-    public var openLibraryChord: ChordBinding {
-        settings.value(SettingKeys.shelfEnabled) ? settings.value(SettingKeys.shortcutsToggleShelf) : ChordBinding.none
-    }
-}

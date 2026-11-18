@@ -25,6 +25,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         item.menu = menu
         refreshIcon()
         container.presenter.onNoticesChanged = { [weak self] in self?.refreshIcon() }
+        container.onTriggerStatusChange = { [weak self] in self?.refreshIcon() }
         unsubscribe = container.settings.subscribe { [weak self] _ in
             Task { @MainActor in self?.refreshIcon() }
         }
@@ -36,7 +37,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     private var icon: MenuIcon {
         MenuBarModel.icon(
-            mode: container.settings.value(SettingKeys.captureMode), hasWarning: container.presenter.hasBadge)
+            mode: container.settings.value(SettingKeys.captureMode), hasWarning: container.presenter.hasBadge || container.showsTriggerWarning)
     }
 
     private func refreshIcon() {
