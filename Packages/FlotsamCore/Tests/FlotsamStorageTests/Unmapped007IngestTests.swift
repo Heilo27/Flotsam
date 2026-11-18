@@ -273,6 +273,9 @@ final class CPUShareProbe: @unchecked Sendable {
         return lock.withLock { share }
     }
 
+    /// True once `stop()` has asked the spin thread to end (read by the TASK-475 worf tests to see a deferred stop ran).
+    var stopWasRequested: Bool { lock.withLock { stopRequested } }
+
     private static func threadCPUNanos() -> UInt64 {
         var ts = timespec()
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts)
