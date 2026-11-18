@@ -220,11 +220,16 @@ public final class ClipboardCapture {
 
     // MARK: Reporting
 
+    /// Every skip and raise is final for the change it handled, so it ends any reread of that change (FR-001-22). A latch
+    /// left set would re-handle the same `changeCount` on every tick. Clearing here, not at the read, keeps the attempt
+    /// budget of a change whose types are listed but whose bytes come back empty (`noteEmptyRead` below the snapshot).
     private func skip(_ policy: ErrorCode) {
+        rereadingChangeCount = nil
         FlotsamLog.log(.pasteboardProcessed(kind: nil, byteSize: 0, outcome: .skipped, policy: policy), sink: sink)
     }
 
     private func raise(_ error: FlotsamError) {
+        rereadingChangeCount = nil
         let reporter = reporter
         Task { await reporter.report(error, origin: .background) }
     }

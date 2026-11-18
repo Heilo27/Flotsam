@@ -254,7 +254,7 @@ struct ClipboardRetryMarkersWorfTests {
         // when polling continues on the same changeCount
         rig.tick(6)
         // then one change is skipped once
-        withKnownIssue("DEFECT TASK-401-F1: rereadingChangeCount is not cleared on the skip/raise early exits, so the same changeCount is re-handled every tick. Remove this wrapper when fixed.") { #expect(rig.sink.count(containing: "CAP-POL-001") == 1) }
+        #expect(rig.sink.count(containing: "CAP-POL-001") == 1)
     }
 }
 
@@ -375,7 +375,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick(6)
         try await rig.drain()
         // then the change is dropped once (FR-001-22: the next tick proceeds normally)
-        withKnownIssue("DEFECT TASK-401-F1: rereadingChangeCount is not cleared on the skip/raise early exits, so the same changeCount is re-handled every tick. Remove this wrapper when fixed.") { #expect(rig.sink.count(containing: "CAP-VAL-001") == 1) }
+        #expect(rig.sink.count(containing: "CAP-VAL-001") == 1)
     }
 
     @Test("OC-401-W15 read failure after a retry: CAP-OS-001 raised once, not on every tick (control: atomic)")
@@ -401,7 +401,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick(6)
         try await rig.drain()
         // then one failed change raises one error
-        withKnownIssue("DEFECT TASK-401-F1: rereadingChangeCount is not cleared on the skip/raise early exits, so the same changeCount is re-handled every tick. Remove this wrapper when fixed.") { #expect(rig.sink.count(containing: "CAP-OS-001") == 1) }
+        #expect(rig.sink.count(containing: "CAP-OS-001") == 1)
         #expect(try await rig.texts() == [])
     }
 
@@ -421,7 +421,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick()
         rig.board.fill(data("x"))
         rig.tick(6)
-        withKnownIssue("DEFECT TASK-401-F1: rereadingChangeCount is not cleared on the skip/raise early exits, so the same changeCount is re-handled every tick. Remove this wrapper when fixed.") { #expect(rig.sink.count(containing: "CAP-POL-002") == 1) }
+        #expect(rig.sink.count(containing: "CAP-POL-002") == 1)
         #expect(try await rig.texts() == [])
     }
 
