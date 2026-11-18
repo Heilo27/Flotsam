@@ -81,6 +81,11 @@ public protocol FileSystemPort: Sendable {
     func createDirectory(at url: URL, permissions: Int) -> FlotsamResult<Void>
     func copyItem(at source: URL, to destination: URL) -> FlotsamResult<Void>
     func moveItem(at source: URL, to destination: URL) -> FlotsamResult<Void>
+    /// Moves `source` over `destination` in one step: a reader sees the old file or the new one, never neither.
+    /// `moveItem` fails onto an existing path, and removing first leaves a gap in which the file does not exist.
+    /// The default is that two-step form, for a fake that only models the other operations; the real file system
+    /// overrides it with a single `rename(2)`.
+    func replaceItem(at destination: URL, with source: URL) -> FlotsamResult<Void>
     func removeItem(at url: URL) -> FlotsamResult<Void>
     func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]>
     func extendedAttribute(named name: String, at url: URL) -> Data?
@@ -98,6 +103,13 @@ public protocol FileSystemPort: Sendable {
     func fileInfo(at url: URL) -> FileInfo?
     /// Bytes available for important usage on the volume holding `url` (FR-007-14); nil when unknown.
     func availableCapacity(at url: URL) -> Int64?
+}
+
+extension FileSystemPort {
+    public func replaceItem(at destination: URL, with source: URL) -> FlotsamResult<Void> {
+        if fileExists(at: destination), case .failure(let error) = removeItem(at: destination) { return .failure(error) }
+        return moveItem(at: source, to: destination)
+    }
 }
 
 extension FlotsamError {
