@@ -964,9 +964,10 @@
     "OC-7054",
     "OC-7066"
    ],
-   "result": "SURVIVED",
+   "result": "EQUIVALENT",
    "killed_by": null,
-   "killed_by_mapped_test": null
+   "killed_by_mapped_test": null,
+   "note": "Equivalent (TASK-360, applied by hand, FlotsamStorageTests 446 pass with the mutant). The recorded line 56 is stale; the mutant is the enforceImageBudget guard `planned.total > limit` -> `>=` at ImageBudgetEnforcement.swift:58. At total == limit the planner guard at :92 (`total > limit`) has already returned evict: [] and remainingAfterEviction: total, so with the mutant the pass runs on an empty plan: the batch loop at :64 does not execute, evicted stays 0 (no :74 report), evictedBytes 0, and notice is nil because remaining (== limit) > limit is false at :78. Output is identical to the early return for every input; :58 is a redundant fast path. The real boundary lives at :92: mutating that line to `>=` is KILLED by oc7061_budgetBoundary (RetentionPreviewTests.swift:57, preview at exactly 2 GiB must be .none) and the at-limit evicts-nothing assertions in oc7054_oc7066 (RetentionSweepDestructiveTests.swift:391)."
   },
   {
    "id": "M95",
@@ -1096,8 +1097,8 @@
    "killed_by_mapped_test": null
   }
  ],
- "survivors": 13,
- "equivalent": 2,
+ "survivors": 12,
+ "equivalent": 3,
  "unmapped_kills": [
   "M45",
   "M49",
