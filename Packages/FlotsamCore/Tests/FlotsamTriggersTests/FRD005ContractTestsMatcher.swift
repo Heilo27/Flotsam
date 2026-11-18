@@ -652,7 +652,7 @@ struct FRD005ContractTestsMatcher {
 
     // MARK: Switching apps during expansion (FR-005-15(c)), D3
 
-    @Test("OC-5099 the user switches to Notes during the re-check delay: nothing is inserted anywhere, TRG-OS-002 HUD")
+    @Test("OC-5099 (contract drift; asserts FR-005-15(c) per S1 ruling)")
     func oc5099SwitchingAppDuringTheDelay() async {
         // given trigger ';sig', and a delay before the re-check during which the user switches to Notes
         let h = harness()
@@ -676,14 +676,12 @@ struct FRD005ContractTestsMatcher {
         #expect(h.base.keys.targets.isEmpty)
         #expect(h.base.pasteboard.writes.isEmpty)
         #expect(h.base.store.recorded.isEmpty)
-        // and TextEdit keeps the typed ';sig'
+        // and, per FRD-005 FR-005-15(c) (S1 ruling: the FRD wins, the contract line "TextEdit keeps ';sig '" is drift), the
+        // swallowed boundary key is NOT re-posted once the user has left the app: no key event reached any app, and the
+        // text stays exactly as the user left it, ';sig' with no trailing space
+        #expect(h.base.keys.actions.isEmpty)
+        #expect(h.base.keys.targets.isEmpty)
         #expect(doc.text == ";sig")
-        // and TextEdit keeps the swallowed boundary key too (contract). The code posts nothing once the user has left
-        // the app, as FRD-005 FR-005-15(c) says, so the Space is lost.
-        withKnownIssue(
-            "FRD-005 OC-5099: the swallowed boundary key is not re-posted when the user switched apps (FR-005-15(c) posts nothing); the contract says TextEdit keeps ';sig '"
-        ) {
-            #expect(doc.text == ";sig ")
-        }
+        #expect(doc.text != ";sig ")
     }
 }
