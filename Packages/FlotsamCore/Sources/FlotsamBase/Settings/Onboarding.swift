@@ -42,6 +42,18 @@ public struct OnboardingFlow: Equatable, Sendable {
         !settings.value(SettingKeys.onboardingCompleted)
     }
 
+    /// The one home of the resume rule (FR-008-12, OC-8098): only the automatic launch-time show picks up where a quit
+    /// left off; "Show Setup Guide…" always starts at step 1, whatever is saved.
+    public static func resumeStep(isAutomaticShow: Bool, saved: OnboardingStep?) -> OnboardingStep? {
+        isAutomaticShow ? saved : nil
+    }
+
+    /// The one home of the step 5 import rule (FR-008-12, OC-8141): Continue imports the last 30 days only when the
+    /// box is checked and pickup is on; step 5 never turns pickup on (FR-008-17).
+    public static func shouldImportScreenshots(importRecent: Bool, pickupEnabled: Bool) -> Bool {
+        importRecent && pickupEnabled
+    }
+
     public var steps: [OnboardingStep] { OnboardingStep.allCases.filter { $0 != .clipboard || gatesPasteboard } }
     public var position: Int { (steps.firstIndex(of: current) ?? 0) + 1 }
     public var total: Int { steps.count }

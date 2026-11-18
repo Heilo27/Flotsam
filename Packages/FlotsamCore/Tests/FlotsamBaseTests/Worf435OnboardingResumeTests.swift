@@ -5,8 +5,8 @@ import Testing
 
 // TASK-435, FRD-008 FR-008-12 / AC-008-07 (OC-8098): the onboarding resume point, through the public API only.
 // Persistence is always observed through a FRESH UserDefaults reader over the same suite (a relaunch), never an
-// in-memory value. The decision "resume only on the automatic launch-time show" is App/Flotsam/OnboardingModel and
-// has no package seam; what is pinned here is everything that decision is built from.
+// in-memory value. The decision "resume only on the automatic launch-time show" is OnboardingFlow.resumeStep (TASK-441,
+// Task441OnboardingGatesTests); what is pinned here is everything that decision is built from.
 
 /// One UserDefaults suite per test; `launch()` returns a brand-new store and progress reader, like a relaunch.
 private struct Relaunchable {
