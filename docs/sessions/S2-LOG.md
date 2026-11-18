@@ -973,3 +973,20 @@ Contains the S1-named commits (checked with `git merge-base --is-ancestor`). Too
 **Defects / follow-ups for S1:**
 - File copy is not stored (0 of 5), `CAP-VAL-001` logged, FR-001-05 / FR-001-08 expect a `file` item. Repeats the earlier intermittent miss; needs a deterministic repro (real Finder copy) from S1 or me.
 - The first text and URL reads after launch gave `CAP-VAL-001` then `CAP-PRM-001` before capture worked; confirm whether that is the expected permission warm-up on macOS 27.
+
+---
+
+## 2026-11-17: capture p95 rerun (`s2/perf-harness` @ dd8537d, Release)
+
+Load at start was 10.02 (1-min), at 23:57. It rose to 57 by the end (23:59), caused by other sessions' `swift test` compiles, so this is **not a clean quiet-box run**.
+
+| Measure | Value |
+|---|---|
+| Capture n=200 p50 / p95 / max | 268.2 / 494.2 / 757.1 ms |
+| … poll wait p50 / p95 | 251.8 / 484.4 ms |
+| … persist p50 / p95 / max | 5.8 / 86.2 / 386.9 ms |
+| Search 50k n=20 p50 / p95 / max | 26.5 / 54.9 / 57.8 ms |
+
+Across three runs (load 34–63, 34–63, then 10→57), capture p95 holds at 485–494 ms, and the 0.5 s poll wait accounts for 472–484 ms of it. Load moves only the persist tail: p95 of 19, 44 and 86 ms. Search p95 is steady at 53–55 ms. **Conclusion: capture p95 is bound by the poll period, not by load.** Cutting it means a shorter poll interval or change-count signalling, which is a product decision, not a perf bug. A truly quiet rerun would only tighten the persist tail.
+
+The harness uses a private `NSPasteboard(name: "flotsam.perf.<uuid>")` (asserted ≠ `.general`), so it cannot have contaminated other sessions' general-pasteboard reads.
