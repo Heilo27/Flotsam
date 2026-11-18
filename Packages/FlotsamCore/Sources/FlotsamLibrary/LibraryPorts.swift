@@ -66,18 +66,23 @@ public struct LibraryEffects {
     public var external: @MainActor (LibraryExternalCommand, [UUID]) -> Void
     /// Whether Accessibility is granted, for the footer's copy-only notice (FR-003-18).
     public var isAccessibilityTrusted: @MainActor () -> Bool
+    /// The footer's "Enable" button (FR-008-14): opens the Accessibility pane of System Settings through the shared
+    /// `PermissionProbe`, the same path as onboarding and the Triggers pane.
+    public var openAccessibilitySettings: @MainActor () -> Void
 
     public init(
         report: @escaping @MainActor (FlotsamError) -> Void = { _ in },
         reveal: @escaping @MainActor ([String]) -> Void = { _ in },
         openSettings: @escaping @MainActor () -> Void = {},
         external: @escaping @MainActor (LibraryExternalCommand, [UUID]) -> Void = { _, _ in },
-        isAccessibilityTrusted: @escaping @MainActor () -> Bool = { true }
+        isAccessibilityTrusted: @escaping @MainActor () -> Bool = { true },
+        openAccessibilitySettings: @escaping @MainActor () -> Void = {}
     ) {
         self.report = report
         self.reveal = reveal
         self.openSettings = openSettings
         self.external = external
         self.isAccessibilityTrusted = isAccessibilityTrusted
+        self.openAccessibilitySettings = openAccessibilitySettings
     }
 }
