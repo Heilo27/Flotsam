@@ -527,7 +527,7 @@
       "requirement": "AC-004-07",
       "given": "richText item containing bold text and a hyperlink",
       "when": "user opens the editor and saves an edit with ⌘Return",
-      "then": "the formatting-removed notice (organize.edit.formattingRemoved) was visible in the editor; afterwards Copy of the item puts plain text only on the pasteboard (no RTF or HTML type) and the item no longer previews formatting",
+      "then": "the formatting-removed notice (ui.organize.editFormattingRemoved) was visible in the editor; afterwards Copy of the item puts plain text only on the pasteboard (no RTF or HTML type) and the item no longer previews formatting",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -727,7 +727,7 @@
       "requirement": "AC-004-10",
       "given": "Bundle B of 4 files with tag 'x', a note and a pin",
       "when": "user chooses Ungroup",
-      "then": "a confirmation (organize.confirm.ungroup) appears before any change",
+      "then": "a confirmation (ui.organize.confirmUngroup) appears before any change",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true

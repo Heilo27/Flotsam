@@ -10,9 +10,7 @@ import FlotsamBase
 // App-target UI, listed in FRD004ContractTestsGaps.swift. Expected values are literals; state is read back through a
 // second read-only connection (Store.reader) or the public query API, never through the connection that wrote it.
 //
-// [Spec Drift] OC-4053: the contract names the notice key `organize.edit.formattingRemoved`; FRD-004 FR-004-07 and the
-// catalogue name it `ui.organize.editFormattingRemoved`. The FRD is the spec, so the FRD key is asserted and the
-// contract key is wrapped in withKnownIssue.
+// OC-4053: the oracle names the notice key as FRD-004 FR-004-07 does, `ui.organize.editFormattingRemoved` (TASK-467 fixed the stale key).
 
 /// What Organize is handed by the composition root, faked the way the capture rules behave: a leading https:// is a
 /// link, anything else is text, and the dedupe key is derived from the text alone.
@@ -251,10 +249,6 @@ private extension Store {
         #expect(try store.stored(2)?.plainText == "bystander")
         // The FRD's key for the editor notice (FR-004-07) resolves to the shipped copy.
         #expect(FlotsamStrings.text(forKey: "ui.organize.editFormattingRemoved") == "Saving removes the formatting. Only plain text is kept.")
-        // [Spec Drift] the contract's key is not in the catalogue; the FRD's is.
-        withKnownIssue("FRD-004 OC-4053: contract names notice key organize.edit.formattingRemoved; FRD-004 FR-004-07 and the catalogue use ui.organize.editFormattingRemoved") {
-            #expect(FlotsamStrings.text(forKey: "organize.edit.formattingRemoved") != nil)
-        }
     }
 
     // OC-4055. Red if the kind is not re-detected on save (the item would stay text and never reach Links).

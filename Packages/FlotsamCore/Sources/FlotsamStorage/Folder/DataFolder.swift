@@ -17,6 +17,9 @@ public struct DataFolder: Sendable {
     public var tmpURL: URL { root.appendingPathComponent("tmp") }
     public var preMigrationURL: URL { root.appendingPathComponent("pre-migration") }
 
+    /// The write-ahead log SQLite keeps beside the database file.
+    var walURL: URL { root.appendingPathComponent("flotsam.sqlite-wal") }
+
     /// `flotsam.sqlite` plus the WAL and shared-memory files SQLite keeps beside it.
     var databaseFileURLs: [URL] {
         ["", "-wal", "-shm"].map { root.appendingPathComponent("flotsam.sqlite" + $0) }
