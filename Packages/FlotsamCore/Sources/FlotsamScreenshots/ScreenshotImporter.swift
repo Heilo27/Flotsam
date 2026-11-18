@@ -52,6 +52,9 @@ struct ScreenshotImporter: Sendable {
     /// Off the caller's executor: the read and the 0.5 s waits must not hold the watcher actor.
     @concurrent
     func run(_ file: ScreenshotFile, countsAsCopy: Bool) async -> ScreenshotImportAttempt {
+        // FR-000-12 / FR-002-14: one interval per pickup; `defer` closes it on every return below, failures included.
+        let span = Signposts.begin(.screenshotImport)
+        defer { span.end() }
         let info: FileInfo
         switch await stability.waitUntilStable(file.url) {
         case .failure(let error): return .unstable(error)
