@@ -16,13 +16,17 @@ struct Worf381PollTickTimerTests {
         var value: Int { lock.lock(); defer { lock.unlock() }; return n }
     }
 
-    /// OC-381-20. given capture mode Paused and a started capture, when 1.7 s of real time passes, then registered
-    /// work ran 2-4 times (the tick keeps firing while Paused, ADR-0004 / FR-001-19) while no pasteboard bytes were
-    /// read. Red if the timer is only scheduled for Active mode, or if fire() is placed after an early return of poll().
+    /// OC-381-20. given capture mode Paused and a started capture, when 1.7 s of ticks pass (1.7 s at the scheduled
+    /// interval is 3 fires), then registered work ran 3 times (2-4: the tick keeps firing while Paused, ADR-0004 /
+    /// FR-001-19) while nothing was stored. Red if the timer is only scheduled for Active mode, or if fire() is placed
+    /// after an early return of poll(). Runs on the timer seam (ADR-0011): the real-timer count of ticks in 1.7 s
+    /// fell outside 2-4 when the main actor was starved under a full-suite run (TASK-447), so the source is fired by
+    /// hand and its scheduled interval is what ties the fire count to the 1.7 s window.
     @Test("OC-381-20 the tick keeps firing while capture is Paused")
     func tickFiresWhilePaused() async throws {
         let tick = PollTick()
-        let rig = try await GapRig(pollTick: tick)
+        let timers = FakeTimers()
+        let rig = try await GapRig(pollTick: tick, scheduleTimer: timers.schedule)
         defer { Task { await rig.cleanUp() } }
         rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         let ran = Count()
@@ -30,10 +34,17 @@ struct Worf381PollTickTimerTests {
         defer { cancel() }
 
         rig.capture.start()
-        try await Task.sleep(for: .milliseconds(1700))
+        await Task.yield()
+        await Task.yield()
+        let source = try #require(timers.live.first, "a Paused capture still schedules its tick source")
+        #expect(timers.live.count == 1, "sources live: \(timers.live.count)")
+        let expectedFires = Int(1.7 / source.interval)
+        #expect(expectedFires >= 2 && expectedFires <= 4, "fires in 1.7 s at interval \(source.interval): \(expectedFires)")
+
+        for _ in 0..<expectedFires { source.fire() }
         let fired = ran.value
         rig.text("copied while paused")
-        try await Task.sleep(for: .milliseconds(700))
+        for _ in 0..<Int(0.7 / source.interval) + 1 { source.fire() }
         let firedAfterCopy = ran.value
         await rig.settle()
 
@@ -78,23 +89,32 @@ struct Worf381PollTickTimerTests {
 
     /// OC-381-22. given a stopped capture, then the tick stops firing, which is why AppContainer must never stop
     /// capture while the watchdog should run (it only stops triggers on quit). Pins the coupling: red if stop() leaves
-    /// the timer running.
+    /// the timer running. Runs on the timer seam (ADR-0011): the scheduled source is fired by hand while running, and
+    /// after stop() it must be cancelled and a fire must not reach the tick (TASK-447: the real-timer version waited
+    /// out wall-clock windows).
     @Test("OC-381-22 stop() ends the tick")
     func stopEndsTheTick() async throws {
         let tick = PollTick()
-        let rig = try await GapRig(pollTick: tick)
+        let timers = FakeTimers()
+        let rig = try await GapRig(pollTick: tick, scheduleTimer: timers.schedule)
         defer { Task { await rig.cleanUp() } }
         let ran = Count()
         let cancel = tick.every(0.5) { ran.bump() }
         defer { cancel() }
 
         rig.capture.start()
-        try await Task.sleep(for: .milliseconds(1200))
+        await Task.yield()
+        await Task.yield()
+        let source = try #require(timers.live.first, "start() schedules the tick source")
+        source.fire()
+        source.fire()
         await rig.capture.stop()
         let atStop = ran.value
-        try await Task.sleep(for: .milliseconds(1200))
 
         #expect(atStop >= 1, "control: it fired while running")
+        #expect(source.isCancelled && timers.live.isEmpty, "stop() left a tick source running")
+        source.fire()
+        source.fire()
         #expect(ran.value == atStop)
     }
 }
