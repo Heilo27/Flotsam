@@ -5,7 +5,7 @@ import Testing
 // reparented to launchd; three were found 5 to 29 hours old. SignpostProbe must end that child on every exit path.
 // Each test names one path and fails if the child is still alive afterwards.
 
-private func isAlive(_ pid: Int32) -> Bool {
+func isAlive(_ pid: Int32) -> Bool {
     // A reaped or reparented-and-exited process is gone; a zombie still answers signal 0, so ask `ps` for its state.
     let ps = Process()
     ps.executableURL = URL(fileURLWithPath: "/bin/ps")
@@ -20,7 +20,7 @@ private func isAlive(_ pid: Int32) -> Bool {
     return !state.isEmpty && !state.hasPrefix("Z")
 }
 
-private func waitUntilGone(_ pid: Int32, seconds: Double) async throws -> Bool {
+func waitUntilGone(_ pid: Int32, seconds: Double) async throws -> Bool {
     let deadline = Date().addingTimeInterval(seconds)
     while Date() < deadline {
         if !isAlive(pid) { return true }
@@ -99,5 +99,84 @@ private func waitUntilGone(_ pid: Int32, seconds: Double) async throws -> Bool {
         #expect(probe.beaconSeen, "start() returned before the stream proved it was attached")
         #expect(probe.marks().allSatisfy { $0.event.category != SignpostProbe.beaconCategory }, "the readiness beacon leaked into the events")
         await probe.stop()
+    }
+}
+
+// TASK-481 (Worf): paths the builder's three leak tests do not reach.
+@Suite(.serialized, .timeLimit(.minutes(2))) struct Worf481ProbeLifecycleTests {
+    /// OC-W481-03 (empty). A probe that was never started has no child, and stop() on it returns without crashing or
+    /// hanging. Red if childPID reports a stale value before start, or stop() blocks waiting for a process that never ran.
+    @Test("OC-W481-03 stop() on a probe that never started returns and reports no child")
+    func stopWithoutStart() async {
+        let probe = SignpostProbe()
+        #expect(probe.childPID == nil)
+        await probe.stop()
+        await probe.stop()
+        #expect(probe.childPID == nil)
+        #expect(probe.marks().isEmpty)
+    }
+
+    /// OC-W481-04 (boundary). A launcher started when its parent is ALREADY dead still ends its child: the watcher must
+    /// not rely on seeing the parent alive first. Red if the watcher is removed, or only starts after a first live check.
+    @Test("OC-W481-04 a child launched for an already-exited parent is ended by the launcher within 5 s")
+    func childEndsWhenParentAlreadyGone() async throws {
+        // given a parent that has already exited
+        let parent = Process()
+        parent.executableURL = URL(fileURLWithPath: "/usr/bin/true")
+        try parent.run()
+        parent.waitUntilExit()
+        let deadPID = parent.processIdentifier
+
+        let pidFile = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-w481-\(UUID().uuidString).pid")
+        defer { try? FileManager.default.removeItem(at: pidFile) }
+
+        // when a launcher starts a long-lived child on its behalf
+        let launcher = SignpostProbe.launch(parentPID: deadPID, executable: "/bin/sleep", arguments: ["300"], pidFile: pidFile)
+        try launcher.run()
+        defer { if launcher.isRunning { launcher.terminate() } }
+        var childPID: Int32?
+        for _ in 0..<50 where childPID == nil {
+            childPID = (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap { Int32($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            if childPID == nil { try await Task.sleep(for: .milliseconds(100)) }
+        }
+        let child = try #require(childPID, "the launcher never wrote the child pid")
+
+        // then the child is gone within 5 s (watcher polls once a second)
+        let gone = try await waitUntilGone(child, seconds: 5)
+        if !gone { kill(child, SIGKILL) }
+        #expect(gone, "child pid \(child) outlived a parent that was already dead at launch")
+    }
+
+    /// OC-W481-05 (negative). While the parent is alive the launcher must NOT end the child on its own: a watcher that
+    /// fires early would kill every probe mid-capture. Red if the child dies within 3 s with its parent still running.
+    @Test("OC-W481-05 a child whose parent is alive survives past the watcher's poll interval")
+    func childSurvivesWhileParentAlive() async throws {
+        // given a live parent
+        let parent = Process()
+        parent.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        parent.arguments = ["60"]
+        try parent.run()
+        defer { if parent.isRunning { kill(parent.processIdentifier, SIGKILL) } }
+
+        let pidFile = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-w481b-\(UUID().uuidString).pid")
+        defer { try? FileManager.default.removeItem(at: pidFile) }
+        let launcher = SignpostProbe.launch(parentPID: parent.processIdentifier, executable: "/bin/sleep", arguments: ["60"], pidFile: pidFile)
+        try launcher.run()
+        var childPID: Int32?
+        for _ in 0..<50 where childPID == nil {
+            childPID = (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap { Int32($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            if childPID == nil { try await Task.sleep(for: .milliseconds(100)) }
+        }
+        let child = try #require(childPID)
+
+        // when more than two watcher polls pass
+        try await Task.sleep(for: .seconds(3))
+
+        // then the child is still running, and ending the launcher ends it
+        #expect(isAlive(child), "the watcher killed a child whose parent was alive")
+        launcher.terminate()
+        let gone = try await waitUntilGone(child, seconds: 5)
+        if !gone { kill(child, SIGKILL) }
+        #expect(gone, "terminating the launcher left child \(child) running")
     }
 }
