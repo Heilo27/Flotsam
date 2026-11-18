@@ -29,6 +29,8 @@ public final class VisibleRefresh {
         onScreen && windowIsVisible == true
     }
 
+    private func readOnce() { refresh() }
+
     /// Whether a refresh loop is currently scheduled.
     public var isRefreshing: Bool { task != nil }
 
@@ -47,9 +49,9 @@ public final class VisibleRefresh {
         let clock = clock
         task = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                guard let self else { return }
-                self.refresh()
-                // Hold the owner only for the read, never across the sleep.
+                // The owner is held only for the call; `self?.readOnce()` releases it before the sleep, so a dropped
+                // owner deinits while its loop is parked and `deinit` cancels the sleep.
+                guard self?.readOnce() != nil else { return }
                 await clock.sleep(for: Self.interval)
             }
         }
