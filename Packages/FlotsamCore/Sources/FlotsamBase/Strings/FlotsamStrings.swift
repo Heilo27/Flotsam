@@ -66,11 +66,18 @@ public enum FlotsamStrings {
         return result + rest
     }
 
-    /// True when `argument` is an integer of any width or signedness equal to 1; nil, a non-integer, or a value outside
-    /// `Int`'s range is not. The one place a plural count is read, so Int, Int64, Int32 and UInt8 counts all agree.
+    /// True when `argument` is an integer equal to 1: a Swift integer of any width or signedness, or an integer-valued
+    /// `NSNumber` (which `as? any BinaryInteger` does not bridge). nil, a non-integer (String, Double, Float, an
+    /// `NSNumber` holding a floating-point value) or a value outside `Int`'s range is not. A Bool is not a count, so
+    /// `true` (Swift `Bool` or `NSNumber(value: true)`, which bridges to 1) is not "one" either. The one place a plural
+    /// count is read, so Int, Int64, Int32, UInt8 and NSNumber counts all agree.
     private static func isOne(_ argument: CVarArg?) -> Bool {
-        guard let integer = argument as? any BinaryInteger else { return false }
-        return Int(exactly: integer) == 1
+        if let integer = argument as? any BinaryInteger { return Int(exactly: integer) == 1 }
+        guard let number = argument as? NSNumber,
+              CFGetTypeID(number) != CFBooleanGetTypeID(),
+              !CFNumberIsFloatType(number)
+        else { return false }
+        return number.int64Value == 1
     }
 
     /// User-facing message for an error code, with `arguments` filling the catalogue placeholders in order

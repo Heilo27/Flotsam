@@ -219,6 +219,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
 
 ## 11. Change Log
+- 2026-11-18: FR-000-05: a plural count is a whole number in any form, including a boxed one (`NSNumber`): exactly 1 reads `one`; anything else reads `other`. A decimal (1.0, 1.5), text, a missing count and a yes/no value (even one that boxes to 1) are not counts and read `other`.
 - 2026-11-18: FR-000-12: `screenshot.import` added, a ninth interval, one per screenshot pickup (FRD-002 FR-002-14 is measured with it).
 - 2026-11-18: FR-000-11/12: a copy-only paste (⇧Return) logs `paste.copy`, not `paste.back`, and is not timed by the `paste.back` signpost (it posts no ⌘V). FR-000-08: Notices raised for a missing trigger permission or a tap that would not install clear when that condition ends, so the menu-bar warning dot does not outlive the problem.
 - 2026-11-18: FR-000-11: eight more callsites ticked (paste-back, hotkey registration, trigger no-match, permission transition, retention sweep, database open, migrate and integrity check); the lines each one writes are listed under the checklist. A trigger no-match is logged only for a typed word that equals a trigger but is suppressed; ordinary words are not logged.
