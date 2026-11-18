@@ -15,11 +15,11 @@ import Testing
 //   OC-4079: WorfFRD004StorageTests.swift (ungroupKeepsFilesAndDoesNotDedupe)
 //   OC-4103: WorfFRD004StorageTests.swift (organisePerformance: tagging 500 in under 1 s)
 //
-// UNTESTABLE halves: the @Test list below. Ids whose other half is tested (OC-4021-4024, 4027, 4030, 4031, 4040, 4047,
+// UNTESTABLE halves: the @Test list below. Ids whose other half is tested (OC-4021-4024, 4027, 4030, 4040, 4047,
 // 4059, 4062, 4069, 4075, 4077, 4099) say which half in the title; OC-4026, 4028, 4041, 4042, 4052 and 4054 have no tested half.
 //
-// OC-4073 is not here: its confirmation rule is tested, and its stale contract key is a known issue in
-// FRD004ContractTestsLibrary.swift ([Spec Drift]: FR-004-11 wins).
+// OC-4073 is not here: its confirmation rule and its key (ui.organize.confirmUngroup, FR-004-11) are tested in
+// FRD004ContractTestsLibrary.swift.
 
 @Suite struct FRD004ContractTestsGaps {
 
@@ -50,10 +50,6 @@ import Testing
     // OC-4030. Seam needed: an App test target, or the coordinator's decision extracted into FlotsamLibrary.
     @Test("OC-4030 (cancel path) deleting tag T and cancelling leaves T and its 5 items [no seam: manual]", .disabled("no seam: manual. Cancel is the OrganizeCoordinator confirm overlay (App target); the prompt text and the confirmed delete are tested"))
     func oc4030_6() {}
-
-    // OC-4031. Seam needed: LibraryOrganizer.deleteTagNeedsConfirmation(itemCount:), mirroring deleteNeedsConfirmation and ungroupNeedsConfirmation.
-    @Test("OC-4031 (no confirm at 0 items) deleting a tag on 0 items shows no confirmation [no seam: manual]", .disabled("no seam: manual. the decision `itemCount > 0` is inline in OrganizeCoordinator.deleteTag (App target); the 0-item delete itself is tested"))
-    func oc4031_7() {}
 
     // OC-4062. Seam needed: an App test target.
     @Test("OC-4062 (dialog and keystroke UI) Command-Delete on a plain item shows no dialog [no seam: manual]", .disabled("no seam: manual. the keystroke and the dialog are the OrganizeCoordinator and LibraryView key handling (App target); deleteNeedsConfirmation and the delete itself are tested"))
