@@ -52,12 +52,21 @@ public enum FlotsamStrings {
         }
     }
 
-    /// User-facing message for a raised error. Placeholder values come from the error's safe context: `count`
-    /// then `limitBytes`, in that order, when present (FR-000-06). Callers never pass free text.
+    /// User-facing message for a raised error. Placeholder values come from the error's safe context, chosen by what
+    /// the code's template declares (`ErrorCode.messageArgumentKinds`, FR-000-06): an integer slot takes `count`, a
+    /// text slot takes `limitBytes` (the one context key carrying a ceiling, rendered by `MessageArgument.formatBytes`).
+    /// Context a template has no slot for (a `count` on a code whose text states its own number, an `itemId`) is
+    /// log-only and never reaches the arity check. A declared slot with no value supplied still falls back to
+    /// SYS-INT-001. Callers never pass free text.
     public static func message(for error: FlotsamError) -> String {
         var arguments: [MessageArgument] = []
-        if case .int(let count)? = error.context[.count] { arguments.append(.count(count)) }
-        if case .bytes(let limit)? = error.context[.limitBytes] { arguments.append(.byteSize(limit)) }
+        for kind in error.code.messageArgumentKinds {
+            switch (kind, error.context[.count], error.context[.limitBytes]) {
+            case (.integer, .int(let count)?, _): arguments.append(.count(count))
+            case (.text, _, .bytes(let limit)?): arguments.append(.byteSize(limit))
+            default: break
+            }
+        }
         return message(for: error.code, arguments: arguments)
     }
 
