@@ -1020,3 +1020,38 @@ The harness uses a private `NSPasteboard(name: "flotsam.perf.<uuid>")` (asserted
 **[Spec Drift]:** FRD-007 FR-007-12 and FRD-008 FR-008-16 disagree on the menu capture toggle. The menu follows FRD-008, while `Unmapped007IngestTests.swift:163-168` pins the FRD-007 behaviour. Needs an S1 ruling.
 
 **No seam, manual:** onboarding live UI (8084, 8086–8092, 8095, 8096, 8099), live permission flows (8105, 8106, 8108, 8109, 8112–8114, 8116–8118, 8124), menu visuals and VoiceOver (8126, 8128, 8130, 8135–8138), binary and packet checks (8142–8147, live halves), and the screenshot halves of 8033, 8065 and 8066. OC-8043 and 8079 are weakly covered.
+
+---
+
+## 2026-11-18: A2 re-run (file copy, first reads after launch) on `main` @ 3b5c01c
+
+Clean clone detached at 3b5c01c; `ef250e4` (merge of worf-401b, TASK-401 reread-latch fix) is an ancestor (`git merge-base --is-ancestor`). Debug build via `bin/build.sh`: BUILD SUCCEEDED. Launched only with a scratch `CFFIXED_USER_HOME` per launch, no TCC grants, no `defaults write`. Load average during the run: 1-minute 9.7 at the start, 3.3 at the end (another session was running `swift test`). **Verdict: A2 file copy PASS, first reads PASS. Both defects from the df9bf09 entry did not reproduce, and I found a likely harness cause for them (below).**
+
+**File copy (item kinds counted in the scratch DB before and after each attempt)**
+
+| Method | Attempts | `file` item stored | Log codes |
+|---|---|---|---|
+| Real Finder copy (osascript: Finder `select` a scratch file, System Events Cmd+C) | 6 | 6 of 6 (pasteboard held `public.file-url`, utf8 and utf16 plain text, `com.apple.icns`) | `pasteboard.processed kind=file outcome=stored`, no `CAP-*` |
+| NSPasteboard file-URL write (`writeObjects([NSURL])`, only `public.file-url`) on launch 1 | 6 | 6 of 6 | `outcome=stored` |
+| Same, launches 2 and 3 | 3 + 3 | 6 of 6 | `outcome=stored` |
+| Same, on the app instance of the discarded first attempt, after fixing the writer (3 writes of one file) | 3 | 1 new item, 2 deduped (expected for the same file) | `outcome=stored` once, then `outcome=deduped` |
+
+**Harness defect found, probable cause of the old 0 of 5.** My first NSPasteboard writer was built with `swiftc -O` and exited immediately after `writeObjects`. For file URLs the pasteboard was then empty (a separate process listing `pasteboardItems` printed nothing, while the same code in a longer-lived process showed `public.file-url`). Flotsam saw this as empty changes: `CAP-VAL-001`, `CAP-VAL-001`, then `CAP-PRM-001 warning permission=pasteboard` after the third, and nothing stored (0 of 6; these 6 attempts are discarded as a harness error, not counted). That is exactly the signature of the df9bf09 run (file copy `CAP-VAL-001`; first reads `CAP-VAL-001` then `CAP-PRM-001`). Rebuilt the writer without `-O` and with a 0.3 s wait before exit; every write then persisted and was captured. I cannot see the earlier run's harness, so this is a probable cause, not a confirmed one. Hint for S1: the product behaved per FR-001-01 / FR-001-18 on the empty reads (three empty changes raised `CAP-PRM-001`).
+
+**First text and URL read after a fresh launch (3 launches)**
+
+| Launch | Pasteboard at launch | Codes before first text | First text | First URL (text plus `public.url`, as a browser writes it) |
+|---|---|---|---|---|
+| 1 | cleared (empty) | one `CAP-VAL-001` at launch (empty read) | stored, no code | stored as `link`, no code |
+| 2 | cleared (empty) | one `CAP-VAL-001` at launch (empty read) | stored, no code | stored as `link`, no code |
+| 3 | held a text string | none | the pre-launch text was stored once at launch, then the new text stored | stored as `link`, no code |
+
+- No `CAP-PRM-001` on any of the three formal launches. The single `CAP-VAL-001` with an empty pasteboard is the specified empty-payload log (AC-001-06 family), not a failure of the first read.
+- Side observation: a pasteboard holding only `public.url` (an `NSURL` write, no plain text) gave `CAP-VAL-001` and nothing stored. FR-001-05 says `public.url` only confirms a link and the plain text is the stored value, so I read this as specified; flagging it in case S1 intends a URL-only copy to be stored.
+- TASK-401 itself (re-read before counting an empty change) was not isolated here: no case in this run exercised a copy caught between clear and write.
+
+**Data isolation:** real DB, its `-wal` and the real prefs plist hashed (sha1) before and after: `flotsam.sqlite` sha1 03fc64cf..., `-wal` sha1 c1189741..., prefs plist sha1 c190d732...; all three identical before and after (full-hash `diff` clean). No `defaults write`, no TCC grants, `com.apple.screencapture` and the media volumes untouched, no TextEdit documents saved. Only scratch files I created were copied. Pasteboard cleared at the end. App quit after each launch; clone, scratch homes and test files deleted; no Flotsam process left running.
+
+**Not done:** TASK-401 empty-between-clear-and-write race (AC-001-18) was not provoked; nothing about the symlinked folder was re-run (not in scope).
+
+**Defects / follow-ups for S1:** none new for the product. The two df9bf09 defects are retracted as not reproduced on 3b5c01c, with the harness cause above as the likely explanation. Optional: confirm intended behaviour for a URL-only (`public.url`, no text) pasteboard.
