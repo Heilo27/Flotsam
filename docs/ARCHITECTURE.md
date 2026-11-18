@@ -127,6 +127,7 @@ Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-mig
 | Settings keys, defaults, validation | Base `SettingKeys` / `SettingsStore` |
 | Ingest limits | Storage `IngestLimits` |
 | Kinds, payload, chord, search normalisation | Base `ItemKind`, `CapturedPayload`, `Chord`, `SearchNormalizer` |
+| Does a file, folder or bundle member still exist (paste, Missing row state) | Base `FileMemberLocator`, `ItemKind.referencesFiles` |
 | Classification and `contentKey` | Payload |
 | Screenshot name prefixes | Screenshots `ScreenshotNamePrefixes` |
 | Reserved chords | Shortcuts `ReservedChords` |

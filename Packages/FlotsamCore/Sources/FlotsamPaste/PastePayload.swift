@@ -9,14 +9,15 @@ enum PastePayload {
 
     /// Kinds whose content is text, so "plain text only" has meaning (FR-003-15).
     private static let textKinds: Set<ItemKind> = [.text, .richText, .link, .color, .phone, .email]
-    private static let fileKinds: Set<ItemKind> = [.file, .folder, .bundle]
 
     /// The representations to write, or `LIB-DAT-001` when a file item has no member left on disk.
     static func representations(
         for content: ItemContent, mode: PasteMode, itemId: UUID, files: any FileSystemPort
     ) -> FlotsamResult<[PasteboardRepresentation]> {
-        if fileKinds.contains(content.kind) {
-            let urls = content.members.compactMap { existingURL(of: $0, files: files) }
+        if content.kind.referencesFiles {
+            let urls = content.members.compactMap {
+                FileMemberLocator.currentURL(path: $0.path, bookmark: $0.bookmark, isDirectory: $0.isDirectory, files: files)
+            }
             guard !urls.isEmpty else {
                 return .failure(FlotsamError(.libDat001, "Every file of the item is gone", context: [.itemId: .id(itemId)]))
             }
@@ -25,19 +26,5 @@ enum PastePayload {
         guard textKinds.contains(content.kind) else { return .success(content.representations) }
         let text = PasteboardRepresentation(uti: plainTextType, data: Data((content.plainText ?? "").utf8))
         return .success(mode == .plainText ? [text] : [text] + content.representations)
-    }
-
-    /// The member's current location: where its bookmark says (it follows a move or rename), else the stored path.
-    /// Nil when nothing exists there any more.
-    private static func existingURL(of member: ItemMember, files: any FileSystemPort) -> URL? {
-        var candidates: [URL] = []
-        if let bookmark = member.bookmark {
-            var stale = false
-            if let resolved = try? URL(resolvingBookmarkData: bookmark, options: [.withoutUI, .withoutMounting], relativeTo: nil, bookmarkDataIsStale: &stale) {
-                candidates.append(resolved)
-            }
-        }
-        candidates.append(URL(fileURLWithPath: member.path, isDirectory: member.isDirectory))
-        return candidates.first { files.fileExists(at: $0) }
     }
 }
