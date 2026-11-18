@@ -416,8 +416,8 @@ struct WatcherSettingsTests {
         rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
         _ = try (0..<3).map { _ in try rig.shot(in: rig.desktop) }
         let log = await HUDLog()
-        await rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
-        await rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
+        await rig.watcher.importRecentAnnouncingWithin { message in log.messages.append(message) }
+        await rig.watcher.importRecentAnnouncingWithin { message in log.messages.append(message) }
         #expect(await log.messages == ["Imported 3", "Imported 0"])
     }
 
@@ -428,8 +428,8 @@ struct WatcherSettingsTests {
         let shots = try (0..<20).map { _ in try rig.shot(in: rig.desktop) }
         #expect(shots.count == 20)
         let log = await HUDLog()
-        async let first: Void = rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
-        async let second: Void = rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
+        async let first: Void = rig.watcher.importRecentAnnouncingWithin { message in log.messages.append(message) }
+        async let second: Void = rig.watcher.importRecentAnnouncingWithin { message in log.messages.append(message) }
         _ = await (first, second)
         #expect(await log.messages == ["Imported 20"])
     }
