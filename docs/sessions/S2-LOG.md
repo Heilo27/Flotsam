@@ -741,7 +741,7 @@ Toolchain on this run: macOS 27.3, Xcode 27.0 (27A266a), Apple Swift 6.4 (the he
 | Known issues | 9 (1 + 8) | 10 (1 + 1 + 8) |
 
 - Counting method: ANSI codes stripped, then `grep "Test run with"` and a sum; failures by `grep -c "^✘"`; known issues by `grep -c "recorded a known issue"`, which matches the per-run "with N known issue(s)" totals.
-- S1's 1610-ish figures: at 42cb847 my sum is 1612, equal to S1's. At 7948739 I count 1312, S1 reported 1310. The difference is 2; I did not find out why (two runs are single-test runs, "1 test in 1 suite"). Counted, not explained.
+- Against S1's figures: at 42cb847 my sum is 1612, equal to S1's 1612. At 7948739 I count 1312, S1 reported 1310. The difference is 2; I did not find out why (two runs are single-test runs, "1 test in 1 suite"). Counted, not explained.
 - Known issues are all pre-existing pins: `Adversarial372ProbeCopyTests.swift:524` (zero-byte main with non-empty WAL), `Adversarial000Tests.swift:1003` and `:1016` (TASK-368 regex/division lint), `:1032` (identifier lint).
 - Known flakes OC-7132, `optionArrowsStepThroughSidebarFilters`, OC-4102, OC-408-W12 all passed in the full run at both SHAs, so no single re-run was needed. LintHarnessTests passed (18.4 s and 20.9 s).
 - Load at A1 start was about 8.4 (other sessions on the machine), and `swift test` itself drove 1-min load to 83 at the end of the first run.
