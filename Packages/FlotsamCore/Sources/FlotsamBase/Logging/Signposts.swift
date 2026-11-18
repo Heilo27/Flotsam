@@ -1,7 +1,7 @@
 import Foundation
 import os
 
-/// The eight measured intervals of FR-000-12. They are the PRD's p95 metrics, so the names are the contract that
+/// The nine measured intervals of FR-000-12. They are the PRD's p95 metrics, so the names are the contract that
 /// Instruments lanes, other FRDs' performance targets and the scripted QA session all refer to.
 public enum PerfInterval: String, CaseIterable, Sendable {
     case capturePersist = "capture.persist"
@@ -13,6 +13,8 @@ public enum PerfInterval: String, CaseIterable, Sendable {
     case triggerExpand = "trigger.expand"
     /// One interval for the whole Clear History operation: count, every delete batch and the scrub (FRD-007 FR-007-16).
     case retentionClearHistory = "retention.clearHistory"
+    /// One screenshot pickup from the stability check to the ingest result, whatever the outcome (FRD-002 FR-002-14).
+    case screenshotImport = "screenshot.import"
 }
 
 /// A point-in-time event inside an open interval. Names are fixed, like the intervals, so an event carries no content.
@@ -51,6 +53,7 @@ public enum Signposts {
         case .retentionSweep: state = signposter.beginInterval("retention.sweep", id: id)
         case .triggerExpand: state = signposter.beginInterval("trigger.expand", id: id)
         case .retentionClearHistory: state = signposter.beginInterval("retention.clearHistory", id: id)
+        case .screenshotImport: state = signposter.beginInterval("screenshot.import", id: id)
         }
         return PerfSpan(interval: interval, state: state)
     }
@@ -65,6 +68,7 @@ public enum Signposts {
         case .retentionSweep: signposter.endInterval("retention.sweep", span.state)
         case .triggerExpand: signposter.endInterval("trigger.expand", span.state)
         case .retentionClearHistory: signposter.endInterval("retention.clearHistory", span.state)
+        case .screenshotImport: signposter.endInterval("screenshot.import", span.state)
         }
     }
 
