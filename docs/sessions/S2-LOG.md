@@ -548,3 +548,30 @@ Clipboard: restored after the run.
 - Before the final full `swift test`: `git fetch origin`, `git merge origin/main` (merge only), record the main SHA tested.
 
 **Unreachable IDs (part 1, from the test file's Unreachable comment):** OC-1001, 1003, 1022, 1023, 1033 (need a running app: CPU profile, menu tracking, Secure Event Input, system screenshot), plus the UI halves of OC-1005..1010, 1030, 1042, 1044, 1045, 1055 (panel/hotkey/paste UI). Part 2 unreachable list not yet built.
+
+## 2026-11-17: B FRD-003 8T, part 2 (INCOMPLETE, handoff)
+
+**Status: stopped on the compaction cap. Next OC ID: OC-3017 (primary lines per kind), then the preview batch (OC-3057, 3058, 3060, 3061, 3062, 3105), then the paste/error batch (OC-3068 onward).** Branch `s2/frd003-8t` @ 900d9e2, pushed. Merged `origin/main` 9fcb65c (main was 9fcb65c at the last fetch); that is the main SHA tested against. Test commits: 717c74d, 40523d0, 5c16a0d, 4c5bc28, 9d51901.
+
+**Counts (full `swift test --package-path Packages/FlotsamCore` at 900d9e2, one run):** FlotsamLibraryTests 169 tests, 16 issues. FlotsamStorageTests 373 tests, 2 issues (1 known). Capture 195, Paste 56, Base 14, Shortcuts 42, others pass. FRD-003 contract tests: 59 test functions that run, 54 pass, 5 fail (the 5 are the defects below; the D6 test is parameterized and counts 5 failing cases). Known flakes OC-7132 and optionArrowsStepThroughSidebarFilters passed. One unrelated failure: OC-4102 (FRD-004 perf, WorfFRD004StorageTests.swift:430, p95(toggle) < 100), likely load-sensitive; not re-run, not mine.
+
+**Pass (literal oracle assertions):** OC-3008, 3009, 3010, 3011, 3012, 3013, 3018, 3020, 3022-3047 (all), 3049, 3050, 3051, 3052, 3054. OC-3049 is mutation-verified (generation guard removed turns it red).
+
+**Fail (defects, product code untouched):**
+- D3 / OC-3015, Major: Command-Down with 10,000 items stops at index 199 (200 rows loaded) and never reaches the oldest. `LibraryViewModel.swift` `jump(toLast:)` (about line 355).
+- D4 / OC-3019, Major: yesterday reads "Safari · yesterday" (lowercase; oracle wants "Yesterday"); a 10-day-old item reads "last wk." where a date is wanted. `Sources/FlotsamStorage/Search/ItemSpeech.swift:22-27`.
+- D6 / OC-3060 and FR-003-14, Major: `LibraryPreview.memberLimit = 10` (`LibraryPreview.swift:10`), oracle wants 20 shown then "and 5 more" for a 25-member bundle. 5 parameterized cases fail.
+- NEW OC-3053 (a), Major: sidebar Types order puts Screenshots last because `SidebarEntry.entries` iterates `ItemKind.allCases` (`LibraryPresentation.swift:73-76`); oracle order is Text, Rich Text, Links, Colors, Phone Numbers, Emails, Images, Screenshots, Files, Folders, Bundles.
+- NEW OC-3053 (b), Minor: Pinned at 0 is not dimmed; `isDimmed: false` hardcoded at `LibraryPresentation.swift:71`.
+- D5 / OC-3020: FIXED on main, test passes. Wording mismatch for Ryan: oracle says "Original file missing", FRD and product say "Missing". FRD governs; no code change.
+
+**Predicted, unconfirmed (tests not written):** OC-3061 (preview has no First copied or Times copied field; `LibraryPreview.fields`), OC-3105 (no tag or note rows), OC-3058 (no colour swatch, hex or rgb data).
+
+**Handoff for the next agent:**
+- Worktree `flotsam-s2-frd003-8t`, test dir `Packages/FlotsamCore/Tests/FlotsamLibraryTests/`. Helpers: `RealLibrary` (real temp DB, shipping organizer; `add`, `allRows`), `Harness`, `FakeSource`, `UncancellableDelaySource`, `ContractPNG.make`, in `Frd003ContractSupport.swift`, `LibraryFakes.swift`, `Frd003ContractSearchTests.swift`.
+- OC-3017 only: write the per-kind primary-line test (text/richText 2 lines, 140 chars; link URL; colour '#1A2b3C'; phone, email; see the contract text).
+- Preview file `Frd003ContractPreviewTests.swift`: `model.preview`, `awaitPreview()`, `LibraryPreview.isTruncated`, `fields`, `memberPaths`, `hiddenMemberCount`; 3057 (25,000 chars truncated, 19,000 not), 3061 (labels Kind, Source, Copied, First copied, Times copied, Times pasted, Size, Pixel size), 3062 ('q' goes to search while preview open).
+- Paste/error batch: the paste-sequence fakes are in `Tests/FlotsamPasteTests/PasteFakes.swift` (internal there; copy locally). Failure codes: LIB-IO-001 (blob missing, item removed), LIB-DAT-001 (all members missing, panel stays open), LIB-OS-001. Reachable: 3068, 3069, 3071-3073, 3077-3081 (footer part), 3084, 3085, 3087, 3095, 3096, 3098, 3100-3104 (string literals from `Localizable.xcstrings`).
+- Run: `swift test --package-path Packages/FlotsamCore --filter Frd003Contract`. Commit `[FRD-003] 8T: ...` with both trailers, explicit-path `git add`, push after each batch; before the final full run `git fetch origin` and `git merge origin/main`, record the SHA.
+
+**Unreachable from the package (one-line reason each):** OC-3002 to 3007 (Spaces, hotkey, focus: need a running app), 3014 (signpost p95: needs the app), 3016 (AX layout hierarchy), 3021 (pt measurement: view-level), 3048, 3055, 3056 (perf and memory: need the app), 3059 and 3097 (network monitor: system level), 3063-3067 and 3070-3076 (real target apps and key posting), 3082 (NSDoubleLocalizedStrings launch argument), 3083 (human study), 3086 label order via VoiceOver, 3088-3090 (Full Keyboard Access, Reduce Motion, appearance), 3099 (drag), plus the view-level halves of 3057 (280 pt width), 3058 (rendering), 3060 (image fit), 3062 (click focus), and the HUD placement and 2.5 s timing in 3068, 3075, 3077, 3084, 3100-3103.
