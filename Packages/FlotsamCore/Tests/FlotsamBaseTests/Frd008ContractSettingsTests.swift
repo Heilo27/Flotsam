@@ -511,18 +511,29 @@ import Testing
         #expect(SettingsString.notInstalled.text == "Not installed")
     }
 
-    // OC-8079. Cancel in the reset alert leaves the edited list alone; the alert text is the oracle's.
-    @Test func oc8079_cancelledResetLeavesTheListAlone() {
-        let (settings, _, cleanup) = isolated(); defer { cleanup() }
+    // OC-8079 (AC-008-06, package half). The confirm-then-reset branch and the Cancel button live only in the SwiftUI
+    // view App/Flotsam/Settings/AppListEditor.swift (`confirmsReset ? confirmingReset = true : reset()`; Cancel is an
+    // empty closure). That decision is App-only and cannot be driven from this package; it needs an app UI test.
+    // What the package owns, and what makes "Cancel leaves the list unchanged" true: an edited list is persisted
+    // exactly (order, members) and nothing in the settings layer resets it on its own. Given an edited list, when
+    // no reset is invoked (the Cancel outcome), then a FRESH store on the same defaults returns exactly that list.
+    // Red if `set` drops/reorders entries, if `adding`/`removing` misbehave, or if reading falls back to the defaults.
+    @Test func oc8079_editedListSurvivesWhenResetIsNotInvoked() {
+        let name = "flotsam.frd008.settings.\(UUID().uuidString)"
+        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        func store() -> SettingsStore {
+            SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!), onInvalid: { _ in })
+        }
         let edited = BundleIdentifierList.defaultIgnoredApps.removing("com.bitwarden.desktop").adding("com.apple.TextEdit")
-        settings.set(edited, for: SettingKeys.privacyIgnoredApps)
+        store().set(edited, for: SettingKeys.privacyIgnoredApps)
 
+        let list = store().value(SettingKeys.privacyIgnoredApps).identifiers
+        #expect(list == [
+            "com.apple.keychainaccess", "com.apple.Passwords", "com.1password.1password",
+            "com.agilebits.onepassword7", "org.keepassxc.keepassxc", "com.apple.TextEdit",
+        ])
+        #expect(list != SettingKeys.privacyIgnoredApps.defaultValue.identifiers)
         #expect(SettingsString.confirmResetIgnored.text == "Replace your list with the default apps?")
-        // Cancel: nothing is written.
-        let list = settings.value(SettingKeys.privacyIgnoredApps).identifiers
-        #expect(list.count == 6)
-        #expect(list.contains("com.apple.TextEdit"))
-        #expect(!list.contains("com.bitwarden.desktop"))
     }
 
     // OC-8080. Confirming the reset yields exactly the six defaults.
