@@ -33,12 +33,7 @@ private struct QARig {
         settings.set(CaptureMode.active, for: SettingKeys.captureMode)
     }
 
-    func settle() async {
-        for _ in 0..<4 {
-            try? await Task.sleep(for: .milliseconds(30))
-            _ = await reporter.recentErrors()
-        }
-    }
+    func settle() async { await quiesceReporter(reporter) }
 
     func until(seconds: Double = 5, _ condition: () async throws -> Bool) async -> Bool {
         let deadline = Date().addingTimeInterval(seconds)
@@ -72,7 +67,9 @@ private struct QARig {
 }
 
 @MainActor
-private func withQARig(access: any PasteboardAccessPort, prefill: String? = nil, _ body: (QARig) async throws -> Void) async throws {
+private func withQARig(
+    access: any PasteboardAccessPort, prefill: String? = nil, timers: FakeTimers? = nil, _ body: (QARig) async throws -> Void
+) async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-414qa-\(UUID().uuidString)")
     defer { try? FileManager.default.removeItem(at: root) }
     let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data")).get()
@@ -86,7 +83,8 @@ private func withQARig(access: any PasteboardAccessPort, prefill: String? = nil,
     let capture = ClipboardCapture(
         pasteboard: pasteboard, sourceApps: ContractSourceApps(frontmost: ContractRig.writerApp), ownWrites: OwnWriteLedger(),
         ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
-        ignoredApps: { [] }, access: access, clock: clock, sink: sink)
+        ignoredApps: { [] }, access: access, clock: clock, sink: sink,
+        scheduleTimer: timers?.schedule ?? ClipboardCapture.systemTimer)
     capture.start()
     let rig = QARig(database: database, presenter: presenter, sink: sink, clock: clock, reporter: reporter, pasteboard: pasteboard, capture: capture, settings: settings)
     do { try await body(rig) } catch {
@@ -200,21 +198,32 @@ struct Task414SuspensionTests {
         }
     }
 
+    /// Runs on the timer seam (ADR-0011) and the manual clock: the 60 s probe is driven by firing the one scheduled
+    /// source by hand, so neither a real 0.5 s tick nor a sleep decides the outcome (TASK-447: a real-timer wait of
+    /// 1.2 s / 3 s lost the race under full-suite load).
     @Test("OC-1083 (launch variant): blocked at launch, text becomes readable without a changeCount bump, 60 s probe stores it and clears the Notice")
     func launchBlockedProbeResumes() async throws {
-        try await withQARig(access: SwitchableAccess(false)) { rig in
+        let timers = FakeTimers()
+        try await withQARig(access: SwitchableAccess(false), timers: timers) { rig in
             await rig.settle()
             #expect(rig.codes == [.capPrm001])
             await rig.letWatchEnd()  // end the launch change's watch so the reveal below is a hidden, not a re-read, change
+            let source = try #require(timers.live.first, "capture schedules its poll source")
             let v = uid("probe")
             rig.pasteboard.reveal([PasteboardRepresentation(uti: PasteboardTypes.plainText, data: Data(v.utf8))])
             rig.clock.advance(by: 59)
-            try await Task.sleep(for: .milliseconds(1200))
+            let typeQueriesBefore = rig.pasteboard.typeQueries
+            source.fire()
+            // A tick at 59 s reads `changeCount` only: the probe has not run, so no type or byte read happened.
+            #expect(rig.pasteboard.typeQueries == typeQueriesBefore, "59 s: the probe has not run")
+            await rig.settle()
             let stored = try await rig.texts()
             #expect(stored == [], "59 s: the probe has not run")
             #expect(rig.codes == [.capPrm001], "59 s: the Notice stays")
             rig.clock.advance(by: 1)
-            #expect(await rig.until(seconds: 3) { try await rig.texts() == [v] })
+            source.fire()
+            #expect(await rig.until(seconds: 10) { try await rig.texts() == [v] })
+            #expect(await rig.until(seconds: 10) { rig.codes.isEmpty })
             await rig.settle()
             #expect(rig.codes.isEmpty)
         }
@@ -231,9 +240,13 @@ struct Task414SuspensionTests {
             // No clock advance: the resume cleared the Notice and with it the 60 s throttle (FR-000-08), so a re-suspend
             // inside the window shows the Notice again (FR-001-18).
             for _ in 0..<3 { await rig.emptyChange() }
+            // Presence is awaited, not slept for; the strict assertions then run after a quiesce, so a late clear
+            // arriving after the Notice appeared would still fail them.
+            #expect(await rig.until { rig.sink.logged(.capPrm001).count == 2 && rig.codes == [.capPrm001] })
             await rig.settle()
             #expect(rig.sink.logged(.capPrm001).count == 2)
             #expect(rig.codes == [.capPrm001], "lists: \(rig.presenter.noticeLists.map { $0.map(\.code.rawValue) })")
+            #expect(await rig.until { try await rig.texts() == [r] })
             let stored = try await rig.texts()
             #expect(stored == [r])
         }

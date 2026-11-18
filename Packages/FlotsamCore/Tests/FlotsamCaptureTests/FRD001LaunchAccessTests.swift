@@ -38,12 +38,7 @@ struct FRD001LaunchAccessTests {
         await capture.stop()
     }
 
-    private func settle(_ reporter: ErrorReporter) async {
-        for _ in 0..<3 {
-            try? await Task.sleep(for: .milliseconds(30))
-            _ = await reporter.recentErrors()
-        }
-    }
+    private func settle(_ reporter: ErrorReporter) async { await quiesceReporter(reporter) }
 
     @Test("OC-1084: access other than Allow at launch raises CAP-PRM-001 and shows the warning")
     func blockedAtLaunch() async throws {

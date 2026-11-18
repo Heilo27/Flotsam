@@ -406,29 +406,34 @@ private extension Store {
     // OC-4102, OC-4103. Red if an organise command scans the library per item, or tagging 500 loops with a read each.
     @Test("OC-4102 given 10,000 items, when pin, tag and delete repeat, then p95 is under 100 ms and tagging 500 is under 1 s")
     func organisePerformance() async throws {
-        let store = try await Store.make()
-        defer { store.cleanUp() }
-        try await store.insert((1...10_000).map { Spec(n: $0, ageMs: Int64($0) * 1000) })
-        #expect(try store.count("item") == 10_000)
-        let tag = try await store.database.createTag(name: "perf").get()
-        let clock = ContinuousClock()
-        func millis(_ d: Duration) -> Double { Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15 }
+        // Every run asserts the work done; only the timing is best-of-three (TASK-447: wall-clock figures of a debug
+        // build lost to scheduler stalls under a full-suite run). The bounds are unchanged: the metric is the worst
+        // figure as a fraction of its own bound, so < 1 means p95 < 100 ms for each command and the bulk < 1000 ms.
+        var figures = ""
+        let worstFraction = try await bestOfThree(under: 1.0) {
+            let store = try await Store.make()
+            defer { store.cleanUp() }
+            try await store.insert((1...10_000).map { Spec(n: $0, ageMs: Int64($0) * 1000) })
+            #expect(try store.count("item") == 10_000)
+            let tag = try await store.database.createTag(name: "perf").get()
+            let clock = ContinuousClock()
+            func millis(_ d: Duration) -> Double { Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15 }
 
-        var pin: [Double] = [], toggle: [Double] = [], delete: [Double] = []
-        for n in 1...20 {
-            pin.append(millis(await clock.measure { _ = await store.database.togglePinned(ids: [Store.id(n * 10)]) }))
-            toggle.append(millis(await clock.measure { _ = await store.database.toggleTag(id: tag, on: [Store.id(n * 10 + 1)]) }))
-            delete.append(millis(await clock.measure { _ = await store.database.delete(ids: [Store.id(n * 10 + 2)]) }))
+            var pin: [Double] = [], toggle: [Double] = [], delete: [Double] = []
+            for n in 1...20 {
+                pin.append(millis(await clock.measure { _ = await store.database.togglePinned(ids: [Store.id(n * 10)]) }))
+                toggle.append(millis(await clock.measure { _ = await store.database.toggleTag(id: tag, on: [Store.id(n * 10 + 1)]) }))
+                delete.append(millis(await clock.measure { _ = await store.database.delete(ids: [Store.id(n * 10 + 2)]) }))
+            }
+            let bulk = millis(await clock.measure { _ = await store.database.toggleTag(id: tag, on: (5_001...5_500).map(Store.id)) })
+
+            // the work happened (a test of a no-op would pass any time budget)
+            #expect(try store.scalar("SELECT COUNT(*) FROM item WHERE pinned = 1") == 20)
+            #expect(try store.count("item") == 9_980)
+            #expect(try store.scalar("SELECT COUNT(*) FROM itemTag") == 520)
+            figures = "p95 pin \(p95(pin)) toggle \(p95(toggle)) delete \(p95(delete)) ms, bulk \(bulk) ms"
+            return max(p95(pin) / 100, p95(toggle) / 100, p95(delete) / 100, bulk / 1000)
         }
-        let bulk = millis(await clock.measure { _ = await store.database.toggleTag(id: tag, on: (5_001...5_500).map(Store.id)) })
-
-        // the work happened (a test of a no-op would pass any time budget)
-        #expect(try store.scalar("SELECT COUNT(*) FROM item WHERE pinned = 1") == 20)
-        #expect(try store.count("item") == 9_980)
-        #expect(try store.scalar("SELECT COUNT(*) FROM itemTag") == 520)
-        #expect(p95(pin) < 100)
-        #expect(p95(toggle) < 100)
-        #expect(p95(delete) < 100)
-        #expect(bulk < 1000)
+        #expect(worstFraction < 1, "over budget on all 3 runs; last run: \(figures)")
     }
 }

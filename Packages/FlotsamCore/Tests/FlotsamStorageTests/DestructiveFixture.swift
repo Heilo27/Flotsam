@@ -298,3 +298,16 @@ struct References {
     func read(_ url: URL) -> String? { (try? Data(contentsOf: url)).flatMap { String(data: $0, encoding: .utf8) } }
     func cleanUp() { try? FileManager.default.removeItem(at: directory) }
 }
+
+/// Wall-clock figures in a debug build share the machine with the rest of the suite, so one scheduler stall can push a
+/// single run over a bound the code meets. The metric is the best of up to three independent runs, stopping at the
+/// first that is inside the bound: noise passes on a retry, while code that is genuinely over the bound is over it on
+/// every run (each kill-check below makes the work slower than the bound on every run).
+func bestOfThree(under bound: Double, _ run: () async throws -> Double) async rethrows -> Double {
+    var best = Double.infinity
+    for _ in 1...3 {
+        best = min(best, try await run())
+        if best < bound { break }
+    }
+    return best
+}

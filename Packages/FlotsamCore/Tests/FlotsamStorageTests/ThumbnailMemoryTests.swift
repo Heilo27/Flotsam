@@ -19,7 +19,10 @@ import FlotsamBase
 
     private func ingestWarmed(_ rig: Rig, key: String = "img") async throws -> UUID {
         let id = try await rig.create(rig.image(key, TestImage.make(width: 1200, height: 800, format: .png)))
-        let warmed = await waitUntil { rig.store.exists(thumbPath(rig, id, 256)) && rig.store.exists(thumbPath(rig, id, 512)) }
+        // The warm-up is a `.utility` detached task by design (IngestActor.warmThumbnails), so under full-suite CPU
+        // load it can wait several seconds for a core. The wait is on the event (both files written); 60 s is only
+        // a hang guard so a warm-up that truly never runs fails instead of hanging. The assertion is unchanged.
+        let warmed = await waitUntil(seconds: 60) { rig.store.exists(thumbPath(rig, id, 256)) && rig.store.exists(thumbPath(rig, id, 512)) }
         try #require(warmed, "warm-up never wrote both thumbnails")
         return id
     }

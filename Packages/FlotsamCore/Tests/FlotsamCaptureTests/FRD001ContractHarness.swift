@@ -43,8 +43,6 @@ final class ContractPasteboard: PasteboardPort {
     func copy(_ representations: [PasteboardRepresentation]) {
         reps = representations
         changeCount += 1
-        lastCopyInstant = ContinuousClock.now
-        firstReadAfterCopy = nil
     }
 
     /// `clearContents`: empties the board and bumps `changeCount`. The first half of a non-atomic copy.
@@ -54,19 +52,6 @@ final class ContractPasteboard: PasteboardPort {
     func fill(_ representations: [PasteboardRepresentation]) { reps = representations }
     func fillText(_ text: String) { fill([PasteboardRepresentation(uti: PasteboardTypes.plainText, data: Data(text.utf8))]) }
 
-    /// When the latest copy happened, and when capture first listed the types after it (the poll that saw the new
-    /// count). Their difference is detection latency (FR-001-20) with ingest and the test's own database polling
-    /// kept out of it.
-    private var lastCopyInstant: ContinuousClock.Instant?
-    private var firstReadAfterCopy: ContinuousClock.Instant?
-
-    /// Seconds from the latest copy to the first type-list read after it; nil until capture has looked.
-    var detectionLatency: Double? {
-        guard let copied = lastCopyInstant, let read = firstReadAfterCopy else { return nil }
-        let elapsed = read - copied
-        return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
-    }
-
     func copy(_ pairs: [(String, Data)]) { copy(pairs.map { PasteboardRepresentation(uti: $0.0, data: $0.1) }) }
     func copy(_ uti: String, _ data: Data) { copy([PasteboardRepresentation(uti: uti, data: data)]) }
     func copyText(_ text: String, extra: [(String, Data)] = []) {
@@ -75,7 +60,6 @@ final class ContractPasteboard: PasteboardPort {
 
     func currentTypeIdentifiers() -> [String] {
         typeQueries += 1
-        if firstReadAfterCopy == nil, lastCopyInstant != nil { firstReadAfterCopy = ContinuousClock.now }
         var seen: [String] = []
         for rep in reps where !seen.contains(rep.uti) { seen.append(rep.uti) }
         return seen
@@ -214,10 +198,13 @@ final class ContractRig {
 
     static let writerApp = SourceApp(bundleId: "com.example.writer", name: "Writer")
 
-    static func make(frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true) async throws -> ContractRig {
+    static func make(
+        frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true,
+        scheduleTimer: @escaping ClipboardCapture.TimerScheduler = ClipboardCapture.systemTimer
+    ) async throws -> ContractRig {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-frd001-\(UUID().uuidString)")
         let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data")).get()
-        let rig = ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture)
+        let rig = ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture, scheduleTimer: scheduleTimer)
         if startCapture {
             // Starting on an empty pasteboard opens the watch of an empty change (FR-001-01), which would later count
             // toward FR-001-18 b. Paused then Active re-reads the baseline (FR-001-19), so that launch read is never
@@ -230,7 +217,10 @@ final class ContractRig {
         return rig
     }
 
-    private init(root: URL, database: FlotsamDatabase, frontmost: SourceApp?, startCapture: Bool) {
+    private init(
+        root: URL, database: FlotsamDatabase, frontmost: SourceApp?, startCapture: Bool,
+        scheduleTimer: @escaping ClipboardCapture.TimerScheduler
+    ) {
         self.folder = root.appendingPathComponent("data")
         self.files = root.appendingPathComponent("files")
         try? FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
@@ -242,7 +232,7 @@ final class ContractRig {
         self.capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: sourceApps, ownWrites: ledger,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { box.value }, clock: clock, sink: sink)
+            reporter: reporter, ignoredApps: { box.value }, clock: clock, sink: sink, scheduleTimer: scheduleTimer)
         if startCapture { capture.start() }
     }
 
@@ -264,12 +254,7 @@ final class ContractRig {
 
     /// Lets fire-and-forget `reporter.report` tasks settle. Use before asserting that a log record is ABSENT; pair it
     /// with a positive `until` on the record that must be present.
-    func flush() async {
-        for _ in 0..<3 {
-            try? await Task.sleep(for: .milliseconds(30))
-            _ = await reporter.recentErrors()
-        }
-    }
+    func flush() async { await quiesceReporter(reporter) }
 
     /// Polls `condition` for up to `seconds`; returns whether it became true.
     @discardableResult
@@ -429,12 +414,33 @@ enum TestImage {
 
 // MARK: Shared test helpers (parts 1 and 2)
 
+/// The one home of "wait for the capture's fire-and-forget reporter tasks" (`Task { await reporter.report(...) }`,
+/// ClipboardCapture `raise` and `noteReadability`), with no wall-clock wait. A fixed sleep (the earlier 3 x 30 ms
+/// and 300 ms) loses the race when the main actor is starved under a full-suite run (TASK-447). The main actor runs
+/// its queue in order, so one `yield` lets every task already queued start; each then enqueues on the reporter
+/// actor, whose `recentErrors()` call queues behind them; the reporter's hop to the main-actor presenter queues
+/// ahead of the next `yield`. Four rounds cover the longest chain (task, reporter, presenter). Pair it with a
+/// positive `until` when the thing asserted is PRESENT.
+@MainActor
+func quiesceReporter(_ reporter: ErrorReporter) async {
+    for _ in 0..<4 {
+        await Task.yield()
+        _ = await reporter.recentErrors()
+    }
+    await Task.yield()
+}
+
+/// A timer scheduler that never fires: a test that drives `captureNow()` by hand uses it so a real 0.5 s tick cannot
+/// interleave an extra read (every extra read of an unfinished empty change counts toward CAP-PRM-001).
+let inertTimer: ClipboardCapture.TimerScheduler = { _, _, _ in { } }
+
 @MainActor
 func withRig(
     frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true,
+    scheduleTimer: @escaping ClipboardCapture.TimerScheduler = ClipboardCapture.systemTimer,
     _ body: (ContractRig) async throws -> Void
 ) async throws {
-    let rig = try await ContractRig.make(frontmost: frontmost, startCapture: startCapture)
+    let rig = try await ContractRig.make(frontmost: frontmost, startCapture: startCapture, scheduleTimer: scheduleTimer)
     do { try await body(rig) } catch {
         await rig.finish()
         throw error
