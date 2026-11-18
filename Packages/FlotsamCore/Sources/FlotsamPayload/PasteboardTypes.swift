@@ -8,8 +8,8 @@ import Foundation
 /// There is deliberately no list of ignored types, so a new unknown type is ignored by default.
 public enum PasteboardTypes {
     public static let plainText = PasteboardUTI.plainText
-    public static let rtf = "public.rtf"
-    public static let html = "public.html"
+    public static let rtf = PasteboardUTI.rtf
+    public static let html = PasteboardUTI.html
     public static let png = "public.png"
     public static let tiff = "public.tiff"
     public static let jpeg = "public.jpeg"

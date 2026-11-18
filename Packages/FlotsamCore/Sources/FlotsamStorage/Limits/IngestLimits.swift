@@ -27,7 +27,7 @@ struct LimitedPayload: Sendable {
 
 extension IngestLimits {
     /// Rich-text representations, the only ones that may be dropped alone while the plain text is kept.
-    static let richTypeIdentifiers: Set<String> = ["public.rtf", "public.html"]
+    static let richTypeIdentifiers: Set<String> = [PasteboardUTI.rtf, PasteboardUTI.html]
 
     /// The skip code for an over-ceiling text or image, chosen by where the payload came from (FR-007-06).
     static func limitCode(for origin: CaptureOrigin) -> ErrorCode {
