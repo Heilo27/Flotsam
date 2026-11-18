@@ -24,7 +24,8 @@ final class OnboardingModel {
     init(container: AppContainer, resuming: Bool) {
         self.container = container
         flow = OnboardingFlow(
-            gatesPasteboard: PasteboardAccess.isGated, resumingAt: resuming ? container.onboardingProgress.savedStep() : nil)
+            gatesPasteboard: PasteboardAccess.isGated,
+            resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: resuming, saved: container.onboardingProgress.savedStep()))
         refresh()
     }
 
@@ -87,7 +88,9 @@ final class OnboardingModel {
     /// Step 5 changes no setting: pickup and the folder belong to General alone (FR-008-17). The one thing it does is
     /// the optional import of the last 30 days, and only while pickup is on.
     private func applyScreenshots() {
-        if importRecent && container.screenshotPickup.enabled { container.actions.importRecentScreenshots?() }
+        if OnboardingFlow.shouldImportScreenshots(importRecent: importRecent, pickupEnabled: container.screenshotPickup.enabled) {
+            container.actions.importRecentScreenshots?()
+        }
     }
 
     /// The only place onboarding registers the login item, and only on Continue (FR-008-15). A failure shows the HUD
