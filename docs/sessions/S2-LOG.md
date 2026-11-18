@@ -280,3 +280,68 @@ Clipboard: the prior contents (one item, `public.rtf` and `public.utf8-plain-tex
 - `swift test` (parallel, no scratch path), in `Packages/FlotsamCore`: exit 0, no failures. 292 tests in 45 suites with 8 known issues, the same as before. OC-7132 passed in the full run.
 - `bin/check-architecture.sh`: **pass**.
 - Test bugs found: none. No site was a test meant to exercise a throwing path; each asserts on the returned `FlotsamResult`.
+
+---
+
+## 2026-11-17: Lane A3 smoke, FRD-005 triggers/shortcuts @ a6c6ff0
+
+**Verdict: pass with 2 defects (both minor, no data effect).**
+
+- Clean clone at a6c6ff0, `bin/bootstrap.sh` ok. `swift test` (parallel, no scratch path), in `Packages/FlotsamCore`: **0 failures, exit 0**. Swift Testing runs include 287 tests in 44 suites with 8 known issues (matches S1), 270 in 36 with 1 known issue, 157 in 12, and a 25-test / 5-suite run with 2 known issues; 872 tests in total, 11 known issues. XCTest bundle: 6 tests, 0 failures.
+- OC-7132 (`Unmapped007TimingTests.swift:151`) passed in the full run (3.3 s), so no solo re-run was needed. Other agents were running `swift test` on the same box.
+- `bin/check-architecture.sh`: **pass**. `bin/build.sh`: **BUILD SUCCEEDED** (only warning: AppIntents metadata skip).
+
+**Test data dir:** the app has none (`AppContainer.dataFolder` uses the Application Support directory unconditionally). The run was isolated by launching the Debug binary directly with `CFFIXED_USER_HOME` pointing at a scratch directory. This is an OS-level redirect, not an app feature. The real database was untouched (17 items before and after, 0 rows with the test marker). Clipboard saved before and restored after.
+
+**A3 smoke (editor driven by real keystrokes via System Events)**
+- Editor opens with Cmd+K ("Shortcut and Trigger"): Shortcut row ("Not set"), Record shortcut, Trigger field with help text, Cancel, Save. **pass**
+- Assign trigger and save: stored as `;a3s2sig` (text item) and `;a3s2link` (link item). **pass**
+- Assign shortcut and save: Ctrl+Opt+A and Ctrl+Opt+B stored as hotkeyCode / hotkeyModifiers. **pass**
+- Persistence: after the editor closes, after reopening the editor, and after a full quit and relaunch, the DB (read-only) and the editor both show the saved shortcut and trigger. **pass**
+- Trigger grammar (TRG-VAL-001): no symbol, a space, and a lone symbol are rejected with the catalogue copy; `;` plus 23 letters accepted, plus 24 rejected; `;sig`, `;x1-_` accepted. Empty shows the help text. **pass**
+- Duplicate trigger (TRG-VAL-002), case-insensitive: inline copy shown, Save disabled. **pass**
+- Shortcut rules (TRG-VAL-003): Shift+A, Opt+Shift+A, Opt+J, Cmd+C, Cmd+Q rejected with the catalogue copy, recording continues. Ctrl+Opt+A accepted. Cmd+Space and Ctrl+Space not tried (system-wide side effects). **pass (partial)**
+- Duplicate shortcut (TRG-VAL-004) shows the catalogue copy. **pass**
+- Image item (AC-005-08): no trigger field; only the shortcut, with the note that triggers expand text. **pass**
+- Non-ASCII trigger via GUI: **untested** (the keystroke harness mangled the character); covered by the AC-005-07 unit tests.
+- Unknown-variable warning (TRG-VAL-005): **FAIL**, see D1.
+- Capture regression, each stored once: text (`text`), URL (`link`), image (`image`), file (`file`, one `bundleMember` row), rich text already on the clipboard at launch (`richText`). Re-copying text gives copyCount 2, still one item. Concealed (`org.nspasteboard.ConcealedType`) copy: item count unchanged, 0 hits for the secret string in the DB, data folder and Preferences (checked twice). **pass**
+- Library opens, sidebar and footer render. Pin and delete (and the pinned delete-confirm): **not hosted yet**. The app wires only Cmd+K; pin, tags, note, edit, delete, sort and ungroup are FRD-004 and inert (comment in `AppContainer.swift`). Cmd+P and Cmd+Delete had no effect, as designed.
+- Menu bar item and menu: **pass**. Clean quit via the menu, process gone, no DiagnosticReports entry, `PRAGMA integrity_check` ok (twice). **pass**
+- Live trigger expansion: **not hosted yet**. Paste-back and anything needing Accessibility: **untested (no AX grant)**.
+
+**Defects**
+- **D1 (TRG-VAL-005 / FR-005-17):** with an item containing an unknown variable (copied text `... {foo} {date:@@}`), assigning a trigger shows the generic copy "Something unexpected went wrong. Try again; if it keeps happening, copy diagnostics from Settings > About." instead of "An unknown variable was left as plain text." The save HUD shows the same wrong text. The save itself succeeds (trigger stored). Cause confirmed in code: `TemplateVariables.validate` attaches `.count` to the error, `FlotsamStrings.message(for:)` then passes one argument to a template with no placeholder, the arguments-versus-placeholders check fails and it falls back to SYS-INT-001. Repro: copy text containing `{foo}`, open it in the Library, Cmd+K, type `;x1`. Fixed on main by TASK-395 (checked in the 2990d01 entry below).
+- **D2 (FR-005-04 / AC-005-02, minor UX):** in the shortcut recorder, after a rejected chord (reserved or duplicate), recording a valid chord is accepted and the shortcut shows, but the red inline error stays on screen. Save still works. No FRD text says it must clear, so this is stale state, not a spec break.
+
+**Observations (not defects)**
+- File capture was missed on the first attempt in a rapid sequence and stored on retry (harness timing not ruled out; see the 2990d01 entry).
+
+Clipboard: restored after the run.
+
+---
+
+## 2026-11-17: Lanes A1+A2, TASK-396 triggers hosted @ 2990d01
+
+**Verdict: pass. One known issue (TASK-399), no new defects.** Hands-on trigger checks (AX grant, live typing) skipped as briefed; those are done by hand separately.
+
+- Same scratch clone, fetched and checked out at 2990d01. `swift test` (parallel, no scratch path), in `Packages/FlotsamCore`: **0 failures, exit 0**. Runs: 287 tests in 44 suites with 8 known issues (matches S1), 270 in 36 with 1 known issue, 167 in 13 with 1 known issue, 59 in 7, 53 in 6, 30 in 6, 27 in 3, and three 1-test runs. XCTest bundle: 6 tests, 0 failures. 10 known issues in total.
+- **Known issue, not new:** `theDotStaysSetWhileLatchedEvenIfAPermissionIsRevoked` (TriggerHostingWorfTests.swift:202, `h.engine.showsWarningDot`) records a known issue. Its fix is TASK-399, in progress.
+- `bin/check-architecture.sh`: **pass**. `bin/build.sh` (build directory removed first): **BUILD SUCCEEDED**, only the AppIntents metadata warning.
+
+**A2 launch smoke** (Debug app, isolated test home via `CFFIXED_USER_HOME`; real database untouched at 17 items)
+- Launch alive, menu bar item present. Menu: Open Library, Save Clipboard, Toggle Shelf, Pause Capture, Notices, Settings…, Show Setup Guide…, Quit Flotsam. **pass**
+- Captures: text (`text`), URL (`link`), image (`image`), file (`file`, one `bundleMember` row per copied file), each stored once. **pass**
+- Concealed copy: item count unchanged, 0 hits for the secret in the test data folder. **pass**
+- Library opens from the menu bar, 9 items listed with Types and Apps sidebars, footer "9 items". **pass**
+- Quit via the menu: process gone, `PRAGMA integrity_check` ok, no DiagnosticReports entry. **pass**
+- Also checked, editor only (no live trigger): the unknown-variable warning now shows "An unknown variable was left as plain text." (D1 from the entry above is fixed at 2990d01).
+- Live trigger expansion and paste-back: **not run** (skipped per brief; needs AX).
+
+**Observations (not defects)**
+- File capture is intermittent in my harness. At 2990d01 a copied file was missed three times in a row (5 to 8 s gaps) after an image or file capture, then stored when a different file was copied, and stored on a later retry of the first file once a text copy had come between. Cause not determined (harness pasteboard timing versus an app-side dedupe or skip); it also missed once on a6c6ff0 and stored on retry. Not reproducible on demand, so not filed as a defect; worth a look by whoever owns capture dedupe.
+- The `pb image` harness tool needs a path argument; a call without one does not capture anything (harness trap, not the app).
+
+**Defects:** none new.
+
+Clipboard: restored after the run.
