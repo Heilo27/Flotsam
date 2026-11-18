@@ -175,75 +175,15 @@ import Testing
 
 // MARK: - FR-000-12: signposts (X309, X310)
 
-/// Reads real signposts the way Instruments does. `OSLogStore` cannot return signposts and `OSSignposter` has no
-/// readback, so a short-lived `log stream --signpost` (an unprivileged system tool, no production seam) filtered to
-/// this process, the app subsystem and category `perf` is the observer.
-private final class SignpostProbe: @unchecked Sendable {
-    struct Event: Equatable { let name: String; let type: String; let category: String }
-
-    private let process = Process()
-    private let outputURL: URL
-    private var started = false
-
-    init() {
-        outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-signpost-\(UUID().uuidString).ndjson")
-    }
-
-    /// Starts the stream and returns once it reports it is filtering. The predicate names the subsystem but NOT the
-    /// category, so a signposter on a wrong category is visible as an event with the wrong category (not silence).
-    func start() async throws {
-        FileManager.default.createFile(atPath: outputURL.path, contents: nil)
-        let sink = try FileHandle(forWritingTo: outputURL)
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/log")
-        process.arguments = [
-            "stream", "--signpost", "--style", "ndjson",
-            "--predicate", "subsystem == \"\(FlotsamLog.subsystem)\" AND processID == \(ProcessInfo.processInfo.processIdentifier)",
-        ]
-        process.standardOutput = sink
-        process.standardError = sink
-        try process.run()
-        started = true
-        for _ in 0..<100 {
-            if (try? String(contentsOf: outputURL, encoding: .utf8))?.contains("Filtering the log data") == true { break }
-            try await Task.sleep(for: .milliseconds(100))
-        }
-        try await Task.sleep(for: .milliseconds(800))
-    }
-
-    func events() -> [Event] {
-        guard let text = try? String(contentsOf: outputURL, encoding: .utf8) else { return [] }
-        return text.split(separator: "\n").compactMap { line in
-            guard line.hasPrefix("{"),
-                  let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
-                  let name = object["signpostName"] as? String, let type = object["signpostType"] as? String,
-                  let category = object["category"] as? String else { return nil }
-            return Event(name: name, type: type, category: category)
-        }
-    }
-
-    /// Waits until at least `count` events have been seen (up to 20 s), then a further settle window so an unexpected
-    /// extra event has time to show up.
-    func collect(atLeast count: Int) async throws -> [Event] {
-        for _ in 0..<200 where events().count < count { try await Task.sleep(for: .milliseconds(100)) }
-        try await Task.sleep(for: .seconds(1.5))
-        return events()
-    }
-
-    func stop() async {
-        guard started else { return }
-        if process.isRunning { process.terminate() }
-        for _ in 0..<50 where process.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
-        try? FileManager.default.removeItem(at: outputURL)
-    }
-}
+// `SignpostProbe` (the observer) lives in SignpostProbe.swift, shared with the FlotsamScreenshotsTests target by symlink.
 
 @Suite(.serialized, .timeLimit(.minutes(1))) struct SignpostTests {
     static let names = [
         "capture.persist", "library.open", "library.search", "paste.back", "shelf.reveal", "retention.sweep", "trigger.expand",
-        "retention.clearHistory",
+        "retention.clearHistory", "screenshot.import",
     ]
 
-    /// OC-0041 / OC-0042. given a begin and an end of each of the eight intervals, then the system sees, for each
+    /// OC-0041 / OC-0042. given a begin and an end of each of the nine intervals, then the system sees, for each
     /// literal name, exactly one begin and exactly one end, all in category `perf`. Turns red if `end()` stops ending
     /// the interval (X309: no end events) or the category changes (X310: events under another category).
     @Test("OC-0041 OC-0042 each interval emits one begin and one end under category perf")
@@ -252,10 +192,10 @@ private final class SignpostProbe: @unchecked Sendable {
         do {
             try await probe.start()
             for interval in PerfInterval.allCases { Signposts.begin(interval).end() }
-            let events = try await probe.collect(atLeast: 16)
+            let events = try await probe.collect(atLeast: 18)
             await probe.stop()
             #expect(PerfInterval.allCases.map(\.rawValue) == SignpostTests.names)
-            #expect(events.count == 16, "\(events)")
+            #expect(events.count == 18, "\(events)")
             #expect(Set(events.map(\.category)) == ["perf"])
             for name in SignpostTests.names {
                 #expect(events.filter { $0.name == name && $0.type == "begin" }.count == 1, "begin \(name)")
