@@ -197,6 +197,26 @@ final class ProbedFileSystem: FileSystemPort, @unchecked Sendable {
     private var hiddenPaths: Set<String> = []
 
     var listingCount: Int { lock.withLock { listed } }
+
+    // TASK-461 QA: hold the next folder listing (blocks its caller) until `releaseListing()`, so a test can place work
+    // between the moment a scan starts and the moment its result is used.
+    private var holdNext = false
+    private var held = false
+    private var holding = false
+    var listingIsHeld: Bool { lock.withLock { holding } }
+    func holdNextListing() { lock.withLock { holdNext = true; held = true } }
+    func releaseListing() { lock.withLock { held = false } }
+    private func waitIfHeld() {
+        let mine = lock.withLock { () -> Bool in
+            guard holdNext else { return false }
+            holdNext = false
+            holding = true
+            return true
+        }
+        guard mine else { return }
+        while lock.withLock({ held }) { Thread.sleep(forTimeInterval: 0.005) }
+        lock.withLock { holding = false }
+    }
     func hide(_ url: URL) { lock.withLock { _ = hiddenPaths.insert(url.path) } }
     func unhide(_ url: URL) { lock.withLock { _ = hiddenPaths.remove(url.path) } }
     private func isHidden(_ url: URL) -> Bool {
@@ -207,6 +227,7 @@ final class ProbedFileSystem: FileSystemPort, @unchecked Sendable {
     func fileInfo(at url: URL) -> FileInfo? { isHidden(url) ? nil : real.fileInfo(at: url) }
     func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> {
         lock.withLock { listed += 1 }
+        waitIfHeld()
         if isHidden(url) { return .failure(FlotsamError(.sspIo001, "Folder hidden by test")) }
         return real.contentsOfDirectory(at: url)
     }
