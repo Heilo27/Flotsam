@@ -34,7 +34,7 @@ public struct ColorChannels: Sendable, Equatable {
     public var channels: String { "\(red), \(green), \(blue)" }
 
     private static func parseHex(_ digits: String) -> ColorChannels? {
-        guard [3, 4, 6, 8].contains(digits.count), digits.allSatisfy(\.isHexDigit) else { return nil }
+        guard [3, 4, 6, 8].contains(digits.count), digits.allSatisfy({ $0.isASCII && $0.isHexDigit }) else { return nil }
         let expanded = digits.count <= 4 ? digits.flatMap { [$0, $0] } : Array(digits)
         let bytes = stride(from: 0, to: expanded.count, by: 2).compactMap { UInt8(String(expanded[$0...$0 + 1]), radix: 16) }
         guard bytes.count >= 3 else { return nil }
@@ -47,15 +47,36 @@ public struct ColorChannels: Sendable, Equatable {
         let name = lowered[lowered.startIndex..<open]
         guard name == "rgb" || name == "rgba" else { return nil }
         let inside = lowered[lowered.index(after: open)..<lowered.index(before: lowered.endIndex)]
-        let parts = inside.split(whereSeparator: { $0 == "," || $0 == "/" || $0.isWhitespace })
-        guard parts.count == 3 || parts.count == 4 else { return nil }
-        let channels = parts.prefix(3).compactMap { part -> Int? in
-            if part.hasSuffix("%") {
-                return Double(part.dropLast()).map { Int(($0 * 2.55).rounded()) }
-            }
-            return Double(part).map { Int($0.rounded()) }
+        // Comma and slash delimit slots; whitespace separates within a slot. An empty slot ("1,,2,3", "(,1,2,3)") is garbage.
+        let slots = inside.split(omittingEmptySubsequences: false, whereSeparator: { $0 == "," || $0 == "/" })
+        var parts: [Substring] = []
+        for slot in slots {
+            let tokens = slot.split(whereSeparator: \.isWhitespace)
+            guard !tokens.isEmpty else { return nil }
+            parts.append(contentsOf: tokens)
         }
-        guard channels.count == 3 else { return nil }
+        guard parts.count == 3 || parts.count == 4 else { return nil }
+        // The 4th (alpha) slot is ignored but must still be a number or percentage.
+        if parts.count == 4, parseNumber(parts[3]) == nil { return nil }
+        var channels: [Int] = []
+        for part in parts.prefix(3) {
+            guard let value = parseNumber(part) else { return nil }
+            channels.append(part.hasSuffix("%") ? Self.clampedInt(value * 2.55) : Self.clampedInt(value))
+        }
         return ColorChannels(red: channels[0], green: channels[1], blue: channels[2])
+    }
+
+    /// A plain decimal number with an optional trailing "%" (sign, digits, one point; no exponent, "nan", "inf" or hex).
+    /// Returns the numeric part, always finite; nil for anything else.
+    private static func parseNumber(_ token: Substring) -> Double? {
+        let body = token.hasSuffix("%") ? token.dropLast() : token
+        guard body.wholeMatch(of: /[+-]?(?:\d+\.?\d*|\.\d+)/) != nil,
+              let value = Double(body), value.isFinite else { return nil }
+        return value
+    }
+
+    /// Rounds to the nearest integer after clamping to 0...255, so a huge value never reaches `Int(_:)` (which traps).
+    private static func clampedInt(_ value: Double) -> Int {
+        Int(min(max(value, 0), 255).rounded())
     }
 }
