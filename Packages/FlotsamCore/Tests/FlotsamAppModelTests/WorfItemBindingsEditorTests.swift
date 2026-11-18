@@ -502,6 +502,38 @@ private let msgUnknownVariable = "An unknown variable was left as plain text."
         model.stopRecording()
     }
 
+    // FR-005-04 / AC-005-04 (TASK-403): a rejected chord's inline error does not outlive the accepted chord that follows.
+    @Test func acceptedChordClearsThePriorInlineError() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.startRecording()
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C: reserved, rejected
+        #expect(model.recorder.errorMessage != nil)
+        #expect(model.recorder.isRecording)
+
+        pressInProcess(keyCode: 11, modifiers: [.control, .option])  // ⌃⌥B: accepted
+        #expect(model.hotkey == Chord(keyCode: 11, modifiers: [.control, .option]))
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+    }
+
+    // FR-005-04: Esc after a rejected chord also leaves no stale error.
+    @Test func escapeClearsThePriorInlineError() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.startRecording()
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C: rejected
+        #expect(model.recorder.errorMessage != nil)
+
+        pressInProcess(keyCode: 53, modifiers: [])  // Esc
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+    }
+
     // A chord another Flotsam binding already owns is refused by the recorder (TRG-VAL-004).
     @Test func recorderRefusesAChordAnotherBindingOwns() async throws {
         let rig = try await Rig.make()
@@ -556,5 +588,166 @@ private let msgUnknownVariable = "An unknown variable was left as plain text."
         #expect(rig.huds.value == [msgChordTaken])
         #expect(try await rig.stored() == ItemBindings())
         #expect(rig.didSave.value == 0)
+    }
+}
+
+// MARK: Worf, TASK-403 (FR-005-04, AC-005-04), blind: the recorder's inline error follows recording, never outlives it
+
+private struct StubSystemChords: SystemHotkeyProvider {
+    let chords: Set<Chord>
+    func enabledSystemChords() -> Set<Chord> { chords }
+}
+
+private let msgChordInvalid = "Shortcuts need ⌘ or ⌃ plus a key, and can't be a reserved system shortcut."
+
+extension WorfEditorRecorderTests {
+    // AC-005-04. Red if the error is cleared when a rejection lands while one is already showing (reject, reject, reject).
+    @Test func consecutiveRejectedChordsEachKeepTheErrorAndKeepRecording() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.startRecording()
+
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+        pressInProcess(keyCode: 12, modifiers: [.command])  // ⌘Q
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+        #expect(model.recorder.isRecording)
+        pressInProcess(keyCode: 0, modifiers: [.option])  // ⌥A
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+        #expect(model.recorder.isRecording)
+        #expect(model.hotkey == nil)
+        model.stopRecording()
+    }
+
+    // FR-005-02 / FR-005-04. Red if a later rejection leaves the earlier code's message (stale 003 after a 004) in place.
+    @Test func eachRejectionShowsItsOwnMessageNotThePreviousOne() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        rig.registry.bind(.openLibrary, to: cmdL)
+        let model = await rig.loaded(1)
+        model.startRecording()
+
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C reserved
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+        pressInProcess(keyCode: 37, modifiers: [.command])  // ⌘L taken
+        #expect(model.recorder.errorMessage == msgChordTaken)
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C again
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+        #expect(model.recorder.isRecording)
+        model.stopRecording()
+    }
+
+    // FR-005-04: Delete (clear allowed) ends recording, so it leaves no error beside the cleared binding.
+    @Test func deleteAfterARejectedChordClearsTheErrorAndTheBinding() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1, hotkey: cmdK)
+        let model = await rig.loaded(1)
+        model.startRecording()
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C rejected
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+
+        pressInProcess(keyCode: 51, modifiers: [])  // Delete
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+        #expect(model.hotkey == nil)
+    }
+
+    // FR-005-04: focus loss and the view going away end recording through stop(); no error may remain, and a new
+    // session starts clean and can accept a chord.
+    @Test func focusLossAfterARejectedChordClearsTheErrorAndANewSessionStartsClean() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.startRecording()
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C rejected
+        #expect(model.recorder.errorMessage == msgChordInvalid)
+
+        model.stopRecording()  // what didResignKey, onDisappear and windowWillClose all call
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+
+        model.startRecording()
+        #expect(model.recorder.isRecording)
+        #expect(model.recorder.errorMessage == nil)
+        pressInProcess(keyCode: 11, modifiers: [.control, .option])  // ⌃⌥B
+        #expect(model.hotkey == Chord(keyCode: 11, modifiers: [.control, .option]))
+        #expect(model.recorder.errorMessage == nil)
+    }
+
+    // FR-005-04: stop() with nothing recording is a no-op and leaves no error.
+    @Test func stopWhenNotRecordingLeavesNoError() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.stopRecording()
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+    }
+
+    // FR-005-02 (a)-(d) through the recorder: every reserved chord, every missing-modifier shape and a macOS-owned chord
+    // is rejected with the TRG-VAL-003 message and keeps recording; ⌘⇧C (not reserved) is accepted. Fresh session per chord.
+    @Test func everyRejectionPathShowsItsMessageAndAcceptedNeighboursClear() async throws {
+        let osChord = Chord(keyCode: 20, modifiers: [.control, .shift])  // stand-in for an enabled symbolic hotkey
+        let registry = ShortcutRegistry(registrar: StubRegistrar(), systemHotkeys: StubSystemChords(chords: [osChord]))
+        let recorder = ShortcutRecorderModel()
+        let committed = Box<[ChordBinding]>([])
+        let id = ShortcutID.toggleShelf
+        let rejected: [(UInt16, NSEvent.ModifierFlags)] = [
+            (12, [.command]), (13, [.command]), (4, [.command]), (46, [.command]), (48, [.command]), (49, [.command]),
+            (49, [.control]), (53, [.command, .option]), (43, [.command]),
+            (8, [.command]), (9, [.command]), (7, [.command]), (6, [.command]), (0, [.command]),
+            (0, [.option]), (0, [.option, .shift]), (0, [.shift]), (0, []),  // rule (a): no ⌘ or ⌃
+            (20, [.control, .shift]),  // rule (d)
+        ]
+        for (code, flags) in rejected {
+            recorder.start(registry: registry, id: id, allowClear: true) { committed.value.append($0) }
+            #expect(recorder.errorMessage == nil, "key \(code) \(flags.rawValue): clean at start")
+            pressInProcess(keyCode: code, modifiers: flags)
+            #expect(recorder.errorMessage == msgChordInvalid, "key \(code) \(flags.rawValue)")
+            #expect(recorder.isRecording, "key \(code) \(flags.rawValue)")
+            recorder.stop()
+            #expect(recorder.errorMessage == nil, "key \(code) \(flags.rawValue): cleared by stop")
+        }
+        #expect(committed.value.isEmpty)
+
+        let accepted: [(UInt16, NSEvent.ModifierFlags)] = [(8, [.command, .shift]), (11, [.control, .option]), (25, [.command, .shift])]
+        for (code, flags) in accepted {
+            recorder.start(registry: registry, id: id, allowClear: true) { committed.value.append($0) }
+            pressInProcess(keyCode: 12, modifiers: [.command])  // a reject first, so a stale error would show
+            pressInProcess(keyCode: code, modifiers: flags)
+            #expect(recorder.isRecording == false, "key \(code)")
+            #expect(recorder.errorMessage == nil, "key \(code)")
+        }
+        #expect(committed.value == [
+            .chord(Chord(keyCode: 8, modifiers: [.command, .shift])),
+            .chord(Chord(keyCode: 11, modifiers: [.control, .option])),
+            .chord(Chord(keyCode: 25, modifiers: [.command, .shift])),
+        ])
+    }
+
+    // FR-005-01 / FR-005-04: where clearing is not allowed (openLibrary), Delete does nothing and recording continues; Esc then
+    // ends it with no error left. Red if Delete committed or stopped the recorder.
+    @Test func deleteWhereClearingIsRefusedKeepsRecordingAndEscEndsCleanly() async throws {
+        let registry = ShortcutRegistry(registrar: StubRegistrar())
+        let recorder = ShortcutRecorderModel()
+        let committed = Box<[ChordBinding]>([])
+        recorder.start(registry: registry, id: .openLibrary, allowClear: false) { committed.value.append($0) }
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C rejected
+        #expect(recorder.errorMessage == msgChordInvalid)
+
+        pressInProcess(keyCode: 51, modifiers: [])  // Delete, refused
+        #expect(recorder.isRecording)
+        #expect(committed.value.isEmpty)
+
+        pressInProcess(keyCode: 53, modifiers: [])  // Esc
+        #expect(recorder.isRecording == false)
+        #expect(recorder.errorMessage == nil)
+        #expect(committed.value.isEmpty)
     }
 }
