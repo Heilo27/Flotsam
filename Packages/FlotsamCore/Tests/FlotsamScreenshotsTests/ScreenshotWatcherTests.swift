@@ -33,7 +33,7 @@ struct WatcherLocationTests {
         #expect(rig.ingest.names == [wanted.lastPathComponent])
     }
 
-    @Test("OC-2006: with no system location the Desktop is watched with no warning")
+    @Test("FR-002-01: with no system location the Desktop is watched with no warning")
     func desktopByDefault() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())
         defer { rig.cleanUp() }
@@ -108,7 +108,7 @@ struct WatcherLocationTests {
         #expect(rig.source.running.map { realPath($0.folder) } == [realPath(second)])
     }
 
-    @Test("OC-2004/2079/2080: an override wins, goes unusable -> paused with SSP-IO-003, and resumes when it returns")
+    @Test("OC-2004/2072/2079/2080: an override wins, goes unusable -> paused with SSP-IO-003, and resumes when it returns")
     func overrideFolderLifecycle() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())
         defer { rig.cleanUp() }
@@ -453,7 +453,7 @@ struct WatcherSettingsTests {
         #expect(position < 500, "the live file was imported before the backfill drained, not after it")
     }
 
-    @Test("OC-2024: Import recent screenshots is available in a capture mode that does not import")
+    @Test("OC-2020: Import recent screenshots is available in a capture mode that does not import")
     func backfillWhilePaused() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())
         defer { rig.cleanUp() }

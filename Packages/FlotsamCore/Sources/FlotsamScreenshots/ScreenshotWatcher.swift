@@ -66,6 +66,14 @@ public actor ScreenshotWatcher {
 
     private var watermark: Date?
     private var watermarkLoaded = false
+    /// FR-002-08: where live file events are cut off. Moved by scans (and mode changes) only, never by an import or
+    /// the tick, so a live event is judged exactly as it was before the persisted watermark started following imports.
+    private var eventFloor: Date?
+    /// FR-002-08: birth dates of the files the persisted watermark must not pass yet: live files queued, unstable or
+    /// failed (by path), and hidden files that may still be renamed into screenshots (replaced by each listing, added
+    /// by file events). Entries older than `ScreenshotSelection.holdWindow` no longer hold anything.
+    private var unfinished: [String: Date] = [:]
+    private var hiddenFiles: [String: Date] = [:]
 
     private var seen = SeenFiles(capacity: ScreenshotWatcher.seenCapacity)
     private var retry: [String: RetryEntry] = [:]
@@ -215,6 +223,8 @@ public actor ScreenshotWatcher {
         teardown()
         dropQueuedJobs()
         retry.removeAll()
+        unfinished.removeAll()
+        hiddenFiles.removeAll()
         location = nil
         let ended = [raisedLocationWarning, accessDenied ? ErrorCode.sspPrm001 : nil, inFallback ? ErrorCode.sspOs001 : nil]
         raisedLocationWarning = nil
@@ -230,6 +240,11 @@ public actor ScreenshotWatcher {
         await evaluate(reconcile: false)
         if inFallback { await tryLeaveFallback() }
         await retryUnstable()
+        // FR-002-08: the folder was listed and is being watched, so what the watermark covers is known up to now.
+        // Not while access is refused or no folder is watched: a file that could not be seen must stay inside it.
+        if active, !accessDenied, location?.folder != nil {
+            await advanceWatermark(to: heldWatermark(clock.now()), scan: false)
+        }
     }
 
     // MARK: Location
@@ -357,8 +372,12 @@ public actor ScreenshotWatcher {
         guard settings.value(SettingKeys.captureMode).importsScreenshots, let folder = location?.folder else { return }
         let current = generation
         let files = await Self.directChildren(of: folder, among: urls, scanner: scanner)
-        guard active, generation == current, !files.isEmpty, let last = await currentWatermark() else { return }
-        enqueue(ScreenshotSelection.reconcile(files, lastScanAt: last), batch: nil, bypassSeen: false)
+        let hidden = await Self.hiddenChildren(of: folder, among: urls, scanner: scanner)
+        guard active, generation == current else { return }
+        for (path, birth) in hidden { hiddenFiles[path] = birth }
+        // No watermark yet: a new library imports nothing (FR-002-08).
+        guard !files.isEmpty, await currentWatermark() != nil, let floor = eventFloor else { return }
+        enqueue(ScreenshotSelection.reconcile(files, lastScanAt: floor), batch: nil, bypassSeen: false)
     }
 
     /// FR-002-08. Also the access probe (FR-002-03): a listing refused for permission lands in `markAccessDenied`.
@@ -366,31 +385,39 @@ public actor ScreenshotWatcher {
         guard active, let folder = location?.folder else { return }
         let current = generation
         let started = clock.now()
-        let listing = await Self.scan(scanner, folder: folder)
+        let result = await Self.list(scanner, folder: folder)
         guard active, generation == current else { return }
         let files: [ScreenshotFile]
-        switch listing {
+        switch result {
         case .failure(let error):
             if ScreenshotFolderAccess.isPermissionDenied(error) { await markAccessDenied(at: started) }
+            FlotsamLog.log(.screenshotScanned(outcome: .failed, count: 0), sink: sink)
             return
-        case .success(let listed): files = listed
+        case .success(let listing):
+            files = listing.files
+            hiddenFiles = listing.hiddenFiles
         }
         await markAccessGranted()
 
         guard settings.value(SettingKeys.captureMode).importsScreenshots else {
             await advanceWatermark(to: started)
+            FlotsamLog.log(.screenshotScanned(outcome: .succeeded, count: 0), sink: sink)
             return
         }
+        var queued = 0
         // No watermark yet: a new library imports nothing and only records where it is (FR-002-08).
         if let last = await currentWatermark() {
             let present = Set(files.map(\.url.path))
             retry = retry.filter { present.contains($0.key) }
+            unfinished = unfinished.filter { present.contains($0.key) }
             // The retry is spent before the selection is queued: a file the watermark window also selects would
             // otherwise be queued first and found `pending`, and never use up its budget (FR-002-07).
-            let retries = retryDue(among: files)
-            enqueue(retries + ScreenshotSelection.reconcile(files, lastScanAt: last), batch: nil, bypassSeen: false)
+            let selected = retryDue(among: files) + ScreenshotSelection.reconcile(files, lastScanAt: last)
+            queued = Set(selected.map(\.url.path)).count
+            enqueue(selected, batch: nil, bypassSeen: false)
         }
-        await advanceWatermark(to: started)
+        await advanceWatermark(to: heldWatermark(started))
+        FlotsamLog.log(.screenshotScanned(outcome: .succeeded, count: queued), sink: sink)
     }
 
     /// FR-002-03: pickup stays idle and the next tick or activation lists the folder again.
@@ -431,6 +458,7 @@ public actor ScreenshotWatcher {
             case .success(let date):
                 watermark = date
                 watermarkLoaded = true
+                if eventFloor == nil { eventFloor = date }
             case .failure(let error):
                 await report(error)
                 return nil
@@ -439,12 +467,25 @@ public actor ScreenshotWatcher {
         return watermark
     }
 
-    /// Never moves backwards, so two scans finishing out of order cannot re-open a window already scanned.
-    private func advanceWatermark(to date: Date) async {
-        if let known = await currentWatermark(), known >= date { return }
+    /// Never moves backwards, so two scans finishing out of order cannot re-open a window already scanned. A scan
+    /// (`scan`, the default) also moves the floor live file events are judged by; an import or the tick does not.
+    private func advanceWatermark(to date: Date, scan: Bool = true) async {
+        let known = await currentWatermark()
+        if scan { eventFloor = max(eventFloor ?? date, date) }
+        if let known, known >= date { return }
         watermark = date
         watermarkLoaded = true
         if case .failure(let error) = await watermarkStore.setLastScanAt(date) { await report(error) }
+    }
+
+    /// FR-002-08: `proposed`, but not past the birth of a file that is not finished: still hidden, queued, unstable
+    /// or failed. Its birth date has to stay inside the window the next scan selects by.
+    private func heldWatermark(_ proposed: Date) -> Date {
+        let now = clock.now()
+        unfinished = unfinished.filter { ScreenshotSelection.isHeld($0.value, now: now) }
+        hiddenFiles = hiddenFiles.filter { ScreenshotSelection.isHeld($0.value, now: now) }
+        return ScreenshotSelection.heldBack(
+            proposed, now: now, births: Array(unfinished.values) + Array(hiddenFiles.values))
     }
 
     private func seedWatermarkIfNone(at date: Date) async {
@@ -460,6 +501,7 @@ public actor ScreenshotWatcher {
             let path = file.url.path
             guard !pending.contains(path), bypassSeen || !seen.contains(file) else { continue }
             pending.insert(path)
+            if batch == nil { unfinished[path] = file.createdAt }
             let job = ImportJob(file: file, batch: batch)
             if batch == nil, let firstBackfill = queue.firstIndex(where: { $0.batch != nil }) {
                 queue.insert(job, at: firstBackfill)
@@ -490,6 +532,7 @@ public actor ScreenshotWatcher {
         case .imported(let result, let byteSize):
             seen.insert(job.file)
             retry[job.file.url.path] = nil
+            await settle(job)
             if case .created = result.outcome { created = true }
             FlotsamLog.log(.screenshotImported(outcome: created ? .stored : .deduped, byteSize: byteSize), sink: sink)
             for warning in result.warnings { await report(warning) }
@@ -499,6 +542,7 @@ public actor ScreenshotWatcher {
         case .rejected(let error, let byteSize):
             seen.insert(job.file)
             retry[job.file.url.path] = nil
+            await settle(job)
             FlotsamLog.log(.screenshotImported(outcome: .skipped, byteSize: byteSize), sink: sink)
             await report(error)
         case .failed(let error, let byteSize):
@@ -507,6 +551,17 @@ public actor ScreenshotWatcher {
         }
         complete(job, created: created)
         pump()
+    }
+
+    /// FR-002-08: a live file that is done (imported, or recognised as not importable) no longer holds the watermark,
+    /// and the watermark moves past it, so a relaunch does not select it again, whether or not the user has deleted
+    /// the item since. The seen set cannot do this: it lives in memory only.
+    private func settle(_ job: ImportJob) async {
+        guard job.batch == nil else { return }
+        unfinished[job.file.url.path] = nil
+        guard active else { return }
+        let proposed = ScreenshotSelection.watermarkAfterImport(of: job.file, now: clock.now())
+        await advanceWatermark(to: heldWatermark(proposed), scan: false)
     }
 
     private func complete(_ job: ImportJob, created: Bool) {
@@ -528,6 +583,7 @@ public actor ScreenshotWatcher {
         queue.removeAll { $0.batch == nil }
         for job in dropped {
             pending.remove(job.file.url.path)
+            unfinished[job.file.url.path] = nil
             complete(job, created: false)
         }
     }
@@ -540,6 +596,7 @@ public actor ScreenshotWatcher {
             // Out of retries: dropped. Marked seen so the watermark window cannot select it again; only
             // "Import recent screenshots" (which bypasses `seen`) can still bring it in.
             retry[path] = nil
+            unfinished[path] = nil
             seen.insert(file)
         } else if retry[path] == nil {
             retry[path] = RetryEntry(file: file, retriesLeft: Self.maxRetries)
@@ -577,8 +634,25 @@ public actor ScreenshotWatcher {
     }
 
     @concurrent
+    private static func list(_ scanner: ScreenshotFolderScanner, folder: URL) async -> FlotsamResult<ScreenshotListing> {
+        scanner.listing(folder)
+    }
+
+    @concurrent
     private static func scan(_ scanner: ScreenshotFolderScanner, folder: URL) async -> FlotsamResult<[ScreenshotFile]> {
         scanner.scan(folder)
+    }
+
+    /// FR-002-08: the hidden direct children an event batch names, with their birth dates; nil for one that is gone
+    /// or no longer hidden (the rename that ends a screenshot's save reports the temporary name as well).
+    @concurrent
+    private static func hiddenChildren(of folder: URL, among urls: [URL], scanner: ScreenshotFolderScanner) async -> [(String, Date?)] {
+        urls.compactMap { url in
+            let parent = url.deletingLastPathComponent().standardizedFileURL.resolvingSymlinksInPath()
+            guard parent.path == folder.path, ScreenshotRecognizer.isHiddenName(url.lastPathComponent) else { return nil }
+            let child = folder.appendingPathComponent(url.lastPathComponent)
+            return (child.path, scanner.hiddenBirth(child))
+        }
     }
 
     /// FR-002-04: FSEvents is file-level and non-recursive in effect only by this filter. A path whose parent is not

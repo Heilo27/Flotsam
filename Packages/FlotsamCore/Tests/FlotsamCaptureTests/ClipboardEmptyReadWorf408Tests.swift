@@ -8,7 +8,8 @@ import FlotsamBase
 // Independent adversarial verification of TASK-408 (FRD-001 FR-001-18 b, AC-001-15): a change whose types are listed
 // but whose snapshot yields no bytes counts toward the same empty-read threshold as an empty type list.
 // Every sequence is driven by `captureNow()` with no suspension point between calls, so the real 0.5 s timer cannot
-// interleave. One `captureNow()` is one tick; one change needs `emptyAttemptsPerChange` (3) ticks to count as empty.
+// interleave. One `captureNow()` is one tick; a change that reads empty is watched for `emptyChangeWatchLimit` on a manual clock
+// and counts as empty when that watch ends (`expire()`), or when a newer change supersedes it.
 // Expected values are literals only.
 
 private final class Board408: PasteboardPort {
@@ -66,6 +67,7 @@ private struct Rig408 {
     let sink: Sink408
     let capture: ClipboardCapture
     let settings: SettingsStore
+    let clock: ManualClock
 
     static func make(ignored: Set<String> = []) async throws -> Rig408 {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-worf408-\(UUID().uuidString)")
@@ -73,19 +75,32 @@ private struct Rig408 {
         let settings = SettingsStore(store: KV408())
         let board = Board408()
         let sink = Sink408()
+        let clock = ManualClock()
         let capture = ClipboardCapture(
             pasteboard: board, sourceApps: App408(), ownWrites: OwnWriteLedger(),
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: Presenter408(), sink: sink), ignoredApps: { ignored }, sink: sink)
-        return Rig408(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings)
+            reporter: ErrorReporter(presenter: Presenter408(), sink: sink), ignoredApps: { ignored }, clock: clock, sink: sink)
+        return Rig408(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, clock: clock)
     }
 
-    func tick(_ times: Int = 1) { for _ in 0..<times { capture.captureNow() } }
+    /// Starts capture with the launch read baselined away: Paused then Active re-reads the baseline (FR-001-19). Without
+    /// it the empty board at launch opens the watch of an empty change, which the first copy supersedes and counts
+    /// (FR-001-01, FR-001-18 b), a count none of these sequences means to make.
+    func start() {
+        capture.start()
+        settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        settings.set(CaptureMode.active, for: SettingKeys.captureMode)
+    }
 
-    /// One persistently empty change whose type list is empty (`clear`), counted after its third read.
-    func emptyTypesChange() { board.emptyBytes = false; board.clear(); tick(3) }
+    /// Ticks the poll.
+    func tick(_ times: Int = 1) { for _ in 0..<times { capture.captureNow() } }
+    /// Lets the watch of the change in hand run out (FR-001-01) and ticks once, which is when it counts as empty.
+    func expire() { clock.advance(by: ClipboardCapture.emptyChangeWatchLimit); tick() }
+
+    /// One persistently empty change whose type list is empty (`clear`), counted when its watch ends.
+    func emptyTypesChange() { board.emptyBytes = false; board.clear(); tick(); expire() }
     /// One persistently empty change whose types are listed but whose bytes read back empty.
-    func listedEmptyChange(_ s: String = "gated") { board.emptyBytes = true; board.copy([text: Data(s.utf8)]); tick(3) }
+    func listedEmptyChange(_ s: String = "gated") { board.emptyBytes = true; board.copy([text: Data(s.utf8)]); tick(); expire() }
     /// One change that yields bytes (stored).
     func readableChange(_ s: String) { board.emptyBytes = false; board.copy([text: Data(s.utf8)]); tick() }
 
@@ -111,7 +126,7 @@ struct ClipboardEmptyReadWorf408Tests {
     func threeListedEmptySuspend() async throws {
         // given two listed-but-empty changes
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.listedEmptyChange()
         try await rig.drain()
         // then below threshold: no permission notice, one data notice each
@@ -129,7 +144,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W2 mixed across changes: empty-types, listed-empty, empty-types suspends at three")
     func mixedAcrossChangesSuspend() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         // given empty-types, then listed-empty
         rig.emptyTypesChange(); rig.listedEmptyChange()
         try await rig.drain()
@@ -144,7 +159,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W3 mixed across changes, other order: listed-empty, empty-types, listed-empty suspends at three")
     func mixedOtherOrderSuspend() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.emptyTypesChange()
         try await rig.drain()
         #expect(rig.prm == 0)
@@ -155,16 +170,17 @@ struct ClipboardEmptyReadWorf408Tests {
 
     @Test("OC-408-W4 one change whose reads alternate between empty types and listed-empty is one empty change, not three")
     func alternatingReadsOfOneChangeCountOnce() async throws {
-        // given one changeCount whose three reads see: no types, types with no bytes, types with no bytes
+        // given one changeCount whose reads see: no types, types with no bytes, types with no bytes
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.emptyBytes = true
         rig.board.fill([text: Data("late".utf8)])
         rig.tick(2)
+        rig.expire()
         try await rig.drain()
-        // then it counted once: the budget was three reads in all (1 types-empty + 2 snapshot reads), one CAP-VAL-001
+        // then it counted once when its watch ended (1 types-empty read + 2 snapshot reads), one CAP-VAL-001
         #expect(rig.board.snapshotReads == 2)
         #expect(rig.val == 1)
         #expect(rig.prm == 0)
@@ -177,11 +193,11 @@ struct ClipboardEmptyReadWorf408Tests {
         #expect(rig.prm == 1)
     }
 
-    @Test("OC-408-W5 boundary: a listed-empty change read only twice is not yet counted")
+    @Test("OC-408-W5 boundary: a listed-empty change whose watch has not ended is not yet counted")
     func twoReadsDoNotCount() async throws {
-        // given two full empty changes and a third read only twice
+        // given two full empty changes and a third still being watched
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.listedEmptyChange()
         rig.board.emptyBytes = true
         rig.board.copy([text: Data("third".utf8)])
@@ -190,8 +206,8 @@ struct ClipboardEmptyReadWorf408Tests {
         // then no suspension, no more than two data notices
         #expect(rig.prm == 0)
         #expect(rig.val == 2)
-        // when the third read lands
-        rig.tick()
+        // when its watch ends
+        rig.expire()
         try await rig.drain()
         #expect(rig.prm == 1)
     }
@@ -201,7 +217,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W6 a readable change mid-run resets the count: 2 empty, 1 readable, 2 empty never suspends")
     func readableChangeResets() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.listedEmptyChange()
         rig.readableChange("real")
         rig.listedEmptyChange(); rig.listedEmptyChange()
@@ -214,7 +230,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W7 after the reset exactly three more are needed, mixed kinds included")
     func resetThenThreeMore() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.emptyTypesChange(); rig.listedEmptyChange()
         rig.readableChange("real")
         rig.emptyTypesChange(); rig.listedEmptyChange()
@@ -228,7 +244,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W8 a bytes-yielding change whose bytes arrive on the third read still resets the count")
     func lateFillingChangeResets() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.listedEmptyChange()
         // when a change is empty twice and then yields bytes
         rig.board.emptyBytes = true
@@ -248,7 +264,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W9 while suspended, further listed-empty and empty-types changes never raise CAP-PRM-001 again")
     func exactlyOnceWhileSuspended() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...3 { rig.listedEmptyChange() }
         try await rig.drain()
         #expect(rig.prm == 1)
@@ -266,7 +282,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W10 a readable change clears the suspension and stores; three new empties raise CAP-PRM-001 a second time")
     func recoveryThenResuspend() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...3 { rig.listedEmptyChange() }
         try await rig.drain()
         #expect(rig.prm == 1)
@@ -287,7 +303,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W11 suspended on listed-empty, a still-gated probe does not resume; first bytes do")
     func gatedProbesDoNotResume() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...3 { rig.listedEmptyChange() }
         // when the board stays gated across many retry ticks of the same change
         rig.tick(30)
@@ -302,29 +318,29 @@ struct ClipboardEmptyReadWorf408Tests {
 
     // MARK: the defer
 
-    @Test("OC-408-W12 empty snapshot does not mark readable on any attempt: 2 empty, then a change read-empty on every attempt")
+    @Test("OC-408-W12 empty snapshot does not mark readable on any read: 2 empty, then a change read-empty on every read")
     func emptySnapshotNeverResets() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        // Not started: `snapshotReads == 3` pins the exact read count, so the real poll timer (which adds a read whenever
+        // Not started: `snapshotReads == 2` pins the exact read count, so the real poll timer (which adds a read whenever
         // `drain()` lets it fire under suite load) must not exist. Every read here is one `captureNow()`.
         rig.emptyTypesChange(); rig.emptyTypesChange()
-        // when the third change lists types but every snapshot is empty; attempts 1 and 2 are silent
+        // when the third change lists types but every snapshot is empty; while it is watched nothing is counted
         rig.board.emptyBytes = true
         rig.board.copy([text: Data("x".utf8)])
         rig.tick(2)
         try await rig.drain()
         #expect(rig.prm == 0)
-        // then attempt 3 is what counts
-        rig.tick()
+        // then the end of its watch is what counts (and reads nothing more)
+        rig.expire()
         try await rig.drain()
         #expect(rig.prm == 1)
-        #expect(rig.board.snapshotReads == 3)
+        #expect(rig.board.snapshotReads == 2)
     }
 
     @Test("OC-408-W13 empty snapshot between two empty-types changes does not reset: the run still reaches three")
     func emptySnapshotInTheMiddleDoesNotReset() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.emptyTypesChange()
         rig.listedEmptyChange()
         rig.emptyTypesChange()
@@ -335,7 +351,7 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W14 gates that read nothing (capture paused) leave the empty count untouched")
     func pausedCaptureDoesNotTouchCount() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.listedEmptyChange()
         // when capture is paused and a change lands, then resumed
         rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
@@ -353,7 +369,7 @@ struct ClipboardEmptyReadWorf408Tests {
     func policySkipResetsCount() async throws {
         // given two empties, then an ignored-app copy (types listed, bytes never requested), then two empties
         let rig = try await Rig408.make(ignored: ["com.example.writer"]); defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.listedEmptyChange(); rig.listedEmptyChange()
         rig.readableChange("ignored")
         rig.listedEmptyChange(); rig.listedEmptyChange()
