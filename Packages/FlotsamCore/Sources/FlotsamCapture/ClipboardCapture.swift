@@ -129,7 +129,11 @@ public final class ClipboardCapture {
 
         let types = pasteboard.currentTypeIdentifiers()
         if types.isEmpty { return noteEmptyRead(changeCount: changeCount) }
-        _ = noteReadability(.readable)
+        // Listed types are readable type data, so every exit below marks readable (and resumes a suspension) except
+        // the one where the snapshot then yields no bytes: that is an empty read, counted by `noteEmptyRead` like an
+        // empty type list (FR-001-18 b), and must not reset `consecutiveEmptyReads` on the way.
+        var readable = true
+        defer { if readable { _ = noteReadability(.readable) } }
         if types.contains(PasteboardMarkers.ownWrite) { return skip(.capPol004) }
         if types.contains(where: PasteboardMarkers.neverStore.contains) { return skip(.capPol001) }
 
@@ -150,8 +154,10 @@ public final class ClipboardCapture {
             }
             snapshot = value
         }
-        if snapshot.representations.isEmpty { return noteEmptyRead(changeCount: changeCount) }
-        _ = noteReadability(.readable)
+        if snapshot.representations.isEmpty {
+            readable = false
+            return noteEmptyRead(changeCount: changeCount)
+        }
         rereadingChangeCount = nil
 
         continuation?.yield(CapturedPayload(

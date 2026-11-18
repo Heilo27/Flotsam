@@ -14,6 +14,8 @@ private final class FakePasteboard: PasteboardPort {
     private var contents: [String: Data] = [:]
     /// The type identifiers asked for in `readSnapshot`: a gate that rejects must not have read payload bytes.
     private(set) var bytesRequested: [String] = []
+    /// Types are listed but every snapshot comes back with no bytes (a gated board, or one still filling).
+    var returnsEmptyBytes = false
 
     func copy(_ contents: [String: Data]) {
         self.contents = contents
@@ -34,7 +36,7 @@ private final class FakePasteboard: PasteboardPort {
 
     func readSnapshot(types: [String]) -> FlotsamResult<PasteboardSnapshot> {
         bytesRequested += types
-        let reps = types.compactMap { uti in contents[uti].map { PasteboardRepresentation(uti: uti, data: $0) } }
+        let reps = returnsEmptyBytes ? [] : types.compactMap { uti in contents[uti].map { PasteboardRepresentation(uti: uti, data: $0) } }
         return .success(PasteboardSnapshot(changeCount: changeCount, typeIdentifiers: currentTypeIdentifiers(), representations: reps))
     }
 
@@ -212,5 +214,47 @@ final class ClipboardCaptureTests: XCTestCase {
         for _ in 0..<100 where !presenter.noticeCodes.contains(.capPrm001) { try await Task.sleep(nanoseconds: 20_000_000) }
 
         XCTAssertTrue(presenter.noticeCodes.contains(.capPrm001))
+    }
+
+    /// TASK-408: types listed but bytes empty is "no readable type data" (FR-001-18 b) just as an empty type list is,
+    /// so it reaches CAP-PRM-001 at the same threshold. Listing types must not reset the count.
+    func testThreeChangesWithTypesListedButEmptyBytesSuspendCapture() async throws {
+        capture.start()
+        pasteboard.returnsEmptyBytes = true
+        for n in 1...3 {
+            pasteboard.copy([textType: Data("gated \(n)".utf8)])
+            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+            if n < ClipboardCapture.emptyReadsBeforeSuspension {
+                try await Task.sleep(nanoseconds: 200_000_000)  // reports are raised from unstructured tasks
+                XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "\(n) empty changes are below the threshold")
+            }
+        }
+        for _ in 0..<100 where !presenter.noticeCodes.contains(.capPrm001) { try await Task.sleep(nanoseconds: 20_000_000) }
+
+        XCTAssertEqual(presenter.noticeCodes.filter { $0 == .capPrm001 }.count, 1)
+    }
+
+    /// A change that yields bytes still resets the count: two listed-but-empty changes, a real copy, two more never
+    /// reach three in a row.
+    func testReadableChangeResetsTheListedButEmptyCount() async throws {
+        capture.start()
+        for _ in 1...2 {
+            pasteboard.returnsEmptyBytes = true
+            pasteboard.copy([textType: Data("gated".utf8)])
+            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+        }
+        pasteboard.returnsEmptyBytes = false
+        pasteboard.copy([textType: Data("real".utf8)])
+        capture.captureNow()
+        for _ in 1...2 {
+            pasteboard.returnsEmptyBytes = true
+            pasteboard.copy([textType: Data("gated".utf8)])
+            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+        }
+        let count = try await settle()
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(count, 1)
+        XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "four empty changes in all, never three in a row")
     }
 }
