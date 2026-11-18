@@ -229,6 +229,9 @@ public actor ScreenshotWatcher {
         await updateLocationWarning(for: resolved)
         location = resolved
         guard let folder = resolved.folder else {
+            // Nothing is watched, so a refusal or a polling fallback raised for the previous folder no longer stands.
+            leaveFallbackState()
+            await markAccessGranted()
             status = .paused
             await seedWatermarkIfNone(at: clock.now())
             return
