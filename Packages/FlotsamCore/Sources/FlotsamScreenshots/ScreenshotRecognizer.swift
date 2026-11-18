@@ -23,10 +23,13 @@ public enum ScreenshotRecognizer {
         return ScreenshotNamePrefixes.matches(fileName, customPrefix: customPrefix)
     }
 
+    /// A hidden name: the temporary name macOS saves a screenshot under before it renames the file (FR-002-06, FR-002-08).
+    public static func isHiddenName(_ fileName: String) -> Bool { fileName.hasPrefix(".") }
+
     /// FR-002-06 (a) and (b): not hidden (macOS writes a hidden temporary name, then renames) and an image extension.
     /// Needs no file-system call, so scanners use it to reject most of a busy folder before reading anything.
     public static func hasCandidateName(_ fileName: String) -> Bool {
-        !fileName.hasPrefix(".") && imageExtensions.contains((fileName as NSString).pathExtension.lowercased())
+        !isHiddenName(fileName) && imageExtensions.contains((fileName as NSString).pathExtension.lowercased())
     }
 
     /// The attribute is a binary property list holding a boolean (or, on some writers, a number).
