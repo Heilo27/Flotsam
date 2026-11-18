@@ -22,6 +22,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
 
     // Item editor: shortcut and trigger (FR-005-09)
     case editorWindow, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
+    /// The variable help caption: lists {date}, {time}, {clipboard} and format examples (FR-005-17, FRD-005 section 8).
+    case editorVariablesHelp
     case editorNoTrigger, editorSave, editorItemGone, editorLoadFailed
 
     // Triggers and permissions
