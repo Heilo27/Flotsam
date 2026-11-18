@@ -720,3 +720,56 @@ Branch `s2/frd001-8t` @ 2d580ef (pushed; tests only, no product code touched). *
 **Not done:** no run on a clean main checkout (not needed per the brief's rule); OC-1089/1090/1079/1084 still unreachable from the package; the three Major defects above are product bugs for S1 and are untouched.
 
 **Addendum (Rule 0 correction to the entry above).** The pre-hardening OC-1087 stayed green under the 1.0 s poll mutation (queue 1 shows only OC-1088 red), so the old OC-1087 was a third surviving mutation, not only a flake. The hardened OC-1087 goes red at 1.0 s (rerun above); at 0.65 s only OC-1088 goes red. Also: M12 (text leak) did not compile in round 1; the red result for OC-1093 is from the rewritten M12 in round 2.
+
+---
+
+## 2026-11-17: A1 + A4 on `main` @ 7948739 and 42cb847
+
+Toolchain on this run: macOS 27.3, Xcode 27.0 (27A266a), Apple Swift 6.4 (the header above is stale: it says 26.7 / 26.3 / 6.2.4). M1 Max. A1 was run at 7948739 first; `main` then moved to 42cb847 (FRD-005 merge), so A1 was run again there and A4 was run on the 42cb847 Debug build only.
+
+**A1 (clean clone per SHA in the session scratchpad, deleted afterwards; logs kept). Verdict: PASS at both SHAs, 0 failures.**
+
+| Step | 7948739 | 42cb847 |
+|---|---|---|
+| `bin/bootstrap.sh` | exit 0, 4 s | exit 0, 5 s |
+| `swift test` (Packages/FlotsamCore, no scratch path, so the lint harness ran) | exit 0, 82 s incl. build | exit 0, 89 s incl. build |
+| `bin/check-architecture.sh` | exit 0, 1 s ("architecture checks passed") | exit 0, 1 s |
+| `bin/build.sh` (Debug, unsigned) | exit 0, 24 s, BUILD SUCCEEDED | exit 0, 25 s, BUILD SUCCEEDED |
+| Swift Testing, sum of every "Test run with N tests" line | 1312 tests in 10 runs, all passed | 1612 tests in 11 runs, all passed |
+| XCTest "Executed" (FlotsamCaptureTests only) | 18, 0 failures | 18, 0 failures |
+| Failures (`✘` lines) | 0 | 0 |
+| Known issues | 9 (1 + 8) | 10 (1 + 1 + 8) |
+
+- Counting method: ANSI codes stripped, then `grep "Test run with"` and a sum; failures by `grep -c "^✘"`; known issues by `grep -c "recorded a known issue"`, which matches the per-run "with N known issue(s)" totals.
+- S1's 1610-ish figures: at 42cb847 my sum is 1612, equal to S1's. At 7948739 I count 1312, S1 reported 1310. The difference is 2; I did not find out why (two runs are single-test runs, "1 test in 1 suite"). Counted, not explained.
+- Known issues are all pre-existing pins: `Adversarial372ProbeCopyTests.swift:524` (zero-byte main with non-empty WAL), `Adversarial000Tests.swift:1003` and `:1016` (TASK-368 regex/division lint), `:1032` (identifier lint).
+- Known flakes OC-7132, `optionArrowsStepThroughSidebarFilters`, OC-4102, OC-408-W12 all passed in the full run at both SHAs, so no single re-run was needed. LintHarnessTests passed (18.4 s and 20.9 s).
+- Load at A1 start was about 8.4 (other sessions on the machine), and `swift test` itself drove 1-min load to 83 at the end of the first run.
+- Warnings: 4 distinct compiler warnings in the test targets at both SHAs (unused result): `Frd003ContractPasteTests.swift:493`, `ShelfDropServiceTests.swift:524`, `:526`, `:536`. The app build has no compiler warnings (one `appintentsmetadataprocessor` note about no AppIntents.framework). The cross-project rule is zero warnings, so the test warnings are a defect to ticket. Not fixed.
+
+**A4 idle profile, TASK-116: 42cb847 Debug build (Debug, not Release; the lane says the same build)**
+
+| Budget line | Budget | Measured | Verdict |
+|---|---|---|---|
+| Idle CPU, mean over 10 min | at most 0.2 % of one core | 0.0845 % (0.509 s CPU in 603 s) in window 2; 0.083 % (0.51 s in 602 s) in window 1 | PASS |
+| Wakeups | at most 2.5 /s | 2.109 /s (1272 interrupt wakeups in 603 s); max 23 in any 10 s bucket (2.3 /s); the 10 s buckets were 20 to 23 | PASS (0.39 /s headroom) |
+| Resident memory | at most 60 MB | RSS 89.7 MB (ps) / 87.6 MB (`ri_resident_size`), flat between 89.68 and 89.76 MB across 20 min; end footprint 23.0 MB | FAIL on RSS; the physical footprint is 23 MB |
+
+Method:
+- Process: the Debug binary launched directly, `CFFIXED_USER_HOME` pointing at a scratch home, capture on (default). Load at start 1.69 (1-min, 22:23:23), 1.79 at the end of window 1, 1.73 at the end of window 2; no swift/xcodebuild process running of mine (an idle sourcekitd service and someone's `cp` were on the box). Waited from load 83 to under 2 first.
+- Settle: 55 s after launch (footprint and ps taken then), then window 1: 10 min hands-off, `top -l 62 -s 10 -pid <PID> -stats pid,cpu,idlew,mem,rsize` plus `ps -o rss=,cputime=` every 10 s.
+- CPU: delta of `ps cputime` (10 ms resolution) divided by wall time, and, in window 2, `proc_pid_rusage` (`ri_user_time + ri_system_time`, converted with mach_timebase) divided by wall time. `top` showed 0.0 % in every one of 61 samples.
+- Wakeups: window 1 `top` IDLEW is cumulative package-idle wakeups: 20 at 22:24:24 to 278 at 22:34:41, so 258 in 617 s = 0.42 /s. That column only counts wakeups that brought the core out of idle, so it undercounts (a 0.5 s timer alone is 2 /s). Window 2 (22:36 to 22:46, hands-off) therefore read `ri_interrupt_wkups` through `proc_pid_rusage` (RUSAGE_INFO_V4) every 10 s: 1571 to 2843 over 603 s = 2.109 /s. The package-idle counter in the same window gave 185 in 603 s = 0.307 /s. The number to compare with the budget is the interrupt one. Cumulative since launch (714 s, launch burst included) was 1561, 2.19 /s.
+- Memory: `ps -o rss` and `ri_resident_size` for resident, `footprint <PID>` and `vmmap --summary` for physical footprint (23 MB at start, 23.0 MB at end, peak 23.3 MB). `top`'s mem and rsize columns both printed 23M (the footprint), so I did not use `top` for RSS.
+- Wakeup source: not traced. The budget lines pass, so no `xctrace` trace was taken. The roughly 2.0 /s is consistent with the 0.5 s pasteboard poll timer in FRD-001 (AC-001-01); that is an inference, not a measured attribution, and about 0.1 /s is unattributed.
+- RSS fail diagnosis (`vmmap --summary`): private dirty is 23 MB (Malloc Small 13 MB, `__DATA` 2.8 MB, `__DATA_DIRTY` 2.3 MB, malloc metadata 1.1 MB), and 18 MB is clean mapped file. The other roughly 65 MB of resident size is clean pages of the system libraries mapped from the shared cache (`__TEXT`, `__OBJC_RO`, `__AUTH_CONST`, `__DATA_CONST`), which are shared with other processes and are not heap. I did not attribute them per framework, and I did not measure a Release build. The FRD does not say whether "resident" means RSS or footprint. By RSS the line fails; by footprint it passes with 37 MB of headroom. Needs a decision from S1 / Ryan on which definition the budget uses.
+- The pasteboard (one `public.utf8-plain-text` item, 0 bytes) was saved before and compared after: identical items, changeCount 68 before and after, so the app and I never touched it and no restore was needed.
+- Not done: capture latency and the 50k-item search latency (the other two A4 bullets, not in this brief); the Edit-menu-held-open check; a Time Profiler trace; a Release-build profile. Onboarding state was not observed (no screenshot and no AX). I did not see a plist land in the scratch home's Library/Preferences, and the real prefs plist hash is unchanged, so I do not know which domain the app read its settings from.
+- Quit: the app was stopped with SIGTERM (a menu quit needs AX or an Automation grant, and I made no TCC grant). Exit was clean to the shell; the scratch database holds 0 items and I did not run `integrity_check` on it. No DiagnosticReports entry for Flotsam.
+
+**Data isolation.** `lsof` showed the app opening only the scratch home's `Application Support/Flotsam`, 0 handles on the real folder. Real DB opened read-only before and after: 17 items both times; `flotsam.sqlite` and `-wal` have identical size, mtime and sha1 before and after (`-shm` excluded, readers touch it). The real prefs plist `io.github.heilo27.Flotsam.plist` has the same sha1 before and after. No `defaults write` was used. Scratch clones deleted; logs kept in the scratchpad.
+
+**Defects / follow-ups for S1:**
+1. A4 RSS 89.7 MB against the 60 MB line (see above); decide the definition, and re-measure on a Release build.
+2. Four unused-result warnings in test targets (list above).
+3. The `S2-LOG.md` header toolchain line is stale.
