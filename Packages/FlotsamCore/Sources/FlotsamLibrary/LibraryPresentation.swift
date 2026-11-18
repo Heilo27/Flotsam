@@ -63,14 +63,14 @@ public struct SidebarEntry: Equatable, Identifiable {
 
     public var id: LibraryFilter { filter }
 
-    /// The sidebar in order: All, Pinned; the types that have items; tags alphabetically; the top apps by count. The
+    /// The sidebar in order: All, Pinned (each dimmed at zero); the types that have items; tags alphabetically; the top apps by count. The
     /// query layer already orders tags and caps apps (`SidebarCounts`), so this only labels them.
     public static func entries(from counts: SidebarCounts) -> [SidebarEntry] {
         var entries = [
-            SidebarEntry(filter: .all, section: .top, title: LibraryText.string("ui.library.sidebarAll"), count: counts.all, isDimmed: false),
-            SidebarEntry(filter: .pinned, section: .top, title: LibraryText.string("ui.library.sidebarPinned"), count: counts.pinned, isDimmed: false),
+            SidebarEntry(filter: .all, section: .top, title: LibraryText.string("ui.library.sidebarAll"), count: counts.all, isDimmed: counts.all == 0),
+            SidebarEntry(filter: .pinned, section: .top, title: LibraryText.string("ui.library.sidebarPinned"), count: counts.pinned, isDimmed: counts.pinned == 0),
         ]
-        for kind in ItemKind.allCases {
+        for kind in typeOrder {
             guard let count = counts.kinds[kind], count > 0 else { continue }
             entries.append(SidebarEntry(filter: .kind(kind), section: .types, title: LibraryText.typeTitle(kind), count: count, isDimmed: false))
         }
@@ -81,6 +81,26 @@ public struct SidebarEntry: Equatable, Identifiable {
             entries.append(SidebarEntry(filter: .sourceApp(app.identity), section: .apps, title: appTitle(app), count: app.count, isDimmed: false))
         }
         return entries
+    }
+
+    /// The Types rows in FR-003-12's order. The one home of that order: `ItemKind` itself stays in storage order, so
+    /// nothing that persists or counts by kind is affected. The exhaustive switch makes a new kind a compile error here.
+    static let typeOrder: [ItemKind] = ItemKind.allCases.sorted { typeRank($0) < typeRank($1) }
+
+    private static func typeRank(_ kind: ItemKind) -> Int {
+        switch kind {
+        case .text: 0
+        case .richText: 1
+        case .link: 2
+        case .color: 3
+        case .phone: 4
+        case .email: 5
+        case .image: 6
+        case .screenshot: 7
+        case .file: 8
+        case .folder: 9
+        case .bundle: 10
+        }
     }
 
     private static func appTitle(_ app: SidebarCounts.AppCount) -> String {
