@@ -334,7 +334,8 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.appAnotherDevice`, `appUnknown` | Another device, Unknown | (14/15, 7/15) |
 | `ui.library.typeText` to `typeScreenshot` | Text, Rich Text, Links, Colors, Phone Numbers, Emails, Images, Files, Folders, Bundles, Screenshots | (sidebar type names) |
 | `ui.library.tagOverflow` | +%lld | (row chips) |
-| `ui.library.fromApp`, `ui.library.pinned` | from %@, Pinned | (VoiceOver row label) |
+| `ui.library.fromApp` | from %@ | (VoiceOver row label) |
+| `ui.library.spokenPinned` | pinned | (VoiceOver row label, pinned rows) |
 | `ui.library.previewShowMore` | Show more | (9/15) |
 | `ui.library.previewMore` | and %lld more | (13/40) |
 | `ui.library.previewUnavailable` | Preview unavailable | (19/40) |

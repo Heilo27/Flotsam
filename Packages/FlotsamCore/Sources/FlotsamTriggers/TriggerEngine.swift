@@ -283,7 +283,7 @@ public final class TriggerEngine {
         }
     }
 
-    /// FR-005-13: only Secure Event Input and an excluded app are logged; an input method or an unknown app is silent.
+    /// FR-005-13: only Secure Event Input and an excluded app are reported; an input method or an unknown app reports nothing.
     ///
     /// Every suppression is a typed word that equalled a trigger and was not expanded, so each logs the yes/no match
     /// result as `false` (FR-000 callsite checklist). A word that equals no trigger is decided on the tap thread, where
