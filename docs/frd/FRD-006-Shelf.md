@@ -122,7 +122,7 @@ A small panel at a screen edge (or under the menu-bar icon) that shows pinned an
 | HUD | floating label | screen with pointer | `SHF-*`, `LIB-DAT-001`, `SET-PRM-001` |
 
 ## 9. Assumptions and open items (flagged for Friday)
-1. Reveal model. The PRD says "edge/menu-bar panel" and does not define the reveal. This FRD reveals on a system-wide drag reaching the edge (so scrollbars and the Dock are not disturbed), on a hotkey or menu item, and optionally on edge hover. Whether a drag in progress can be reliably detected with global monitors without Accessibility on macOS 14 to 26 is unverified and needs a spike before build; fallback is hotkey, menu and hover only.
+1. Reveal model. The PRD says "edge/menu-bar panel" and does not define the reveal. This FRD reveals on a system-wide drag reaching the edge (so scrollbars and the Dock are not disturbed), on a hotkey or menu item, and optionally on edge hover. Whether a drag in progress can be reliably detected with global monitors without Accessibility on macOS 26 is unverified and needs a spike before build; fallback is hotkey, menu and hover only.
 2. Drops ignore capture mode and ignored apps (FR-006-13a) because they are explicit. This is a product choice; Concealed and Transient types still reject.
 3. Source app of a drop is the frontmost application (FR-006-13c); drag sources outside the frontmost app (rare) are mislabelled.
 4. Click behaviour: double-click pastes. A single click only selects, to avoid accidental pastes while moving to drag.

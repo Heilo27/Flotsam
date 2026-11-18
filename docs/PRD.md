@@ -50,9 +50,9 @@ copies together, lets you drag them out, and turns favourites into triggers.
 | iOS companion, AirDrop/Share from Shelf, themes beyond light/dark, Mac App Store build | NOT DOING (v1) |
 
 ## 7. Platform & Distribution
-macOS 14 Sonoma+, Apple silicon and Intel. Swift 6 / SwiftUI with AppKit `NSPanel` for the Library and
+macOS 26 Tahoe+ (Ryan, 2026-11-18: no macOS 14 or 15 support), Apple silicon and Intel. Swift 6 / SwiftUI with AppKit `NSPanel` for the Library and
 Shelf. Not sandboxed (Accessibility + CGEvent paste-back). Distributed as a Developer-ID-signed, notarized
-DMG on GitHub Releases; Homebrew cask after 1.0. Build from source with Xcode 16+.
+DMG on GitHub Releases; Homebrew cask after 1.0. Build from source with Xcode 26+.
 
 ## 8. Monetization
 None. MIT licensed, free forever, no donations gate any feature (anti-truth 4). Optional GitHub Sponsors link in README only.

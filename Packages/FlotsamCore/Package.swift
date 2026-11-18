@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "FlotsamCore",
     defaultLocalization: "en",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("26.0")],
     products: [
         .library(name: "FlotsamBase", targets: ["FlotsamBase"]),
         .library(name: "FlotsamStorage", targets: ["FlotsamStorage"]),

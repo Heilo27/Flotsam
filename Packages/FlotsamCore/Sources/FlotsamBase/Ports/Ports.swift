@@ -58,11 +58,11 @@ public protocol PasteboardPort {
 /// `PasteboardPort` because it is a system privacy setting, not part of reading or writing the board.
 @MainActor
 public protocol PasteboardAccessPort {
-    /// False when the system reports an access behaviour other than "Allow" (macOS 15.4 and later).
+    /// False when the system reports an access behaviour other than "Allow" (the setting exists on every supported macOS).
     var isReadAllowed: Bool { get }
 }
 
-/// Access on macOS versions that do not gate pasteboard reads, and the default when no system probe is supplied.
+/// Access with no gate (reads always allowed): the default when no system probe is supplied.
 public struct UngatedPasteboardAccess: PasteboardAccessPort {
     public init() {}
     public var isReadAllowed: Bool { true }

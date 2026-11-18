@@ -152,6 +152,8 @@ Ports marked after Base are declared when the owning FRD is built, not before (n
 
 ## 9. Spike register (AC4)
 
+Minimum macOS is 26 (Ryan, 2026-11-18, TRUTHS amendment log): spikes S-2, S-3, S-5 and S-9 run on macOS 26 only; their macOS 14 and 15 matrix rows are dropped.
+
 | Spike | Ticket | Question | Lands in | If it fails |
 |---|---|---|---|---|
 | S-1 | TASK-004 | Search latency at 10k items; FTS needed? | ADR-0003 | Add FTS5 trigram as migration 2 (rule fixed in advance). Request: include the in-DB `instr` scan as a third arm |
@@ -196,7 +198,7 @@ bin/check-architecture.sh
 ## 13. Known gaps and open decisions
 
 - Bundle identifier is a placeholder (section 11).
-- macOS 14's bundled SQLite and FTS5 trigram availability are unverified; the dev machine's SQLite supports it (S-1 repeats the check on macOS 14).
+- FTS5 trigram availability on the minimum OS (macOS 26) is the development machine's measured behaviour; S-1 needs no older-OS check.
 - Off-main pasteboard reads are unverified (section 5).
 - The Storage item-change event stream (FR-005-22) is not yet designed; it is part of the FRD-005 build.
 - The full error catalogue (FRD-000 section 7) and the other 15 settings keys are seeded by their owning build tickets; the skeleton holds three codes and four keys so the mechanism is proven end to end.

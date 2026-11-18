@@ -4,7 +4,7 @@
 Free, MIT, local-first macOS clipboard + screenshot history (Library, Shelf, tags, bundles, triggers) — an open alternative to the paid LinkHiv workflow.
 
 ## Stack
-Swift 6 · SwiftUI + AppKit (NSPanel) · SQLite (decided in architecture) · macOS 14+ · direct distribution (signed DMG on GitHub Releases), not Mac App Store.
+Swift 6 · SwiftUI + AppKit (NSPanel) · SQLite (decided in architecture) · macOS 26+ · direct distribution (signed DMG on GitHub Releases), not Mac App Store.
 
 ## Critical Rules
 - PUBLIC repo (github.com/Heilo27/Flotsam). Never commit secrets, signing identities, team IDs in plain config, or anything from LinkHiv (name, copy, art, screenshots). We reimplement the workflow, never the expression.

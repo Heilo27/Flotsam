@@ -19,7 +19,7 @@ Use **GRDB.swift** (MIT) with a `DatabasePool` on the system SQLite (`import GRD
 
 ## Consequences
 - One runtime dependency (ADR-0010). GRDB is MIT, has no networking code, and is actively maintained (latest tag seen 2026-11-16: v7.12.0).
-- Available SQLite features follow the OS: the system library on macOS 14 is older than on current macOS. This matters for FTS5 trigram only (ADR-0003); everything else in FR-007 uses long-standing SQLite features (WAL, `secure_delete`, `incremental_vacuum`, `quick_check`, `user_version`); the skeleton test confirms them on the build machine and S-1 repeats the check on macOS 14.
+- Available SQLite features follow the OS: the system library on the minimum macOS (26) is the one the development machine runs. This matters for FTS5 trigram only (ADR-0003); everything else in FR-007 uses long-standing SQLite features (WAL, `secure_delete`, `incremental_vacuum`, `quick_check`, `user_version`); the skeleton test confirms them on the build machine and S-1 repeats the check on the build machine only (macOS 14 and 15 are unsupported).
 - The skeleton test `StorageOpenTests` asserts the pragmas (WAL, foreign keys, secure_delete, user_version) on a real file, so a GRDB or SQLite change that breaks FR-007-02 fails a test.
 
 ## Reversibility

@@ -14,7 +14,7 @@ exists only in paid apps.
 | Spotlight (macOS 26) | Built-in ⌘Space ⌘4 history | Short history, no organization | Free | No |
 | OpenPaste / Pesty / PasteMemo / Clipbara | Various open SwiftUI managers | None combine screenshots + shelf + triggers | Free | MIT/GPL |
 
-**Platform:** macOS 14+, native Swift/SwiftUI + AppKit panels; direct distribution (signed/notarized DMG
+**Platform:** macOS 26+, native Swift/SwiftUI + AppKit panels; direct distribution (signed/notarized DMG
 on GitHub Releases, Homebrew cask). Mac App Store excluded: sandbox blocks paste-back and global key
 monitoring for triggers.
 
