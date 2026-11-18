@@ -86,7 +86,7 @@ Enforced by Swift's target graph (a missing dependency fails to compile) and, fo
 
 ## 5. Concurrency ([ADR-0004](adr/0004-concurrency-model.md))
 
-MainActor owns UI and the 0.5 s pasteboard poll, which only compares `changeCount`, runs the gates and copies bytes. An immutable `Sendable` `CapturedPayload` then goes to a serial `IngestActor` in Storage, which hashes, classifies, converts and writes in one transaction. The database is a GRDB `DatabasePool` with async-only access. The CGEventTap runs on its own run-loop thread with a thread-confined matcher. The paste coordinator, screenshot watcher, retention scheduler and settings store each have one isolation domain. Timers use an injected clock. `@unchecked Sendable` and `nonisolated(unsafe)` are permitted only for the tap-thread context, the trigger snapshot holder and the `UserDefaults` in `UserDefaultsStore`.
+MainActor owns UI and the 0.5 s pasteboard poll, which only compares `changeCount`, runs the gates and copies bytes. An immutable `Sendable` `CapturedPayload` then goes to a serial `IngestActor` in Storage, which hashes, classifies, converts and writes in one transaction. The database is a GRDB `DatabasePool` with async-only access. The CGEventTap runs on its own run-loop thread with a thread-confined matcher. The paste coordinator, screenshot watcher, retention scheduler and settings store each have one isolation domain. Timers use an injected clock, except the one pasteboard poll timer, which also carries the tap watchdog (5 s) and the folder re-resolve (30 s) through `PollTick` (ADR-0004). `@unchecked Sendable` and `nonisolated(unsafe)` are permitted only for the tap-thread context, the trigger snapshot holder and the `UserDefaults` in `UserDefaultsStore`.
 
 Open item: whether reading a large image's bytes off the main actor is safe for `NSPasteboard` is unverified (belongs to S-4's remit).
 
@@ -114,7 +114,7 @@ Schema sketch (FRD-007 FR-007-03 is the single definition; this is the architect
 | `itemTag` | `itemId`, `tagId` (cascade, unique pair) |
 | `meta` | `key` PK; `value` (`schemaVersion`, `screenshots.lastScanAt`, `retention.lastSweepAt`, `budget.lastNoticeAt`) |
 
-Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-migration file copy (FR-007-17). Migration 1 is the full FRD-007 schema (item, representation, bundleMember, tag, itemTag, meta); the copy is `pre-migration/flotsam-v<from>.sqlite`, latest only.
+Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-migration file copy (FR-007-17). Migration 1 is the full FRD-007 schema (item, representation, bundleMember, tag, itemTag, meta); the copy is `pre-migration/flotsam-v<from>.sqlite` (`flotsam-v<from>-<n>.sqlite` if a non-file entry holds that name), latest only, deleted 7 days after a later clean launch or by Clear History; `corrupt-<timestamp>/` lives 30 days (FR-007-11, -13, -17). The rules live in `FlotsamStorage/Folder/PlaintextCopies.swift`.
 
 **Search default** ([ADR-0003](adr/0003-search-strategy.md)): an in-database `instr(searchText, token) > 0` scan per token, AND-ed, tokens normalised by `SearchNormalizer`, pages of 200 rows plus a count, no resident index copy. If it exceeds 100 ms p95 at 10k items (2k images) in spike S-1, migration 2 adds an FTS5 trigram index kept in sync in the same transaction, used for tokens of 3 or more characters, with `instr` for shorter ones and an equivalence test against the scan either way.
 

@@ -24,6 +24,15 @@ public struct ClearOutcome: Sendable, Equatable {
     /// False when readers kept `wal_checkpoint(TRUNCATE)` from finishing. The items are gone from the database
     /// either way; this tells the caller the WAL file was not yet truncated, so the on-disk scrub is incomplete.
     public let checkpointCompleted: Bool
+    /// False when a pre-migration copy or corrupt-database quarantine could not be removed (FR-007-11). Those are full
+    /// plaintext copies of the database, so the deleted items are still on disk until a later Clear or their expiry.
+    public let plaintextCopiesPurged: Bool
+
+    public init(deletedCount: Int, checkpointCompleted: Bool, plaintextCopiesPurged: Bool = true) {
+        self.deletedCount = deletedCount
+        self.checkpointCompleted = checkpointCompleted
+        self.plaintextCopiesPurged = plaintextCopiesPurged
+    }
 }
 
 extension DeletionPreview {
@@ -147,7 +156,17 @@ extension FlotsamDatabase {
         if deleted > 0 {
             report(FlotsamError(.stoPol001, "Clear history", context: [.count: .int(deleted)]))
         }
-        return .success(ClearOutcome(deletedCount: deleted, checkpointCompleted: await scrubDatabaseFile()))
+        // Deleted rows also live in the full database copies beside the live file (FR-007-11, FR-007-13, FR-007-17).
+        var copiesPurged = true
+        if deleted > 0 {
+            let purge = folder.purgePlaintextCopies(fileSystem: fileSystem)
+            copiesPurged = purge.isComplete
+            if !purge.isComplete {
+                report(FlotsamError(.stoIo003, "Clear history left plaintext database copies", context: [.count: .int(purge.failed)]))
+            }
+        }
+        return .success(ClearOutcome(
+            deletedCount: deleted, checkpointCompleted: await scrubDatabaseFile(), plaintextCopiesPurged: copiesPurged))
     }
 
     /// True when the WAL was fully checkpointed and truncated. A failure here must not fail the Clear: the rows are

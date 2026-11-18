@@ -22,8 +22,9 @@ public enum ScreenshotPickupStatus: Sendable, Equatable {
 /// listing, the stability wait, reading bytes) runs `@concurrent`, because the first read of Desktop, Documents or
 /// Downloads can sit behind the system's folder-access prompt for as long as the user takes to answer it.
 public actor ScreenshotWatcher {
-    /// FR-002-02, FR-002-03: re-resolution and the access retry share this period.
-    public static let tickInterval: Duration = .seconds(30)
+    /// FR-002-02, FR-002-03: seconds between re-resolutions, which the access retry shares. A whole number of poll
+    /// ticks (`PollTick`): the watcher owns no timer.
+    public static let tickInterval: TimeInterval = 30
     /// FR-002-13.
     public static let maxInFlight = 2
     /// FR-002-07: how many times a file that was unstable is tried again.
@@ -35,6 +36,7 @@ public actor ScreenshotWatcher {
 
     private let fileSystem: any FileSystemPort
     private let clock: any WallClock
+    private let pollTick: PollTick
     private let settings: SettingsStore
     private let resolver: ScreenshotLocationResolver
     private let scanner: ScreenshotFolderScanner
@@ -55,7 +57,7 @@ public actor ScreenshotWatcher {
     /// Bumped on every teardown; events and scan results from an earlier watch are discarded.
     private var generation = 0
     private var watch: (any FolderWatch)?
-    private var tick: Task<Void, Never>?
+    private var cancelTick: (@Sendable () -> Void)?
 
     /// The warnings of ongoing conditions, so each is raised once per change of state and cleared when it ends.
     private var raisedLocationWarning: ErrorCode?
@@ -84,10 +86,12 @@ public actor ScreenshotWatcher {
         watermarkStore: any ScreenshotWatermarkStore,
         report: @escaping @Sendable (FlotsamError) async -> Void,
         clear: @escaping @Sendable (ErrorCode) async -> Void,
+        pollTick: PollTick,
         sink: any LogSink = OSLogSink()
     ) {
         self.fileSystem = fileSystem
         self.clock = clock
+        self.pollTick = pollTick
         self.settings = settings
         self.resolver = ScreenshotLocationResolver(fileSystem: fileSystem, preferences: preferences, home: home)
         self.scanner = ScreenshotFolderScanner(fileSystem: fileSystem, preferences: preferences)
@@ -174,21 +178,15 @@ public actor ScreenshotWatcher {
         active = true
         lastMode = settings.value(SettingKeys.captureMode)
         if freshWatermark { await advanceWatermark(to: clock.now()) }
-        tick = Task { [clock] in
-            while !Task.isCancelled {
-                await clock.sleep(for: Self.tickInterval)
-                if Task.isCancelled { break }
-                await self.tickFired()
-            }
-        }
+        cancelTick = pollTick.every(Self.tickInterval) { Task { await self.tickFired() } }
         await evaluate(reconcile: true)
     }
 
     /// FR-002-05: no watcher, no timer, no folder access, and none of the conditions it raised left standing.
     private func deactivate() async {
         active = false
-        tick?.cancel()
-        tick = nil
+        cancelTick?()
+        cancelTick = nil
         teardown()
         dropQueuedJobs()
         retry.removeAll()
@@ -201,7 +199,8 @@ public actor ScreenshotWatcher {
         for code in ended.compactMap({ $0 }) { await clear(code) }
     }
 
-    private func tickFired() async {
+    /// The 30 s work, run from the shared poll tick (`PollTick`). Internal so tests can run one tick to completion.
+    func tickFired() async {
         guard active else { return }
         await evaluate(reconcile: false)
         if inFallback { await tryLeaveFallback() }

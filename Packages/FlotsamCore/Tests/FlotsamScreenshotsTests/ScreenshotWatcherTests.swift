@@ -498,7 +498,7 @@ struct WatcherSettingsTests {
         #expect(await rig.watcher.status == .off)
         #expect(rig.source.running.isEmpty)
         #expect(!rig.notices.standing(.sspIo001))
-        #expect(await eventually { rig.clock.sleeping(seconds: 30) == 0 }, "no timer is left running")
+        #expect(rig.pollTick.registrationCount == 0, "no periodic work is left registered")
     }
 }
 
