@@ -176,11 +176,9 @@ import Testing
         #expect(TriggerPermissionNotice.missing(triggersEnabled: true, probe: probe) == [.setPrm001])
         #expect(rows.first { $0.kind == .accessibility }?.status.text == "Not granted")
         #expect(rows.first { $0.kind == .inputMonitoring }?.status.text == "Granted")
-        let text = FlotsamStrings.text(forKey: "error.SET-PRM-001") ?? ""
+        let text = TriggerPermissionNotice.text(for: .setPrm001)
         #expect(text.contains("Accessibility"))
-        withKnownIssue("DEFECT OC-8038: SET-PRM-001 text says paste is unavailable; oracle says the message states triggers are paused (spec/catalogue wording drift)") {
-            #expect(text.lowercased().contains("trigger"))
-        }
+        #expect(text.lowercased().contains("trigger"))
     }
 
     // OC-8039. Both granted: nothing inline, both rows Granted. Both missing: both codes, in a stable order.
@@ -290,15 +288,13 @@ import Testing
         #expect(SettingsString.revealDataFolder.text == "Reveal Data Folder")
     }
 
-    // OC-8047 (text). The budget-lowering alert text names N and Z. The oracle says 'image budget'; the catalogue says 'image limit'.
+    // OC-8047 (text). The budget-lowering alert text names N and Z. The alert says 'image budget'.
     @Test func oc8047_budgetAlertText() {
         let text = SettingsString.confirmBudget.text([.count(7), .byteSize(1_048_576)])
 
         #expect(text.contains("removes 7 older images ("), "the real count is interpolated: \(text)")
         #expect(text.hasSuffix("). Pinned and shortcut items are kept."))
-        withKnownIssue("DEFECT OC-8047: alert says 'Lowering the image limit', oracle says 'Lowering the image budget' (spec/catalogue wording drift)") {
-            #expect(text.hasPrefix("Lowering the image budget removes 7 older images ("))
-        }
+        #expect(text.hasPrefix("Lowering the image budget removes 7 older images ("))
     }
 
     // OC-8047/8048 (flow). Lowering the budget needs a preview; a preview above zero asks, and Cancel/Confirm are the caller's.
@@ -487,7 +483,7 @@ import Testing
     // MARK: - Ignored apps list (OC-8075...8080)
 
     // OC-8075. An app with no identifier is refused with the oracle text; the list is unchanged. The oracle says the
-    // button reads 'Add…'; the catalogue says 'Add app'.
+    // button reads 'Add…'.
     @Test func oc8075_addWithoutIdentifierRefusedAndButtonLabel() {
         let defaults = BundleIdentifierList.defaultIgnoredApps
         guard case .failure(let error) = BundleIdentifierList.validated(nil) else { Issue.record("nil id must be refused"); return }
@@ -495,9 +491,7 @@ import Testing
         #expect(error.code == .setVal002)
         #expect(defaults.identifiers.count == 6)
         #expect(Set(defaults.identifiers) == Self.defaultIgnored)
-        withKnownIssue("DEFECT OC-8075: button reads 'Add app', oracle says 'Add…' (spec/catalogue wording drift)") {
-            #expect(SettingsString.addApp.text == "Add…")
-        }
+        #expect(SettingsString.addApp.text == "Add…")
     }
 
     // OC-8076. Adding 1Password 8 again changes nothing.

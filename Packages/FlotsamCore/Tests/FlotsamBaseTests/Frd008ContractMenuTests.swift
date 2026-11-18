@@ -95,8 +95,8 @@ struct Frd008ContractMenuTests {
         #expect(menu.contains("NSApplication.shared.terminate(nil)"))
     }
 
-    // OC-8127 wording. The FRD prints the Toggle Shelf chord as ⌘⇧9; the product renders modifiers in the system order
-    // ⇧⌘9 (Chord.displayString, and AppKit for the menu row). Wording drift, no user impact.
+    // OC-8127 wording. Chords render modifiers in the system order (⌃⌥⇧⌘), so Toggle Shelf reads ⇧⌘9
+    // (Chord.displayString, and AppKit for the menu row); FR-008-16 states the rule.
     @Test("OC-8127: the Toggle Shelf chord reads as the FRD prints it")
     func chordWordingMatchesFRD() {
         guard case .chord(let chord) = toggleShelfChord else {
@@ -104,9 +104,6 @@ struct Frd008ContractMenuTests {
             return
         }
         #expect(chord.displayString == "⇧⌘9")
-        withKnownIssue("DEFECT OC-8127 wording drift: FRD prints ⌘⇧9, product renders system order ⇧⌘9") {
-            #expect(chord.displayString == "⌘⇧9")
-        }
     }
 
     // OC-8128 (model half). Red if Pause stops stopping automatic capture, Resume does not restart it, or the toggle

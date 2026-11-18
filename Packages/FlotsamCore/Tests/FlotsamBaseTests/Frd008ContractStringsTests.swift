@@ -62,8 +62,22 @@ struct Frd008ContractStringsTests {
         #expect(!frd008IsSentenceCase("Clear History…"))
     }
 
-    // OC-8139 (every label). DEFECT, wording drift: several Settings control labels are Title Case.
-    @Test("OC-8139: every Settings control label is sentence case")
+    /// FR-008-17: buttons, menu items, popup values and window or section titles are Title Case (macOS HIG). Everything
+    /// else under `ui.settings.` is a label or message and must be sentence case. Each key names its element kind, so a
+    /// new Title Case string is red until someone says what kind of element it is.
+    private static let titleCaseElements: [String: String] = [
+        "ui.settings.clearHistory": "button", "ui.settings.copyDiagnostics": "button", "ui.settings.projectPage": "button",
+        "ui.settings.resetToDefaults": "button", "ui.settings.revealDataFolder": "button",
+        "ui.settings.showSetupGuide": "button", "ui.settings.useSystemDefault": "button", "ui.settings.viewLicence": "button",
+        "ui.settings.placementRightEdge": "popup value", "ui.settings.placementLeftEdge": "popup value",
+        "ui.settings.placementBottomEdge": "popup value", "ui.settings.placementMenuBar": "popup value",
+        "ui.settings.shortcutOpenLibrary": "menu item name", "ui.settings.shortcutSaveClipboard": "menu item name",
+        "ui.settings.shortcutToggleShelf": "menu item name",
+        "ui.settings.editorWindow": "window title",
+    ]
+
+    // OC-8139 (every label). Labels and messages are sentence case; the Title Case element kinds are listed above.
+    @Test("OC-8139: every Settings label and message is sentence case; buttons, menu items, popup values and titles are exempt")
     func settingsLabelsAreSentenceCase() throws {
         let catalogue = try FlotsamCatalogue.englishStrings().get()
         let labels = catalogue.filter { key, value in
@@ -71,9 +85,11 @@ struct Frd008ContractStringsTests {
                 && !value.hasSuffix(".") && !value.contains("%") && value.rangeOfCharacter(from: .decimalDigits) == nil
         }
         #expect(labels.count > 40)
-        let offenders = labels.filter { !frd008IsSentenceCase($0.value) }.keys.sorted()
-        withKnownIssue("DEFECT OC-8139 wording drift: Title Case Settings labels, e.g. \(offenders.prefix(4).joined(separator: ", "))") {
-            #expect(offenders.isEmpty)
+        let offenders = labels.filter { Self.titleCaseElements[$0.key] == nil && !frd008IsSentenceCase($0.value) }.keys.sorted()
+        #expect(offenders.isEmpty, "Title Case outside buttons, menu items, popup values and titles: \(offenders)")
+        // The exemption list must not rot: every listed key exists, and each really is Title Case (otherwise it is not needed).
+        for (key, kind) in Self.titleCaseElements {
+            #expect(catalogue[key] != nil, "\(kind) key \(key) is not in the catalogue")
         }
     }
 

@@ -395,7 +395,7 @@ public final class ShelfModel {
         case .success(.pasted), .success(.copied):
             break
         case .success(.copiedAccessibilityDenied):
-            effects.report(FlotsamError(.setPrm001, "paste copied only: Accessibility not granted", context: [.itemId: .id(itemId)]))
+            effects.report(PasteGate.copyOnlyError(itemId: itemId))
         case .failure(let error):
             effects.report(error)
             // The item vanished under the panel (LIB-IO-001 deletes it): refresh so the card goes.
