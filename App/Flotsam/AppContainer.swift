@@ -186,6 +186,9 @@ final class AppContainer {
                     details: database, effects: effects)
             })
         shelf = controller
+        // Only one Flotsam panel is open at a time: showing the Shelf hides the Library (FR-006-04). The reverse is
+        // `actions.openLibrary` and the Library hotkey below.
+        controller.onReveal = { [weak self] in self?.library?.hidePanel() }
         actions.toggleShelf = { [weak controller] in controller?.toggle() }
 
         // The Toggle Shelf hotkey (FR-006-03c, FR-005-07): unbound by default, and unregistered while the Shelf is off.

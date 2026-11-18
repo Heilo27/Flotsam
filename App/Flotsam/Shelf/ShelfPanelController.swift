@@ -42,8 +42,13 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private var deadlineTask: Task<Void, Never>?
     private var showTask: Task<Void, Never>?
     private var keyMonitor: Any?
-    private var observers: [NSObjectProtocol] = []
+    // Touched only in `init` and `deinit`; `NotificationCenter` removal is thread-safe, which is what lets `deinit` (not
+    // main-actor isolated on the macOS 14 target) release them.
+    private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
     private var unsubscribeSettings: (@Sendable () -> Void)?
+    /// Called each time the Shelf is shown, so the app can hide the Library: only one Flotsam panel is open at a time
+    /// (FR-006-04). The app owns the rule; the Shelf only announces the reveal.
+    var onReveal: (@MainActor () -> Void)?
 
     /// The model needs its host and the host needs the model, so the controller builds the model with its box as host.
     /// `makeModel` receives the box and returns the model wired to it.
@@ -73,6 +78,15 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         observeFeeds()
         subscribeToSettings()
         send(.configure(enabled: enabled, placement: placement, revealOnEdgeHover: settings.value(SettingKeys.shelfRevealOnEdgeHover)))
+    }
+
+    deinit {
+        unsubscribeSettings?()
+        let workspace = NSWorkspace.shared.notificationCenter
+        for observer in observers {
+            workspace.removeObserver(observer)
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: ShelfPasteHost
@@ -132,16 +146,21 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         showTask?.cancel()
         let target = frontmost.frontmost()
         let sticky = trigger.mode == .sticky
+        // From the trigger to the panel fully visible with content (FR-006-17).
+        let span = Signposts.begin(.shelfReveal)
         showTask = Task { [weak self] in
-            guard let self else { return }
+            guard let self else { span.end(); return }
             await model.open(target: target, sticky: sticky)
             // A hide that arrived while the sections loaded wins.
-            guard !Task.isCancelled, machine.isVisible else { return }
-            reveal(screen: screen, sticky: sticky)
+            guard !Task.isCancelled, machine.isVisible else { span.end(); return }
+            reveal(trigger: trigger, screen: screen, sticky: sticky, span: span)
         }
     }
 
-    private func reveal(screen: Int, sticky: Bool) {
+    private func reveal(trigger: ShelfTrigger, screen: Int, sticky: Bool, span: PerfSpan) {
+        onReveal?()
+        // One Info line per reveal: the trigger type only, never a clip, file or app name (FR-006-18).
+        FlotsamLog.log(.shelf(.reveal, outcome: .revealed, detail: .trigger(trigger)))
         let visible = Self.visibleFrame(ofScreenAt: screen)
         let frame = ShelfLayout.frame(for: placement, in: visible, contentExtent: contentExtent())
         let transition = ShelfLayout.transition(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
@@ -161,13 +180,15 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         } else {
             panel.orderFrontRegardless()
         }
-        NSAnimationContext.runAnimationGroup { context in
+        NSAnimationContext.runAnimationGroup({ context in
             context.duration = transition.showDuration
             switch transition.style {
             case .fade: panel.animator().alphaValue = 1
             case .slide: panel.animator().setFrame(frame, display: true)
             }
-        }
+        }, completionHandler: {
+            span.end()
+        })
     }
 
     private func dismiss() {
