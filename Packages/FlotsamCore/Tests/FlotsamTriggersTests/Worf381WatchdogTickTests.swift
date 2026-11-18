@@ -46,7 +46,7 @@ import Testing
     /// OC-381-32. race: given a watchdog pass spawned by the 10th tick and stop() called before that pass runs, then
     /// the tap must stay uninstalled. (The pass is a `Task` that outlives `cancelWatchdog`; if it runs after stop() its
     /// reconcile installs a tap on a stopped engine.)
-    @Test("KNOWN TASK-381 defect D1: a watchdog pass spawned before stop() reinstalls the tap")
+    @Test("a watchdog pass spawned before stop() does not reinstall the tap")
     func aPassSpawnedBeforeStopDoesNotReinstallTheTap() async {
         let h = EngineHarness(triggers: [itemId: ";zqxsig"])
         await h.engine.start()
@@ -56,10 +56,7 @@ import Testing
         h.engine.stop()
         try? await Task.sleep(for: .milliseconds(200))
 
-        // Remove `withKnownIssue` when TriggerEngine.stop() makes a pass spawned before it a no-op.
-        withKnownIssue("D1: the pass is a Task that outlives cancelWatchdog; its reconcile reinstalls the tap") {
-            #expect(!h.source.isInstalled, "a stopped engine must not hold a tap")
-        }
+        #expect(!h.source.isInstalled, "a stopped engine must not hold a tap")
     }
 
     /// OC-381-33. FR-005-19 resume path: given a tap found disabled, when the system resumes, then the tap is

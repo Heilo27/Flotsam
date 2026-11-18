@@ -98,6 +98,9 @@ public final class TriggerEngine {
     private var cancelWatchdog: (@Sendable () -> Void)?
     private var unsubscribe: (@Sendable () -> Void)?
     private var hasStarted = false
+    /// Set by `stop()`. The watchdog pass is a `Task` that can outlive `cancelWatchdog`, so a pass spawned by the
+    /// tick before `stop()` checks this on the main actor and does nothing on a stopped engine.
+    private var hasStopped = false
 
     public private(set) var status: TriggerEngineStatus = .off {
         didSet { if status != oldValue { onStatusChange?(status) } }
@@ -187,6 +190,7 @@ public final class TriggerEngine {
 
     /// Removes the tap and stops every loop.
     public func stop() {
+        hasStopped = true
         unsubscribe?()
         unsubscribe = nil
         tasks.forEach { $0.cancel() }
@@ -235,6 +239,7 @@ public final class TriggerEngine {
     /// disabled and re-enabled in the callback is healthy again before the watchdog looks, so the two paths do not
     /// double count except in a window of microseconds.
     func watchdogTick() async {
+        guard !hasStopped else { return }  // a pass spawned before `stop()` must not reinstall the tap
         var foundDisabled = false
         if isInstalled, !source.isHealthy {
             foundDisabled = true
@@ -250,6 +255,7 @@ public final class TriggerEngine {
         if foundDisabled {
             await reporter.report(FlotsamError(.trgOs003, "Event tap found disabled by the watchdog"), origin: .background)
         }
+        guard !hasStopped else { return }  // `stop()` may have run while the report above was suspended
         await reconcileAndReport()
     }
 
