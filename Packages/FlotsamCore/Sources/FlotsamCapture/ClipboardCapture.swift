@@ -27,6 +27,7 @@ public final class ClipboardCapture {
     static let suspendedProbeInterval: TimeInterval = 60
 
     private let pasteboard: any PasteboardPort
+    private let access: any PasteboardAccessPort
     private let sourceApps: any SourceAppPort
     private let ownWrites: OwnWriteLedger
     private let settings: SettingsStore
@@ -45,6 +46,9 @@ public final class ClipboardCapture {
     /// The count whose last read came back empty and is still being re-read, and how many reads it has had.
     private var rereadingChangeCount: Int?
     private var emptyAttempts = 0
+    /// The last `changeCount` that was counted as an empty change. FR-001-18 b counts changeCount increments, so a
+    /// second read of the same count (Save Clipboard pressed again, a suspended probe) is not another.
+    private var lastCountedEmptyChangeCount: Int?
     private var suspendedSince: Date?
     private var lastProbe = Date.distantPast
 
@@ -54,9 +58,11 @@ public final class ClipboardCapture {
         pasteboard: any PasteboardPort, sourceApps: any SourceAppPort, ownWrites: OwnWriteLedger,
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
+        access: any PasteboardAccessPort = UngatedPasteboardAccess(),
         clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink()
     ) {
         self.pasteboard = pasteboard
+        self.access = access
         self.sourceApps = sourceApps
         self.ownWrites = ownWrites
         self.ingest = ingest
@@ -69,7 +75,8 @@ public final class ClipboardCapture {
 
     // MARK: Lifecycle
 
-    /// Starts the poll and the ingest consumer, then runs the launch check (FR-001-02 d).
+    /// Starts the poll and the ingest consumer, then runs the launch check (FR-001-02 d). When the system reports an
+    /// access behaviour other than "Allow", capture starts suspended with `CAP-PRM-001` (FR-001-18 a).
     public func start() {
         guard timer == nil else { return }
         let (stream, continuation) = AsyncStream<CapturedPayload>.makeStream()
@@ -86,6 +93,7 @@ public final class ClipboardCapture {
         timer.tolerance = Self.pollTolerance
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+        if !access.isReadAllowed { raise(beginSuspension(reason: "pasteboard access is not Allow")) }
         captureNow()
     }
 
@@ -211,7 +219,7 @@ public final class ClipboardCapture {
 
     private func resolveSource(types: [String]) -> SourceApp? {
         if types.contains(PasteboardMarkers.remoteClipboard) {
-            return SourceApp(bundleId: nil, name: FlotsamStrings.text(forKey: "ui.source.remoteDevice"))
+            return SourceApp(bundleId: nil, name: SourceApp.anotherDeviceName)
         }
         if types.contains(PasteboardMarkers.source),
            case .success(let snapshot) = pasteboard.readSnapshot(types: [PasteboardMarkers.source]),
@@ -233,8 +241,9 @@ public final class ClipboardCapture {
 
     /// An empty read of `changeCount`. When `rereading` (a poll), the first `emptyAttemptsPerChange - 1` are silent and
     /// the same count is read again on the next tick; only the last one counts as an empty change (and can suspend
-    /// capture, FR-001-18 b). Save Clipboard does not reread (nothing will tick again for it): its empty read counts and
-    /// is reported at once.
+    /// capture, FR-001-18 b). Save Clipboard does not reread (nothing will tick again for it): its empty read is
+    /// reported at once. Either way a `changeCount` counts as an empty change once: a repeat read of the same count
+    /// (three Save Clipboard presses on one unchanged empty pasteboard) is rejected as empty but not counted.
     private func noteEmptyRead(changeCount: Int, rereading: Bool) -> Rejection {
         if rereading {
             if rereadingChangeCount != changeCount {
@@ -245,6 +254,8 @@ public final class ClipboardCapture {
             if emptyAttempts < Self.emptyAttemptsPerChange { return .silent(.capVal001) }
             rereadingChangeCount = nil
         }
+        guard changeCount != lastCountedEmptyChangeCount else { return .silent(.capVal001) }
+        lastCountedEmptyChangeCount = changeCount
         // `.empty` always yields a rejection; the fallback only satisfies the optional.
         return noteReadability(.empty) ?? .silent(.capVal001)
     }
@@ -258,18 +269,27 @@ public final class ClipboardCapture {
             if suspendedSince != nil {
                 suspendedSince = nil
                 FlotsamLog.trace("capture resumed after pasteboard access returned", category: .capture, sink: sink)
+                // FR-001-18: the warning clears on the first successful read.
+                let reporter = reporter
+                Task { await reporter.clearNotices(code: .capPrm001) }
             }
             return nil
         case .empty:
             consecutiveEmptyReads += 1
             if consecutiveEmptyReads >= Self.emptyReadsBeforeSuspension, suspendedSince == nil {
-                suspendedSince = clock.now()
-                return .failed(FlotsamError(.capPrm001, "pasteboard reads return no data", context: [.permission: .permission(.pasteboard)]))
+                return .failed(beginSuspension(reason: "pasteboard reads return no data"))
             } else if suspendedSince == nil {
                 return .failed(FlotsamError(.capVal001, "pasteboard change carries no data"))
             }
             return .silent(.capVal001)
         }
+    }
+
+    /// Suspends capture and returns the `CAP-PRM-001` to raise, for either trigger of FR-001-18 (a launch-time access
+    /// check, b empty reads). The one place the suspension begins.
+    private func beginSuspension(reason: StaticString) -> FlotsamError {
+        suspendedSince = clock.now()
+        return FlotsamError(.capPrm001, reason, context: [.permission: .permission(.pasteboard)])
     }
 
     // MARK: Reporting

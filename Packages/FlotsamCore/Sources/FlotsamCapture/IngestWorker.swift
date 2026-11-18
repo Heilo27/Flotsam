@@ -30,8 +30,9 @@ struct IngestWorker: Sendable {
         switch await ingest.ingest(candidate) {
         case .failure(let error):
             // FR-001-22: this item is lost, the pipeline carries on with the next.
-            if reportingFailure { await reporter.report(error, origin: .background) }
-            return error
+            let failure = Self.captureFailure(error)
+            if reportingFailure { await reporter.report(failure, origin: .background) }
+            return failure
         case .success(let result):
             for warning in result.warnings { await reporter.report(warning, origin: .background) }
             FlotsamLog.log(
@@ -40,6 +41,23 @@ struct IngestWorker: Sendable {
                     outcome: result.outcome.isBump ? .deduped : .stored, policy: nil),
                 sink: sink)
             return nil
+        }
+    }
+}
+
+extension IngestWorker {
+    /// A write the disk or database refused (`STO-DB-001`, `STO-IO-001`) is, for capture, a copy that could not be
+    /// saved: `CAP-IO-001` (FR-001-22), keeping the cause: the underlying error when there is one, and always the
+    /// original `STO-*` code as the `code` context field (a refusal from DiskGuard or BlobStore has no underlying
+    /// error, so the code is then the only trace of which write failed). Every other pipeline failure keeps its own code.
+    static func captureFailure(_ error: FlotsamError) -> FlotsamError {
+        switch error.code {
+        case .stoDb001, .stoIo001:
+            FlotsamError(
+                .capIo001, "Capture write refused", context: error.context.merging([.code: .code(error.code)]) { _, new in new },
+                underlying: error.underlying)
+        default:
+            error
         }
     }
 }

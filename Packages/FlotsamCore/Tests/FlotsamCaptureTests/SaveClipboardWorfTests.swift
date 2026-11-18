@@ -210,11 +210,6 @@ struct SaveClipboardWorfTests {
             if case .rejected(let error) = await rig.capture.saveClipboardNow() { codes.append(error.code) }
         }
 
-        // DEFECT (Major): the third press returns CAP-PRM-001 and suspends capture, because `saveClipboardNow` feeds
-        // `noteEmptyRead` for an unchanged changeCount (ClipboardCapture.swift `saveClipboardNow` / `noteEmptyRead`).
-        // Known issue so the suite stays green; it turns red ("unexpectedly passed") the day this is fixed.
-        withKnownIssue("FR-001-18(b): repeated Save on one unchanged empty clipboard must not count as 3 changes") {
-            #expect(codes == [.capVal001, .capVal001, .capVal001])
-        }
+        #expect(codes == [.capVal001, .capVal001, .capVal001])
     }
 }

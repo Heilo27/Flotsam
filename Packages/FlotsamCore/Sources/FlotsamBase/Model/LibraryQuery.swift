@@ -13,8 +13,10 @@ public enum SourceAppIdentity: Sendable, Equatable, Hashable {
 extension SourceApp {
     /// The stored source name of a Universal Clipboard copy (FRD-001 FR-001-14). It is the only thing that tells the
     /// "Another device" bucket apart from "Unknown", because neither has a bundle identifier, so the capture side
-    /// (writes it) and the query layer (reads it) share this one constant.
-    public static let anotherDeviceName = "Another device"
+    /// (writes it) and the query layer (reads it) share this one value. Its home is the string catalogue
+    /// (`ui.source.remoteDevice`); this reads it once. A missing key yields the key itself on both sides, so the
+    /// bucket still matches.
+    public static let anotherDeviceName: String = FlotsamStrings.text(forKey: "ui.source.remoteDevice") ?? "ui.source.remoteDevice"
 }
 
 /// The single sidebar filter (FRD-004 FR-004-10). Exactly one applies; the free-text query is independent of it.
