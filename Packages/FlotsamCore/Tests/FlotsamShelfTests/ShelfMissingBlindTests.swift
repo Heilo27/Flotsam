@@ -14,24 +14,25 @@ private final class QuietSink: LogSink, @unchecked Sendable {
     func write(_ record: LogRecord) {}
 }
 
-/// A file system whose answer to "does it exist" is fixed, to prove the Shelf asks the port it is given.
+/// A file system whose answer to "does it exist" is fixed, to prove the Missing rule asks the port it is given. Every
+/// other call goes to the real file system so the database can open its folder.
 private struct FixedFileSystem: FileSystemPort {
     let answer: Bool
+    private let real = LocalFileSystem()
     func fileExists(at url: URL) -> Bool { answer }
-    func createDirectory(at url: URL, permissions: Int) -> FlotsamResult<Void> { .success(()) }
-    func copyItem(at source: URL, to destination: URL) -> FlotsamResult<Void> { .success(()) }
-    func moveItem(at source: URL, to destination: URL) -> FlotsamResult<Void> { .success(()) }
-    func removeItem(at url: URL) -> FlotsamResult<Void> { .success(()) }
-    func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> { .success([]) }
-    func extendedAttribute(named name: String, at url: URL) -> Data? { nil }
-    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { .success(()) }
-    func readFile(at url: URL) -> FlotsamResult<Data> { .success(Data()) }
-    func fileInfo(at url: URL) -> FileInfo? { nil }
-    func availableCapacity(at url: URL) -> Int64? { nil }
+    func createDirectory(at url: URL, permissions: Int) -> FlotsamResult<Void> { real.createDirectory(at: url, permissions: permissions) }
+    func copyItem(at source: URL, to destination: URL) -> FlotsamResult<Void> { real.copyItem(at: source, to: destination) }
+    func moveItem(at source: URL, to destination: URL) -> FlotsamResult<Void> { real.moveItem(at: source, to: destination) }
+    func removeItem(at url: URL) -> FlotsamResult<Void> { real.removeItem(at: url) }
+    func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> { real.contentsOfDirectory(at: url) }
+    func extendedAttribute(named name: String, at url: URL) -> Data? { real.extendedAttribute(named: name, at: url) }
+    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { real.writeFile(data, to: url, permissions: permissions) }
+    func readFile(at url: URL) -> FlotsamResult<Data> { real.readFile(at: url) }
+    func fileInfo(at url: URL) -> FileInfo? { real.fileInfo(at: url) }
+    func availableCapacity(at url: URL) -> Int64? { real.availableCapacity(at: url) }
 }
 
-/// One card to put on both surfaces. `members == nil` means the Shelf's details port does not describe it (the Library
-/// has no such notion, so such a card is only given to the Shelf).
+/// One card to put on both surfaces, as one database row with its member rows (`nil` is the same as none).
 private struct Card {
     let n: Int
     let kind: ItemKind
@@ -76,20 +77,10 @@ private struct Card {
 
     // MARK: Surfaces
 
-    /// The ids the Shelf marks Missing for these cards.
-    private func shelfMissing(_ cards: [Card], files: any FileSystemPort = LocalFileSystem()) async -> Set<UUID> {
-        let rows = cards.map { makeShelfRow($0.n, kind: $0.kind, pinned: $0.pinned, memberCount: $0.members?.count ?? 0) }
-        var described: [UUID: [ItemMember]] = [:]
-        for card in cards { if let members = card.members { described[shelfID(card.n)] = members } }
-        let rig = ShelfRig(rows: rows, details: FakeShelfDetails(members: described), files: files)
-        await rig.openSticky()
-        return Set(rig.model.sections().flatMap(\.cards).filter(\.isMissing).map(\.id))
-    }
-
-    /// The ids the Library's real query marks Missing for the described cards, read from a real database.
-    private func libraryMissing(_ cards: [Card]) async throws -> Set<UUID> {
+    /// A real database holding the cards (S1 ruling 2026-11-17: both surfaces read `ItemRow.isMissing` from it).
+    private func database(_ cards: [Card], files: any FileSystemPort = LocalFileSystem()) async throws -> FlotsamDatabase {
         let root = path("library-\(UUID().uuidString)")
-        let database = try await FlotsamDatabase.open(folder: root, logSink: QuietSink()).get()
+        let database = try await FlotsamDatabase.open(folder: root, fileSystem: files, logSink: QuietSink()).get()
         try await database.pool.write { db in
             for card in cards {
                 let id = shelfID(card.n).uuidString
@@ -103,7 +94,24 @@ private struct Card {
                 }
             }
         }
-        let page = try await database.items(matching: LibraryQuery()).get()
+        return database
+    }
+
+    /// The ids the Shelf marks Missing, drawn by the real model over the database.
+    private func shelfMissing(in database: FlotsamDatabase) async -> Set<UUID> {
+        let model = ShelfModel(source: database, paster: FakeShelfPaster(), host: FakeShelfHost(), events: ItemEventBus(), details: database)
+        await model.open(target: textEdit, sticky: true)
+        return Set(model.sections().flatMap(\.cards).filter(\.isMissing).map(\.id))
+    }
+
+    /// The ids the Shelf marks Missing for these cards.
+    private func shelfMissing(_ cards: [Card], files: any FileSystemPort = LocalFileSystem()) async throws -> Set<UUID> {
+        await shelfMissing(in: try await database(cards, files: files))
+    }
+
+    /// The ids the Library's real query marks Missing for the cards, read from a real database.
+    private func libraryMissing(_ cards: [Card]) async throws -> Set<UUID> {
+        let page = try await database(cards).items(matching: LibraryQuery()).get()
         #expect(page.rows.count == cards.count, "every card must be on the Library page")
         return Set(page.rows.filter(\.isMissing).map(\.id))
     }
@@ -113,7 +121,7 @@ private struct Card {
         _ expected: Set<Int>, _ cards: [Card], _ label: String, sourceLocation: SourceLocation = #_sourceLocation
     ) async throws {
         let want = Set(expected.map(shelfID))
-        let shelf = await shelfMissing(cards)
+        let shelf = try await shelfMissing(cards)
         let library = try await libraryMissing(cards)
         #expect(shelf == want, "Shelf: \(label)", sourceLocation: sourceLocation)
         #expect(library == want, "Library: \(label)", sourceLocation: sourceLocation)
@@ -385,50 +393,45 @@ private struct Card {
         ], "empty members")
     }
 
-    // given every non-file kind carrying member paths that do not exist (a buggy port), plus file cards the port omits
-    // red if the badge is decided from the members rather than from the kind, or an unlisted file card defaults to Missing
-    @Test("OC-S2-006-W16 non-file kinds are never Missing whatever the port lists; a file card the port omits is never Missing")
-    func nonFileAndUndescribed() async {
+    // given every non-file kind carrying member paths that do not exist (stray rows), plus file cards the source reports
+    // present (an undescribed card carries no flag)
+    // red if the badge is decided from the members rather than from the kind, or an unflagged file card defaults to Missing
+    @Test("OC-S2-006-W16 non-file kinds are never Missing whatever members they carry; a file card the row does not flag is never Missing")
+    func nonFileAndUndescribed() async throws {
         let ghost = [ItemMember(path: path("nothing-here").path, bookmark: nil, isDirectory: false)]
         let kinds: [ItemKind] = [.text, .richText, .link, .color, .phone, .email, .image, .screenshot]
-        var cards = kinds.enumerated().map { Card(n: $0.offset + 1, kind: $0.element, members: ghost) }
-        cards.append(Card(n: 20, kind: .file, members: nil))
-        cards.append(Card(n: 21, kind: .bundle, members: nil))
-        cards.append(Card(n: 22, kind: .folder, members: nil))
+        let cards = kinds.enumerated().map { Card(n: $0.offset + 1, kind: $0.element, members: ghost) }
 
-        let missing = await shelfMissing(cards)
+        let missing = try await shelfMissing(cards)
 
         #expect(missing.isEmpty, "marked Missing: \(missing.count) card(s)")
-    }
 
-    // given a details port that answers for every id it knows, listed or not (a greedy port), with ghost members for
-    // text, image and link cards that the Shelf never asked about
-    // red if the model trusts whatever the port returns instead of deciding from the card's kind
-    @Test("OC-S2-006-W25 a port that returns members for non-file cards still never makes a non-file card Missing")
-    func greedyPortCannotMarkNonFileCards() async {
-        struct GreedyDetails: ShelfCardDetails {
-            let everything: [UUID: [ItemMember]]
-            func cardTexts(for ids: [UUID]) async -> [UUID: String] { [:] }
-            func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]] { everything }
-        }
-        let ghost = [ItemMember(path: path("nothing-here").path, bookmark: nil, isDirectory: false)]
-        let rows = [makeShelfRow(1, kind: .text), makeShelfRow(2, kind: .image), makeShelfRow(3, kind: .link),
-                    makeShelfRow(4, kind: .file, memberCount: 1)]
-        let rig = ShelfRig(rows: rows, details: GreedyDetails(everything: Dictionary(uniqueKeysWithValues: rows.map { ($0.id, ghost) })))
+        let rows = [makeShelfRow(20, kind: .file), makeShelfRow(21, kind: .bundle), makeShelfRow(22, kind: .folder)]
+        let rig = ShelfRig(rows: rows)
         await rig.openSticky()
-
-        let cards = rig.model.sections().flatMap(\.cards)
-        #expect(cards.count == 4)
-        #expect(cards.filter(\.isMissing).map(\.id) == [shelfID(4)])
+        #expect(rig.model.sections().flatMap(\.cards).count == 3)
+        #expect(rig.model.sections().flatMap(\.cards).filter(\.isMissing).isEmpty, "an unflagged card must not be Missing")
     }
 
-    // given a stray entry for an id that is not on the Shelf and a described Missing card beside an undescribed one
-    // red if the stray entry produces a card or a count change, or the undescribed neighbour inherits the flag
-    @Test("OC-S2-006-W17 a members entry for an id not on the Shelf adds no card and marks none")
-    func strayMembersEntry() async {
-        let rows = [makeShelfRow(1, kind: .file, memberCount: 1), makeShelfRow(2, kind: .file)]
+    // given text, image and link cards that carry ghost member rows, beside a file card whose only member is a ghost
+    // red if the model decides from whatever members exist instead of from the card's kind
+    @Test("OC-S2-006-W25 ghost member rows on non-file cards still never make a non-file card Missing")
+    func ghostMembersCannotMarkNonFileCards() async throws {
         let ghost = [ItemMember(path: path("nothing-here").path, bookmark: nil, isDirectory: false)]
-        let rig = ShelfRig(rows: rows, details: FakeShelfDetails(members: [shelfID(1): ghost, shelfID(99): ghost]))
+        let cards = [Card(n: 1, kind: .text, members: ghost), Card(n: 2, kind: .image, members: ghost),
+                     Card(n: 3, kind: .link, members: ghost), Card(n: 4, kind: .file, members: ghost)]
+
+        let missing = try await shelfMissing(cards)
+
+        #expect(missing == [shelfID(4)])
+    }
+
+    // given a Shelf whose details port answers for an id that is not on the Shelf, beside a flagged and an unflagged card
+    // red if the stray entry produces a card or a count change, or the unflagged neighbour inherits the flag
+    @Test("OC-S2-006-W17 a details entry for an id not on the Shelf adds no card and marks none")
+    func strayDetailsEntry() async {
+        let rows = [makeShelfRow(1, kind: .file, memberCount: 1, missing: true), makeShelfRow(2, kind: .file, memberCount: 1)]
+        let rig = ShelfRig(rows: rows, details: FakeShelfDetails(texts: [shelfID(99): "stray"]))
         await rig.openSticky()
 
         let cards = rig.model.sections().flatMap(\.cards)
@@ -461,21 +464,16 @@ private struct Card {
     func deleteThenRestoreClears() async throws {
         defer { cleanUp() }
         let a = try file("a.txt")
-        let row = makeShelfRow(1, kind: .file, memberCount: 1)
-        let rig = ShelfRig(rows: [row], details: FakeShelfDetails(members: [row.id: [a.member]]))
-        func missingNow() async -> [UUID] {
-            await rig.openSticky()
-            return rig.model.sections().flatMap(\.cards).filter(\.isMissing).map(\.id)
-        }
+        let store = try await database([Card(n: 1, kind: .file, members: [a.member])])
 
-        let before = await missingNow()
+        let before = await shelfMissing(in: store)
         try remove(a.url)
-        let whileGone = await missingNow()
+        let whileGone = await shelfMissing(in: store)
         try Data("x".utf8).write(to: a.url)
-        let afterRestore = await missingNow()
+        let afterRestore = await shelfMissing(in: store)
 
         #expect(before.isEmpty)
-        #expect(whileGone == [row.id])
+        #expect(whileGone == [shelfID(1)])
         #expect(afterRestore.isEmpty)
     }
 
@@ -491,8 +489,8 @@ private struct Card {
         try remove(deleted.url)
         let cards = [Card(n: 1, kind: .file, members: [present.member]), Card(n: 2, kind: .file, members: [deleted.member])]
 
-        let nothingExists = await shelfMissing(cards, files: FixedFileSystem(answer: false))
-        let everythingExists = await shelfMissing(cards, files: FixedFileSystem(answer: true))
+        let nothingExists = try await shelfMissing(cards, files: FixedFileSystem(answer: false))
+        let everythingExists = try await shelfMissing(cards, files: FixedFileSystem(answer: true))
 
         #expect(nothingExists == [shelfID(1), shelfID(2)])
         #expect(everythingExists.isEmpty)

@@ -17,7 +17,7 @@ enum LibraryKeyTranslator {
         return LibraryKeyStroke(.character(first), modifiers)
     }
 
-    private static func chordModifiers(_ flags: NSEvent.ModifierFlags) -> ChordModifiers {
+    static func chordModifiers(_ flags: NSEvent.ModifierFlags) -> ChordModifiers {
         var modifiers: ChordModifiers = []
         if flags.contains(.command) { modifiers.insert(.command) }
         if flags.contains(.control) { modifiers.insert(.control) }

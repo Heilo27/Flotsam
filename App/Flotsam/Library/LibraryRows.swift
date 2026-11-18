@@ -126,7 +126,7 @@ private extension View {
     }
 }
 
-private func symbolName(for kind: ItemKind) -> String {
+func symbolName(for kind: ItemKind) -> String {
     switch kind {
     case .text: "text.alignleft"
     case .richText: "doc.richtext"

@@ -102,9 +102,11 @@ final class FakeShelfPaster: ShelfPasting {
 
 struct FakeShelfDetails: ShelfCardDetails {
     var texts: [UUID: String] = [:]
-    var members: [UUID: [ItemMember]] = [:]
-    func cardTexts(for ids: [UUID]) async -> [UUID: String] { texts.filter { ids.contains($0.key) } }
-    func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]] { members.filter { ids.contains($0.key) } }
+    var failure: FlotsamError?
+    func cardTexts(for ids: [UUID]) async -> FlotsamResult<[UUID: String]> {
+        if let failure { return .failure(failure) }
+        return .success(texts.filter { ids.contains($0.key) })
+    }
 }
 
 /// What the model's effects observed.
@@ -145,14 +147,14 @@ struct ShelfRig {
     let model: ShelfModel
 
     init(
-        rows: [ItemRow], details: any ShelfCardDetails = NoShelfCardDetails(), files: any FileSystemPort = LocalFileSystem(),
+        rows: [ItemRow], details: any ShelfCardDetails = NoShelfCardDetails(),
         configure: (EffectsProbe) -> Void = { _ in }
     ) {
         log = CallLog()
         source = FakeShelfSource(rows: rows, log: log)
         configure(probe)
         model = ShelfModel(
-            source: source, paster: paster, host: host, events: bus, details: details, effects: probe.effects(log: log), files: files)
+            source: source, paster: paster, host: host, events: bus, details: details, effects: probe.effects(log: log))
     }
 
     /// Opens a sticky Shelf over TextEdit.
