@@ -1291,3 +1291,37 @@ Clean clone at 10596ad. Nothing committed.
 **Real DB, -wal and prefs plist (sha1):** identical before and after, and identical to the values in the 3b5c01c entry.
 
 **Not run:** the symlinked folder, the override folder and the AC-001-18 race.
+
+## 2026-11-18: A4 perf baseline on `main` @ 10596ad (Release)
+
+Values are the median of 3 harness runs. Earlier A4 values are in brackets.
+
+**Idle** (10 min, sampled every 10 s via proc_pid_rusage; empty library)
+- CPU mean 0.0750 % [0.0806]. Budget ≤ 0.2 %: PASS. Max 10 s interval 0.0908 %.
+- Wakeups 2.000/s [2.139]. Budget ≤ 2.5/s: PASS.
+- RSS 85.9 / 85.8 / 85.9 MiB (start / end / peak) [97.5 MiB, but that was a seeded 10k library]. Budget is 60 MB: FAIL if the budget means RSS.
+- Footprint 22.5 MiB [22.6]. PASS if the budget means footprint.
+- The FR-001-20 definition of "resident" is still open.
+
+**Capture**
+- End to end: p50 272.3, p95 479.8, max 507.1 ms [268.2 / 494.2 / 757.1]. The 0.5 s poll accounts for 470-477 ms of the p95.
+- Persist only: p50 7.7, p95 11.5, max 22.3 ms [5.8 / 86.2 / 386.9]. Budget ≤ 250 ms: PASS.
+
+**Search** (50k items, n=20)
+- p50 25.5, p95 52.65, max 55.9 ms [26.5 / 54.9 / 57.8].
+- Budget is p95 ≤ 100 ms, stated at 10k items: PASS.
+
+**DB open + schema check** (OC-7130, 10k items)
+- PASS in 3 of 3 runs. Budget ≤ 300 ms. No per-open time is printed; the whole test, including seeding, took 0.254-0.261 s.
+
+**Library open (hotkey → visible) and paste p95** (TASK-167/168/195/196)
+- UNTESTABLE-AT-PACKAGE for both. Hotkey → visible needs the real NSPanel, the Carbon hotkey and the `library.open` signpost. Paste needs the real run loop, a real pasteboard and a CGEvent post.
+- Budget for both is p95 ≤ 150 ms. Not measured.
+
+**Conditions**
+- 1-minute load average: idle run 3.69 at start, about 12.3 at end; perf runs 12.20 / 3.90 / 6.37.
+- Run 1, at load 12.20, landed within 2 % of runs 2 and 3.
+
+**Isolation**
+- Real DB, -wal and prefs sha1 identical before and after, and matching earlier entries.
+- No `defaults write`, no processes left behind.
