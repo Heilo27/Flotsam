@@ -44,6 +44,15 @@ import FlotsamBase
             ]
             let windowEnd = Date().addingTimeInterval(0.05)
             _ = try await probe.collect(atLeast: 6)
+            // TASK-479: an import another suite holds open on purpose can begin inside this window and end only when its
+            // own test releases it, later than the fixed settle in `collect`. Wait (bounded) until every interval that
+            // began in the window has ended. An interval this importer leaked never ends, so it still fails below.
+            let windowIntervalsAllEnded: @Sendable () -> Bool = {
+                let all = probe.marks().filter { $0.event.name == "screenshot.import" }
+                let ended = Set(all.filter { $0.event.type == "end" }.map(\.id))
+                return all.filter { $0.event.type == "begin" && $0.at >= windowStart && $0.at <= windowEnd }.allSatisfy { ended.contains($0.id) }
+            }
+            _ = await eventually(timeout: .seconds(20), windowIntervalsAllEnded)
             let marks = probe.marks().filter { $0.event.name == "screenshot.import" }
             await probe.stop()
             guard case .imported = attempts[0], case .unstable = attempts[1], case .rejected = attempts[2] else {
