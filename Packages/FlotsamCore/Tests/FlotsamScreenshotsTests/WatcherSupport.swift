@@ -115,7 +115,20 @@ final class IngestRecorder: ScreenshotIngesting, @unchecked Sendable {
 
     func fail(_ fileName: String, with error: FlotsamError) { lock.withLock { scripted[fileName] = error } }
 
+    // TASK-461: hold every ingest that starts while held (it records nothing until `releaseIngests()`), so a test
+    // can keep jobs queued or in flight while something else happens.
+    private var gated = false
+    private var heldNow = 0
+    func holdIngests() { lock.withLock { gated = true } }
+    func releaseIngests() { lock.withLock { gated = false } }
+    var heldIngests: Int { lock.withLock { heldNow } }
+
     func ingest(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult> {
+        if lock.withLock({ gated }) {
+            lock.withLock { heldNow += 1 }
+            while lock.withLock({ gated }) { try? await Task.sleep(for: .milliseconds(5)) }
+            lock.withLock { heldNow -= 1 }
+        }
         lock.withLock {
             running += 1
             peak = max(peak, running)
@@ -146,7 +159,19 @@ final class MemoryWatermarkStore: ScreenshotWatermarkStore, @unchecked Sendable 
     init(_ initial: Date? = nil) { stored = initial }
     var value: Date? { lock.withLock { stored } }
     func lastScanAt() async -> FlotsamResult<Date?> { .success(lock.withLock { stored }) }
+    // TASK-461: hold every watermark write until `releaseWrites()`, which suspends a live job's tail (`settle`).
+    private var writeGate = false
+    private var writesWaiting = 0
+    func holdWrites() { lock.withLock { writeGate = true } }
+    func releaseWrites() { lock.withLock { writeGate = false } }
+    var heldWrites: Int { lock.withLock { writesWaiting } }
+
     func setLastScanAt(_ date: Date) async -> FlotsamResult<Void> {
+        if lock.withLock({ writeGate }) {
+            lock.withLock { writesWaiting += 1 }
+            while lock.withLock({ writeGate }) { try? await Task.sleep(for: .milliseconds(5)) }
+            lock.withLock { writesWaiting -= 1 }
+        }
         lock.withLock { stored = date }
         return .success(())
     }
