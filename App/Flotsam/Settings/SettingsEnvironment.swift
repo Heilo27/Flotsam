@@ -63,6 +63,9 @@ struct SettingsEnvironment: Sendable {
     let hud: @MainActor @Sendable (String) -> Void
     /// TODO(FRD-008 menu/onboarding builder): reopens onboarding (FR-008-12). Seam until that window exists.
     let showSetupGuide: @MainActor @Sendable () -> Void
+    /// FR-002-12: the same action onboarding calls; it shows the "Imported {n}" HUD itself. Read at click time, because
+    /// pickup is wired after the database opens, which can be after this environment is built.
+    let importRecentScreenshots: @MainActor @Sendable () -> Void
     /// Builds the diagnostics report and puts it on the pasteboard (FR-000-10); the result is the byte count copied.
     let copyDiagnostics: @Sendable () async -> FlotsamResult<Int>
 }

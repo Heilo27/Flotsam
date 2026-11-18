@@ -2,7 +2,7 @@ import AppKit
 import FlotsamBase
 import SwiftUI
 
-/// General (FR-008-04): Launch at Login, screenshot pickup and folder, the Shelf, and the setup guide.
+/// General (FR-008-04): Launch at Login, screenshot pickup, folder and import, the Shelf, and the setup guide.
 struct GeneralPane: View {
     let model: SettingsModel
     @State private var loginStatus: LoginItemStatus
@@ -40,6 +40,8 @@ struct GeneralPane: View {
                         Text(verbatim: folderName).settingsCaption()
                     }
                 }
+                // FR-002-12: always available, including while pickup is off, so never disabled.
+                Button { model.env.importRecentScreenshots() } label: { Text(.importRecentScreenshots) }
             }
             Section {
                 Toggle(isOn: model.binding(SettingKeys.shelfEnabled)) { Text(.shelf) }
