@@ -1,8 +1,13 @@
 import Carbon.HIToolbox
 import FlotsamBase
 
+/// Four-character signature "FLTS" marks Flotsam's hotkeys.
+private let carbonHotkeySignature: OSType = 0x464C_5453
+
 /// Global hotkeys through Carbon `RegisterEventHotKey` (ADR-0006): no Accessibility or Input Monitoring needed.
 /// One application event handler serves every registered hotkey; the handler looks the pressed hotkey up by id.
+/// Ids are allocated per instance and all share the "FLTS" signature, so the app must hold exactly one instance
+/// (`AppContainer.hotkeyRegistrar`); a second instance would reuse ids and answer for the first one's hotkeys.
 @MainActor
 final class CarbonHotkeyRegistrar: HotkeyRegistrar {
     private struct Entry {
@@ -10,8 +15,6 @@ final class CarbonHotkeyRegistrar: HotkeyRegistrar {
         let handler: @MainActor () -> Void
     }
 
-    /// Four-character signature "FLTS" marks Flotsam's hotkeys.
-    private static let signature: OSType = 0x464C_5453
     private var entries: [UInt32: Entry] = [:]
     private var nextId: UInt32 = 1
     private var eventHandler: EventHandlerRef?
@@ -24,7 +27,7 @@ final class CarbonHotkeyRegistrar: HotkeyRegistrar {
         var reference: EventHotKeyRef?
         let status = RegisterEventHotKey(
             UInt32(chord.keyCode), Self.carbonModifiers(chord.modifiers),
-            EventHotKeyID(signature: Self.signature, id: id),
+            EventHotKeyID(signature: carbonHotkeySignature, id: id),
             GetApplicationEventTarget(), 0, &reference)
         guard status == noErr, let reference else {
             return .failure(FlotsamError(.trgOs001, "The system refused the hotkey"))
@@ -44,9 +47,12 @@ final class CarbonHotkeyRegistrar: HotkeyRegistrar {
         entries.removeAll()
     }
 
-    /// Dispatches a pressed hotkey. Called from the Carbon handler on the main thread.
-    fileprivate func fire(id: UInt32) {
-        entries[id]?.handler()
+    /// Dispatches a pressed hotkey. Called from the Carbon handler on the main thread. False when `id` is not one this
+    /// registrar owns, so the event is left for other handlers.
+    fileprivate func fire(id: UInt32) -> Bool {
+        guard let entry = entries[id] else { return false }
+        entry.handler()
+        return true
     }
 
     /// `ChordModifiers` to Carbon modifier flags (`cmdKey`, `shiftKey`, `optionKey`, `controlKey`).
@@ -79,7 +85,8 @@ private func carbonHotkeyCallback(
         event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
         MemoryLayout<EventHotKeyID>.size, nil, &hotKeyId)
     guard status == noErr else { return status }
+    guard hotKeyId.signature == carbonHotkeySignature else { return OSStatus(eventNotHandledErr) }
     let registrar = Unmanaged<CarbonHotkeyRegistrar>.fromOpaque(userData).takeUnretainedValue()
-    MainActor.assumeIsolated { registrar.fire(id: hotKeyId.id) }
-    return noErr
+    let handled = MainActor.assumeIsolated { registrar.fire(id: hotKeyId.id) }
+    return handled ? noErr : OSStatus(eventNotHandledErr)
 }

@@ -31,6 +31,9 @@ final class AppContainer {
     private(set) var library: LibraryPanelController?
     /// The Shelf panel (FR-006-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var shelf: ShelfPanelController?
+    /// The one Carbon registrar for the process: it owns hotkey id allocation and the single application event
+    /// handler, so the Library and Shelf hotkeys cannot collide on an id (ADR-0006).
+    private let hotkeyRegistrar = CarbonHotkeyRegistrar()
     private var libraryHotkey: LibraryHotkey?
     private var shelfHotkey: LibraryHotkey?
     private var unsubscribeHotkey: (@Sendable () -> Void)?
@@ -194,7 +197,7 @@ final class AppContainer {
         // The Toggle Shelf hotkey (FR-006-03c, FR-005-07): unbound by default, and unregistered while the Shelf is off.
         // `LibraryHotkey` is the one registration path; only the chord it reads differs.
         let hotkey = LibraryHotkey(
-            registrar: CarbonHotkeyRegistrar(), preferences: SettingsShelfHotkeyPreferences(settings: settings)
+            registrar: hotkeyRegistrar, preferences: SettingsShelfHotkeyPreferences(settings: settings)
         ) { [weak controller] in controller?.toggle(.hotkey) }
         if case .failure(let error) = hotkey.apply() {
             Task { await reporter.report(error, origin: .background) }
@@ -257,7 +260,7 @@ final class AppContainer {
         }
 
         let hotkey = LibraryHotkey(
-            registrar: CarbonHotkeyRegistrar(), preferences: SettingsLibraryHotkeyPreferences(settings: settings)
+            registrar: hotkeyRegistrar, preferences: SettingsLibraryHotkeyPreferences(settings: settings)
         ) { [weak controller, weak self] in
             self?.shelf?.libraryOpened()
             controller?.toggle()
