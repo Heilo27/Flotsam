@@ -575,3 +575,38 @@ Clipboard: restored after the run.
 - Run: `swift test --package-path Packages/FlotsamCore --filter Frd003Contract`. Commit `[FRD-003] 8T: ...` with both trailers, explicit-path `git add`, push after each batch; before the final full run `git fetch origin` and `git merge origin/main`, record the SHA.
 
 **Unreachable from the package (one-line reason each):** OC-3002 to 3007 (Spaces, hotkey, focus: need a running app), 3014 (signpost p95: needs the app), 3016 (AX layout hierarchy), 3021 (pt measurement: view-level), 3048, 3055, 3056 (perf and memory: need the app), 3059 and 3097 (network monitor: system level), 3063-3067 and 3070-3076 (real target apps and key posting), 3082 (NSDoubleLocalizedStrings launch argument), 3083 (human study), 3086 label order via VoiceOver, 3088-3090 (Full Keyboard Access, Reduce Motion, appearance), 3099 (drag), plus the view-level halves of 3057 (280 pt width), 3058 (rendering), 3060 (image fit), 3062 (click focus), and the HUD placement and 2.5 s timing in 3068, 3075, 3077, 3084, 3100-3103.
+
+---
+
+## 2026-11-17: A3 on `obrien-409` @ a9a3114 (TASK-409 Shelf)
+
+**Verdict: pass, ready to merge from S2's side. No defects.** The Shelf is wired into the app: it toggles from the menu bar item, shows without taking focus, pastes a card into the frontmost app, hides on Esc, and hides when the Library opens.
+
+Machine: macOS 26.7, Xcode 26.3, Swift 6.2.4. Fresh clone from origin, detached at a9a3114.
+
+**A1**
+| Step | Exit | Result |
+|---|---|---|
+| `bin/bootstrap.sh` | 0 | OK (GRDB 7.12.0) |
+| `swift test` (Packages/FlotsamCore, parallel, no workarounds) | 0 | 1129 Swift Testing tests in 151 suites, 0 failed, 9 known issues (KNOWN TASK-368 x2, "identifiers that contain a view or network name", and the existing adversarial pins). XCTest bundle: 18 tests, 0 failures. About 80 s. |
+| `bin/check-architecture.sh` | 0 | architecture checks passed |
+| `bin/build.sh` | 0 | **BUILD SUCCEEDED**. The only `warning:` line is the AppIntents metadata skip; 0 compiler warnings. |
+
+Known flakes (OC-7132, `optionArrowsStepThroughSidebarFilters`) did not fail, so no isolated re-run was needed.
+
+**A2 + Shelf checks** (Debug app, driven by System Events and a CGEvent double-click helper; screenshots in the S2 scratchpad as `a3-*.png`)
+- **a. Launch, menu bar item, no crash: pass.** `Flotsam` item present at `menu bar item 1 of menu bar 1`, process stayed up for the whole run, clean quit through the menu item. Screenshot `a3-01-launch-desktop.png`.
+- **b. Generic smoke: pass.** Two test strings captured ("A3-SMOKE-1 hello shelf", "A3-SMOKE-2 second card"); both rows are in the isolated database; the Library opened from the menu bar and listed both (`a3-02-library.png`).
+- **c. Shelf toggled from the menu bar appears and does not steal focus: pass.** TextEdit stayed the frontmost app with its text area focused while the Shelf was up (`a3-04-shelf-shown.png`, `a3-06-shelf-shown2.png`).
+- **d. Paste a Shelf card into a new untitled TextEdit doc: pass.** A single click only selects the card (`a3-05-after-paste.png`, no text inserted); a double-click pastes. The new doc then read "A3-SMOKE-2 second card" (`a3-05b-after-dblclick.png`). The Accessibility grant was present, so paste-back was not blocked. The doc was read through System Events AX, not Apple Events: the first Apple Events call to TextEdit raised a new Automation prompt, which was deliberately not granted. The doc was closed with Delete in the "keep this new document" sheet (never saved; `a3-10b-close-sheet.png`, `a3-11-textedit-closed.png`; TextEdit has 0 windows). No other TextEdit doc was touched.
+- **e. Esc hides the Shelf: pass** (`a3-07-after-esc.png`). A control run with no Esc left the Shelf up for the full 7 s (`a3-08-ctrl-t1.png`, `a3-08-ctrl-t7.png`), so the hide is the Esc and not a timeout.
+- **f. Opening the Library hides the Shelf: pass** (`a3-09-library-with-shelf.png`).
+- **g. Crash logs: pass.** No `Flotsam*` files in `~/Library/Logs/DiagnosticReports` or `/Library/Logs/DiagnosticReports` (none before the launch either). `log show` for process Flotsam, last 30 min: 0 faults, 0 "fatal" messages, and 8 error-level lines (below).
+
+**Defects:** none.
+
+**Observations (not defects)**
+- error-level os_log lines during the run: 6 AppKit `-[NSWindow makeKeyWindow] called on <_NSGlassEffectWindow> which returned NO from canBecomeKeyWindow` (21:33:12 to 21:37:03, lines up with Shelf shows), 1 `com.apple.appintents` registry connection error at launch, and 1 benign ViewBridge cancel. Left for S1 to judge; the AppKit warning is consistent with the non-activating Shelf panel being asked to become key.
+- Single click on a card selects, double-click pastes (matches `ShelfView`: `onTapGesture(count: 2)`).
+
+**Data isolation.** The app has no data-folder override, so it was launched with `CFFIXED_USER_HOME` pointing at a scratch directory. The isolated database ended with exactly 2 items and `PRAGMA integrity_check` returned ok. The real database was only opened read-only: 17 items before and 17 after; nothing deleted or altered. The pasteboard was saved before the run and the capture strings went to the system pasteboard during the test. No TCC or privacy settings were changed. Scratch clone deleted; logs and screenshots kept.
