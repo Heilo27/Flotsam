@@ -43,6 +43,7 @@ Notice screenshots that macOS saves to disk and add them to history as `screensh
 - **FR-002-13** Limits and pacing. A file over the image ceiling (FRD-007 FR-007-06) is skipped with `SSP-LIM-001`. A file that is not a decodable image is skipped with `SSP-VAL-001`. A burst is processed serially with at most 2 imports in flight; a stuck file never blocks others.
 - **FR-002-14** Performance. For a file that is already final, the screenshot is a queryable Library item at p95 ≤ 2.0 s (0.3 s event latency + 0.5 s stability check + persist; the thumbnail may follow). With pickup enabled and no screenshots, idle cost is under 0.1 % CPU (event-driven; no timers except the 30 s re-resolution).
 - **FR-002-15** Privacy. Logs carry outcome and byte size only; file names, paths and the screenshot folder path are never logged or shown in Notices (FR-000-10). The Settings pane may show the folder path to the user locally.
+- **FR-002-16** Link safety. A file is read only if it is a regular file (not a symbolic link, whatever the link points at) whose resolved location is a direct child of the folder being watched. A link, or any file that resolves outside that folder, is never opened. The scan drops it silently like any other non-qualifying entry (FR-002-06); if a file is swapped for a link after it was listed, the import is skipped with `SSP-VAL-001` and not retried. One rule serves both checks (`ScreenshotPathGuard`).
 
 ## 4. Data Requirements
 - Settings read: `screenshots.enabled`, `screenshots.folderOverride` (FRD-008 registry).
@@ -62,7 +63,7 @@ Notice screenshots that macOS saves to disk and add them to history as `screensh
 | System folder invalid, using Desktop | SSP-IO-001 | watch Desktop; Notice once |
 | File unstable or unreadable | SSP-IO-002 | skip; retry list (3 retries after the first skip) |
 | Override folder missing | SSP-IO-003 | paused until it returns |
-| Not a decodable image | SSP-VAL-001 | skip |
+| Not a decodable image, or swapped for a link before import (FR-002-16) | SSP-VAL-001 | skip |
 | File over ceiling | SSP-LIM-001 | skip; Notice |
 | FSEvents unavailable | SSP-OS-001 | 5 s directory polling |
 | Storage failure on import | STO-* via the pipeline | item not stored; Notice |
@@ -80,6 +81,7 @@ Notice screenshots that macOS saves to disk and add them to history as `screensh
 - **AC-002-10** (FR-002-12) Given 700 qualifying screenshots within 30 days, when "Import recent screenshots" runs, then the 500 newest are imported; running it again creates no duplicates.
 - **AC-002-11** (FR-002-14) Given 20 screenshots taken in 10 s, then all are imported, at most 2 imports are in flight at once, and p95 time to queryable per file meets FR-002-14.
 - **AC-002-12** (FR-002-15) Given the screenshot file name contains a unique marker, when logs and the diagnostics report are searched, then zero matches.
+- **AC-002-13** (FR-002-16) Given a symbolic link named like a screenshot in the watched folder, pointing at a file inside the folder, outside it, or via `../`, then it is not listed and nothing behind it is read; given a listed file that is replaced by such a link before import, then the import is skipped with `SSP-VAL-001` and no item is created.
 
 ## 8. UI Inventory
 | Element | Type | Where | Behavior |

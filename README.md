@@ -25,4 +25,4 @@ Get `Flotsam-<version>.dmg` from [GitHub Releases](https://github.com/Heilo27/Fl
 1. Create a *Developer ID Application* certificate (Xcode > Settings > Accounts > Manage Certificates).
 2. `xcrun notarytool store-credentials flotsam` (prompts for your Apple ID, an app-specific password from account.apple.com, and your team ID).
 
-Or set `FLOTSAM_SIGN_IDENTITY`, `FLOTSAM_NOTARY_PROFILE`, or `APPLE_ID`/`APPLE_TEAM_ID`/`APPLE_APP_PASSWORD`. Without them the script makes an ad-hoc DMG for local testing and lists what is missing. Tagging and uploading to Releases is manual.
+Or set `FLOTSAM_SIGN_IDENTITY`, or `FLOTSAM_NOTARY_PROFILE` (keychain profile only; passwords are never read from the environment). Without them the script makes an ad-hoc DMG for local testing and lists what is missing. Tagging and uploading to Releases is manual.

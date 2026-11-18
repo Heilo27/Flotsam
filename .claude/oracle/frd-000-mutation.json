@@ -20,7 +20,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200912] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200912] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -32,7 +32,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -128,7 +128,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -157,7 +157,7 @@
    "mutated": "public static func englishStrings(at url: URL = shippedURL()) -> FlotsamResult<=[String: String]> {",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) te/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
    ]
   },
   {
@@ -179,7 +179,7 @@
    "mutated": "public static func englishStrings(from data: Data) -> FlotsamResult<=[String: String]> {",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) te/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
    ]
   },
   {
@@ -191,7 +191,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -412,7 +412,7 @@
    "mutated": "while false {",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -563,7 +563,7 @@
    "mutated": "while let percent = rest.firstIndex(of: \"%~\") {",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -879,7 +879,7 @@
    "mutated": "name.count > appNameLimit ? String(name.prefix(max(0, appNameLimit - 1))) - \"\\u{2026}\" : name",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -980,7 +980,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -992,7 +992,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1004,7 +1004,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1016,7 +1016,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1028,7 +1028,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1040,7 +1040,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1052,7 +1052,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1144,7 +1144,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1156,7 +1156,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -1168,7 +1168,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1180,7 +1180,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1192,7 +1192,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200912] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200912] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -1204,7 +1204,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1216,7 +1216,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1298,7 +1298,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [7\u2009/\u200911] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules [7\u2009/\u200911] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -1310,7 +1310,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1322,7 +1322,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules [7\u2009/\u200911] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules [7\u2009/\u200911] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -1334,7 +1334,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1346,7 +1346,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1358,7 +1358,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1370,7 +1370,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1382,7 +1382,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1394,7 +1394,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1456,7 +1456,7 @@
    "mutated": "lines += [\"\", ~\"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1468,7 +1468,7 @@
    "mutated": "lines += [\"\", \"Settings\", ~\"  retention: \\(snapshot.retention.rawValue)\", \"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1480,7 +1480,7 @@
    "mutated": "lines += [\"\", \"Settings\", \"  retention: \\(snapshot.retention.rawValue)\", ~\"  imageBudget: \\(snapshot.imageBudget.rawValue)\"]",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1515,7 +1515,7 @@
    "mutated": "lines.append(\"  \\(key): \\(snapshot.toggles[key] == true ? \"on\" : ~\"off\")\")",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1552,7 +1552,7 @@
    "mutated": "lines += [\"\", ~\"Items\"]",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1603,7 +1603,7 @@
    "mutated": "return lines.joined(separator: \"\\n\") - \"\\n\"",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1642,7 +1642,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1654,7 +1654,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1678,7 +1678,7 @@
    "mutated": "return pasteboard.write([text] - markers)",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1690,7 +1690,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1702,7 +1702,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1714,7 +1714,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -1726,7 +1726,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -1738,7 +1738,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2085,7 +2085,7 @@
    "mutated": "parts[2].allSatisfy({ $0 >= \"0~\" && $0 <= \"9\" }),",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2097,7 +2097,7 @@
    "mutated": "parts[2].allSatisfy({ $0 >= \"0\" && $0 <= \"9~\" }),",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2676,7 +2676,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2688,7 +2688,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2700,7 +2700,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2777,7 +2777,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2789,7 +2789,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) 1/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules [8\u2009/\u200913] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
@@ -2801,7 +2801,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2813,7 +2813,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2825,7 +2825,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2837,7 +2837,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2922,7 +2922,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -2944,7 +2944,7 @@
    "mutated": "public func contentsOfDirectory(at url: URL) -> FlotsamResult<=[URL]> {",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) te/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages -experimental-emit-module-separately -disable-cmo error: Build failed error: fatalError "
    ]
   },
   {
@@ -3101,7 +3101,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3113,7 +3113,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3125,7 +3125,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3137,7 +3137,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3149,7 +3149,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3161,7 +3161,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3173,7 +3173,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3185,7 +3185,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3197,7 +3197,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3209,7 +3209,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3329,7 +3329,7 @@
    "result": "KILLED",
    "killed_by": [
     "bundle identifier validation rejects paths, URLs, sentences, unicode and 256-byte values",
-    "bundle identifier validation rejects paths, URLs,error: Process '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/swift/pm/swiftpm-testing-helper --test-bundle-path /private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Products/Debug/FlotsamBaseTests.xctest/Contents/MacOS/FlotsamBaseTests --filter FlotsamBaseTests /private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Products/Debug/FlotsamBaseTests.xctest/Contents/MacOS/FlotsamBaseTests --testing-library swift-testing' exited with unexpected signal code 5\n sentences, unicode and 256-byte values",
+    "bundle identifier validation rejects paths, URLs,error: Process '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/libexec/swift/pm/swiftpm-testing-helper --test-bundle-path <scratch>/s0/Packages/FlotsamCore/.build/out/Products/Debug/FlotsamBaseTests.xctest/Contents/MacOS/FlotsamBaseTests --filter FlotsamBaseTests <scratch>/s0/Packages/FlotsamCore/.build/out/Products/Debug/FlotsamBaseTests.xctest/Contents/MacOS/FlotsamBaseTests --testing-library swift-testing' exited with unexpected signal code 5\n sentences, unicode and 256-byte values",
     "ids, bundle ids and unknown pasteboard types never reach publicText"
    ]
   },
@@ -3397,7 +3397,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3725,7 +3725,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3737,7 +3737,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {
@@ -3826,7 +3826,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) private/tmp/claude-501/-Users-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out -index-system-modules error: Build failed error: fatalError "
    ]
   },
   {

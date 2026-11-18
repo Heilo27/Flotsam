@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command release: Release build -> sign -> DMG -> notarize + staple -> SHA-256 (FRD-009). Output in ./dist.
 # Credentials never live in the repo. Identity: FLOTSAM_SIGN_IDENTITY, else the keychain's "Developer ID Application".
-# Notary: keychain profile FLOTSAM_NOTARY_PROFILE (default "flotsam"), or APPLE_ID + APPLE_TEAM_ID + APPLE_APP_PASSWORD.
+# Notary: keychain profile only, FLOTSAM_NOTARY_PROFILE (default "flotsam"). No password is ever passed on argv (visible to ps).
 # Missing either one -> ad-hoc signed, un-notarized DMG (local testing only) and a list of exactly what is missing.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,12 +15,10 @@ PROFILE=${FLOTSAM_NOTARY_PROFILE:-flotsam}
 missing=()
 [ -n "$ID" ] || missing+=("Developer ID Application certificate (Xcode > Settings > Accounts > Manage Certificates > + > Developer ID Application)")
 notary=()
-if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ] && [ -n "${APPLE_APP_PASSWORD:-}" ]; then
-  notary=(--apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD")
-elif xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null 2>&1; then
+if xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null 2>&1; then
   notary=(--keychain-profile "$PROFILE")
 else
-  missing+=("notarytool credentials: xcrun notarytool store-credentials $PROFILE, which prompts for Apple ID, app-specific password and team ID (or APPLE_ID/APPLE_TEAM_ID/APPLE_APP_PASSWORD)")
+  missing+=("notarytool keychain profile \"$PROFILE\" not found or unusable: run xcrun notarytool store-credentials $PROFILE (prompts for Apple ID, app-specific password and team ID; stored in the keychain)")
 fi
 SIGN=(--force --options runtime --entitlements App/Flotsam/Flotsam.entitlements)
 if [ ${#missing[@]} -eq 0 ]; then SIGN+=(--timestamp --sign "$ID"); else
