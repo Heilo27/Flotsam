@@ -56,6 +56,9 @@ public actor ScreenshotWatcher {
     private var lastMode: CaptureMode
     /// Bumped on every teardown; events and scan results from an earlier watch are discarded.
     private var generation = 0
+    /// Counts the pickup sessions ended by `deactivate`. An import started in one session must not leave anything
+    /// behind in a later one, so each job carries the session it was queued in.
+    private var session = 0
     private var watch: (any FolderWatch)?
     private var cancelTick: (@Sendable () -> Void)?
     private var tickRunning = false
@@ -270,6 +273,7 @@ public actor ScreenshotWatcher {
     /// FR-002-05: no watcher, no timer, no folder access, and none of the conditions it raised left standing.
     private func deactivate() async {
         active = false
+        session += 1
         cancelTick?()
         cancelTick = nil
         teardown()
@@ -439,7 +443,10 @@ public actor ScreenshotWatcher {
         guard active, generation == current else { return }
         for (path, birth) in hidden { hiddenFiles[path] = birth }
         // No watermark yet: a new library imports nothing (FR-002-08).
-        guard !files.isEmpty, await currentWatermark() != nil, let floor = eventFloor else { return }
+        guard !files.isEmpty else { return }
+        let known = await currentWatermark()
+        // The watermark load suspends: pickup may have been turned off, or the watch replaced, meanwhile (FR-002-05).
+        guard active, generation == current, known != nil, let floor = eventFloor else { return }
         enqueue(ScreenshotSelection.reconcile(files, lastScanAt: floor), batch: nil, bypassSeen: false)
     }
 
@@ -461,6 +468,9 @@ public actor ScreenshotWatcher {
             hiddenFiles = listing.hiddenFiles
         }
         await markAccessGranted()
+        // `markAccessGranted` and the watermark loads below suspend, and pickup can be turned off (FR-002-05) or the
+        // watch replaced in each gap: an overtaken scan leaves the queue, the watermark and the status to its overtaker.
+        guard active, generation == current else { return }
 
         guard settings.value(SettingKeys.captureMode).importsScreenshots else {
             await advanceWatermark(to: started)
@@ -469,7 +479,9 @@ public actor ScreenshotWatcher {
         }
         var queued = 0
         // No watermark yet: a new library imports nothing and only records where it is (FR-002-08).
-        if let last = await currentWatermark() {
+        let last = await currentWatermark()
+        guard active, generation == current else { return }
+        if let last {
             let present = Set(files.map(\.url.path))
             retry = retry.filter { present.contains($0.key) }
             unfinished = unfinished.filter { present.contains($0.key) }
@@ -569,7 +581,7 @@ public actor ScreenshotWatcher {
             guard !pending.contains(path), bypassSeen || !seen.contains(file) else { continue }
             pending.insert(path)
             if batch == nil { unfinished[path] = file.createdAt }
-            let job = ImportJob(file: file, batch: batch)
+            let job = ImportJob(file: file, batch: batch, session: session)
             if batch == nil, let firstBackfill = queue.firstIndex(where: { $0.batch != nil }) {
                 queue.insert(job, at: firstBackfill)
             } else {
@@ -613,7 +625,10 @@ public actor ScreenshotWatcher {
             FlotsamLog.log(.screenshotImported(outcome: created ? .stored : .deduped, byteSize: byteSize), sink: sink)
             for warning in result.warnings { await report(warning) }
         case .unstable(let error):
-            if job.batch == nil { noteUnstable(job.file) }
+            // `deactivate` emptied the retry list (FR-002-05): an import that was already running when pickup went off
+            // and ends unstable must not put its file back, or a later reactivation would retry a file from before the
+            // off period. A file still unstable in the same session stays on the list.
+            if job.batch == nil, job.session == session { noteUnstable(job.file) }
             await report(error)
         case .rejected(let error, let byteSize):
             seen.insert(job.file)
@@ -691,7 +706,7 @@ public actor ScreenshotWatcher {
                 continue
             }
             if presses.count > 1 { joiners[path] = Array(presses.dropFirst()) }
-            queue.append(ImportJob(file: job.file, batch: owner))
+            queue.append(ImportJob(file: job.file, batch: owner, session: session))
         }
         pump()
     }
@@ -785,6 +800,8 @@ private struct ImportJob: Sendable {
     let file: ScreenshotFile
     /// Set for "Import recent screenshots", whose caller waits for the count.
     let batch: UUID?
+    /// The `ScreenshotWatcher.session` the job was queued in.
+    let session: Int
 }
 
 private struct RetryEntry: Sendable {
