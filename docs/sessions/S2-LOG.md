@@ -990,3 +990,33 @@ Load at start was 10.02 (1-min), at 23:57. It rose to 57 by the end (23:59), cau
 Across three runs (load 34–63, 34–63, then 10→57), capture p95 holds at 485–494 ms, and the 0.5 s poll wait accounts for 472–484 ms of it. Load moves only the persist tail: p95 of 19, 44 and 86 ms. Search p95 is steady at 53–55 ms. **Conclusion: capture p95 is bound by the poll period, not by load.** Cutting it means a shorter poll interval or change-count signalling, which is a product decision, not a perf bug. A truly quiet rerun would only tighten the persist tail.
 
 The harness uses a private `NSPasteboard(name: "flotsam.perf.<uuid>")` (asserted ≠ `.general`), so it cannot have contaminated other sessions' general-pasteboard reads.
+
+---
+
+## 2026-11-18: FRD-008 phase 8T (`s2/frd008-8t` @ 6f95646, base df9bf09)
+
+138 contract tests (OC-8001..OC-8147): Part A 83 and Part B 55. The filtered run is green with 15 `withKnownIssue` DEFECTs. Sources are unchanged.
+
+- **Mutations:** 11 of 11 went red (Part A M1–M5 plus Part B: PasteGate.outcome, the menu shelf filter, captureToggle, LoginItem setEnabled, LSUIElement, `import Network`).
+- **check-architecture:** passed.
+- **Full suite:** only the known flakes OC-4102 and OC-381-21 failed.
+- Part A was re-authored before its first push, so all commits are by Friday.
+
+**DEFECTs (product untouched):**
+- OC-8001/8030: "Launch at login" case.
+- OC-8011: recovery removes the key instead of holding d30.
+- OC-8016: an invalid key code is accepted, there's no reset to ⌃⌘V, and no SET-DAT-001.
+- OC-8038: SET-PRM-001 copy lacks "triggers are paused".
+- OC-8047: "image limit" vs "image budget".
+- OC-8075: "Add app" vs "Add…".
+- OC-8098: onboarding resume is lost on ⌘Q.
+- OC-8110: no on-demand Accessibility or Input Monitoring request.
+- OC-8127: ⌘⇧9 vs ⇧⌘9.
+- OC-8139: Title Case labels against sentence case.
+- OC-8141: onboarding step 5 writes the screenshot prefs.
+
+**Rule 9 (Critical):** `PasteGate` has no production caller, and 5 paths re-implement SET-PRM-001.
+
+**[Spec Drift]:** FRD-007 FR-007-12 and FRD-008 FR-008-16 disagree on the menu capture toggle. The menu follows FRD-008, while `Unmapped007IngestTests.swift:163-168` pins the FRD-007 behaviour. Needs an S1 ruling.
+
+**No seam, manual:** onboarding live UI (8084, 8086–8092, 8095, 8096, 8099), live permission flows (8105, 8106, 8108, 8109, 8112–8114, 8116–8118, 8124), menu visuals and VoiceOver (8126, 8128, 8130, 8135–8138), binary and packet checks (8142–8147, live halves), and the screenshot halves of 8033, 8065 and 8066. OC-8043 and 8079 are weakly covered.
