@@ -3,7 +3,7 @@
 Status: Accepted as a default; spike S-1 (TASK-004) may change it. Load-bearing: flagged to Friday.
 
 ## Context
-FR-003-09: tokens split on whitespace, AND across tokens, each a case-insensitive, diacritic-insensitive substring of any searchable field. FR-003-10 and AC-007-16: p95 ≤ 100 ms per keystroke at 10,000 items (2,000 images). FR-007-18: `item.searchText` is a normalised concatenation of all searchable fields, rewritten in the same transaction as any change to a source field (tag rename rewrites every tagged item). Memory budget: 150 MB resident with 10,000 items (FR-001-20).
+FR-003-09: tokens split on whitespace, AND across tokens, each a case-insensitive, diacritic-insensitive substring of any searchable field. FR-003-10 and AC-007-16: p95 ≤ 100 ms per keystroke at 10,000 items (2,000 images). FR-007-18: `item.searchText` is a normalised concatenation of all searchable fields, rewritten in the same transaction as any change to a source field (tag rename rewrites every tagged item). Memory budget: 150 MB physical footprint (`phys_footprint`) with 10,000 items (FR-001-20).
 
 Measured today (minimum OS is macOS 26, the development machine's OS): the system `sqlite3` on the development machine is 3.54.0 and `CREATE VIRTUAL TABLE ... USING fts5(x, tokenize='trigram')` succeeds. SQLite introduced the trigram tokenizer in 3.34; no older OS is supported, so no older system library needs checking. Trigram cannot match tokens shorter than 3 characters.
 

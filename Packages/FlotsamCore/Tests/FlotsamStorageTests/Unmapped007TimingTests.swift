@@ -14,7 +14,7 @@ import FlotsamBase
 //   - Exception, OC-7132 (TASK-371): its 50 ms p95 batch bound is NOT asserted here. In a debug build under a parallel
 //     suite the figure measured 55-90 ms, so the assertion flaked. The test holds the batch count and size and a 1 s
 //     ceiling; the 50 ms bound is read at 9F.
-//   - OC-7047 / 7133: the 150 MB resident-set check needs a running app and Activity Monitor / `ps`, so it moves to 9F.
+//   - OC-7047 / 7133: the 150 MB physical-footprint check (`phys_footprint`, as reported by `footprint`) needs a running app, so it moves to 9F.
 //     What storage owns, and what is asserted here, is the 64 MiB ceiling on the thumbnail cache that keeps the
 //     figure bounded.
 
