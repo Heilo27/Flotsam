@@ -20,6 +20,16 @@ private final class FakePasteboard: PasteboardPort {
         changeCount += 1
     }
 
+    /// What NSPasteboard does for a file copy: `clearContents` bumps `changeCount` and leaves the board empty, then
+    /// `writeObjects` fills it WITHOUT a second bump (measured on a private pasteboard, TASK-401). A poll that lands
+    /// between the two sees a new count and no types.
+    func beginCopy() {
+        contents = [:]
+        changeCount += 1
+    }
+
+    func finishCopy(_ contents: [String: Data]) { self.contents = contents }
+
     func currentTypeIdentifiers() -> [String] { contents.keys.sorted() }
 
     func readSnapshot(types: [String]) -> FlotsamResult<PasteboardSnapshot> {
@@ -49,11 +59,13 @@ private final class MemoryKV: KeyValueStore, @unchecked Sendable {
     func removeValue(forKey key: String) { lock.withLock { _ = values.removeValue(forKey: key) } }
 }
 
-@MainActor
-private final class NullPresenter: ErrorPresenter {
+private final class RecordingPresenter: ErrorPresenter, @unchecked Sendable {
+    private let lock = NSLock()
+    private var codes: [ErrorCode] = []
     func showHUD(message: String) {}
-    func noticesChanged(_ notices: [Notice]) {}
+    func noticesChanged(_ notices: [Notice]) { lock.withLock { codes.append(contentsOf: notices.map(\.code)) } }
     func presentFatal(_ error: FlotsamError) {}
+    var noticeCodes: [ErrorCode] { lock.withLock { codes } }
 }
 
 @MainActor
@@ -64,6 +76,7 @@ final class ClipboardCaptureTests: XCTestCase {
     private var ledger: OwnWriteLedger!
     private var settings: SettingsStore!
     private var capture: ClipboardCapture!
+    private var presenter: RecordingPresenter!
     private var ignored: Set<String> = []
     private let textType = "public.utf8-plain-text"
 
@@ -74,10 +87,11 @@ final class ClipboardCaptureTests: XCTestCase {
         ledger = OwnWriteLedger()
         settings = SettingsStore(store: MemoryKV())
         ignored = []
+        presenter = RecordingPresenter()
         capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: FakeSourceApps(frontmost: SourceApp(bundleId: "com.example.writer", name: "Writer")),
             ownWrites: ledger, ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: NullPresenter()), ignoredApps: { [unowned self] in ignored })
+            reporter: ErrorReporter(presenter: presenter), ignoredApps: { [unowned self] in ignored })
     }
 
     override func tearDown() async throws {
@@ -148,5 +162,55 @@ final class ClipboardCaptureTests: XCTestCase {
         pasteboard.copy([textType: Data("while paused".utf8)])
         let count = try await settle()
         XCTAssertEqual(count, 0)
+    }
+
+    // MARK: Copies caught mid-write (TASK-401)
+
+    private func fileURLData(_ url: URL) -> Data { Data(url.absoluteString.utf8) }
+
+    /// TASK-401. A Finder copy is `clearContents` (count bumps, board empty) then `writeObjects` (no second bump). A poll
+    /// between the two used to mark that count processed, so the copy was dropped and nothing re-read it until the user
+    /// copied something else.
+    func testFileCopyPolledBetweenClearAndWriteIsStillCaptured() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-401-\(UUID().uuidString).txt")
+        try Data("x".utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        capture.start()
+
+        pasteboard.beginCopy()
+        capture.captureNow()  // lands in the window: the count is new, the board is empty
+        pasteboard.finishCopy(["public.file-url": fileURLData(file)])
+        let count = try await settle()  // the next poll, same count, now readable
+
+        XCTAssertEqual(count, 1)
+    }
+
+    /// The S2 symptom: three file copies in a row each polled in the window, none captured. With the old code the third
+    /// empty change also suspended capture (FR-001-18 b) and raised CAP-PRM-001 although access was never blocked.
+    func testThreeCopiesEachPolledMidWriteAreAllCapturedAndDoNotSuspendCapture() async throws {
+        capture.start()
+        for n in 1...3 {
+            pasteboard.beginCopy()
+            capture.captureNow()
+            pasteboard.finishCopy([textType: Data("copy \(n)".utf8)])
+            capture.captureNow()
+        }
+        let count = try await settle()
+        try await Task.sleep(nanoseconds: 200_000_000)  // reports are raised from unstructured tasks
+
+        XCTAssertEqual(count, 3)
+        XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "a copy caught mid-write is not blocked access")
+    }
+
+    /// FR-001-18 b still holds: a change that stays empty across its re-reads counts, and three such changes suspend.
+    func testThreeChangesThatStayEmptyStillSuspendCapture() async throws {
+        capture.start()
+        for _ in 1...3 {
+            pasteboard.beginCopy()
+            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+        }
+        for _ in 0..<100 where !presenter.noticeCodes.contains(.capPrm001) { try await Task.sleep(nanoseconds: 20_000_000) }
+
+        XCTAssertTrue(presenter.noticeCodes.contains(.capPrm001))
     }
 }
