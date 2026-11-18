@@ -305,8 +305,8 @@ struct Frd008ContractMenuTests {
         #expect(homes.keys.contains("shelfEnabled") && homes.keys.contains("triggersEnabled"))
     }
 
-    // OC-8141 incl. onboarding. FR-008-17: only shortcuts.openLibrary may also appear in onboarding. Onboarding
-    // step 5 also controls screenshots.enabled and screenshots.folderOverride, which General controls.
+    // OC-8141 incl. onboarding. FR-008-17: only shortcuts.openLibrary may also appear in onboarding. Red if onboarding
+    // (step 5 in particular) touches screenshots.enabled or screenshots.folderOverride, which General controls.
     @Test("OC-8141: onboarding shares only shortcuts.openLibrary with a Settings pane")
     func onboardingOverlap() throws {
         let panes = ["GeneralPane", "PrivacyPane", "ShortcutsPane", "StoragePane", "TriggersPane"]
@@ -315,9 +315,7 @@ struct Frd008ContractMenuTests {
         let onboardingKeys = Set(try Frd008KeyHomes.scan(["App/Flotsam/OnboardingModel.swift"]).keys)
         let shared = paneKeys.intersection(onboardingKeys).sorted()
         #expect(shared.contains("shortcutsOpenLibrary"))
-        withKnownIssue("DEFECT OC-8141: onboarding also controls screenshotsEnabled and screenshotsFolderOverride, which General controls") {
-            #expect(shared == ["shortcutsOpenLibrary"])
-        }
+        #expect(shared == ["shortcutsOpenLibrary"])
     }
 }
 

@@ -23,6 +23,8 @@ final class AppContainer {
     /// value that fails validation reads as its default and raises SET-DAT-001 once per launch per key, as a Notice
     /// (no HUD), via `reporter`.
     let settings: SettingsStore
+    /// The resume point of an unfinished onboarding; progress, not a preference, so it is not in the registry.
+    let onboardingProgress = OnboardingProgress(store: .standard)
     let permissions: any PermissionProbe
     let loginItem: LoginItemController
     /// What the menu and onboarding can trigger. Each owning FRD fills its own closure; a nil one disables its menu row.
@@ -97,6 +99,12 @@ final class AppContainer {
         ) { _ in
             MainActor.assumeIsolated { logger.check() }
         }
+    }
+
+    /// The screenshot settings as onboarding may show them: read-only. Only Settings › General writes them (FR-008-17).
+    var screenshotPickup: (enabled: Bool, folderName: String?) {
+        (settings.value(SettingKeys.screenshotsEnabled),
+         Pickers.folderName(of: settings.value(SettingKeys.screenshotsFolderOverride)))
     }
 
     /// Builds the Settings window over this container's objects and points `actions.openSettings` at it, so every

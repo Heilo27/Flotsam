@@ -130,17 +130,15 @@ struct Frd008ContractPermissionsTests {
         #expect(afterRelaunch.isAccessibilityTrusted)
     }
 
-    // OC-8110. DEFECT: FR-008-13 says Accessibility is requested at the first paste attempt; nothing on the paste path
-    // calls request(). The only call sites are the onboarding Allow buttons. Red-until-fixed scan of the paste service.
+    // OC-8110. FR-008-13: Accessibility is requested at the first paste attempt. Red if the paste service stops calling
+    // request(.accessibility) on the paste path. Source scan only: the once-only half needs a behavioural test (Worf).
     @Test("OC-8110: the first paste attempt with Accessibility off prompts once")
     func firstPasteAttemptRequestsAccessibility() throws {
         let root = try #require(frd008RepoRoot())
         let source = try String(
             contentsOf: root.appendingPathComponent("Packages/FlotsamCore/Sources/FlotsamPaste/PasteService.swift"),
             encoding: .utf8)
-        withKnownIssue("DEFECT OC-8110: PasteService never calls PermissionProbe.request; no first-attempt prompt exists") {
-            #expect(source.contains("request(.accessibility)"))
-        }
+        #expect(source.contains("request(.accessibility)"))
     }
 
     // OC-8111, OC-8119. Red if the copy-only HUD text drifts or the HUD is not shown for the first denied choice.
