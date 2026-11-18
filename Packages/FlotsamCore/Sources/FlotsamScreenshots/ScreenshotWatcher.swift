@@ -319,14 +319,21 @@ public actor ScreenshotWatcher {
         await rebuild(for: resolved)
     }
 
+    /// Every suspension below lets the actor serve other calls: pickup turned off (`deactivate`) or a second
+    /// re-resolution (which tears down and rebuilds again). Both bump `generation`, so a rebuild that finds it changed,
+    /// or pickup off, after a suspension was overtaken and stops: what it would install is no longer wanted, and the
+    /// overtaker owns the location, the status and the watch.
     private func rebuild(for resolved: ScreenshotLocation) async {
         teardown()
+        let mine = generation
         await updateLocationWarning(for: resolved)
+        guard active, generation == mine else { return }
         location = resolved
         guard let folder = resolved.folder else {
             // Nothing is watched, so a refusal or a polling fallback raised for the previous folder no longer stands.
             leaveFallbackState()
             await markAccessGranted()
+            guard active, generation == mine else { return }
             status = .paused
             await seedWatermarkIfNone(at: clock.now())
             return
