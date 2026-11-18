@@ -121,7 +121,7 @@ Library appears in 120 ms ease-out (scale 0.98 to 1, fade). Shelf slides 150 ms 
 - List rows: 44 pt, 32 pt lead icon or thumbnail, first line `t1` single line, second line `t2` (source app, age). Badges: pin, trigger, Missing (warn). Up to 3 tag chips then "+n". Quick-paste badge ⌘1 to ⌘9 on the first nine rows.
 - Grid cells: 120 pt square, thumbnail, name caption, same badges.
 - Preview: content, metadata list, tags, note, "Show more" past 12 lines (text) or fit for images.
-- Footer: key hints (Paste, Plain text, Copy, Preview, Close); copy-only mode shows "Press ⌘V to paste" and an "Enable pasting" link.
+- Footer: key hints (Paste, Plain text, Copy, Preview, Close); the active sort name (Recent, Oldest, Most Used, A to Z) beside the item count at the right; copy-only mode shows "Press ⌘V to paste" and an "Enable pasting" link.
 
 ### 3.2 Shelf (image 05)
 
