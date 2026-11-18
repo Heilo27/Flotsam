@@ -99,8 +99,9 @@ public final class PasteService {
         return loaded
     }
 
-    /// Confirms `target` is frontmost (within 250 ms), then posts ⌘V. Shared with trigger expansion (FR-005-14).
-    /// `LIB-OS-001` when the target never comes back or the event cannot be posted; nothing is re-written either way.
+    /// Confirms `target` is frontmost (within 250 ms), then posts ⌘V to it. Shared with trigger expansion (FR-005-14).
+    /// `LIB-OS-001` when the target never comes back, stops being frontmost at the post, or the event cannot be posted;
+    /// nothing is re-written either way.
     public func postPaste(target: FrontmostApp?) async -> FlotsamResult<Void> {
         let failure = FlotsamError(.libOs001, "Paste target changed or key event not posted")
         guard let target else { return .failure(failure) }
@@ -110,7 +111,10 @@ public final class PasteService {
             await clock.sleep(for: PasteTiming.pollInterval)
             waited += PasteTiming.pollInterval
         }
-        return keys.postPaste() ? .success(()) : .failure(failure)
+        // `target` stays frontmost from the read above to the post: nothing suspends between them. The event is still
+        // addressed to the target's process, because the session tap would deliver it to whichever app has focus when
+        // the window server routes it, which can differ from what `NSWorkspace` last reported (FR-003-16).
+        return keys.postPaste(to: target) ? .success(()) : .failure(failure)
     }
 
     private func waitUntilHidden(_ host: any PasteHost) async {

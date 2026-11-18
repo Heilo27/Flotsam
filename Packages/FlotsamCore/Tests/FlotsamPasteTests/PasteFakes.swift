@@ -96,7 +96,9 @@ struct FakePermission: PermissionProbe {
 final class FakeKeys: KeyEventPoster {
     var succeeds = true
     private(set) var posts = 0
-    func postPaste() -> Bool { posts += 1; return succeeds }
+    /// The target each ⌘V was addressed to, in order.
+    private(set) var targets: [FrontmostApp] = []
+    func postPaste(to target: FrontmostApp) -> Bool { posts += 1; targets.append(target); return succeeds }
 }
 
 /// Panel that is visible until hidden, unless `staysVisible`.
