@@ -1680,3 +1680,33 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
   - OC-0055: a pure `Notice.menuTitle` in FlotsamBase.
   - OC-0056: the inline error view lives in the App target.
 - **[Spec Drift]:** none.
+
+## 2026-11-18: FRD-007 8T on `s2/frd007-8t` @ 173f6f1 (cut from main c0382e8)
+- **Slices:**
+  - 315e5b0: OC-7062/63/65, 7080/81/85/88, 7109, 7125, 7151.
+  - 4c0ed68: OC-7102 to 7105, 7107, 7108.
+  - 43b4de7: OC-7115, 7116.
+  - 3e22fdd: OC-7126, 7150.
+  - 31a52c7: OC-7127.
+  - 930cf96: comments only.
+  - 173f6f1: the Gaps file, with 17 disabled no-seam stubs.
+- **Mutations, all red and reverted, one per slice:**
+  - ImageBudgetEnforcement eviction target
+  - ClipboardCapture gate `|| true`
+  - FlotsamDatabase migrate-log `if false`
+  - IngestActor copyCount `+0`
+  - ItemDeletion `where false`
+  - PasteService delete skipped
+- **Coverage of 153 ids:** 21 tested here, 130 cited, 2 untestable-only (7011, 7152), 0 uncovered (checked by grep script).
+- **Recon correction:** S2 first reported 62 untagged ids. That came from a grep that only matched OC-70xx; the real number was 13.
+- **Full run on the branch:** exit 0. 2866 tests in 12 runs, 20 known issues, 0 "recorded an issue". S2 re-summed this from the log. Arch passed.
+- **Defect (Minor), OC-7088:** `ui.settings.clearDelete` reads "Delete", but FR-007-11 says "Delete {n} Items". It is a known issue. Once fixed it falls under TASK-469 for the plural.
+- **[Spec Drift] FR-007-12 vs FR-008-16:** for Curated, the menu item reads "Pause Capture" in FR-007-12 and "Resume Capture" in FR-008-16. The code follows FRD-008. `CaptureMode.afterMenuToggle` and `MenuBarModel.captureToggle` also disagree (Rule 9). This needs a ruling.
+- **OC-7105:** the icon label "Flotsam, capture paused" differs from the contract's "Flotsam, paused". No FRD fixes this wording, so it is logged as a known issue marked unverified, not a defect.
+- **OC-7127:** the contract conflates moved-file (LIB-DAT-001, item kept) with missing-blob (LIB-IO-001, item deleted). The two are asserted separately.
+- **Seams needed:**
+  - StorageChangeCoordinator: 7062, 7063, 7080, 7081.
+  - Popups or sheet rendering: 7065, 7085, 7109, 7088, 7105.
+  - Cross-target Shelf/Capture: 7102, 7103, 7104, 7127.
+  - Running app: 7011, 7115.
+  - A reveal port: 7152.
