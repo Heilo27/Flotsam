@@ -114,7 +114,7 @@ Schema sketch (FRD-007 FR-007-03 is the single definition; this is the architect
 | `itemTag` | `itemId`, `tagId` (cascade, unique pair) |
 | `meta` | `key` PK; `value` (`schemaVersion`, `screenshots.lastScanAt`, `retention.lastSweepAt`, `budget.lastNoticeAt`) |
 
-Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-migration file copy (FR-007-17). Migration 1 is the full FRD-007 schema (item, representation, bundleMember, tag, itemTag, meta); the copy is `pre-migration/flotsam-v<from>.sqlite`, latest only.
+Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-migration file copy (FR-007-17). Migration 1 is the full FRD-007 schema (item, representation, bundleMember, tag, itemTag, meta); the copy is `pre-migration/flotsam-v<from>.sqlite` (`flotsam-v<from>-<n>.sqlite` if a non-file entry holds that name), latest only, deleted 7 days after a later clean launch or by Clear History; `corrupt-<timestamp>/` lives 30 days (FR-007-11, -13, -17). The rules live in `FlotsamStorage/Folder/PlaintextCopies.swift`.
 
 **Search default** ([ADR-0003](adr/0003-search-strategy.md)): an in-database `instr(searchText, token) > 0` scan per token, AND-ed, tokens normalised by `SearchNormalizer`, pages of 200 rows plus a count, no resident index copy. If it exceeds 100 ms p95 at 10k items (2k images) in spike S-1, migration 2 adds an FTS5 trigram index kept in sync in the same transaction, used for tokens of 3 or more characters, with `instr` for shorter ones and an equivalence test against the scan either way.
 
