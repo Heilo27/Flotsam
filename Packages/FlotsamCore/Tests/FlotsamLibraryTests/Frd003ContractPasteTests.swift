@@ -490,7 +490,7 @@ struct StoredState: Equatable {
 
     private func seedThree(_ rig: PasteRig) async throws -> [UUID] {
         let text = try await rig.lib.add(.text, key: "keep-text", text: "kept text", secondsAgo: 30).itemId
-        try await rig.lib.database.setNote("kept note", for: text).get()
+        _ = try await rig.lib.database.setNote("kept note", for: text).get()
         _ = try await rig.lib.database.createTagAndApply(name: "keep", to: [text]).get()
         let rich = try await rig.lib.add(
             .richText, key: "keep-rich", text: "kept rich", secondsAgo: 20,

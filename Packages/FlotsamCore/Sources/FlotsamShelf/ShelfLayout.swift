@@ -19,6 +19,8 @@ public enum ShelfLayout {
     public static let edgeZoneThickness: CGFloat = 4
     /// The edge zone covers this fraction of the edge's length, centred.
     public static let edgeZoneLengthFraction: CGFloat = 0.6
+    /// How long a dropped card stays highlighted (FR-006-15). The 1.5 s hold is `ShelfRevealMachine.dropHold`.
+    public static let dropHighlightDuration: TimeInterval = 0.6
 
     // MARK: Panel (FR-006-05)
 

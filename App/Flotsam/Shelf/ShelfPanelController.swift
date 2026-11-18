@@ -1,5 +1,6 @@
 import AppKit
 import FlotsamBase
+import FlotsamPayload
 import FlotsamShelf
 import SwiftUI
 
@@ -11,8 +12,8 @@ import SwiftUI
 /// Timers (FR-006-17): none while idle. The machine exposes `nextDeadline`; one one-shot task is armed for it only
 /// while it is non-nil and cancelled and re-armed after every event.
 ///
-/// Not wired yet: the global drag and pointer monitors (drag and hover reveal, click outside a transient Shelf) and
-/// drop-in and drag-out (FRD-006 section 9, item 8).
+/// Drops (FR-006-12 to FR-006-15) arrive through `ShelfDropView`; the controller decides acceptance and hands the
+/// pasteboard to `ShelfDropService`.
 @MainActor
 final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// A panel that never activates the app (FR-006-08) and takes key only while the Shelf is sticky.
@@ -41,7 +42,20 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private var placement: ShelfPlacement
     private var deadlineTask: Task<Void, Never>?
     private var showTask: Task<Void, Never>?
+    private var highlightTask: Task<Void, Never>?
     private var keyMonitor: Any?
+    /// Pointer, button and drag monitors (FR-006-03, FR-006-04); `hoverMonitor` only while edge hover is on.
+    private var pointerMonitors: [Any] = []
+    private var hoverMonitor: Any?
+    private var lastRegion: ShelfRevealMachine.Pointer?
+    /// Where the visible panel is, or is sliding to. `panel.frame` is mid-animation or off-screen right after a reveal,
+    /// so the pointer is tested against this.
+    private var shownFrame: NSRect?
+    /// The drag pasteboard's change count at the last mouse-down: a drag is a gesture that changes it (FR-006-03).
+    private var dragCountAtMouseDown: Int?
+    private var dragDetected = false
+    /// An own drag-out session is running (FR-006-03: the Shelf must not hide under it).
+    private var ownDragActive = false
     // Touched only in `init` and `deinit`; `NotificationCenter` removal is thread-safe, which is what lets `deinit` (not
     // main-actor isolated on the macOS 14 target) release them.
     private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
@@ -49,6 +63,14 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// Called each time the Shelf is shown, so the app can hide the Library: only one Flotsam panel is open at a time
     /// (FR-006-04). The app owns the rule; the Shelf only announces the reveal.
     var onReveal: (@MainActor () -> Void)?
+    /// Carries an accepted drop to storage (FR-006-13). Set by the app once the database is open; nil until then, and
+    /// a drop with none set is not taken.
+    var dropService: ShelfDropService?
+    /// The menu-bar item's frame in screen coordinates: where the `.menuBar` placement is anchored and where a drag
+    /// hover reveals it (FR-006-05c, FR-006-03d). Set by the app; nil when there is no item.
+    var menuBarIconFrame: (@MainActor () -> CGRect?)?
+    /// Drag-out from the cards (FR-006-10). The app supplies its ports once the database is open.
+    let dragOut = ShelfDragOut()
 
     /// The model needs its host and the host needs the model, so the controller builds the model with its box as host.
     /// `makeModel` receives the box and returns the model wired to it.
@@ -70,18 +92,27 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             contentRect: NSRect(x: 0, y: 0, width: ShelfLayout.panelWidth, height: ShelfLayout.minimumHeight),
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         hosting = NSHostingView(
-            rootView: ShelfView(model: model, placement: placement, thumbnail: thumbnail, close: {}))
+            rootView: ShelfView(model: model, placement: placement, thumbnail: thumbnail, dragOut: dragOut, close: {}))
         super.init()
         hostBox.target = self
+        dragOut.model = model
+        // The machine must not hide a Shelf under its own drag (FR-006-03), and an accepted drop hides a transient one
+        // (FR-006-11).
+        dragOut.onSession = { [weak self] dragging in self?.ownDragSession(dragging) }
+        dragOut.onAccepted = { [weak self] in self?.send(.dragOutAccepted) }
         hosting.rootView = makeView()
         configurePanel()
         observeFeeds()
         subscribeToSettings()
+        updateMonitors()
         send(.configure(enabled: enabled, placement: placement, revealOnEdgeHover: settings.value(SettingKeys.shelfRevealOnEdgeHover)))
     }
 
     deinit {
         unsubscribeSettings?()
+        // Monitors are removed on the main actor by `updateMonitors` whenever the Shelf is disabled; at teardown the
+        // owner (`AppContainer`) lives for the whole process, so there is nothing left to release here.
+
         let workspace = NSWorkspace.shared.notificationCenter
         for observer in observers {
             workspace.removeObserver(observer)
@@ -106,6 +137,9 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
 
     /// The Library opened: only one Flotsam panel is open at a time (FR-006-04).
     func libraryOpened() { send(.libraryOpened) }
+
+    /// A drop was stored: a transient Shelf stays open for the hold (FR-006-15).
+    func dropCompleted() { send(.dropCompleted) }
 
     private func send(_ event: ShelfRevealMachine.Event) {
         let commands = machine.send(event, at: Date())
@@ -161,10 +195,12 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         // Hides the Library (FR-006-04) and writes the one Info line per reveal (FR-006-18).
         ShelfRevealAnnouncement.announce(trigger, hideLibrary: onReveal)
         let visible = Self.visibleFrame(ofScreenAt: screen)
-        let frame = ShelfLayout.frame(for: placement, in: visible, contentExtent: contentExtent())
+        let frame = ShelfLayout.frame(
+            for: placement, in: visible, contentExtent: contentExtent(), menuBarIcon: menuBarIconFrame?())
         let transition = ShelfLayout.transition(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         panel.allowsKey = sticky
         hosting.rootView = makeView()
+        shownFrame = frame
         switch transition.style {
         case .fade:
             panel.setFrame(frame, display: false)
@@ -188,11 +224,17 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         }, completionHandler: {
             span.end()
         })
+        // The machine last heard `.edgeZone` (or the icon) from the dwell that revealed the Shelf. A pointer that has not
+        // moved since sits on the panel now, and no further event would say so: tell the machine, or it hides the Shelf
+        // 600 ms after it appeared (FR-006-04).
+        lastRegion = nil
+        reportPointer()
     }
 
     private func dismiss() {
         showTask?.cancel()
         showTask = nil
+        shownFrame = nil
         removeKeyMonitor()
         model.didHide()
         guard panel.isVisible else { return }
@@ -256,7 +298,9 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     // MARK: Panel
 
     private func makeView() -> ShelfView {
-        ShelfView(model: model, placement: placement, thumbnail: thumbnail, close: { [weak self] in self?.send(.closeButton) })
+        ShelfView(
+            model: model, placement: placement, thumbnail: thumbnail, dragOut: dragOut,
+            close: { [weak self] in self?.send(.closeButton) })
     }
 
     private func configurePanel() {
@@ -269,7 +313,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         panel.backgroundColor = .clear
         panel.hasShadow = true
 
-        let effect = NSVisualEffectView()
+        let effect = ShelfDropView()
+        effect.delegate = self
         effect.material = .hudWindow
         effect.blendingMode = .behindWindow
         effect.state = .active
@@ -284,6 +329,30 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         panel.contentView = effect
     }
 
+    // MARK: Drops (FR-006-12 to FR-006-15)
+
+    /// Type identifiers only (FR-006-12, BR-4): no bytes are read until the drop is accepted.
+    private func acceptance(of info: any NSDraggingInfo) -> ShelfDropAcceptance {
+        ShelfDropPlanner.acceptance(
+            types: SystemPasteboard(pasteboard: info.draggingPasteboard).currentTypeIdentifiers(),
+            originatesInShelf: originatesInShelf(info))
+    }
+
+    /// A drag that began in this Shelf's own cards is refused, silently (FR-006-12).
+    private func originatesInShelf(_ info: any NSDraggingInfo) -> Bool {
+        info.draggingSource is ShelfDragOut
+    }
+
+    /// The card a drop stored or bumped is highlighted for 600 ms and scrolled to the top of Recent (FR-006-15).
+    private func highlight(_ itemId: UUID) {
+        model.highlight(itemId)
+        highlightTask?.cancel()
+        highlightTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(ShelfLayout.dropHighlightDuration)) } catch { return }
+            self?.model.clearHighlight(of: itemId)
+        }
+    }
+
     // MARK: Feeds
 
     /// A Space change and a display change hide the Shelf (FR-006-04, FR-006-20).
@@ -295,7 +364,10 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         observers.append(NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.send(.screensChanged) }
+            MainActor.assumeIsolated {
+                self?.lastRegion = nil
+                self?.send(.screensChanged)
+            }
         })
     }
 
@@ -316,7 +388,148 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private func applySettings() {
         placement = settings.value(SettingKeys.shelfPlacement)
         hosting.rootView = makeView()
+        lastRegion = nil
+        updateMonitors()
         send(.configure(enabled: enabled, placement: placement, revealOnEdgeHover: settings.value(SettingKeys.shelfRevealOnEdgeHover)))
+    }
+
+    // MARK: Pointer, button and drag monitors (FR-006-03, FR-006-04)
+
+    /// Monitors exist only while the Shelf is enabled, and the mouse-moved monitor only while edge hover is on
+    /// (FR-006-17). They read positions and button state only: no key, no content.
+    private func updateMonitors() {
+        let wantsHover = enabled && settings.value(SettingKeys.shelfRevealOnEdgeHover)
+        if enabled, pointerMonitors.isEmpty { installPointerMonitors() }
+        if !enabled { removePointerMonitors() }
+        if wantsHover, hoverMonitor == nil {
+            hoverMonitor = NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+                MainActor.assumeIsolated { self?.reportPointer() }
+            }
+        } else if !wantsHover, let monitor = hoverMonitor {
+            NSEvent.removeMonitor(monitor)
+            hoverMonitor = nil
+        }
+    }
+
+    private func installPointerMonitors() {
+        // Nothing was watched while the Shelf was off, so what was last seen is stale; the machine resets its own side
+        // on `.configure` (FR-006-03).
+        dragCountAtMouseDown = nil
+        dragDetected = false
+        lastRegion = nil
+        let down = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
+            MainActor.assumeIsolated { self?.mouseDown(outside: true) }
+        }
+        let up = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseUp) { [weak self] _ in
+            MainActor.assumeIsolated { self?.mouseUp() }
+        }
+        let dragged = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDragged) { [weak self] _ in
+            MainActor.assumeIsolated { self?.mouseDragged() }
+        }
+        // Global monitors never see events aimed at this app's own windows, so a click in the Library or the Settings
+        // window is seen here. A click on the panel or on a menu is not outside.
+        let local = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp]) { [weak self] event in
+            let incoming = Unchecked(event)
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if incoming.value.type == .leftMouseUp { self.mouseUp(); return }
+                let window = incoming.value.window
+                self.mouseDown(outside: Self.isOutsideClick(in: window, panel: self.panel))
+            }
+            return event
+        }
+        pointerMonitors = [down, up, dragged, local].compactMap { $0 }
+    }
+
+    private func removePointerMonitors() {
+        for monitor in pointerMonitors { NSEvent.removeMonitor(monitor) }
+        pointerMonitors = []
+        if let hoverMonitor { NSEvent.removeMonitor(hoverMonitor) }
+        hoverMonitor = nil
+    }
+
+    /// A click is outside when it lands in an ordinary window of this app (Library, Settings) other than the panel.
+    /// App-owned auxiliary windows are not: the status item (status-bar level), alerts and their sheets (modal level
+    /// and above), menus and the error HUD. Clicking "Toggle Shelf" in the menu-bar item or answering the delete
+    /// confirmation must not hide the Shelf (FR-006-04).
+    private static func isOutsideClick(in window: NSWindow?, panel: NSWindow) -> Bool {
+        guard let window else { return true }
+        if window === panel || window.isSheet || window.sheetParent != nil { return false }
+        return window.level < .modalPanel
+    }
+
+    private func mouseDown(outside: Bool) {
+        dragCountAtMouseDown = SystemPasteboard(pasteboard: NSPasteboard(name: .drag)).changeCount
+        dragDetected = false
+        send(.buttonDown(true))
+        if outside, machine.isVisible { send(.clickOutside) }
+    }
+
+    private func mouseUp() { gestureEnded() }
+
+    /// The button is up and any drag it began is over, however the end reached us: the global mouse-up monitor, a drop
+    /// on the panel, or the destination's `draggingEnded` (a drag from another app that was refused, cancelled with Esc
+    /// or dropped elsewhere, whose mouse-up the monitors never see). One place, so the machine's `isDragging` and
+    /// `isButtonDown` cannot be left set by whichever path misses.
+    private func gestureEnded() {
+        dragCountAtMouseDown = nil
+        dragGestureEnded()
+        send(.buttonDown(false))
+        reportPointer()
+    }
+
+    /// A drag gesture is over, possibly without a mouse-up having reached the global monitor (a drop on the Shelf, or a
+    /// drag from another app that ended elsewhere). The machine must not keep hearing "dragging", or a transient Shelf
+    /// never hides. An own drag-out is not ended here: the panel is a drop destination too, and the session ends through
+    /// `ownDragSession`.
+    private func dragGestureEnded() {
+        guard !ownDragActive else { return }
+        dragDetected = false
+        send(.dragging(false))
+    }
+
+    /// An own drag-out began or ended. The session swallows its mouse-up, so the end also releases the button the
+    /// machine still holds as down, which would otherwise block hover reveal (FR-006-03b).
+    private func ownDragSession(_ dragging: Bool) {
+        ownDragActive = dragging
+        if dragging {
+            send(.dragging(true))
+            return
+        }
+        gestureEnded()
+    }
+
+    /// A drag is a pressed button plus a change to the drag pasteboard since the press; plain window drags and text
+    /// selections never change it.
+    private func mouseDragged() {
+        if !dragDetected, let start = dragCountAtMouseDown,
+            SystemPasteboard(pasteboard: NSPasteboard(name: .drag)).changeCount != start
+        {
+            dragDetected = true
+            send(.dragging(true))
+        }
+        reportPointer()
+    }
+
+    /// Reports where the pointer is, only when that changed: the machine and its timer see one event per region.
+    private func reportPointer() {
+        let region = currentRegion()
+        guard region != lastRegion else { return }
+        lastRegion = region
+        send(.pointer(region))
+    }
+
+    private func currentRegion() -> ShelfRevealMachine.Pointer {
+        let point = NSEvent.mouseLocation
+        if machine.isVisible, (shownFrame ?? panel.frame).contains(point) { return .onShelf }
+        let screens = NSScreen.screens.map(\.frame)
+        if placement == .menuBar, let icon = menuBarIconFrame?(), icon.contains(point) {
+            return .menuBarIcon(screen: screens.firstIndex { $0.contains(point) } ?? 0)
+        }
+        if let screen = ShelfLayout.screenIndex(of: point, placement: placement, screens: screens) {
+            return .edgeZone(screen: screen)
+        }
+        return .away
     }
 
     // MARK: Keys (sticky only, FR-006-08)
@@ -343,6 +556,61 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private func handle(_ event: NSEvent) -> NSEvent? {
         guard event.window === panel, machine.canBecomeKey else { return event }
         guard let stroke = LibraryKeyTranslator.stroke(for: event) else { return event }
+        // Esc hides a sticky Shelf (FR-006-04); the machine owns the decision.
+        if stroke == KeyStroke(.escape) {
+            send(.escape)
+            return nil
+        }
         return model.handle(stroke) ? nil : event
     }
+}
+
+extension ShelfPanelController: ShelfDropDelegate {
+    func shelfDragUpdated(_ info: any NSDraggingInfo) -> NSDragOperation {
+        reportPointer()
+        let accepted = acceptance(of: info) == .accepted
+        model.setDropTargeted(accepted)
+        return accepted ? .copy : []
+    }
+
+    /// The drag left the panel but is still going, so it is not ended here: sending `.dragging(false)` would start the
+    /// 600 ms hide clock under a drag the person is still holding. A drag that ends outside the panel ends through
+    /// `shelfDragEnded` (or the mouse-up monitor).
+    func shelfDragExited() {
+        model.setDropTargeted(false)
+        reportPointer()
+    }
+
+    func shelfDragEnded() {
+        model.setDropTargeted(false)
+        gestureEnded()
+    }
+
+    /// Reads the bytes now (they are only valid during the drag) and stores them asynchronously. The result is not the
+    /// operation's: AppKit is told the drop was taken, and a failure reaches the user as the HUD the service reports.
+    func shelfPerformDrop(_ info: any NSDraggingInfo) -> Bool {
+        model.setDropTargeted(false)
+        // The drop ends the gesture, and the mouse-up that follows may never reach the global monitor.
+        gestureEnded()
+        guard let dropService else { return false }
+        let pasteboard = SystemPasteboard(pasteboard: info.draggingPasteboard)
+        let types = pasteboard.currentTypeIdentifiers()
+        let inShelf = originatesInShelf(info)
+        var representations: [PasteboardRepresentation] = []
+        if !inShelf, case .success(let snapshot) = pasteboard.readSnapshot(types: PasteboardTypes.typesToRead(from: types)) {
+            representations = snapshot.representations
+        }
+        // FR-006-13: the source is the frontmost app at drop time. Capture mode and the ignored-apps list do not apply
+        // (an explicit drop is an explicit save); the capture classifier's never-store gates still do.
+        let source = SystemSourceApps().frontmostApp()
+        Task { [weak self] in
+            let result = await dropService.drop(
+                types: types, representations: representations, source: source, originatesInShelf: inShelf,
+                occurredAt: Date())
+            if case .stored(let itemId, _) = result { self?.highlight(itemId) }
+        }
+        return true
+    }
+
+    func shelfPointerMoved() { reportPointer() }
 }

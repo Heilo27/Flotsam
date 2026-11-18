@@ -368,4 +368,49 @@ import FlotsamBase
         #expect(commands == [.show(trigger: .drag, screen: 0)])
         #expect(m.nextDeadline != nil)
     }
+
+    // MARK: Stale state across a disable (FR-006-03)
+
+    @Test("re-enabling forgets a button, drag and pointer reported while disabled: no dwell until a fresh report")
+    func enableResetsStaleInputs() {
+        var m = machine(hover: true, enabled: false)
+        send(&m, [.buttonDown(true), .dragging(true), .pointer(.edgeZone(screen: 0))], at: 1)
+        send(&m, [.configure(enabled: true, placement: .rightEdge, revealOnEdgeHover: true)], at: 2)
+        #expect(m.nextDeadline == nil)
+        // The button is no longer held and no drag is running: a pointer in the zone is a hover dwell, not a drag dwell.
+        send(&m, [.pointer(.edgeZone(screen: 0))], at: 3)
+        #expect(m.nextDeadline == t(3.5))
+        #expect(settle(&m, to: 3.5) == [.show(trigger: .hover, screen: 0)])
+    }
+
+    @Test("an enable that changes nothing (already enabled) keeps the reported pointer")
+    func reconfigureWhileEnabledKeepsInputs() {
+        var m = machine(hover: true)
+        send(&m, [.pointer(.edgeZone(screen: 0))], at: 1)
+        send(&m, [.configure(enabled: true, placement: .rightEdge, revealOnEdgeHover: true)], at: 1.2)
+        #expect(m.nextDeadline == t(1.5))
+    }
+
+    // MARK: Drag and button end (the contract the App layer must honour on every way a gesture can end)
+
+    @Test("a transient Shelf under a drag never hides; dragging(false) with the pointer away starts the 600 ms clock")
+    func dragEndStartsHideClock() {
+        var m = machine()
+        send(&m, [.dragging(true), .pointer(.edgeZone(screen: 0))], at: 1)
+        _ = settle(&m, to: 1.3)
+        send(&m, [.pointer(.away)], at: 2)
+        #expect(m.nextDeadline == nil)
+        send(&m, [.dragging(false)], at: 3)
+        #expect(m.nextDeadline == t(3.6))
+        #expect(settle(&m, to: 3.6) == [.hide])
+    }
+
+    @Test("a button left down blocks the hover dwell; buttonDown(false) releases it")
+    func buttonUpReleasesHover() {
+        var m = machine(hover: true)
+        send(&m, [.buttonDown(true), .pointer(.edgeZone(screen: 0))], at: 1)
+        #expect(m.nextDeadline == nil)
+        send(&m, [.buttonDown(false)], at: 2)
+        #expect(m.nextDeadline == t(2.5))
+    }
 }

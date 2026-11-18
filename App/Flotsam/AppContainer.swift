@@ -33,6 +33,8 @@ final class AppContainer {
     private(set) var library: LibraryPanelController?
     /// The Shelf panel (FR-006-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var shelf: ShelfPanelController?
+    /// The menu-bar item's frame, set by `StatusItemController`; the Shelf anchors under it (FR-006-05c).
+    var menuBarIconFrame: (@MainActor () -> CGRect?)?
     private var unsubscribeScreenshots: (@Sendable () -> Void)?
     /// Retained for the life of the app (FRD-002).
     private(set) var screenshots: ScreenshotWatcher?
@@ -216,6 +218,16 @@ final class AppContainer {
                     details: database, effects: effects)
             })
         shelf = controller
+        controller.menuBarIconFrame = { [weak self] in self?.menuBarIconFrame?() }
+        // FR-006-10: drag-out reads the cards' content and counts a paste per accepted card.
+        controller.dragOut.ports = .init(
+            content: { await database.content(of: $0) }, recordPaste: { _ = await database.recordPaste(of: $0) },
+            files: LocalFileSystem(), report: effects.report)
+        // FR-006-13: a drop is an ingest path. It goes through the same classifier and ingest actor as clipboard
+        // capture; the controller reads the drag pasteboard and calls this.
+        controller.dropService = ShelfDropService(
+            ingest: IngestActor(database: database, settings: settings), reporter: reporter,
+            dropCompleted: { [weak controller] in await controller?.dropCompleted() })
         // Only one Flotsam panel is open at a time: showing the Shelf hides the Library (FR-006-04). The reverse is
         // `actions.openLibrary`, which the Library hotkey also runs.
         controller.onReveal = { [weak self] in self?.library?.hidePanel() }

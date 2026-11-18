@@ -11,6 +11,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let item: NSStatusItem
     private var unsubscribe: (@Sendable () -> Void)?
 
+    /// The status item's frame in screen coordinates, for the Shelf's menu-bar placement (FR-006-05c).
+    var iconFrame: CGRect? { item.button?.window?.frame }
+
     init(container: AppContainer, showSetupGuide: @escaping @MainActor () -> Void) {
         self.container = container
         self.showSetupGuide = showSetupGuide
@@ -24,6 +27,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.autoenablesItems = false
         item.menu = menu
         refreshIcon()
+        container.menuBarIconFrame = { [weak self] in self?.iconFrame }
         container.presenter.onNoticesChanged = { [weak self] in self?.refreshIcon() }
         container.onTriggerStatusChange = { [weak self] in self?.refreshIcon() }
         unsubscribe = container.settings.subscribe { [weak self] _ in
