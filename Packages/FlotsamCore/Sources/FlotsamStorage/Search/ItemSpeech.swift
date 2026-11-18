@@ -18,12 +18,23 @@ public enum ItemSpeech {
         return spoken.joined(separator: ", ")
     }
 
-    /// "2 min ago", "yesterday". A copy time slightly in the future (clock skew) reads as now, never as "in 1 min".
+    /// Items older than this read as a date, not a relative phrase (FR-003-07).
+    public static let relativeWindow: TimeInterval = 7 * 86_400
+
+    /// "2 min ago", "Yesterday", then a date once the copy is more than 7 days old (FR-003-07). A copy time slightly in
+    /// the future (clock skew) reads as now, never as "in 1 min".
     public static func relativeTime(_ date: Date, now: Date) -> String {
+        let copied = min(date, now)
+        if now.timeIntervalSince(copied) > relativeWindow {
+            return copied.formatted(date: .abbreviated, time: .omitted)
+        }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         formatter.dateTimeStyle = .named
-        return formatter.localizedString(for: min(date, now), relativeTo: now)
+        let phrase = formatter.localizedString(for: copied, relativeTo: now)
+        // The formatter's own word for one day back stands alone as a label, so it opens with a capital.
+        let yesterday = formatter.localizedString(from: DateComponents(day: -1))
+        return phrase == yesterday ? phrase.localizedCapitalized : phrase
     }
 
     private static func template(_ key: String) -> String { FlotsamStrings.text(forKey: key) ?? "" }
