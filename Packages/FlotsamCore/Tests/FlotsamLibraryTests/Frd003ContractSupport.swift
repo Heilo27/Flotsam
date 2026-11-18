@@ -59,12 +59,20 @@ struct RealLibrary {
         self.database = database
         self.ingest = ingest
         let reported = reported
+        // The organizer is the shipping one over the same database, so delete, tag and note go through real storage.
+        let organizer = LibraryOrganizer(
+            store: database,
+            classifiers: ItemClassifiers(
+                editedText: { ItemClassification(kind: .text, contentKey: "edit:" + $0) },
+                fileMember: { path, isDirectory in ItemClassification(kind: isDirectory ? .folder : .file, contentKey: "file:" + path) }),
+            report: { reported.errors.append($0) })
         model = LibraryViewModel(
             source: database, paster: paster, host: host, preferences: prefs,
             effects: LibraryEffects(
                 report: { reported.errors.append($0) }, reveal: { reported.revealed.append($0) },
                 openSettings: { reported.settingsOpened += 1 },
-                external: { reported.external.append(($0, $1)) }, isAccessibilityTrusted: { true }))
+                external: { reported.external.append(($0, $1)) }, isAccessibilityTrusted: { true }),
+            organizer: organizer)
     }
 
     func cleanUp() { try? FileManager.default.removeItem(at: root) }
@@ -73,12 +81,12 @@ struct RealLibrary {
     @discardableResult
     func add(
         _ kind: ItemKind, key: String, text: String? = nil, source: String? = nil, secondsAgo: Double = 0,
-        members: [IngestMember] = [], representations: [PasteboardRepresentation] = []
+        members: [IngestMember] = [], representations: [PasteboardRepresentation] = [], originalPath: String? = nil
     ) async throws -> IngestResult {
         let candidate = IngestCandidate(
             kind: kind, contentKey: key, plainText: text, representations: representations, members: members,
             source: source.map { SourceApp(bundleId: "com.example.\($0.lowercased())", name: $0) }, origin: .pasteboard,
-            occurredAt: Date().addingTimeInterval(-secondsAgo))
+            occurredAt: Date().addingTimeInterval(-secondsAgo), originalPath: originalPath)
         return try await ingest.ingest(candidate).get()
     }
 
