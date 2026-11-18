@@ -279,6 +279,28 @@ import Testing
         #expect(domain.reported.names == ["screenshots.folderOverride"])
     }
 
+    // TASK-458. A bookmark made without `.withSecurityScope` (what a launch-argument or script-made bookmark usually is)
+    // is a real bookmark but not the stored form FR-008-10 specifies, so it reads as none with one SET-DAT-001 report.
+    // The same folder chosen through the app's own path (`FolderOverride.choosing`) is usable.
+    @Test func task458_bookmarkWithoutSecurityScopeIsRejectedAppMadeOneIsUsable() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam.task458.\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+
+        let unscoped = try folder.bookmarkData()
+        let rejected = Domain(); defer { rejected.remove() }
+        rejected.poke(unscoped.base64EncodedString(), "screenshots.folderOverride")
+        #expect(rejected.reopen().value(SettingKeys.screenshotsFolderOverride) == FolderOverride.none)
+        #expect(rejected.reported.names == ["screenshots.folderOverride"])
+
+        let accepted = Domain(); defer { accepted.remove() }
+        guard case .success(let chosen) = FolderOverride.choosing(folder) else { Issue.record("folder must be accepted"); return }
+        accepted.poke(chosen.persisted, "screenshots.folderOverride")
+        let value = accepted.reopen().value(SettingKeys.screenshotsFolderOverride)
+        #expect(value.resolvedURL?.lastPathComponent == folder.lastPathComponent)
+        #expect(accepted.reported.names.isEmpty)
+    }
+
     // OC-8016. Key code 9999 with control and command held. The chord is unusable, so Open Library must return to the
     // default and be reported once.
     @Test func oc8016_unusableChordFallsBackToDefault() {
