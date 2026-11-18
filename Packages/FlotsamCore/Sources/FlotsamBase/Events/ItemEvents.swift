@@ -18,9 +18,8 @@ public enum ItemEvent: Sendable, Equatable {
 /// Lives in Base so Shortcuts and Triggers can subscribe without importing Storage internals.
 ///
 /// Why not an actor: an actor's `publish` would have to be `async`, which is the "schedules delivery" behaviour above.
-/// Why not `Synchronization.Mutex`: it needs macOS 15 and the package targets macOS 14. `OSAllocatedUnfairLock` (in
-/// `os`, macOS 13+) is `Sendable` and owns the state it guards, so the compiler checks this class's Sendability and
-/// it needs no `@unchecked` exception (ADR-0004).
+/// Why `OSAllocatedUnfairLock` (in `os`): it is `Sendable` and owns the state it guards, so the compiler checks this
+/// class's Sendability and it needs no `@unchecked` exception (ADR-0004).
 public final class ItemEventBus: Sendable {
     private let handlers = OSAllocatedUnfairLock(initialState: [UUID: @Sendable (ItemEvent) -> Void]())
 

@@ -57,7 +57,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// An own drag-out session is running (FR-006-03: the Shelf must not hide under it).
     private var ownDragActive = false
     // Touched only in `init` and `deinit`; `NotificationCenter` removal is thread-safe, which is what lets `deinit` (not
-    // main-actor isolated on the macOS 14 target) release them.
+    // main-actor isolated) release them.
     private nonisolated(unsafe) var observers: [NSObjectProtocol] = []
     private var unsubscribeSettings: (@Sendable () -> Void)?
     /// Called each time the Shelf is shown, so the app can hide the Library: only one Flotsam panel is open at a time

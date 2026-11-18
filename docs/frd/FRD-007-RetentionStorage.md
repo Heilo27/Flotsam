@@ -127,7 +127,7 @@ All of these appear in Settings › Storage (pane layout in FRD-008); behaviours
 | Pause / Resume Capture | menu item | menu bar (FRD-008) | toggles Active and Paused |
 
 ## 9. Assumptions and open items (flagged for Friday)
-1. Spike S-1 (FR-007-18): FTS5 trigram versus in-memory scan. The system SQLite on macOS 14 may predate trigram options; the requirement is the p95, not the technique.
+1. Spike S-1 (FR-007-18): FTS5 trigram versus in-memory scan. The minimum OS is macOS 26, whose system SQLite is the one measured in ADR-0003; the requirement is the p95, not the technique.
 2. Image quality presets and budget values are the architect's reading of "image budget plus Efficient downscale preset": three quality presets and four budgets as listed. Ryan may want fewer.
 3. Clear history range choices (hour, 24 h, all) were added beyond the PRD's bare "Clear history", to serve the "copied a secret by mistake" case. Destructive class: flagged, no safety envelope widened (confirmation always, exempt items kept by default).
 4. Paused persists across relaunch and also pauses screenshot pickup (the PRD does not say). Resume does not backfill.
