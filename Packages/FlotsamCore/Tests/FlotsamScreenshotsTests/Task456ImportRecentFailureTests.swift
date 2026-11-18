@@ -142,7 +142,8 @@ struct Task456ImportRecentCoordinatorTests {
         entry.request()
         entry.request()
         entry.ready(run: run(log))
-        #expect(await settles { log.runs == 1 })
+        // The run counts itself before it reports, so wait for the report, not for the count.
+        #expect(await settles { log.hud.count == 2 })
         #expect(log.hud.first == ScreenshotImportHUD.importingMessage)
         #expect(log.hud.last == "Imported 3")
         #expect(log.runs == 1, "two presses before ready are one request")
