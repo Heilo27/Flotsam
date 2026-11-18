@@ -73,8 +73,8 @@ public protocol ShelfPasteHost {
     func hidePanel()
 }
 
-/// The paste sequence as the Shelf calls it. DEFERRED: the app layer adapts `PasteService` to this; until then the
-/// Shelf is exercised only through fakes.
+/// The paste sequence as the Shelf calls it. The app layer adapts `PasteService` to this (`ShelfPasteAdapter`); the
+/// Shelf's own tests use fakes.
 @MainActor
 public protocol ShelfPasting {
     func paste(itemId: UUID, mode: ShelfPasteMode, target: FrontmostApp?, host: any ShelfPasteHost) async -> FlotsamResult<ShelfPasteOutcome>
