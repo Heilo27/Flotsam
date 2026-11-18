@@ -1262,3 +1262,32 @@ The notice and report absence checks have no production mutation, because Notice
 - The contract says "thumbnail rows", but thumbnails are files at `thumbs/<id>-<edge>.jpg`. This is a contract wording gap.
 - `FlotsamError.message` is a StaticString, which is a compile-time guard against paths in messages.
 - 4560b64's trailer says Sonnet 5.5. It is left as is, because rewriting it would need a force-push.
+
+## 2026-11-18: A1 + A2 on `main` @ 10596ad (re-targeted from a9e1029)
+
+Clean clone at 10596ad. Nothing committed.
+
+**A1**
+- bootstrap: exit 0.
+- `swift test` (FlotsamCore): 2350 tests in 284 suites across 12 runs. 2349 passed, 1 failed, 9 known issues.
+  - The failure was OC-4102 (`WorfFRD004StorageTests.swift:429`, p95(pin) < 100 ms). It measured 150.8 ms while the load average was 32.7.
+  - Re-running that suite alone passed (17/17). This is a timing flake, the same class as OC-381-21.
+  - The 2350 total comes from the run that hit the flake.
+- check-architecture: pass.
+- build.sh Debug: BUILD SUCCEEDED with 1 warning, `ClipboardCapture.swift:112:27` ("result of call to 'assumeIsolated' is unused").
+- Delta vs df9bf09: 1848 → 2350 tests, 11 → 12 runs, known issues unchanged at 9.
+
+**A2** (Debug build, scratch home, no TCC grants)
+- Launch: pass. Menu bar item present (8 menu entries).
+- Quit: pass. No process left.
+- Text copy: stored as `text`.
+- URL copy: stored as `link`.
+- Image copy: stored as `image`, 12530 B.
+- Concealed copy: skipped with `CAP-POL-001`.
+- File copy, 5 attempts: 1 item stored, 4 deduped, copyCount 5.
+- First reads: one `CAP-VAL-001` on the empty pasteboard at launch; no `CAP-PRM-001`.
+- Crash reports: 0 before, 0 after.
+
+**Real DB, -wal and prefs plist (sha1):** identical before and after, and identical to the values in the 3b5c01c entry.
+
+**Not run:** the symlinked folder, the override folder and the AC-001-18 race.
