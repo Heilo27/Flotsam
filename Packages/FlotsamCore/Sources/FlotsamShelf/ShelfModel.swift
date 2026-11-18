@@ -1,4 +1,5 @@
 import FlotsamBase
+import FlotsamStorage
 import Foundation
 
 /// A section of the Shelf (FR-006-06).
@@ -49,6 +50,8 @@ public final class ShelfModel {
     @ObservationIgnored private let host: any ShelfPasteHost
     @ObservationIgnored private let events: ItemEventBus
     @ObservationIgnored private let effects: ShelfEffects
+    /// The file system the Missing badge reads through `ItemMember.anyExists` (FR-003-07).
+    @ObservationIgnored private let files: any FileSystemPort
 
     // MARK: Private state
 
@@ -66,7 +69,8 @@ public final class ShelfModel {
 
     public init(
         source: any ShelfDataSource, paster: any ShelfPasting, host: any ShelfPasteHost, events: ItemEventBus,
-        details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects()
+        details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects(),
+        files: any FileSystemPort = LocalFileSystem()
     ) {
         self.source = source
         self.paster = paster
@@ -74,6 +78,7 @@ public final class ShelfModel {
         self.events = events
         self.details = details
         self.effects = effects
+        self.files = files
     }
 
     // MARK: Derived
@@ -190,24 +195,27 @@ public final class ShelfModel {
                 let recentRows = Array(all.rows.filter { !$0.isPinned }.prefix(limit))
                 let rows = pinnedRows + recentRows
                 let loadedTexts = await details.cardTexts(for: rows.map(\.id))
-                let fileRows = rows.filter { [.file, .folder, .bundle].contains($0.kind) }
-                let paths = await details.memberPaths(of: fileRows.map(\.id))
+                let fileRows = rows.filter { $0.kind.referencesFiles }
+                let members = await details.fileMembers(of: fileRows.map(\.id))
                 guard !Task.isCancelled, generation == self.generation else { return }
-                apply(pinned: pinnedRows, recent: recentRows, texts: loadedTexts, memberPaths: paths, selection: policy)
+                apply(pinned: pinnedRows, recent: recentRows, texts: loadedTexts, fileMembers: members, selection: policy)
             }
         }
     }
 
     private func apply(
-        pinned: [ItemRow], recent: [ItemRow], texts: [UUID: String], memberPaths: [UUID: [String]],
+        pinned: [ItemRow], recent: [ItemRow], texts: [UUID: String], fileMembers: [UUID: [ItemMember]],
         selection policy: SelectionPolicy
     ) {
         pinnedRows = pinned
         recentRows = recent
         self.texts = texts
-        // A card is Missing when any file member is gone. This is the Shelf's seam only: the badge's rule and its
-        // data source belong to FRD-003 (see `ShelfCardDetails`).
-        missing = Set(memberPaths.filter { $0.value.contains { !effects.fileExists($0) } }.keys)
+        // The Library's rule, not a Shelf one (FR-003-07): a file, folder or bundle card is Missing when none of its
+        // members exist (a moved one is found by its bookmark; a listed bundle with no members is Missing). Only the
+        // members' source is the Shelf's port (see `ShelfCardDetails`): an item the port did not list is never marked,
+        // so with the inert port no card shows Missing.
+        let fileIDs = Set((pinned + recent).filter { $0.kind.referencesFiles }.map(\.id))
+        missing = Set(fileMembers.filter { fileIDs.contains($0.key) && !$0.value.anyExists(files: files) }.keys)
         loadState = .loaded
         applySelection(policy, rows: pinned + recent)
     }

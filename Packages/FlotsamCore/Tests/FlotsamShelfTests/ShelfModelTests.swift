@@ -112,16 +112,12 @@ import Testing
         #expect(cards[1].text == "fallback")
     }
 
-    @Test func missingStateComesOnlyThroughThePortsAndIsOffByDefault() async {
-        let file = makeShelfRow(1, kind: .file)
-        let details = FakeShelfDetails(paths: [file.id: ["/gone/a.txt", "/here/b.txt"]])
-        let inert = ShelfRig(rows: [file], details: details)
-        await inert.openSticky()
-        #expect(inert.model.sections()[0].cards[0].isMissing == false)
-
-        let checking = ShelfRig(rows: [file], details: details) { $0.files.only(["/here/b.txt"]) }
-        await checking.openSticky()
-        #expect(checking.model.sections()[0].cards[0].isMissing)
+    // The Missing rule itself (moved, deleted, partial, empty, and agreement with the Library) is in
+    // ShelfMissingTests. This one only pins that the inert port marks nothing, as FR-006-07 says.
+    @Test func inertDetailsPortMarksNothingMissing() async {
+        let rig = ShelfRig(rows: [makeShelfRow(1, kind: .file), makeShelfRow(2, kind: .bundle)])
+        await rig.openSticky()
+        #expect(rig.model.sections()[0].cards.allSatisfy { !$0.isMissing })
     }
 
     // MARK: FR-006-08 keyboard

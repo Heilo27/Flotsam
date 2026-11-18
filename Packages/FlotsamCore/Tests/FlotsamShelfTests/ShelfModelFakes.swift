@@ -1,4 +1,5 @@
 import FlotsamBase
+import FlotsamStorage
 import Foundation
 @testable import FlotsamShelf
 
@@ -101,17 +102,9 @@ final class FakeShelfPaster: ShelfPasting {
 
 struct FakeShelfDetails: ShelfCardDetails {
     var texts: [UUID: String] = [:]
-    var paths: [UUID: [String]] = [:]
+    var members: [UUID: [ItemMember]] = [:]
     func cardTexts(for ids: [UUID]) async -> [UUID: String] { texts.filter { ids.contains($0.key) } }
-    func memberPaths(of ids: [UUID]) async -> [UUID: [String]] { paths.filter { ids.contains($0.key) } }
-}
-
-/// A Sendable stand-in for the disk: every path exists until `only` names the ones that do.
-final class FakeFiles: @unchecked Sendable {
-    private let lock = NSLock()
-    private var present: Set<String>?
-    func only(_ paths: Set<String>) { lock.withLock { present = paths } }
-    func exists(_ path: String) -> Bool { lock.withLock { present?.contains(path) ?? true } }
+    func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]] { members.filter { ids.contains($0.key) } }
 }
 
 /// What the model's effects observed.
@@ -122,7 +115,6 @@ final class EffectsProbe {
     var confirmAnswer = true
     var captureCount = 0
     var onCapture: (@MainActor () -> Void)?
-    let files = FakeFiles()
 
     func effects(log: CallLog? = nil) -> ShelfEffects {
         ShelfEffects(
@@ -136,7 +128,6 @@ final class EffectsProbe {
                 confirmQuestions.append(question)
                 return confirmAnswer
             },
-            fileExists: { [files] path in files.exists(path) },
             now: { Date(timeIntervalSince1970: 1_000_100) })
     }
 }
@@ -153,12 +144,15 @@ struct ShelfRig {
     let log: CallLog
     let model: ShelfModel
 
-    init(rows: [ItemRow], details: any ShelfCardDetails = NoShelfCardDetails(), configure: (EffectsProbe) -> Void = { _ in }) {
+    init(
+        rows: [ItemRow], details: any ShelfCardDetails = NoShelfCardDetails(), files: any FileSystemPort = LocalFileSystem(),
+        configure: (EffectsProbe) -> Void = { _ in }
+    ) {
         log = CallLog()
         source = FakeShelfSource(rows: rows, log: log)
         configure(probe)
         model = ShelfModel(
-            source: source, paster: paster, host: host, events: bus, details: details, effects: probe.effects(log: log))
+            source: source, paster: paster, host: host, events: bus, details: details, effects: probe.effects(log: log), files: files)
     }
 
     /// Opens a sticky Shelf over TextEdit.

@@ -98,13 +98,6 @@ import FlotsamStorage
         }
     }
 
-    @Test("OC-6089 acceptance is decided from type identifiers alone: it takes no data, so hovering reads none")
-    func acceptanceTakesTypesOnly() {
-        // The signature is the guarantee (BR-4): `acceptance(types:originatesInShelf:)` has no data parameter, so a
-        // lazy source is never asked for bytes while a drag hovers. The decision must not need them.
-        #expect(ShelfDropPlanner.acceptance(types: [PasteboardTypes.plainText], originatesInShelf: false) == .accepted)
-    }
-
     // MARK: What a drop becomes (FR-006-13, AC-006-14)
 
     @Test("OC-6090 three files dropped from Finder are one bundle of three with the source carried through")

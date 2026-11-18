@@ -29,7 +29,7 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
     /// of a colour, the file name of a file or folder; nil for pictures and bundles.
     public let text: String?
     public let isPinned: Bool
-    /// "Missing" badge for an item with a file member that is gone (FR-006-07).
+    /// "Missing" badge for a file, folder or bundle item none of whose members exist (FR-006-07, FR-003-07).
     public let isMissing: Bool
     /// The source app's name; the view draws its small icon. Nil when the source is unknown.
     public let sourceName: String?
@@ -39,7 +39,7 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
     /// - Parameters:
     ///   - text: the item's stored plain text, for the kinds that show text. Nil falls back to the row's primary line
     ///     (already cut to two lines), so a card never renders empty when the text could not be read.
-    ///   - isMissing: whether a file member is gone, from the Shelf's missing-members port.
+    ///   - isMissing: whether none of the item's file members exist, decided by the model from the members port.
     public init(row: ItemRow, text: String? = nil, isMissing: Bool = false, now: Date) {
         id = row.id
         kind = row.kind
