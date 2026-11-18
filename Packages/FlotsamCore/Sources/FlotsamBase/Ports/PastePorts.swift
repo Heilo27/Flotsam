@@ -14,6 +14,19 @@ public struct FrontmostApp: Sendable, Equatable {
     }
 }
 
+/// The one decision behind every synthetic post (ADR-0005, FR-003-16, FR-005-14): a key may be posted to `target` only
+/// when `target` is the frontmost application right now and its process is still running. The real adapter and the test
+/// fake both call this, so neither can drift from the other.
+public enum PostGuard {
+    /// - Parameters:
+    ///   - target: the application the post is addressed to.
+    ///   - frontmost: the frontmost application read immediately before posting; nil when none could be read.
+    ///   - targetIsRunning: true only when `target`'s process was found and has not terminated.
+    public static func allowsPost(to target: FrontmostApp, frontmost: FrontmostApp?, targetIsRunning: Bool) -> Bool {
+        frontmost == target && targetIsRunning
+    }
+}
+
 /// Which application is frontmost right now.
 @MainActor
 public protocol FrontmostAppProvider {
