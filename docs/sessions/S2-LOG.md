@@ -956,7 +956,7 @@ Contains the S1-named commits (checked with `git merge-base --is-ancestor`). Too
 | File copy | **not stored**: 5 attempts (including one after an intervening text copy) each logged `CAP-VAL-001`; no `item` or `bundleMember` row |
 | `~/Library/Logs/DiagnosticReports/Flotsam*` | none; no fault-level log lines from the process |
 
-- First round of text and URL copies: the first read logged `CAP-VAL-001`, then `CAP-PRM-001 warning permission=pasteboard`; nothing stored for text and URL. After the image capture, a second round stored text and URL once each. Another session's perf harness was also writing the shared pasteboard about every 0.5 s at the start, so the first round is contaminated and I count the second round as the result.
+- First round of text and URL copies: the first read logged `CAP-VAL-001`, then `CAP-PRM-001 warning permission=pasteboard`; nothing stored for text and URL. After the image capture, a second round stored text and URL once each. I count the second round as the result. Correction: this entry first blamed the first-round miss on the perf harness writing the shared pasteboard. That is wrong. The harness writes only to a private named pasteboard, and a test asserts it is not `.general` (see the perf harness entry). The cause of the first-round miss is unknown. It may be a permission warm-up after launch (`CAP-PRM-001`); S1, please confirm.
 - File copy matches the intermittent capture already logged at 2990d01. This run it never stored. A file URL is an honoured type (FR-001-05) and is the first precedence in FR-001-08, so a copied file should be stored. Cause not determined; harness timing is not ruled out, but 0 of 5 is stronger than the earlier 3 misses.
 
 **Symlinked screenshot folder (FRD-002, TASK-428 guard)**
