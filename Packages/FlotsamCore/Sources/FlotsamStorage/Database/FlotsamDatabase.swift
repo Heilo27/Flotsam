@@ -91,6 +91,13 @@ public final class FlotsamDatabase: Sendable {
             case .opened(let pool, let migratedThisLaunch):
                 // FR-007-17 / FR-007-13: a clean open on a launch that did not migrate ends the life of old plaintext copies.
                 if !migratedThisLaunch { layout.expirePlaintextCopies(fileSystem: fileSystem, now: clock.now()) }
+                // FR-007-13: an earlier launch failed closed partway through a quarantine, so nobody was told yet.
+                // WHY: consumed even when this launch quarantined for real (`notice` already set), or the stale marker
+                // would raise a second STO-DB-002 at a later clean launch. One notice covers both.
+                let hadPendingNotice = layout.consumePendingNotices(fileSystem: fileSystem)
+                if notice == nil, hadPendingNotice {
+                    notice = FlotsamError(.stoDb002, "Database damaged; moved aside and recreated")
+                }
                 FlotsamLog.log(.database(.open, outcome: .opened), sink: logSink)
                 return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink))
             case .failed(let error):
@@ -258,7 +265,12 @@ public final class FlotsamDatabase: Sendable {
         for url in layout.databaseFileURLs + [layout.blobsURL] where fileSystem.fileExists(at: url) {
             guard case .success = fileSystem.moveItem(
                 at: url, to: destination.appendingPathComponent(url.lastPathComponent))
-            else { return false }
+            else {
+                // WHY: this launch fails closed with STO-DB-003, but what already moved (say the -wal) is safe in
+                // `destination` and the next launch recovers quietly. The marker makes that launch raise STO-DB-002.
+                layout.markNoticePending(in: destination, fileSystem: fileSystem)
+                return false
+            }
         }
         return layout.prepare(fileSystem: fileSystem).isSuccess
     }
