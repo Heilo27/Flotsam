@@ -548,6 +548,49 @@ struct WatcherEnvironmentTests {
         #expect(rig.source.running.count == 1)
     }
 
+    @Test("FR-002-03/FR-002-01 (TASK-420): a standing SSP-PRM-001 is cleared when the folder resolves to paused")
+    func deniedThenPaused() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        let chosen = try rig.temp.folder("Pictures/Chosen")
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: rig.desktop.path)
+            rig.cleanUp()
+        }
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: rig.desktop.path)
+        await rig.watcher.start()
+        #expect(await rig.watcher.status == .needsAccess)
+        #expect(rig.notices.standing(.sspPrm001))
+
+        // The override now points at a folder that cannot be used: nothing is watched, so nothing is refused.
+        let override = try FolderOverride.choosing(chosen).get()
+        rig.settings.set(override, for: SettingKeys.screenshotsFolderOverride)
+        rig.fileSystem.hide(chosen)
+        await rig.tick()
+        #expect(await rig.watcher.status == .paused)
+        #expect(rig.notices.standing(.sspIo003))
+        #expect(!rig.notices.standing(.sspPrm001), "the refusal belonged to the previous folder")
+        #expect(rig.notices.cleared(.sspPrm001) == 1)
+    }
+
+    @Test("FR-002-04/FR-002-01 (TASK-420): a standing SSP-OS-001 is cleared when the folder resolves to paused")
+    func fallbackThenPaused() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        defer { rig.cleanUp() }
+        let chosen = try rig.temp.folder("Pictures/Chosen")
+        rig.source.setFailing(true)
+        await rig.watcher.start()
+        #expect(await eventually { rig.notices.standing(.sspOs001) })
+
+        let override = try FolderOverride.choosing(chosen).get()
+        rig.settings.set(override, for: SettingKeys.screenshotsFolderOverride)
+        rig.fileSystem.hide(chosen)
+        await rig.tick()
+        #expect(await rig.watcher.status == .paused)
+        #expect(rig.notices.standing(.sspIo003))
+        #expect(await eventually { !rig.notices.standing(.sspOs001) }, "polling stopped with the folder")
+        #expect(rig.notices.cleared(.sspOs001) == 1)
+    }
+
     @Test("FR-002-04: a stream that goes invalid falls back to polling")
     func invalidatedStream() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())
