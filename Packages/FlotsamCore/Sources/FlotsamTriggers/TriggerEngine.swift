@@ -83,6 +83,7 @@ public final class TriggerEngine {
     private let resetSignal: TriggerResetSignal
     private let health: TapHealth
     private let ownBundleId: String
+    private let sink: any LogSink
 
     private let events: AsyncStream<EngineEvent>
     private let eventSink: AsyncStream<EngineEvent>.Continuation
@@ -118,7 +119,8 @@ public final class TriggerEngine {
         source: any KeyEventSource, snapshot: TriggerSnapshotStore, bindings: any ItemBindingSource,
         settings: SettingsStore, bus: ItemEventBus, expander: TriggerExpander, keyboard: any KeyboardEnvironment,
         permissions: any PermissionProbe, reporter: ErrorReporter, clock: any WallClock,
-        resetSignal: TriggerResetSignal, ownBundleId: String, pollTick: PollTick
+        resetSignal: TriggerResetSignal, ownBundleId: String, pollTick: PollTick,
+        sink: any LogSink = OSLogSink()
     ) {
         self.source = source
         self.snapshot = snapshot
@@ -134,6 +136,7 @@ public final class TriggerEngine {
         self.resetSignal = resetSignal
         self.health = TapHealth(clock: clock)
         self.ownBundleId = ownBundleId
+        self.sink = sink
         let stream = AsyncStream.makeStream(of: EngineEvent.self)
         self.events = stream.stream
         self.eventSink = stream.continuation
@@ -281,7 +284,12 @@ public final class TriggerEngine {
     }
 
     /// FR-005-13: only Secure Event Input and an excluded app are logged; an input method or an unknown app is silent.
+    ///
+    /// Every suppression is a typed word that equalled a trigger and was not expanded, so each logs the yes/no match
+    /// result as `false` (FR-000 callsite checklist). A word that equals no trigger is decided on the tap thread, where
+    /// FR-005-21 forbids I/O, and is not logged.
     private func report(_ suppression: TriggerSuppression) async {
+        FlotsamLog.log(.triggerMatched(false), sink: sink)
         switch suppression {
         case .secureInput:
             await reporter.report(FlotsamError(.trgPol001, "Secure input suppressed a trigger"), origin: .background)

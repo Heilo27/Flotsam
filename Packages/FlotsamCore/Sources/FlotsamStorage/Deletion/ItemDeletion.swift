@@ -18,7 +18,7 @@ extension FlotsamDatabase {
     /// Returns the ids that were actually removed: ids that did not exist (already deleted by a racing sweep) are
     /// left out so callers can report an exact count.
     public func delete(ids: [UUID]) async -> FlotsamResult<[UUID]> {
-        await performDelete(ids: ids, guard: nil)
+        await performDelete(ids: ids, guard: nil).map { $0.map(\.id) }
     }
 
     /// The sweeps' deletion: `delete(ids:)` for those of `ids` that still satisfy `guard` at the moment of deletion.
@@ -29,6 +29,12 @@ extension FlotsamDatabase {
     /// can change between the check and the DELETE. An id that no longer qualifies is skipped, not deleted, and is
     /// left out of the result like an id that no longer exists.
     func deleteWhileEligible(ids: [UUID], guard deletionGuard: DeletionGuard) async -> FlotsamResult<[UUID]> {
+        await deleteItemsWhileEligible(ids: ids, guard: deletionGuard).map { $0.map(\.id) }
+    }
+
+    /// `deleteWhileEligible` for a caller that also reports how many bytes went (the retention sweep's log line,
+    /// FR-000-11). Same deletion, same order of steps; the result carries each removed item's stored byte size.
+    func deleteItemsWhileEligible(ids: [UUID], guard deletionGuard: DeletionGuard) async -> FlotsamResult<[DeletedItem]> {
         await performDelete(ids: ids, guard: deletionGuard)
     }
 
@@ -44,14 +50,15 @@ extension FlotsamDatabase {
     ///
     /// Only blobs named by `representation` rows are removed. Files held by reference (`bundleMember.path`) and a
     /// screenshot's `originalPath` are never read here, so they cannot be touched.
-    private func performDelete(ids: [UUID], guard deletionGuard: DeletionGuard?) async -> FlotsamResult<[UUID]> {
+    private func performDelete(ids: [UUID], guard deletionGuard: DeletionGuard?) async -> FlotsamResult<[DeletedItem]> {
         let removed: [DeletedItem]
         do {
             removed = try await pool.write { db in try Self.deleteRows(db, ids: ids, guard: deletionGuard) }
         } catch {
             return .failure(Self.writeFailure(error))
         }
-        return .success(await finishDeletion(removed))
+        _ = await finishDeletion(removed)
+        return .success(removed)
     }
 
     /// Step 1 of `performDelete`, for a caller that deletes inside a larger transaction (FR-004-11 ungroup deletes the
@@ -68,21 +75,24 @@ extension FlotsamDatabase {
             let blobRows = try Row.fetchAll(
                 db,
                 sql: """
-                    SELECT item.id AS id, representation.blobName AS blobName
+                    SELECT item.id AS id, representation.blobName AS blobName, representation.byteSize AS byteSize
                     FROM item LEFT JOIN representation ON representation.itemId = item.id
                     WHERE item.id IN (\(marks))
                     """,
                 arguments: StatementArguments(chunk))
             guard !blobRows.isEmpty else { continue }
             var blobsById: [String: [String]] = [:]
+            var bytesById: [String: Int64] = [:]
             for row in blobRows {
                 let id: String = row["id"]
                 let name: String? = row["blobName"]
+                let bytes: Int64? = row["byteSize"]
                 blobsById[id, default: []].append(contentsOf: name.map { [$0] } ?? [])
+                bytesById[id, default: 0] += bytes ?? 0
             }
             try db.execute(sql: "DELETE FROM item WHERE id IN (\(marks))", arguments: StatementArguments(chunk))
             removed += blobsById.compactMap { id, names in
-                UUID(uuidString: id).map { DeletedItem(id: $0, blobNames: names) }
+                UUID(uuidString: id).map { DeletedItem(id: $0, blobNames: names, byteSize: bytesById[id] ?? 0) }
             }
         }
         return removed
@@ -130,6 +140,8 @@ extension FlotsamDatabase {
     struct DeletedItem: Sendable {
         let id: UUID
         let blobNames: [String]
+        /// Stored `representation.byteSize` summed over the item, for the sweep's byte count.
+        let byteSize: Int64
     }
 }
 

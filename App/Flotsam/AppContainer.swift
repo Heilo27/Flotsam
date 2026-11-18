@@ -59,6 +59,8 @@ final class AppContainer {
     private var itemSyncRunning = false
     private var itemSyncPending = false
     private var observers: [any NSObjectProtocol] = []
+    private var permissionLogger: PermissionTransitionLogger?
+    private var permissionObserver: (any NSObjectProtocol)?
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
     /// The one recurring timer's tick (S5, ADR-0004): the pasteboard poll fires it, and the tap watchdog and the
@@ -81,6 +83,20 @@ final class AppContainer {
         permissions = SystemPermissionProbe()
         loginItem = LoginItemController(service: SMLoginItemService())
         Task { await openDatabase() }
+        startPermissionLogging()
+    }
+
+    /// FR-000-11: logs a permission flipping. The first `check()` records the launch state as the baseline; each return
+    /// to the app (typically from System Settings) logs whatever changed since.
+    private func startPermissionLogging() {
+        let logger = PermissionTransitionLogger(probe: permissions)
+        permissionLogger = logger
+        logger.check()
+        permissionObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { logger.check() }
+        }
     }
 
     /// Builds the Settings window over this container's objects and points `actions.openSettings` at it, so every
