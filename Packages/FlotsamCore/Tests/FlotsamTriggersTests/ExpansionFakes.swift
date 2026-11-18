@@ -110,26 +110,37 @@ final class RecordingKeys: TriggerKeyPoster {
     }
 
     private(set) var actions: [Action] = []
+    /// The process each recorded action was addressed to, parallel to `actions`.
+    private(set) var targets: [FrontmostApp] = []
     var failKeyPress = false
     var failText = false
     var failPaste = false
-    /// Runs on every action, so a test can change the world between two posts.
+    /// What the adapter reads as frontmost at post time; nil means no check (the app is taken to be in front).
+    var frontmost: (@MainActor () -> FrontmostApp?)?
+    /// Runs just before the adapter's frontmost check, so a test can change focus in the window between the
+    /// expander's own check and the post.
+    var beforePost: (@MainActor () -> Void)?
+    /// Runs on every recorded action, so a test can change the world between two posts.
     var onAction: (() -> Void)?
 
-    func postKeyPress(keyCode: UInt16, count: Int) -> Bool {
-        actions.append(.key(keyCode, count: count))
+    /// Mirrors the adapter: nothing is recorded unless the target is still frontmost.
+    private func record(_ action: Action, to target: FrontmostApp, fail: Bool) -> Bool {
+        beforePost?()
+        if let frontmost, frontmost() != target { return false }
+        actions.append(action)
+        targets.append(target)
         onAction?()
-        return !failKeyPress
+        return !fail
     }
-    func postText(_ text: String) -> Bool {
-        actions.append(.text(text))
-        onAction?()
-        return !failText
+
+    func postKeyPress(keyCode: UInt16, count: Int, to target: FrontmostApp) -> Bool {
+        record(.key(keyCode, count: count), to: target, fail: failKeyPress)
+    }
+    func postText(_ text: String, to target: FrontmostApp) -> Bool {
+        record(.text(text), to: target, fail: failText)
     }
     func postPaste(to target: FrontmostApp) -> Bool {
-        actions.append(.paste)
-        onAction?()
-        return !failPaste
+        record(.paste, to: target, fail: failPaste)
     }
 }
 
@@ -238,6 +249,7 @@ final class ExpanderHarness {
             permissions: permissions, reporter: reporter, clock: clock, ownBundleId: "com.example.flotsam",
             calendar: Calendar(identifier: .gregorian), locale: Locale(identifier: "en_US"), sink: sink)
         environment.frontmost = Self.app
+        keys.frontmost = { [environment] in environment.frontmost }
     }
 
     /// The match the matcher would have produced for the trigger "sig" and a Space.

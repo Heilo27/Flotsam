@@ -5,7 +5,7 @@ import FlotsamBase
 /// Posts the synthetic keys Flotsam needs: ⌘V for paste-back (FR-003-15 step 6) and, for typed triggers, backspaces,
 /// re-posted boundary keys and re-typed text (FR-005-14, FR-005-15). Every event is stamped with
 /// `FlotsamEventMarker.value` so the typed-trigger tap ignores it (FR-005-13 d); `makeKeyEvents` is the one place that
-/// stamps, so no posted event can miss the marker.
+/// stamps, so no posted event can miss the marker. Every post goes through `post(_:to:)`, addressed to one process.
 @MainActor
 struct CGEventKeyPoster: TriggerKeyPoster {
     private static let vKeyCode: CGKeyCode = 9
@@ -15,19 +15,12 @@ struct CGEventKeyPoster: TriggerKeyPoster {
     /// Read again at the post, so the answer is as fresh as `NSWorkspace` can give it.
     private let frontmost = WorkspaceFrontmostAppProvider()
 
-    /// Posts to the target's process with `postToPid`, not to the session tap: the tap delivers to whichever app has
-    /// focus when the window server routes the event, so a focus change after the caller's check would paste into the
-    /// wrong app (FR-003-16). Nothing is posted unless `target` is still frontmost and still running.
     func postPaste(to target: FrontmostApp) -> Bool {
-        guard frontmost.frontmost() == target,
-            NSRunningApplication(processIdentifier: target.processId)?.isTerminated == false,
-            let events = Self.makeKeyEvents(keyCode: Self.vKeyCode, flags: .maskCommand)
-        else { return false }
-        for event in events { event.postToPid(target.processId) }
-        return true
+        guard let events = Self.makeKeyEvents(keyCode: Self.vKeyCode, flags: .maskCommand) else { return false }
+        return post(events, to: target)
     }
 
-    func postKeyPress(keyCode: UInt16, count: Int) -> Bool {
+    func postKeyPress(keyCode: UInt16, count: Int, to target: FrontmostApp) -> Bool {
         guard count >= 0 else { return false }
         // Every event is created before any is posted, so a creation failure posts nothing.
         var pending: [CGEvent] = []
@@ -35,11 +28,10 @@ struct CGEventKeyPoster: TriggerKeyPoster {
             guard let events = Self.makeKeyEvents(keyCode: keyCode, flags: []) else { return false }
             pending.append(contentsOf: events)
         }
-        Self.post(pending)
-        return true
+        return post(pending, to: target)
     }
 
-    func postText(_ text: String) -> Bool {
+    func postText(_ text: String, to target: FrontmostApp) -> Bool {
         guard !text.isEmpty else { return false }
         var pending: [CGEvent] = []
         for chunk in Self.chunks(of: text) {
@@ -48,8 +40,7 @@ struct CGEventKeyPoster: TriggerKeyPoster {
             for event in events { event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: units) }
             pending.append(contentsOf: events)
         }
-        Self.post(pending)
-        return true
+        return post(pending, to: target)
     }
 
     /// Key down then key up for one key, from a private source so the user's held modifiers (for example the ⌥ of
@@ -66,8 +57,16 @@ struct CGEventKeyPoster: TriggerKeyPoster {
         return [down, up]
     }
 
-    private static func post(_ events: [CGEvent]) {
-        for event in events { event.post(tap: .cgSessionEventTap) }
+    /// The one posting path for every key Flotsam synthesises (ADR-0005, FR-003-16, FR-005-14). Posts to the target's
+    /// process with `postToPid`, never to the session tap: the tap delivers to whichever app has focus when the window
+    /// server routes the event, so a focus change after the caller's check would send the keys to the wrong app.
+    /// Nothing is posted unless `target` is still frontmost and still running, read again here, immediately before.
+    private func post(_ events: [CGEvent], to target: FrontmostApp) -> Bool {
+        guard frontmost.frontmost() == target,
+            NSRunningApplication(processIdentifier: target.processId)?.isTerminated == false
+        else { return false }
+        for event in events { event.postToPid(target.processId) }
+        return true
     }
 
     /// Splits at character boundaries so no event carries half a surrogate pair or a split grapheme.

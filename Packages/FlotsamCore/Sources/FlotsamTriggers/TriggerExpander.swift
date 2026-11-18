@@ -110,9 +110,10 @@ public final class TriggerExpander {
         case .failure(let error): return .ended(await abortBeforeDelete(match, cause: error))
         }
 
-        // Step 5. `postKeyPress` creates every event before posting any, so `false` means none was posted and the
+        // Step 5, addressed to the process the trigger was typed into (FR-005-14). `postKeyPress` creates every event
+        // before posting any and re-checks that the app is still frontmost, so `false` means none was posted and the
         // typed trigger is still on screen; that is the same state as a step 1 to 4 failure.
-        guard keys.postKeyPress(keyCode: TriggerKeys.backspace, count: match.triggerLength) else {
+        guard keys.postKeyPress(keyCode: TriggerKeys.backspace, count: match.triggerLength, to: match.app) else {
             return .ended(await abortBeforeDelete(match, cause: nil))
         }
 
@@ -167,7 +168,7 @@ public final class TriggerExpander {
     /// the word into whatever they are in now.
     private func abortAfterDelete(_ match: TriggerMatch, cause: FlotsamError) async -> ExpansionOutcome {
         if keyboard.frontmostApp() == match.app {
-            _ = keys.postText(match.typedText)
+            _ = keys.postText(match.typedText, to: match.app)
             repostBoundary(match)
         }
         let error = expansionFailure(cause)
@@ -176,7 +177,7 @@ public final class TriggerExpander {
     }
 
     private func repostBoundary(_ match: TriggerMatch) {
-        _ = keys.postKeyPress(keyCode: match.boundaryKeyCode, count: 1)
+        _ = keys.postKeyPress(keyCode: match.boundaryKeyCode, count: 1, to: match.app)
     }
 
     /// The one error every failed step shows. The cause is kept as a code in the context, never as text.

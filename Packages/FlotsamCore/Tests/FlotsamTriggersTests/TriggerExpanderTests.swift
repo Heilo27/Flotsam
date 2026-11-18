@@ -156,6 +156,44 @@ import Testing
         #expect(h.presenter.huds.count == 1)
     }
 
+    // MARK: Pid-addressed posts (FR-005-14, security F4b)
+
+    @Test func everyPostIsAddressedToTheAppTheTriggerWasTypedInto() async {
+        let h = ExpanderHarness()
+        h.keys.failPaste = true
+        _ = await h.expander.expand(h.match())
+        // Backspaces, ⌘V, re-type and boundary repost: four posts, all to the same process.
+        #expect(h.keys.actions.count == 4)
+        #expect(h.keys.targets == Array(repeating: ExpanderHarness.app, count: 4))
+    }
+
+    @Test func aFocusChangeAfterTheRecheckBeforeTheBackspacesPostsNothing() async {
+        let h = ExpanderHarness()
+        let environment = h.environment
+        // The expander's own check passed; the user switches app in the window before the first post.
+        h.keys.beforePost = { environment.frontmost = FrontmostApp(bundleId: "com.example.other", processId: 200) }
+        let outcome = await h.expander.expand(h.match())
+        #expect(outcome == .failed(.trgOs002))
+        // No Backspace, no ⌘V, no re-type, no boundary key reached any app.
+        #expect(h.keys.actions.isEmpty)
+        #expect(h.keys.targets.isEmpty)
+        #expect(h.store.recorded.isEmpty)
+        #expect(h.presenter.huds.count == 1)
+    }
+
+    @Test func aFocusChangeAfterTheBackspacesPostsNothingMoreAndRetypesNothing() async {
+        let h = ExpanderHarness()
+        let environment = h.environment
+        h.keys.onAction = {
+            if h.keys.actions.count == 1 {
+                environment.frontmost = FrontmostApp(bundleId: "com.example.other", processId: 200)
+            }
+        }
+        let outcome = await h.expander.expand(h.match())
+        #expect(outcome == .failed(.trgOs002))
+        #expect(h.keys.actions == [.key(backspace, count: 3)])
+    }
+
     // MARK: Step 2 recheck
 
     @Test func accessibilityRevokedAtStepTwoReportsAPermissionHUDAndRepostsTheKey() async {
