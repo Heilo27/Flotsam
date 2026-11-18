@@ -59,6 +59,9 @@ final class AppContainer {
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
+    /// The one recurring timer's tick (S5, ADR-0004): the pasteboard poll fires it, and the tap watchdog and the
+    /// screenshot folder re-resolve run on it instead of owning timers.
+    private let pollTick = PollTick()
     /// The Settings window (FR-008-03). Retained here; `actions.openSettings` holds it weakly.
     private var settingsWindow: SettingsWindowController?
     /// The shortcut-and-trigger editor (FR-005-09). Nil until the database has opened.
@@ -139,7 +142,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
-            access: SystemPasteboardAccess())
+            access: SystemPasteboardAccess(), pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
         let presenter = presenter
@@ -171,7 +174,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings),
             watermarkStore: DatabaseWatermarkStore(database: database),
             report: { error in await reporter.report(error, origin: .background) },
-            clear: { code in await reporter.clearNotices(code: code) })
+            clear: { code in await reporter.clearNotices(code: code) }, pollTick: pollTick)
         screenshots = watcher
 
         let watched: Set<String> = [
@@ -324,7 +327,7 @@ final class AppContainer {
             source: EventTapKeySource(resetSignal: triggerReset), snapshot: snapshot, bindings: database,
             settings: settings, bus: database.events, expander: expander, keyboard: keyboard,
             permissions: permissions, reporter: reporter, clock: clock, resetSignal: triggerReset,
-            ownBundleId: ownBundleId)
+            ownBundleId: ownBundleId, pollTick: pollTick)
         triggerEngine = engine
         // A change of frontmost application clears the typed word (FR-005-11).
         keyboard.onFrontmostChange = { [weak engine] in engine?.frontmostApplicationDidChange() }

@@ -61,8 +61,9 @@ private final class TapSession: @unchecked Sendable {
 ///
 /// One serial loop on the main actor takes every event (matches, suppressions, disablements, item changes), so two
 /// expansions never overlap and the snapshot is rebuilt in order. Everything that decides whether a tap should exist
-/// is `reconcile()`: it runs after any change and every 5 seconds, so a permission granted or revoked while running
-/// installs or removes the tap within one watchdog interval (FR-005-19).
+/// is `reconcile()`: it runs after any change and on every watchdog pass, so a permission granted or revoked while
+/// running installs or removes the tap within one watchdog interval (FR-005-19). The watchdog has no timer: it runs on
+/// every 10th tick of the shared poll (`PollTick`, S5).
 ///
 /// Permission prompts are raised only by `userDidSaveTrigger()` and `userDidEnableTriggers()`, never at launch
 /// (FR-005-10). Call `stop()` when done: the loops hold the engine until then.
@@ -78,6 +79,7 @@ public final class TriggerEngine {
     private let permissions: any PermissionProbe
     private let reporter: ErrorReporter
     private let clock: any WallClock
+    private let pollTick: PollTick
     private let resetSignal: TriggerResetSignal
     private let health: TapHealth
     private let ownBundleId: String
@@ -89,10 +91,11 @@ public final class TriggerEngine {
 
     private var triggersEnabled = true
     private var isInstalled = false
-    /// What was last reported, so a steady state is reported once per change and not every 5 seconds.
+    /// What was last reported, so a steady state is reported once per change and not on every watchdog pass.
     private var lastReportedMissing: [ErrorCode] = []
     private var lastReportedInstallFailure: ErrorCode?
     private var tasks: [Task<Void, Never>] = []
+    private var cancelWatchdog: (@Sendable () -> Void)?
     private var unsubscribe: (@Sendable () -> Void)?
     private var hasStarted = false
 
@@ -112,7 +115,7 @@ public final class TriggerEngine {
         source: any KeyEventSource, snapshot: TriggerSnapshotStore, bindings: any ItemBindingSource,
         settings: SettingsStore, bus: ItemEventBus, expander: TriggerExpander, keyboard: any KeyboardEnvironment,
         permissions: any PermissionProbe, reporter: ErrorReporter, clock: any WallClock,
-        resetSignal: TriggerResetSignal, ownBundleId: String
+        resetSignal: TriggerResetSignal, ownBundleId: String, pollTick: PollTick
     ) {
         self.source = source
         self.snapshot = snapshot
@@ -124,6 +127,7 @@ public final class TriggerEngine {
         self.permissions = permissions
         self.reporter = reporter
         self.clock = clock
+        self.pollTick = pollTick
         self.resetSignal = resetSignal
         self.health = TapHealth(clock: clock)
         self.ownBundleId = ownBundleId
@@ -173,8 +177,10 @@ public final class TriggerEngine {
             Task { [weak self] in
                 for await apps in excludedChanges { self?.snapshot.setExcludedApps(Set(apps.identifiers)) }
             },
-            Task { [weak self] in await self?.watchdogLoop() },
         ]
+        cancelWatchdog = pollTick.every(TriggerKeys.watchdogInterval) { [weak self] in
+            Task { @MainActor in await self?.watchdogTick() }
+        }
 
         await rebuildSnapshot()
     }
@@ -185,6 +191,8 @@ public final class TriggerEngine {
         unsubscribe = nil
         tasks.forEach { $0.cancel() }
         tasks = []
+        cancelWatchdog?()
+        cancelWatchdog = nil
         eventSink.finish()
         uninstall()
     }
@@ -220,14 +228,6 @@ public final class TriggerEngine {
     }
 
     // MARK: Watchdog (FR-005-19)
-
-    private func watchdogLoop() async {
-        while !Task.isCancelled {
-            await clock.sleep(for: TriggerKeys.watchdogInterval)
-            if Task.isCancelled { break }
-            await watchdogTick()
-        }
-    }
 
     /// One watchdog pass: finds a tap macOS disabled without telling us, then re-evaluates whether a tap should exist.
     ///

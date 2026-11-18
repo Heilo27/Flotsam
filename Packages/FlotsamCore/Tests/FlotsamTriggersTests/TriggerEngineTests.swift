@@ -67,7 +67,7 @@ import Testing
         #expect(h.source.startCount == 0)
 
         h.base.permissions.set(.inputMonitoring, granted: true)
-        await h.runWatchdogPass()
+        h.runWatchdogPass()
 
         #expect(await eventually { h.engine.status == .running })
         #expect(h.source.startCount == 1)
@@ -91,7 +91,7 @@ import Testing
         #expect(h.engine.status == .running)
 
         h.base.permissions.set(.inputMonitoring, granted: false)
-        await h.runWatchdogPass()
+        h.runWatchdogPass()
 
         #expect(await eventually { h.engine.status == .inert([.setPrm002]) })
         #expect(!h.source.isInstalled)
@@ -130,7 +130,7 @@ import Testing
         #expect(await h.base.reportedCodes() == [.trgOs001])
 
         h.source.startFailure = nil
-        await h.runWatchdogPass()
+        h.runWatchdogPass()
 
         #expect(await eventually { h.engine.status == .running })
     }
@@ -186,7 +186,7 @@ import Testing
         #expect(h.source.reenableCount == 2)
 
         // The watchdog does not bring a latched tap back.
-        await h.runWatchdogPass()
+        h.runWatchdogPass()
         await h.engine.watchdogTick()
         #expect(h.engine.status == .latchedOff)
         #expect(h.source.startCount == 1)
