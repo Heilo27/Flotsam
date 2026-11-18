@@ -41,7 +41,9 @@ public final class ClipboardCapture {
     private let ingest: IngestActor
     private let pollTick: PollTick
 
-    private var timer: Timer?
+    private let scheduleTimer: TimerScheduler
+    /// Cancels the one scheduled timer source; nil when none is scheduled.
+    private var cancelTimer: (@MainActor () -> Void)?
     /// The interval `timer` was scheduled at, which is `pollTick.cadence` as of the last `syncTimer()`.
     private var timerCadence: TimeInterval?
     private var isStarted = false
@@ -69,8 +71,10 @@ public final class ClipboardCapture {
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
         access: any PasteboardAccessPort = UngatedPasteboardAccess(),
-        clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick()
+        clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick(),
+        scheduleTimer: @escaping TimerScheduler = ClipboardCapture.systemTimer
     ) {
+        self.scheduleTimer = scheduleTimer
         self.pasteboard = pasteboard
         self.access = access
         self.sourceApps = sourceApps
@@ -146,25 +150,34 @@ public final class ClipboardCapture {
     }
 
     /// The interval the timer is scheduled at now, or nil when it is not scheduled. Exposed for tests.
-    var scheduledTimerInterval: TimeInterval? { timer == nil ? nil : timerCadence }
+    var scheduledTimerInterval: TimeInterval? { cancelTimer == nil ? nil : timerCadence }
+
+    /// ADR-0011 seam: schedules a repeating timer at `interval` (with `tolerance`) that calls `fire` on the main actor,
+    /// and returns the function that cancels it. Tests pass a fake to count sources and fire them by hand.
+    public typealias TimerScheduler = @MainActor (_ interval: TimeInterval, _ tolerance: TimeInterval, _ fire: @escaping @MainActor () -> Void) -> @MainActor () -> Void
+
+    /// The production scheduler: a `Timer` on the main run loop in `.common` mode so it keeps firing while a menu is
+    /// tracked (FR-001-01).
+    public static let systemTimer: TimerScheduler = { interval, tolerance, fire in
+        let timer = Timer(timeInterval: interval, repeats: true) { _ in
+            MainActor.assumeIsolated { fire() }
+        }
+        timer.tolerance = tolerance
+        RunLoop.main.add(timer, forMode: .common)
+        return { timer.invalidate() }
+    }
 
     /// Schedules the one timer at `pollTick.cadence`: rescheduled when the cadence changes, removed when nothing needs
     /// a firing. There is never more than one timer.
     private func syncTimer() {
         guard isStarted else { return }
         let wanted = pollTick.cadence
-        if timer != nil, timerCadence == wanted { return }
-        timer?.invalidate()
-        timer = nil
+        if cancelTimer != nil, timerCadence == wanted { return }
+        cancelTimer?()
+        cancelTimer = nil
         timerCadence = wanted
         guard let wanted else { return }
-        // `.common` so the timer keeps firing while a menu is tracked (FR-001-01).
-        let timer = Timer(timeInterval: wanted, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.timerFired() }
-        }
-        timer.tolerance = Self.pollTolerance
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        cancelTimer = scheduleTimer(wanted, Self.pollTolerance) { [weak self] in self?.timerFired() }
     }
 
     /// Stops polling and returns once every payload already handed off has been ingested.
@@ -172,8 +185,8 @@ public final class ClipboardCapture {
         isStarted = false
         unsubscribeSettings?()
         unsubscribeSettings = nil
-        timer?.invalidate()
-        timer = nil
+        cancelTimer?()
+        cancelTimer = nil
         timerCadence = nil
         continuation?.finish()
         continuation = nil

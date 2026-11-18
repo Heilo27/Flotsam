@@ -16,6 +16,7 @@ In the skeleton (used by real code today):
 | `PasteboardPort` (`changeCount`, `readSnapshot`, `write`) | `@MainActor` | `NSPasteboard.general` | Capture, Paste |
 | `KeyValueStore` (get/set/observe) | Sendable | `UserDefaults` | `SettingsStore` |
 | `ScreenCapturePreferences` (`location`, `name`) | Sendable | CFPreferences, `com.apple.screencapture` | Screenshots (FRD-002) |
+| `ClipboardCapture.TimerScheduler` (closure: interval, tolerance, fire, returns a cancel) | `@MainActor` | `Timer` on `RunLoop.main`, `.common` | Capture poll timer (TASK-430); a closure inside `FlotsamCapture`, not a `Base/Ports` protocol, because only Capture schedules the timer |
 
 Declared when the owning FRD is built, not before: `FrontmostAppProvider`, `KeyEventPoster`, `KeyEventSource`, `HotkeyRegistrar`, `FolderEventSource`, `PermissionProbe`.
 

@@ -117,7 +117,7 @@ final class GapRig {
 
     static let frontmostBundle = "com.example.writer"
 
-    init(pollTick: PollTick = PollTick()) async throws {
+    init(pollTick: PollTick = PollTick(), scheduleTimer: @escaping ClipboardCapture.TimerScheduler = ClipboardCapture.systemTimer) async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-gap-\(UUID().uuidString)")
         let sink = self.sink
         let presenter = self.presenter
@@ -136,7 +136,8 @@ final class GapRig {
             pasteboard: pasteboard,
             sourceApps: GapSourceApps(frontmost: SourceApp(bundleId: Self.frontmostBundle, name: "Writer")),
             ownWrites: ledger, ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { ignored.value }, sink: sink, pollTick: pollTick)
+            reporter: reporter, ignoredApps: { ignored.value }, sink: sink, pollTick: pollTick,
+            scheduleTimer: scheduleTimer)
     }
 
     /// Runs one poll, then waits until everything handed off has been ingested (stop drains the consumer).
