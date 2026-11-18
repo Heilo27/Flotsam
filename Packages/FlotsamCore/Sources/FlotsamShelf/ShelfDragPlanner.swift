@@ -43,8 +43,9 @@ public struct ShelfDragPlan: Sendable, Equatable {
     /// counted (FR-006-11), a bundle once however many members it has.
     public let draggedItemIds: [UUID]
 
-    /// The number on the drag image's badge when more than one card is dragged, and the `shelf.dragOut` log count
-    /// (FR-006-10, FR-006-18). Counts cards, not pasteboard items.
+    /// The number of cards the plan provides for (cards, not pasteboard items). It is an upper bound on what is
+    /// dragged: the app skips a card none of whose items it can write (an image `NSImage` cannot read), so the drag
+    /// image's badge and the `shelf.dragOut` count (FR-006-10, FR-006-18) use the cards that got a writer, not this.
     public var cardCount: Int { draggedItemIds.count }
 }
 

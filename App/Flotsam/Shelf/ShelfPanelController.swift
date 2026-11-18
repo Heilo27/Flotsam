@@ -465,18 +465,23 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         if outside, machine.isVisible { send(.clickOutside) }
     }
 
-    private func mouseUp() {
+    private func mouseUp() { gestureEnded() }
+
+    /// The button is up and any drag it began is over, however the end reached us: the global mouse-up monitor, a drop
+    /// on the panel, or the destination's `draggingEnded` (a drag from another app that was refused, cancelled with Esc
+    /// or dropped elsewhere, whose mouse-up the monitors never see). One place, so the machine's `isDragging` and
+    /// `isButtonDown` cannot be left set by whichever path misses.
+    private func gestureEnded() {
         dragCountAtMouseDown = nil
         dragGestureEnded()
         send(.buttonDown(false))
         reportPointer()
     }
 
-    /// A drag gesture is over without a mouse-up having reached the global monitor: a drop on the Shelf (AppKit takes
-    /// the up for the destination) or the drag leaving the panel. The machine must not keep hearing "dragging", or a
-    /// transient Shelf never hides. An own drag-out is not ended here: the panel is a drop destination too and hears
-    /// `draggingExited` when the card leaves it, while the session goes on (`ownDragSession` ends it). `dragDetected`
-    /// clears so a drag that is still going is seen again at its next `leftMouseDragged`.
+    /// A drag gesture is over, possibly without a mouse-up having reached the global monitor (a drop on the Shelf, or a
+    /// drag from another app that ended elsewhere). The machine must not keep hearing "dragging", or a transient Shelf
+    /// never hides. An own drag-out is not ended here: the panel is a drop destination too, and the session ends through
+    /// `ownDragSession`.
     private func dragGestureEnded() {
         guard !ownDragActive else { return }
         dragDetected = false
@@ -487,12 +492,11 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// machine still holds as down, which would otherwise block hover reveal (FR-006-03b).
     private func ownDragSession(_ dragging: Bool) {
         ownDragActive = dragging
-        send(.dragging(dragging))
-        guard !dragging else { return }
-        dragCountAtMouseDown = nil
-        dragDetected = false
-        send(.buttonDown(false))
-        reportPointer()
+        if dragging {
+            send(.dragging(true))
+            return
+        }
+        gestureEnded()
     }
 
     /// A drag is a pressed button plus a change to the drag pasteboard since the press; plain window drags and text
@@ -569,10 +573,17 @@ extension ShelfPanelController: ShelfDropDelegate {
         return accepted ? .copy : []
     }
 
+    /// The drag left the panel but is still going, so it is not ended here: sending `.dragging(false)` would start the
+    /// 600 ms hide clock under a drag the person is still holding. A drag that ends outside the panel ends through
+    /// `shelfDragEnded` (or the mouse-up monitor).
     func shelfDragExited() {
         model.setDropTargeted(false)
-        dragGestureEnded()
         reportPointer()
+    }
+
+    func shelfDragEnded() {
+        model.setDropTargeted(false)
+        gestureEnded()
     }
 
     /// Reads the bytes now (they are only valid during the drag) and stores them asynchronously. The result is not the
@@ -580,9 +591,7 @@ extension ShelfPanelController: ShelfDropDelegate {
     func shelfPerformDrop(_ info: any NSDraggingInfo) -> Bool {
         model.setDropTargeted(false)
         // The drop ends the gesture, and the mouse-up that follows may never reach the global monitor.
-        dragCountAtMouseDown = nil
-        dragGestureEnded()
-        send(.buttonDown(false))
+        gestureEnded()
         guard let dropService else { return false }
         let pasteboard = SystemPasteboard(pasteboard: info.draggingPasteboard)
         let types = pasteboard.currentTypeIdentifiers()

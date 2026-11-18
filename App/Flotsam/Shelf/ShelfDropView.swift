@@ -8,7 +8,11 @@ protocol ShelfDropDelegate: AnyObject {
     /// A drag entered or moved over the panel. Returns `.copy` when the Shelf takes it, `[]` when it refuses (the
     /// not-allowed cursor, FR-006-12).
     func shelfDragUpdated(_ info: any NSDraggingInfo) -> NSDragOperation
+    /// The drag left the panel and is still going.
     func shelfDragExited()
+    /// The drag session is over (refused, cancelled with Esc, or dropped anywhere), whether or not a mouse-up reached
+    /// the global monitors.
+    func shelfDragEnded()
     /// The drop happened. Returns whether the drop was taken; storing continues asynchronously.
     func shelfPerformDrop(_ info: any NSDraggingInfo) -> Bool
     /// The pointer entered or left the panel. Global monitors do not see events over the app's own windows, so the
@@ -51,6 +55,8 @@ final class ShelfDropView: NSVisualEffectView {
     }
 
     override func draggingExited(_ sender: (any NSDraggingInfo)?) { delegate?.shelfDragExited() }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) { delegate?.shelfDragEnded() }
 
     override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool { true }
 

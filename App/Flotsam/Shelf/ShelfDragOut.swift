@@ -66,24 +66,27 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
 
     private func start(_ plan: ShelfDragPlan, from view: NSView, event: NSEvent) {
         providers = []
-        var dragItems: [NSDraggingItem] = []
+        var writers: [any NSPasteboardWriting] = []
         var written: Set<UUID> = []
-        let frame = view.bounds
-        let image = Self.stackedImage(of: view, count: plan.cardCount)
         for item in plan.items {
             guard let writer = writer(for: item) else { continue }
-            let dragItem = NSDraggingItem(pasteboardWriter: writer)
-            dragItem.setDraggingFrame(frame, contents: dragItems.isEmpty ? image : nil)
-            dragItems.append(dragItem)
+            writers.append(writer)
             written.insert(item.itemId)
         }
-        guard !dragItems.isEmpty else {
+        guard !writers.isEmpty else {
             ports?.report(FlotsamError(.libDat001, "Nothing left to drag"))
             return
         }
-        // A card whose only item had no writer (an image `NSImage` cannot read) is not dragged, so it is not counted as
-        // pasted when the drop is accepted (FR-006-10, FR-006-11).
+        // A card whose only item had no writer (an image `NSImage` cannot read) is not dragged, so it is neither counted
+        // as pasted when the drop is accepted nor on the drag image's badge (FR-006-10, FR-006-11).
         draggedItemIds = plan.draggedItemIds.filter(written.contains)
+        let frame = view.bounds
+        let image = Self.stackedImage(of: view, count: draggedItemIds.count)
+        let dragItems = writers.enumerated().map { index, writer in
+            let dragItem = NSDraggingItem(pasteboardWriter: writer)
+            dragItem.setDraggingFrame(frame, contents: index == 0 ? image : nil)
+            return dragItem
+        }
         let session = view.beginDraggingSession(with: dragItems, event: event, source: self)
         session.animatesToStartingPositionsOnCancelOrFail = true
     }
