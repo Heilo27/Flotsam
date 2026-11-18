@@ -13,9 +13,9 @@ import Foundation
 /// Tick cost (FR-001-01): one `changeCount` comparison, nothing else, until the count changes.
 @MainActor
 public final class ClipboardCapture {
-    /// FR-001-01.
-    static let pollInterval: TimeInterval = 0.5
-    static let pollTolerance: TimeInterval = 0.1
+    /// FR-001-01. The values live with the tick every periodic job shares (`PollTick`).
+    static let pollInterval = PollTick.interval
+    static let pollTolerance = PollTick.tolerance
     /// FR-001-18: consecutive changes that return no type data before capture suspends.
     static let emptyReadsBeforeSuspension = 3
     /// FR-001-01: reads of one `changeCount` that may come back empty before the change counts as an empty change. A
@@ -36,6 +36,7 @@ public final class ClipboardCapture {
     private let clock: any WallClock
     private let sink: any LogSink
     private let ingest: IngestActor
+    private let pollTick: PollTick
 
     private var timer: Timer?
     private var continuation: AsyncStream<CapturedPayload>.Continuation?
@@ -59,7 +60,7 @@ public final class ClipboardCapture {
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
         access: any PasteboardAccessPort = UngatedPasteboardAccess(),
-        clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink()
+        clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick()
     ) {
         self.pasteboard = pasteboard
         self.access = access
@@ -71,6 +72,7 @@ public final class ClipboardCapture {
         self.ignoredApps = ignoredApps
         self.clock = clock
         self.sink = sink
+        self.pollTick = pollTick
     }
 
     // MARK: Lifecycle
@@ -88,7 +90,11 @@ public final class ClipboardCapture {
 
         // `.common` so the timer keeps firing while a menu is tracked (FR-001-01).
         let timer = Timer(timeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.poll() }
+            MainActor.assumeIsolated {
+                self?.poll()
+                // Slower periodic work shares this timer's tick (S5, ADR-0004); the poll itself goes first.
+                self?.pollTick.fire()
+            }
         }
         timer.tolerance = Self.pollTolerance
         RunLoop.main.add(timer, forMode: .common)

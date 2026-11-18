@@ -23,8 +23,8 @@ public enum TriggerKeys {
 
     /// FR-005-11: the word is cleared after this long without a key event.
     public static let wordIdleTimeout: Duration = .seconds(5)
-    /// FR-005-19.
-    public static let watchdogInterval: Duration = .seconds(5)
+    /// FR-005-19: seconds between watchdog passes, a whole number of poll ticks (`PollTick`).
+    public static let watchdogInterval: TimeInterval = 5
     public static let disableLimit = 3
     public static let disableWindow: Duration = .seconds(60)
 

@@ -232,6 +232,7 @@ final class EngineHarness {
     let bus = ItemEventBus()
     let clock = GatedClock()
     let resetSignal = TriggerResetSignal()
+    let pollTick = PollTick()
     let engine: TriggerEngine
 
     init(triggers: [UUID: String] = [:], triggersEnabled: Bool = true, base: ExpanderHarness = ExpanderHarness()) {
@@ -241,15 +242,16 @@ final class EngineHarness {
         engine = TriggerEngine(
             source: source, snapshot: base.snapshot, bindings: bindings, settings: settings, bus: bus,
             expander: base.expander, keyboard: base.environment, permissions: base.permissions,
-            reporter: base.reporter, clock: clock, resetSignal: resetSignal, ownBundleId: "com.example.flotsam")
+            reporter: base.reporter, clock: clock, resetSignal: resetSignal, ownBundleId: "com.example.flotsam",
+            pollTick: pollTick)
     }
 
     /// Notice codes shown to the user, newest first.
     var noticeCodes: [ErrorCode] { base.presenter.notices.map(\.code) }
 
-    /// Waits until the watchdog loop is asleep on the gated clock, then lets it run one pass.
-    func runWatchdogPass() async {
-        _ = await eventually { clock.waiting > 0 }
-        clock.release()
+    /// Runs the poll ticks that make one watchdog period (FR-005-19); the pass itself runs in a task.
+    func runWatchdogPass() {
+        let ticks = Int(TriggerKeys.watchdogInterval / PollTick.interval)
+        for _ in 0..<ticks { pollTick.fire() }
     }
 }

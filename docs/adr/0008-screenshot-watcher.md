@@ -7,7 +7,7 @@ FR-002-04 specifies an FSEvents stream with file-level events, 0.3 s latency, no
 
 ## Decision
 - `FolderEventSource` port in Base; adapter `FSEventsFolderSource` in `App/Platform/` (FSEvents stream, filters direct children, ignores symlinks and subfolders) plus the polling variant of the same port, chosen by the adapter factory when stream creation fails.
-- `Screenshots.ScreenshotWatcher` (actor) owns folder resolution (override, `com.apple.screencapture` `location`, Desktop), re-resolution every 30 s and on activation, the 0.5 s stability check, recognition, watermark reconcile, and handoff to `IngestActor`.
+- `Screenshots.ScreenshotWatcher` (actor) owns folder resolution (override, `com.apple.screencapture` `location`, Desktop), re-resolution every 30 s (on the shared poll tick, ADR-0004) and on activation, the 0.5 s stability check, recognition, watermark reconcile, and handoff to `IngestActor`.
 - Recognition is one function, `ScreenshotRecognizer`, holding the one `ScreenshotNamePrefixes` list and the attribute check; "Import recent screenshots" (FR-002-12) and live pickup both call it.
 - Reading the attribute goes through the `FileSystemPort` (`extendedAttribute(named:)`); birth date and entry kind (regular, directory, link) come from its `fileInfo(at:)`.
 - The system `location` and `name` preferences come from a `ScreenCapturePreferences` port in Base, read fresh on every resolution; its CFPreferences adapter is Foundation-only, so it sits beside `LocalFileSystem` in Base.

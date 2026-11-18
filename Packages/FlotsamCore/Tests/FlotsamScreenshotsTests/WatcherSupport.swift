@@ -9,7 +9,7 @@ import FlotsamPayload
 // `ManualClock`, `FixedPreferences` and `TempFolder` live in ScreenshotSupport.swift.
 
 /// A clock the test steps. Waits under a second (the 0.5 s stability check) pass at once and move time forward;
-/// longer waits (the 30 s tick, the 5 s poll) suspend until `advance(by:)` reaches their deadline.
+/// longer waits (the 5 s poll) suspend until `advance(by:)` reaches their deadline.
 final class SteppedClock: WallClock, @unchecked Sendable {
     private struct Sleeper {
         let seconds: TimeInterval
@@ -248,6 +248,7 @@ final class WatcherRig: @unchecked Sendable {
     let home: URL
     let desktop: URL
     let clock = SteppedClock()
+    let pollTick = PollTick()
     let source = FakeFolderSource()
     let ingest = IngestRecorder()
     let marks: MemoryWatermarkStore
@@ -271,7 +272,7 @@ final class WatcherRig: @unchecked Sendable {
         return ScreenshotWatcher(
             fileSystem: fileSystem, preferences: preferences, home: home, clock: clock, eventSource: source,
             settings: settings, ingest: ingest, watermarkStore: marks,
-            report: { notices.raise($0) }, clear: { notices.clear($0) }, sink: sink)
+            report: { notices.raise($0) }, clear: { notices.clear($0) }, pollTick: pollTick, sink: sink)
     }
 
     /// A new launch: a fresh watcher over the same folders, watermark and ingest.
@@ -301,12 +302,11 @@ final class WatcherRig: @unchecked Sendable {
 
     func event(_ url: URL) { source.emit(.changed([url])) }
 
-    /// One 30 s tick, finished: waits for the tick task to park, advances, and waits for it to park again, which it
-    /// does only after the tick's work is done.
+    /// One 30 s tick, finished: time moves on and the tick's work runs to its end (the poll's timer is not in play;
+    /// the watcher's `PollTick` registration is driven by `rig.pollTick`).
     func tick() async {
-        _ = await eventually { clock.sleeping(seconds: 30) >= 1 }
-        clock.advance(by: 30)
-        _ = await eventually { clock.sleeping(seconds: 30) >= 1 }
+        clock.advance(by: ScreenshotWatcher.tickInterval)
+        await watcher.tickFired()
     }
 
     /// One 5 s poll of the fallback source, started (its effect arrives through the watcher's task).
