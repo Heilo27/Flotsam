@@ -891,6 +891,16 @@
         }
       }
     },
+    "ui.library.missing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Missing"
+          }
+        }
+      }
+    },
     "ui.library.noResultsBody" : {
       "localizations" : {
         "en" : {

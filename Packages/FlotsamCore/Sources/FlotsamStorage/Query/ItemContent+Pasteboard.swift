@@ -24,22 +24,8 @@ extension ItemContent {
 
     /// Where each member is now, in member order; members whose file is gone are left out.
     public func existingMemberURLs(files: any FileSystemPort) -> [URL] {
-        members.compactMap { $0.existingURL(files: files) }
-    }
-}
-
-extension ItemMember {
-    /// The member's current location: where its bookmark says (it follows a move or rename), else the stored path.
-    /// Nil when nothing exists there any more.
-    public func existingURL(files: any FileSystemPort) -> URL? {
-        var candidates: [URL] = []
-        if let bookmark {
-            var stale = false
-            if let resolved = try? URL(resolvingBookmarkData: bookmark, options: [.withoutUI, .withoutMounting], relativeTo: nil, bookmarkDataIsStale: &stale) {
-                candidates.append(resolved)
-            }
+        members.compactMap {
+            FileMemberLocator.currentURL(path: $0.path, bookmark: $0.bookmark, isDirectory: $0.isDirectory, files: files)
         }
-        candidates.append(URL(fileURLWithPath: path, isDirectory: isDirectory))
-        return candidates.first { files.fileExists(at: $0) }
     }
 }

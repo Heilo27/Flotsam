@@ -20,6 +20,10 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
     public let isPinned: Bool
     public let hasTrigger: Bool
     public let hasShortcut: Bool
+    /// The files this item references are all gone: the row shows the "Missing" badge (FR-003-07).
+    public let isMissing: Bool
+    /// The badge's text (`ui.library.missing`), nil when the item is not missing.
+    public let missingBadge: String?
     /// The "⌘1" to "⌘9" badge: only the first nine visible rows have one.
     public let shortcutBadge: String?
     public let accessibilityLabel: String
@@ -31,6 +35,8 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
         isPinned = row.isPinned
         hasTrigger = row.hasTrigger
         hasShortcut = row.hasShortcut
+        isMissing = row.isMissing
+        missingBadge = row.isMissing ? LibraryText.string("ui.library.missing") : nil
         shortcutBadge = (0..<9).contains(position) ? "⌘\(position + 1)" : nil
         tagChips = Array(row.tagNames.prefix(Self.maximumTagChips))
         let overflow = row.tagNames.count - Self.maximumTagChips
@@ -39,7 +45,8 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
         let relative = ItemSpeech.relativeTime(row.lastCopiedAt, now: now)
         secondaryText = [row.sourceName, relative].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
 
-        accessibilityLabel = ItemSpeech.label(for: row, now: now)
+        // The Missing badge is read after the shared label (kind, primary line, source, age, pinned) (FR-003-07, FR-003-21).
+        accessibilityLabel = [ItemSpeech.label(for: row, now: now), missingBadge].compactMap { $0 }.joined(separator: ", ")
     }
 }
 

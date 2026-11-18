@@ -9,7 +9,7 @@ enum PastePayload {
     static func representations(
         for content: ItemContent, mode: PasteMode, itemId: UUID, files: any FileSystemPort
     ) -> FlotsamResult<[PasteboardRepresentation]> {
-        if content.kind.isFileBacked {
+        if content.kind.referencesFiles {
             let urls = content.existingMemberURLs(files: files)
             guard !urls.isEmpty else {
                 return .failure(FlotsamError(.libDat001, "Every file of the item is gone", context: [.itemId: .id(itemId)]))
