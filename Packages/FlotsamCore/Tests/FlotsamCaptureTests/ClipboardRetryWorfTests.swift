@@ -98,7 +98,7 @@ private struct Rig {
         let capture = ClipboardCapture(
             pasteboard: board, sourceApps: Writer(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { ignored }, clock: clock, sink: sink, scheduleTimer: inertTimer)
+            reporter: reporter, ignoredApps: { ignored }, access: AllowedPasteboardAccess(), clock: clock, sink: sink, scheduleTimer: inertTimer)
         return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites, clock: clock, reporter: reporter)
     }
 

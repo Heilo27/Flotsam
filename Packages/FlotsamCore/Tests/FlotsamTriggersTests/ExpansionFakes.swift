@@ -268,3 +268,9 @@ final class ExpanderHarness {
     /// Codes the reporter recorded (Warning and above), oldest first.
     func reportedCodes() async -> [ErrorCode] { await reporter.recentErrors().map(\.code) }
 }
+
+/// Pasteboard reads allowed ("Paste from Other Apps" set to Allow): the access the capture tests run under unless a
+/// test supplies its own stub.
+struct AllowedPasteboardAccess: PasteboardAccessPort {
+    var isReadAllowed: Bool { true }
+}

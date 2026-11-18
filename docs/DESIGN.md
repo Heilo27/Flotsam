@@ -384,7 +384,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.row.bundleCount` | 1 item / {n} items (plural: one, other) | (7/40) |
 | `settings.privacy.accessibility.help` | Lets Flotsam paste into the app you are using. | (46/150) |
 | `settings.privacy.input.help` | Lets triggers notice the text you type. Flotsam never stores keystrokes. | (72/150) |
-| `settings.privacy.pasteOther.help` | macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow. | (78/150) |
+| `settings.privacy.pasteOther.help` | macOS asks before apps read the clipboard. Choose Always Allow. | (63/150) |
 | `settings.triggers.needInput` | Triggers need Input Monitoring. Open Settings to allow it. | (58/150) |
 | `settings.storage.keepHelp` | Pinned items and items with a shortcut are always kept. | (55/150) |
 | `settings.general.historyHelp` | Turn off to pause. Existing items stay. | (39/150) |
@@ -398,7 +398,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `onb.1.title` | Everything you copy, within reach | (33/40) |
 | `onb.1.body` | Flotsam keeps your clipboard and screenshot history on this Mac. Nothing leaves it. | (83/150) |
 | `onb.2.title` | Allow Paste from Other Apps | (27/40) |
-| `onb.2.body` | macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow so Flotsam can save what you copy. | (112/150) |
+| `onb.2.body` | macOS asks before apps read the clipboard. Choose Always Allow so Flotsam can save what you copy. | (97/150) |
 | `onb.2.stakes` | Skip this and Flotsam can’t record new copies. | (46/150) |
 | `onb.3.title` | Allow Accessibility | (19/40) |
 | `onb.3.body` | Accessibility lets Flotsam paste into the app you are using. | (60/150) |

@@ -27,7 +27,7 @@ struct Worf435OnboardingResumeTests {
 
     // OC-8098. Red if save/savedStep stop round-tripping through the persisted store (e.g. save becomes a no-op or the
     // key is not written), or the flow ignores the saved step, for ANY step.
-    @Test("OC-8098: quitting at each step resumes at that very step (gated Mac)", arguments: OnboardingStep.allCases)
+    @Test("OC-8098: quitting at each step resumes at that very step", arguments: OnboardingStep.allCases)
     func resumeAtEveryStepGated(step: OnboardingStep) {
         let r = Relaunchable()
         defer { r.wipe() }
@@ -35,37 +35,12 @@ struct Worf435OnboardingResumeTests {
         r.launch().progress.save(step)
         // when relaunched (fresh readers over the same defaults)
         let relaunched = r.launch()
-        let flow = OnboardingFlow(gatesPasteboard: true, resumingAt: relaunched.progress.savedStep())
+        let flow = OnboardingFlow(resumingAt: relaunched.progress.savedStep())
         // then onboarding is still due automatically and it opens on exactly that step
         #expect(OnboardingFlow.shouldShowAutomatically(settings: relaunched.settings))
         #expect(flow.current == step)
         #expect(flow.position == step.rawValue + 1)
         #expect(flow.total == 8)
-    }
-
-    // OC-8098. On macOS 14 step 2 does not exist: every other step still resumes in place, position counts out of 7.
-    @Test("OC-8098: quitting at each step resumes at that step (ungated Mac, 7 steps)", arguments: OnboardingStep.allCases.filter { $0 != .clipboard })
-    func resumeAtEveryStepUngated(step: OnboardingStep) {
-        let r = Relaunchable()
-        defer { r.wipe() }
-        r.launch().progress.save(step)
-        let flow = OnboardingFlow(gatesPasteboard: false, resumingAt: r.launch().progress.savedStep())
-        #expect(flow.current == step)
-        #expect(flow.total == 7)
-        #expect(flow.position == (step == .welcome ? 1 : step.rawValue))
-    }
-
-    // OC-8098 edge. A step saved on a Mac that gated pasteboard reads, resumed on one that does not (OS change between
-    // launches): the hidden step must not strand the flow. Red if resume accepts a step the flow does not show.
-    @Test("OC-8098 edge: a saved step 2 on a Mac without step 2 starts at step 1, not on a hidden step")
-    func savedHiddenStepStartsAtOne() {
-        let r = Relaunchable()
-        defer { r.wipe() }
-        r.launch().progress.save(.clipboard)
-        let flow = OnboardingFlow(gatesPasteboard: false, resumingAt: r.launch().progress.savedStep())
-        #expect(flow.current == .welcome)
-        #expect(flow.position == 1)
-        #expect(flow.steps.contains(flow.current))
     }
 
     // OC-8098 / FR-008-12 "Show Setup Guide...". Red if the plain initialiser (what Show Setup Guide uses) ever picks
@@ -76,12 +51,10 @@ struct Worf435OnboardingResumeTests {
         defer { r.wipe() }
         r.launch().progress.save(.hotkey)
         #expect(r.launch().progress.savedStep() == .hotkey)  // the point is on disk
-        for gated in [true, false] {
-            let flow = OnboardingFlow(gatesPasteboard: gated)
-            #expect(flow.current == .welcome)
-            #expect(flow.position == 1)
-            #expect(flow.isFirst)
-        }
+        let flow = OnboardingFlow()
+        #expect(flow.current == .welcome)
+        #expect(flow.position == 1)
+        #expect(flow.isFirst)
     }
 
     // OC-8098. Red if a nil / absent resume point stops meaning step 1 (fresh install).
@@ -91,7 +64,7 @@ struct Worf435OnboardingResumeTests {
         defer { r.wipe() }
         let launched = r.launch()
         #expect(launched.progress.savedStep() == nil)
-        #expect(OnboardingFlow(gatesPasteboard: true, resumingAt: launched.progress.savedStep()).current == .welcome)
+        #expect(OnboardingFlow(resumingAt: launched.progress.savedStep()).current == .welcome)
         #expect(OnboardingFlow.shouldShowAutomatically(settings: launched.settings))
     }
 
@@ -104,7 +77,7 @@ struct Worf435OnboardingResumeTests {
         r.poke(raw)
         let progress = r.launch().progress
         #expect(progress.savedStep() == nil)
-        #expect(OnboardingFlow(gatesPasteboard: true, resumingAt: progress.savedStep()).current == .welcome)
+        #expect(OnboardingFlow(resumingAt: progress.savedStep()).current == .welcome)
     }
 
     // OC-8098 boundary 0 and 7 (first and last raw values): both resume exactly.
@@ -115,7 +88,7 @@ struct Worf435OnboardingResumeTests {
         r.poke("0")
         #expect(r.launch().progress.savedStep() == .welcome)
         r.poke("7")
-        let flow = OnboardingFlow(gatesPasteboard: true, resumingAt: r.launch().progress.savedStep())
+        let flow = OnboardingFlow(resumingAt: r.launch().progress.savedStep())
         #expect(flow.current == .done)
         #expect(flow.isLast)
     }
@@ -142,7 +115,7 @@ struct Worf435OnboardingResumeTests {
         let r = Relaunchable()
         defer { r.wipe() }
         let progress = r.launch().progress
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        var flow = OnboardingFlow()
         var trail: [OnboardingStep] = []
         for _ in 0..<4 { flow.advance(); progress.save(flow.current); trail.append(r.launch().progress.savedStep()!) }
         #expect(trail == [.clipboard, .accessibility, .inputMonitoring, .screenshots])

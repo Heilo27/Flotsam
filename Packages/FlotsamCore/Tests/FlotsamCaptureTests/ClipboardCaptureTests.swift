@@ -100,7 +100,7 @@ final class ClipboardCaptureTests: XCTestCase {
         capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: FakeSourceApps(frontmost: SourceApp(bundleId: "com.example.writer", name: "Writer")),
             ownWrites: ledger, ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { [unowned self] in ignored }, clock: clock, scheduleTimer: inertTimer)
+            reporter: reporter, ignoredApps: { [unowned self] in ignored }, access: AllowedPasteboardAccess(), clock: clock, scheduleTimer: inertTimer)
     }
 
     /// Reads the change being watched once, then lets its watch run out (FR-001-01) and ticks so it ends: the change

@@ -443,16 +443,6 @@
       "must_verify": true
     },
     {
-      "id": "OC-8045",
-      "requirement": "FR-008-07",
-      "given": "Settings › Privacy on macOS 14",
-      "when": "user lists the pane's controls",
-      "then": "the 'Paste from Other Apps' row is absent; all other Privacy elements are present",
-      "class": "layout",
-      "source_verdict": "CONFIRMED",
-      "must_verify": true
-    },
-    {
       "id": "OC-8046",
       "requirement": "AC-008-04",
       "given": "Settings › Storage",
@@ -838,16 +828,6 @@
       "given": "Fresh install on macOS 15.4+, Paste from Other Apps not set to Allow",
       "when": "user reaches step 2 and sets Allow in System Settings, then returns",
       "then": "step 2 shows the instruction, a System Settings button and a status that changes to granted without restarting onboarding",
-      "class": "state",
-      "source_verdict": "CONFIRMED",
-      "must_verify": true
-    },
-    {
-      "id": "OC-8085",
-      "requirement": "FR-008-12",
-      "given": "Fresh install on macOS 14",
-      "when": "user continues from step 1",
-      "then": "step 2 is not shown; the next step is Paste for you (Accessibility)",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true

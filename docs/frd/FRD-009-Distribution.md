@@ -23,7 +23,7 @@ A person downloads one file from GitHub Releases, drags Flotsam to Applications,
 - **FR-009-08** No updater. The app target contains no updater and no network code (verified by FRD-008 AC-008-13).
 - **FR-009-09** Publishing. Tagging and creating the GitHub Release are manual, by the maintainer, after the script succeeds. The script does neither.
 - **FR-009-10** Tools. Only Xcode tools, `hdiutil`, `shasum` and xcodegen (ADR-0012); no new dependency (ADR-0010).
-- **FR-009-11** Minimum OS. The app requires macOS 26 or later (Ryan, 2026-11-18; macOS 14 and 15 are not supported). `project.yml` holds the app's deployment target and `LSMinimumSystemVersion` (both `26.0`, kept equal; `Info.plist` is generated from it), and `FlotsamCore` declares the same platform.
+- **FR-009-11** Minimum OS. The app requires macOS 26 or later (Ryan, 2026-11-18; macOS 14 and 15 are not supported). `project.yml` holds the app's deployment target (`26.0`) and `LSMinimumSystemVersion` derives from it (`$(MACOSX_DEPLOYMENT_TARGET)`, never a second literal; `Info.plist` is generated from `project.yml`), and `FlotsamCore` declares the same platform.
 
 ## 3. Acceptance Criteria
 - **AC-009-01** (FR-009-01) Given a built DMG, when mounted, then it holds exactly `Flotsam.app` and an `Applications` symlink.

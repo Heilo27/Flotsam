@@ -1,7 +1,7 @@
 # S5 resource audit (TASK-373)
 
 Truth S5, "Invisible on the machine": idle (no panel open, 10,000 items, 10 minutes) at most 0.2 % of one core,
-2.5 wake-ups/s and 60 MB resident; panel open at most 150 MB. Every FRD was re-tested against it.
+2.5 wake-ups/s and 60 MB physical footprint; panel open at most 150 MB physical footprint. Every FRD was re-tested against it.
 
 ## How it was measured
 

@@ -54,7 +54,7 @@ targets:
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         LSUIElement: true
-        LSMinimumSystemVersion: "26.0"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
         NSHumanReadableCopyright: "MIT License"
     entitlements:
       # Not sandboxed (ADR-0001, PRD): CGEventTap, Accessibility paste-back and arbitrary screenshot folders need it.

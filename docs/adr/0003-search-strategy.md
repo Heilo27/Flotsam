@@ -10,7 +10,7 @@ Measured today (minimum OS is macOS 26, the development machine's OS): the syste
 ## Decision
 Default for v1 construction: **in-database substring scan**. Each token becomes `instr(item.searchText, :token) > 0` (the stored text is already normalised; the token is normalised by the same `SearchNormalizer` in Base), AND-ed, inside the active filter, executed on a reader connection, 200 rows per page plus count.
 - It matches FR-003-09 by construction (substring, AND), including 1 and 2 character tokens.
-- It holds no resident copy of the text: SQLite pages it through its cache, so the 150 MB budget does not depend on text size. (An "in-memory scan" of 10,000 items at up to 10,000 characters each could hold on the order of 100 MB by itself.)
+- It holds no resident copy of the text: SQLite pages it through its cache, so the 150 MB physical-footprint budget does not depend on text size. (An "in-memory scan" of 10,000 items at up to 10,000 characters each could hold on the order of 100 MB by itself.)
 - It needs no schema beyond FR-007-03 and no OS feature check.
 
 The query layer is one function in Storage taking filter, tokens, sort, page. The strategy is internal to Storage, so callers (Library) cannot depend on it.

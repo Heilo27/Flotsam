@@ -264,7 +264,7 @@ struct Frd008ContractMenuTests {
         let entries = MenuBarModel.entries(
             mode: .active, shelfEnabled: true, openLibrary: .none, saveClipboard: .none, toggleShelf: .none)
         #expect(Array(entries.suffix(5)) == [.separator, .settings, .setupGuide, .separator, .quit])
-        #expect(OnboardingFlow(gatesPasteboard: false).current == .welcome)
+        #expect(OnboardingFlow().current == .welcome)
     }
 
     // OC-8137. Red if a menu-bar image is made non-template (it would not adapt to light and dark).

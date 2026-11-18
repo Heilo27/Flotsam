@@ -95,7 +95,7 @@ import Testing
         let (settings, _, cleanup) = isolated(); defer { cleanup() }
         settings.set(true, for: SettingKeys.onboardingCompleted)
 
-        let flow = OnboardingFlow(gatesPasteboard: true)
+        let flow = OnboardingFlow()
 
         #expect(flow.current == .welcome)
         #expect(flow.isFirst)
@@ -257,9 +257,9 @@ import Testing
         #expect(probe.requested.isEmpty, "reading status never asks macOS for a permission")
     }
 
-    // MARK: - Privacy (OC-8044, OC-8045, OC-8069)
+    // MARK: - Privacy (OC-8044, OC-8069)
 
-    // OC-8044 / OC-8045 (strings). The read-only statements and the 'Paste from Other Apps' row text.
+    // OC-8044 (strings). The read-only statements and the 'Paste from Other Apps' row text.
     @Test func oc8044_privacyPaneStrings() {
         #expect(SettingsString.neverStored.text == "Flotsam never stores concealed, transient or auto-generated clipboard content.")
         #expect(SettingsString.noNetwork.text == "Flotsam makes no network connections.")

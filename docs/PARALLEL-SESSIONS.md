@@ -82,7 +82,7 @@ Re-run this whenever `main` moves or a builder branch is marked `ready`:
   Note any crash logs (`~/Library/Logs/DiagnosticReports/Flotsam*`).
 - **A3** Same as A1 + A2 on each branch marked `ready`, before S1 merges it. **[S2: done 2026-11-17: `frd003` @ 6fe1d6e, pass; build clean, tests = main baseline, launch OK; paste not drivable until adapters are wired (`s2/log` b8e7469)]**
 - **A4** Performance baseline on `main`, per the PRD/TRUTHS budgets:
-  - idle CPU and RSS of the running app over 10 min;
+  - idle CPU and physical footprint (`footprint <pid>`) of the running app over 10 min;
   - capture latency;
   - Library search latency with a 50k-item seeded DB.
 

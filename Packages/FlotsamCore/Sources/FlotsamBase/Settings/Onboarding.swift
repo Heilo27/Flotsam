@@ -25,16 +25,11 @@ public enum OnboardingStep: Int, CaseIterable, Sendable {
 /// Navigation through onboarding. It holds no settings: each step applies only what its own control set, so skipping
 /// every step leaves the defaults, and closing part-way leaves nothing half-applied (FR-008-12).
 public struct OnboardingFlow: Equatable, Sendable {
-    /// False on macOS versions that do not gate pasteboard reads (FRD-001 FR-001-18): step 2 is then skipped.
-    public let gatesPasteboard: Bool
     public private(set) var current: OnboardingStep
 
-    /// `resumingAt` is the step saved by `OnboardingProgress` after a quit mid-flow; nil, or a step this Mac does not
-    /// show (step 2 on a macOS that does not gate pasteboard reads), starts at step 1.
-    public init(gatesPasteboard: Bool, resumingAt saved: OnboardingStep? = nil) {
-        self.gatesPasteboard = gatesPasteboard
-        current = .welcome
-        if let saved, steps.contains(saved) { current = saved }
+    /// `resumingAt` is the step saved by `OnboardingProgress` after a quit mid-flow; nil starts at step 1.
+    public init(resumingAt saved: OnboardingStep? = nil) {
+        current = saved ?? .welcome
     }
 
     /// First launch shows onboarding by itself; afterwards only "Show Setup Guide…" does.
@@ -59,7 +54,8 @@ public struct OnboardingFlow: Equatable, Sendable {
     /// macOS then shows "Login Item Added" before the user has chosen anything.
     public static func readsLoginStatus(on step: OnboardingStep) -> Bool { step == .loginItem }
 
-    public var steps: [OnboardingStep] { OnboardingStep.allCases.filter { $0 != .clipboard || gatesPasteboard } }
+    /// Every step, in order: every supported macOS (26 and later) gates pasteboard reads, so step 2 always shows.
+    public var steps: [OnboardingStep] { OnboardingStep.allCases }
     public var position: Int { (steps.firstIndex(of: current) ?? 0) + 1 }
     public var total: Int { steps.count }
     public var isFirst: Bool { position == 1 }
