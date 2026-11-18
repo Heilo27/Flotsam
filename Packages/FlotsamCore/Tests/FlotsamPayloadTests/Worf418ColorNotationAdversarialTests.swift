@@ -64,7 +64,7 @@ import FlotsamBase
     func equivalenceWithOldRegex() {
         let inputs = Self.generated(count: 10_000)
         let nonASCIIDigit = Character("٣"), fullwidth = Character("１")
-        // KNOWN DIVERGENCE (see OC-418-W8): a 309+ digit argument overflows Double; old regex = colour, new = not.
+        // KNOWN DIVERGENCE (FR-003-14, OC-418-W8): a 309+ digit argument overflows Double; old regex = colour, new = not, by decision.
         let overflow = String(repeating: "9", count: 309)
         var divergences: [String] = []
         var agreedTrue = 0, agreedFalse = 0
@@ -160,14 +160,20 @@ import FlotsamBase
         #expect(swatches > 100)
     }
 
-    // OC-418-W8. UNDECLARED BEHAVIOUR CHANGE found by the probe: the old detector regex took any digit run, the shared
-    // grammar requires a finite Double. Literal expectations below are the OLD behaviour; red today, by design.
-    @Test("OC-418-W8 given an argument of 400 ASCII digits, when classified, then it is still a colour as before the refactor")
-    func overflowingNumberKeepsOldClassification() {
-        let huge = String(repeating: "9", count: 400)
-        #expect(ColorChannels.isNotation("rgb(\(huge),2,3)"))
-        #expect(ColorChannels.isNotation("hsl(1,2,\(huge)%)"))
-        #expect(TypedTextDetector.detect("rgba(1,2,3,\(huge))") == .color)
+    // OC-418-W8. FR-003-14 (decided, TASK-418): a number too large for Double (309+ ASCII digits) is non-finite, and a
+    // non-finite number is not a colour. Red if the finiteness check is removed (the old "any digit run" behaviour returns)
+    // or if the boundary moves: 308 digits fits a Double and stays a colour.
+    @Test("OC-418-W8 given arguments of 308, 309 and 400 ASCII digits, when classified, then only 308 is a colour (FR-003-14)")
+    func overflowingNumberIsNotColour() {
+        let d308 = String(repeating: "9", count: 308), d309 = String(repeating: "9", count: 309)
+        let d400 = String(repeating: "9", count: 400)
+        #expect(ColorChannels.isNotation("rgb(\(d308),2,3)"))
+        #expect(ColorChannels.isNotation("hsl(1,2,\(d308)%)"))
+        #expect(TypedTextDetector.detect("rgba(1,2,3,\(d308))") == .color)
+        for text in ["rgb(\(d309),2,3)", "rgb(\(d400),2,3)", "hsl(1,2,\(d400)%)", "rgba(1,2,3,\(d400))", "hsla(1,2%,3%,\(d309))"] {
+            #expect(!ColorChannels.isNotation(text), "\(text.prefix(24))")
+            #expect(TypedTextDetector.detect(text) != .color, "\(text.prefix(24))")
+        }
     }
 
     // OC-418-W7. A number too large for Double is not finite; the old regex called it a colour, the shared parser rejects it.
