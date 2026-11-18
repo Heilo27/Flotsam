@@ -16,7 +16,7 @@ FR-003-15 defines the paste sequence for the Library; FR-005-14 uses the same po
 ## Alternatives rejected
 - **Accessibility API `AXUIElement` set-value insertion.** Does not work in Terminal, Electron and many web fields; ⌘V works everywhere an app already accepts paste.
 - **Each caller posting its own ⌘V.** Three copies of a timing-sensitive rule; the 40 ms and 250 ms values are tuned from one dogfood matrix (FRD-003 Assumption 2) and must change in one place.
-- **`CGEvent` posted to a specific pid.** Misses apps that route by the session tap; FR-003-15 specifies the session tap.
+- **⌘V posted to the session event tap.** Delivered to whatever app is frontmost at post time, so a focus change after the 250 ms check could paste the clip into the wrong app (TASK-423, F4). Chosen instead: `CGEvent.postToPid`. Trade-off: `postToPid` reports no delivery failure, so an app that ignores pid-addressed events gets no paste and no LIB-OS-001 (FR-003-16); the dogfood matrix covers Terminal, Electron and sandboxed targets.
 
 ## Consequences
 The window constants (40 ms settle, 250 ms target check, 10 ms Backspace-to-paste gap) live in `PasteTiming` in Paste, tuned by the dogfood matrix. If spike S-7 shows a non-activating panel cannot take text, the panel changes in the app target (e.g. activating panel with explicit refocus); `PasteService` is unchanged except that "target" recording becomes mandatory-before-activation, which it already is.
