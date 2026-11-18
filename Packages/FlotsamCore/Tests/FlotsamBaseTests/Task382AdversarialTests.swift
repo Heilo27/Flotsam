@@ -312,7 +312,7 @@ import Testing
     /// the watchdog still runs within 5 s of its previous run (AC-001-19, FR-005-19). The elapsed part of the slow
     /// interval is not credited to the count when the timer is re-created, so the watchdog's next run slips by it.
     /// Red when: resume mid-interval stretches the watchdog past 5 s. FAILS on 14c52e4 (see W382-D1).
-    @Test(.disabled("DEFECT W382-D1 PollTick.swift:103-123 / ClipboardCapture.swift:142-157: resuming mid slow interval re-creates the timer, the elapsed part is never counted, so work slips by up to a full slow interval"), arguments: [0.5, 2.5, 4.9])
+    @Test(arguments: [0.5, 2.5, 4.9])
     func watchdogBoundHoldsWhenResumeLandsMidSlowInterval(resumeAfter: Double) {
         let sim = Sim()
         let watchdog = Runs()
@@ -329,7 +329,7 @@ import Testing
     /// given Paused with only the 30 s re-resolve registered, when capture resumes 29.5 s into the 30 s interval, then
     /// the re-resolve still runs within 30 s of its previous run (FR-002-02).
     /// Red when: the unsent part of the slow interval stretches the re-resolve. FAILS on 14c52e4 (see W382-D1).
-    @Test(.disabled("DEFECT W382-D1 PollTick.swift:103-123 / ClipboardCapture.swift:142-157: resuming mid slow interval re-creates the timer, the elapsed part is never counted, so work slips by up to a full slow interval")) func resolveBoundHoldsWhenResumeLandsMidSlowInterval() {
+    @Test func resolveBoundHoldsWhenResumeLandsMidSlowInterval() {
         let sim = Sim()
         let resolve = Runs()
         _ = sim.tick.every(30) { resolve.record(sim.now) }
@@ -345,7 +345,7 @@ import Testing
     /// watchdog still runs within its 5 s bound. The timer is re-created at every change and no interval ever
     /// completes, so the count never advances and the watchdog is starved.
     /// Red when: repeated mid-interval changes starve registered work. FAILS on 14c52e4 (see W382-D2).
-    @Test(.disabled("DEFECT W382-D2 PollTick.swift:103-123 / ClipboardCapture.swift:142-157: toggling faster than one interval starves registered work (count never advances)")) func rapidPauseResumeCyclingDoesNotStarveTheWatchdog() {
+    @Test func rapidPauseResumeCyclingDoesNotStarveTheWatchdog() {
         let sim = Sim()
         let watchdog = Runs()
         _ = sim.tick.every(5) { watchdog.record(sim.now) }

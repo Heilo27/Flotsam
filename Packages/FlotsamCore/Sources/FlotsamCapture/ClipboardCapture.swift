@@ -101,7 +101,14 @@ public final class ClipboardCapture {
         // FR-001-19: the mode decides whether the poll runs; the timer follows the cadence `PollTick` reports.
         unsubscribeSettings = settings.subscribe { [weak self] change in
             guard change.name == SettingKeys.captureMode.name else { return }
-            Task { @MainActor in self?.applyMode() }
+            // The store calls handlers before `set` returns. On the main thread apply the mode right there, so the
+            // baseline is read at the change and no check can run between the change and the re-baseline; from any
+            // other thread hop, and `captureNow` re-baselines first if it gets there before the hop does.
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { self?.applyMode() }
+            } else {
+                Task { @MainActor in self?.applyMode() }
+            }
         }
         pollTick.observeCadence { [weak self] in Task { @MainActor in self?.syncTimer() } }
         isPollPaused = settings.value(SettingKeys.captureMode) == .paused
@@ -120,18 +127,22 @@ public final class ClipboardCapture {
 
     /// FR-001-19: enters or leaves Paused. Pausing stops the poll and lets `PollTick` slow the timer. Resuming brings
     /// the 0.5 s cadence back and runs one immediate check against a baseline re-read now, so a change made while
-    /// Paused is never captured. Idempotent: only a change of Paused does anything.
-    func applyMode() {
-        guard isStarted else { return }
+    /// Paused is never captured. Idempotent: only a change of Paused does anything. Returns whether it changed.
+    /// Also called from `captureNow` (the settings subscription reaches here through a main-actor hop, so a check can
+    /// land after the mode changed but before this ran) so the baseline is re-read before anything is compared.
+    @discardableResult
+    func applyMode() -> Bool {
+        guard isStarted else { return false }
         let paused = settings.value(SettingKeys.captureMode) == .paused
-        guard paused != isPollPaused else { return }
+        guard paused != isPollPaused else { return false }
         isPollPaused = paused
         pollTick.setFastTickNeeded(!paused)
         syncTimer()
-        guard !paused else { return }
+        guard !paused else { return true }
         lastProcessedChangeCount = pasteboard.changeCount
         rereadingChangeCount = nil
         captureNow()
+        return true
     }
 
     /// The interval the timer is scheduled at now, or nil when it is not scheduled. Exposed for tests.
@@ -174,6 +185,8 @@ public final class ClipboardCapture {
     /// launch. Idempotent (an unchanged `changeCount` returns at once) and returns after the item is queued, not
     /// after it is persisted. While suspended (FR-001-18) it is also the retry.
     public func captureNow() {
+        // A Paused to Active change not yet applied re-baselines here (and runs its own check), never compares first.
+        if applyMode() { return }
         poll(retrySuspended: suspendedSince != nil)
     }
 

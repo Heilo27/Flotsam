@@ -82,7 +82,7 @@ struct Task382AdversarialTests {
     /// between the setting flipping and `applyMode()` (an activation, the Library showing), then the Paused-era copy is
     /// NOT captured (FR-001-19: nothing copied while Paused is ever captured).
     /// Red when: `captureNow` in the hop reads the stale baseline and ingests. FAILS on 14c52e4 (see W382-D3).
-    @Test(.disabled("DEFECT W382-D3 ClipboardCapture.swift:124-135 / :176 / :203: captureNow between the mode flipping to Active and applyMode running reads the stale baseline and ingests a Paused-era copy")) func pausedEraCopyIsNotCapturedByACaptureNowInsideTheResumeHop() async throws {
+    @Test func pausedEraCopyIsNotCapturedByACaptureNowInsideTheResumeHop() async throws {
         let rig = try await GapRig()
         defer { Task { await rig.cleanUp() } }
         rig.capture.start()
