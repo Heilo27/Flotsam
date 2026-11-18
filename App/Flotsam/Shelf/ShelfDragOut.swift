@@ -29,8 +29,6 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
 
     private var prepared: Task<FlotsamResult<ShelfDragPlan>, Never>?
     private var draggedItemIds: [UUID] = []
-    /// The session's begin callback ran; without it an ended session was aborted by the system (`ShelfDragEnd`).
-    private var sessionBegan = false
     /// `NSPasteboardItem` does not retain its data provider; these live until the session ends.
     private var providers: [Provider] = []
 
@@ -53,71 +51,94 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
         }
     }
 
-    /// Starts the session from `view` once the pointer has moved past the drag threshold. A plan that cannot be built
-    /// is reported (`SHF-OS-001`, `LIB-DAT-001`) and no session starts.
-    func begin(from view: NSView, event: NSEvent) async {
+    /// Starts the session from `view` once the pointer has moved past the drag threshold. A drag that cannot start is
+    /// reported (`SHF-OS-001`, `LIB-DAT-001`) and no session starts. AppKit shows a failure only before the session
+    /// begins or while it asks for data, so those are the places that report (`ShelfDragStart`).
+    func begin(from view: NSView, event: NSEvent?) async {
         guard let ports, let prepared else { return }
         self.prepared = nil
         switch await prepared.value {
         case .failure(let error):
             ports.report(error)
         case .success(let plan):
-            start(plan, from: view, event: event)
+            start(plan, from: view, event: event, ports: ports)
         }
     }
 
-    private func start(_ plan: ShelfDragPlan, from view: NSView, event: NSEvent) {
-        providers = []
-        var writers: [any NSPasteboardWriting] = []
-        var written: Set<UUID> = []
-        for item in plan.items {
-            guard let writer = writer(for: item) else { continue }
-            writers.append(writer)
-            written.insert(item.itemId)
-        }
-        guard !writers.isEmpty else {
-            ports?.report(FlotsamError(.libDat001, "Nothing left to drag"))
+    private func start(_ plan: ShelfDragPlan, from view: NSView, event: NSEvent?, ports: Ports) {
+        let checked = ShelfDragStart.preflight(plan, hasWindow: view.window != nil, hasEvent: event != nil, files: ports.files)
+        let ready: ShelfDragPlan
+        switch checked {
+        case .failure(let error):
+            ports.report(error)
             return
+        case .success(let plan):
+            ready = plan
         }
-        // A card whose only item had no writer (an image `NSImage` cannot read) is not dragged, so it is neither counted
-        // as pasted when the drop is accepted nor on the drag image's badge (FR-006-10, FR-006-11).
-        draggedItemIds = plan.draggedItemIds.filter(written.contains)
-        let frame = view.bounds
-        let image = Self.stackedImage(of: view, count: draggedItemIds.count)
-        let dragItems = writers.enumerated().map { index, writer in
-            let dragItem = NSDraggingItem(pasteboardWriter: writer)
-            dragItem.setDraggingFrame(frame, contents: index == 0 ? image : nil)
-            return dragItem
+        guard let event else { return }
+        providers = []
+        let report: @Sendable (FlotsamError) -> Void = { error in Task { @MainActor in ports.report(error) } }
+        var writers: [(item: ShelfDragItem, writer: any NSPasteboardWriting)] = []
+        var outcomes: [ShelfDragStart.WriterOutcome] = []
+        for item in ready.items {
+            let made = writer(for: item, report: report)
+            if let writer = made.writer { writers.append((item, writer)) }
+            outcomes.append(made.outcome)
         }
-        sessionBegan = false
-        let session = view.beginDraggingSession(with: dragItems, event: event, source: self)
-        session.animatesToStartingPositionsOnCancelOrFail = true
+        switch ShelfDragStart.launch(ready, outcomes: outcomes) {
+        case .fail(let error):
+            providers = []
+            ports.report(error)
+        case .start(let dragged, let error):
+            // A card none of whose items got a writer is not dragged, so it is neither counted as pasted when the drop
+            // is accepted nor on the drag image's badge (FR-006-10, FR-006-11).
+            if let error { ports.report(error) }
+            draggedItemIds = dragged
+            let frame = view.bounds
+            let image = Self.stackedImage(of: view, count: dragged.count)
+            let dragItems = writers.enumerated().map { index, entry in
+                let dragItem = NSDraggingItem(pasteboardWriter: entry.writer)
+                dragItem.setDraggingFrame(frame, contents: index == 0 ? image : nil)
+                return dragItem
+            }
+            let session = view.beginDraggingSession(with: dragItems, event: event, source: self)
+            session.animatesToStartingPositionsOnCancelOrFail = true
+        }
     }
 
     /// One pasteboard item per planned item. Text and file URLs are provided lazily; an image goes through `NSImage`,
     /// and one whose bytes `NSImage` cannot read is skipped (FR-006-10).
-    private func writer(for item: ShelfDragItem) -> (any NSPasteboardWriting)? {
+    private func writer(for item: ShelfDragItem, report: @escaping @Sendable (FlotsamError) -> Void)
+        -> (writer: (any NSPasteboardWriting)?, outcome: ShelfDragStart.WriterOutcome)
+    {
         switch item.payload {
         case .representations(let representations):
             let pasteboardItem = NSPasteboardItem()
-            let provider = Provider(representations)
+            let provider = Provider(representations, report: report)
             providers.append(provider)
             let types = representations.map { NSPasteboard.PasteboardType($0.uti) }
-            guard pasteboardItem.setDataProvider(provider, forTypes: types) else { return nil }
-            return pasteboardItem
+            guard pasteboardItem.setDataProvider(provider, forTypes: types) else { return (nil, .providerRejected) }
+            return (pasteboardItem, .written)
         case .image(let representation):
-            return NSImage(data: representation.data)
+            guard let image = NSImage(data: representation.data) else { return (nil, .imageUnreadable) }
+            return (image, .written)
         }
     }
 
     private final class Provider: NSObject, NSPasteboardItemDataProvider {
         private let representations: [PasteboardRepresentation]
-        init(_ representations: [PasteboardRepresentation]) { self.representations = representations }
+        private let report: @Sendable (FlotsamError) -> Void
+        init(_ representations: [PasteboardRepresentation], report: @escaping @Sendable (FlotsamError) -> Void) {
+            self.representations = representations
+            self.report = report
+        }
 
         func pasteboard(_ pasteboard: NSPasteboard?, item: NSPasteboardItem, provideDataForType type: NSPasteboard.PasteboardType) {
-            if let match = representations.first(where: { $0.uti == type.rawValue }) {
-                item.setData(match.data, forType: type)
+            guard let match = representations.first(where: { $0.uti == type.rawValue }) else {
+                report(ShelfDragStart.osError(.noRepresentation))
+                return
             }
+            item.setData(match.data, forType: type)
         }
     }
 
@@ -131,7 +152,6 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     func ignoreModifierKeys(for session: NSDraggingSession) -> Bool { true }
 
     func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) {
-        sessionBegan = true
         onSession?(true)
     }
 
@@ -140,17 +160,13 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
         providers = []
         let cards = draggedItemIds
         draggedItemIds = []
-        let began = sessionBegan
-        sessionBegan = false
         guard let ports else { return }
-        switch ShelfDragEnd.resolve(accepted: operation != [], sessionBegan: began, cards: cards) {
+        switch ShelfDragEnd.resolve(accepted: operation != [], cards: cards) {
         case .accepted(let accepted):
             // FR-006-11: one paste per card however many pasteboard items it contributed; FR-006-18: the count only.
             Task { for id in accepted { await ports.recordPaste(id) } }
             FlotsamLog.log(.shelf(.dragOut, outcome: .draggedOut, detail: .count(accepted.count)))
             onAccepted?()
-        case .aborted(let error):
-            ports.report(error)
         case .userCancelled, .none:
             break
         }
