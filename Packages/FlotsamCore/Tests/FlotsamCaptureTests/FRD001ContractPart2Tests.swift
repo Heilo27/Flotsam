@@ -1018,7 +1018,7 @@ struct FRD001RobustnessContractTests {
 
 // MARK: Unreachable from this package (no seam in FlotsamCore; recorded in the session log, not faked here)
 //
-// OC-1079, OC-1089, OC-1090  performance, memory and signposts on a running app (p95, resident size, capture.persist).
+// OC-1079, OC-1089, OC-1090  performance, memory and signposts on a running app (p95, physical footprint, capture.persist).
 // OC-1084                    no seam: nothing raises CAP-PRM-001 at launch when the system access behaviour is not Allow
 //                            (PasteboardAccess feeds onboarding only). Reported as a defect from the code, not a test.
 // OC-1085 / OC-1086 (save)   the Save Clipboard action (AppContainer.saveClipboard) is a UI entry point; only the Curated

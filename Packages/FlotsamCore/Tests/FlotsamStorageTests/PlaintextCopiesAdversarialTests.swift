@@ -86,7 +86,7 @@ import FlotsamBase
 
     /// OC-422-W4. Given a launch that quarantines a damaged database, when it opens the fresh one, then an old
     /// pre-migration copy and an old quarantine from before are both kept (a failed/quarantined launch deletes
-    /// nothing). Red if the expiry hook runs on the second attempt.
+    /// nothing; the copy then also predates the new quarantine, so it stays on the launch after too, FR-007-17). Red if the expiry hook runs on the second attempt.
     @Test func aQuarantinedLaunchDeletesNothing() async throws {
         let clock = ManualClock()
         let first = try await Store.make(clock: clock)
@@ -109,9 +109,11 @@ import FlotsamBase
         #expect(exists(oldCopy) && exists(oldQuarantine))
     }
 
-    /// OC-422-W5. Given a copy dated in the future (clock skew), when a later launch runs, then it is kept. Red if the
-    /// age test uses an absolute difference.
-    @Test func aFutureDatedCopyIsKept() async throws {
+    /// OC-422-W5 (rewritten for TASK-484, which removed the 7-day age floor). Given a copy dated in the future (clock
+    /// skew) and no quarantine, when a later launch confirms the migration, then it is deleted like any other copy: no
+    /// date can keep a copy once the launch is confirmed healthy. Red if a date test creeps back into the no-quarantine
+    /// path.
+    @Test func aFutureDatedCopyIsDeletedByAConfirmingLaunch() async throws {
         let clock = ManualClock()
         let first = try await Store.make(clock: clock)
         let root = first.root
@@ -121,7 +123,7 @@ import FlotsamBase
 
         _ = try await Store.make(root: root, clock: clock)
 
-        #expect(exists(copy))
+        #expect(!exists(copy))
     }
 
     /// OC-422-W6. Given a quarantine named with a stamp too large for Int64 or a far-future stamp, when a launch runs,
@@ -157,16 +159,19 @@ import FlotsamBase
         #expect(exists(target))
     }
 
-    /// OC-422-W8. Given a copy whose modification date is old but whose creation date is recent (and the reverse), when
-    /// a later launch runs, then it is kept: the NEWEST of the two dates ages it (FR-007-17). Red if the age uses the
-    /// older date.
-    @Test func theNewerOfTheTwoDatesAgesACopy() async throws {
+    /// OC-422-W8 (rewritten for TASK-484). A quarantine stands 1 hour old. Given a copy whose modification date is old
+    /// but whose creation date is after the quarantine (and the reverse), when a later launch confirms, then both go:
+    /// the NEWEST of the two dates says when the copy was taken (FR-007-17). A copy old on both dates predates the
+    /// quarantine and is kept. Red if the comparison uses the older date.
+    @Test func theNewerOfTheTwoDatesDecidesWhetherAQuarantinePredatesACopy() async throws {
         let clock = ManualClock()
         let first = try await Store.make(clock: clock)
         let root = first.root
         defer { first.cleanUp() }
+        let quarantine = root.appendingPathComponent("corrupt-\(first.clock.millis - hourMs)")
+        try FileManager.default.createDirectory(at: quarantine, withIntermediateDirectories: true)
         let old = first.clock.now().addingTimeInterval(-90 * 86_400)
-        let recent = first.clock.now().addingTimeInterval(-3600)
+        let recent = first.clock.now().addingTimeInterval(-600)
         let oldMtime = try first.plant("pre-migration/flotsam-v1.sqlite")
         // The filesystem lowers the birth date to an older mtime set with it, so set the birth date second.
         try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: oldMtime.path)
@@ -180,7 +185,7 @@ import FlotsamBase
 
         _ = try await Store.make(root: root, clock: clock)
 
-        #expect(exists(oldMtime) && exists(oldBirth))
-        #expect(!exists(bothOld), "arrange check: a copy old on both dates must expire")
+        #expect(!exists(oldMtime) && !exists(oldBirth), "taken after the quarantine on its newest date: deleted")
+        #expect(exists(bothOld), "taken before the quarantine on both dates: kept while the quarantine stands")
     }
 }
