@@ -115,7 +115,7 @@ public final class ClipboardCapture {
             // baseline is read at the change and no check can run between the change and the re-baseline; from any
             // other thread hop, and `captureNow` re-baselines first if it gets there before the hop does.
             if Thread.isMainThread {
-                MainActor.assumeIsolated { self?.applyMode() }
+                MainActor.assumeIsolated { _ = self?.applyMode() }
             } else {
                 Task { @MainActor in self?.applyMode() }
             }
