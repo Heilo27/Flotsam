@@ -1199,3 +1199,34 @@ Tests only: 5 new files plus display-name fixes in ScreenshotWatcherTests.swift.
 
 ## Citation notes
 - ScreenshotWatcherTests.swift:17 still cites OC-2006 and 2072 for a test that proves plain-folder and system-vs-Desktop; probable mis-cite, left alone (out of the approved edit list).
+
+## TASK-442 late-write fix: `s2/cap-late-write` @ 07e13da, with live race re-run (2026-11-18)
+
+**Fix (FR-001-01, FR-001-18):** an empty clipboard change is watched for up to 10 s (`ClipboardCapture.emptyChangeWatchLimit`, its only home), and a newer changeCount ends the watch early. A late fill is stored once, never counts toward FR-001-18(b), and resets the empty count. FRD-001 is in the same commit: FR-001-01, FR-001-18(b), AC-001-15 and AC-001-18 are reworded, and AC-001-20..24 are new.
+
+**Gates on 07e13da:**
+- `bin/check-architecture.sh` passes.
+- The full `swift test` passes: the largest run had 559 tests in 67 suites, 12 known issues, 0 failures and no flake re-runs.
+- `bin/build.sh` succeeds.
+- `FlotsamCaptureTests` passed 228/228 on two extra runs.
+
+**Mutation checks:**
+- Turned tests red: limits of 5, 1, 20 and 10.5 s, and counting late fills toward FR-001-18(b).
+- Stayed green: a limit of 9.9 s, so the low side of the 9.9 s boundary is not tightly pinned.
+
+**Live race re-run.** Same method as the AC-001-18 run above: fresh clone, Debug build, a scratch `CFFIXED_USER_HOME` per launch, an `-Onone` writer, 3 race copies per launch.
+
+| Delay between clear and write | Launches | Race copies stored | Duplicates | Codes | Capture after the third copy |
+|---|---|---|---|---|---|
+| 0.75 s | 2 | 6 of 6 | 0 | `outcome=stored` each, no `CAP-VAL-001`, no `CAP-PRM-001` | live |
+| 1.5 s | 2 | **6 of 6** (was 0 of 6 on 18a306f) | 0 | `outcome=stored` each, no `CAP-VAL-001`, no `CAP-PRM-001` | live |
+| 5 s | 2 | 6 of 6 | 0 | `outcome=stored` each, no `CAP-VAL-001`, no `CAP-PRM-001` | live |
+
+**Verdict: PASS.** All 18 copies were stored exactly once (`copyCount=1`). This run did not exercise writes later than 10 s or the suspension path; unit tests cover those (AC-001-21, AC-001-22, AC-001-24). The writer was synthetic only; no Finder-style slow copy was tried. Each launch also stored the text already on the pasteboard, which is expected and is not a race copy.
+
+**Data isolation:** sha1 of the real `flotsam.sqlite`, its `-wal` and `-shm`, and the prefs plist was identical before and after. The clipboard was restored, scratch files were deleted, and no Flotsam process was left running.
+
+**For S1 and Ryan:**
+- **[Spec Drift]** OC-1080's `CAP-PRM-001` now fires when the third watch ends, up to 10 s later or sooner if the change is superseded. The oracle file is not edited.
+- A superseded empty change now counts toward FR-001-18(b).
+- TASK-442 has no Ticketmaster record in `flotsam`.
