@@ -142,12 +142,8 @@ private struct ShelfCardView: View {
         return NSWorkspace.shared.icon(for: type)
     }
 
-    /// A colour item's value as written on the card ("#RRGGBB"); nil when it is another notation.
+    /// A colour item's swatch; nil when its notation is not one `ColorChannels` reads.
     private static func color(from text: String?) -> Color? {
-        guard var hex = text?.trimmingCharacters(in: .whitespaces), hex.hasPrefix("#") else { return nil }
-        hex.removeFirst()
-        guard hex.count == 6, let value = UInt32(hex, radix: 16) else { return nil }
-        return Color(
-            red: Double((value >> 16) & 0xFF) / 255, green: Double((value >> 8) & 0xFF) / 255, blue: Double(value & 0xFF) / 255)
+        ColorChannels(text: text).map(Color.init)
     }
 }

@@ -1,3 +1,4 @@
+import Foundation
 import FlotsamBase
 import FlotsamPaste
 
@@ -12,6 +13,13 @@ public enum LibraryDirection: Sendable, Equatable { case up, down, left, right }
 /// and hands the command on.
 public enum LibraryExternalCommand: Sendable, Equatable {
     case pin, tags, note, edit, delete, cycleSort, ungroup, shortcutAndTrigger
+
+    /// The one item the shortcut-and-trigger editor opens for (FR-005-09): the editor edits a single item, so only
+    /// that command with exactly one selected row resolves. Anything else, no selection or several rows, opens nothing.
+    public func shortcutEditorTarget(selection ids: [UUID]) -> UUID? {
+        guard self == .shortcutAndTrigger, ids.count == 1 else { return nil }
+        return ids.first
+    }
 }
 
 public enum LibraryCommand: Sendable, Equatable {

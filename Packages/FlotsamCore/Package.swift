@@ -68,11 +68,22 @@ let package = Package(
             name: "FlotsamTriggers",
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPaste"]
         ),
-        .testTarget(name: "FlotsamTriggersTests", dependencies: ["FlotsamTriggers", "FlotsamBase"]),
+        .testTarget(
+            name: "FlotsamTriggersTests",
+            dependencies: ["FlotsamTriggers", "FlotsamBase", "FlotsamStorage", "FlotsamPaste"]
+        ),
         .target(
             name: "FlotsamShelf",
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload"]
         ),
         .testTarget(name: "FlotsamShelfTests", dependencies: ["FlotsamShelf", "FlotsamBase", "FlotsamStorage", "FlotsamPayload"]),
+        // Worf (TASK-318): compiles the App-target editor model and its recorder (symlinked sources) so the editor's
+        // save and validation rules run under `swift test` with no app launch.
+        .testTarget(
+            name: "FlotsamAppModelTests",
+            dependencies: [
+                "FlotsamBase", "FlotsamStorage", "FlotsamPaste", "FlotsamShortcuts", "FlotsamTriggers",
+            ]
+        ),
     ]
 )

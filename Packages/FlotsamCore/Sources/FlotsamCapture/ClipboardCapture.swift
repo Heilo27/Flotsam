@@ -90,7 +90,7 @@ public final class ClipboardCapture {
         timer.tolerance = Self.pollTolerance
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
-        if !access.isReadAllowed { suspendForBlockedAccess(reason: "pasteboard access is not Allow") }
+        if !access.isReadAllowed { raise(beginSuspension(reason: "pasteboard access is not Allow")) }
         captureNow()
     }
 
@@ -124,49 +124,92 @@ public final class ClipboardCapture {
         handleChange(changeCount: changeCount)
     }
 
-    /// FR-001-04: the gates, in order, stopping at the first that rejects. Gate 1 reads nothing; gates 2 to 4 read
-    /// type identifiers and the source marker; payload bytes are read only after all of them pass.
+    /// Why a pasteboard change produced no payload. `silent` is a change counted toward privacy suspension that has
+    /// already been reported (or is deliberately quiet while suspended), or an empty read that is still being retried.
+    private enum Rejection: Error {
+        case skipped(ErrorCode)
+        case failed(FlotsamError)
+        case silent(ErrorCode)
+    }
+
+    /// FR-001-04 gate 1 on a poll, then the rest through `gather`. Rejections are logged or raised as background reports.
     private func handleChange(changeCount: Int) {
         guard settings.value(SettingKeys.captureMode).capturesClipboardAutomatically else {
             return skip(.capPol003)
         }
-        if ownWrites.contains(changeCount: changeCount) { return skip(.capPol004) }
+        switch gather(changeCount: changeCount, rereadEmpty: true) {
+        case .success(let payload): continuation?.yield(payload)
+        case .failure(.skipped(let policy)): skip(policy)
+        case .failure(.failed(let error)): raise(error)
+        case .failure(.silent): break
+        }
+    }
+
+    /// FR-001-04 gates 2 to 5 and the read, in order, stopping at the first that rejects. Gates 2 to 4 read type
+    /// identifiers and the source marker; payload bytes are read only after all of them pass. The one home of those
+    /// gates: a poll (`handleChange`) and Save Clipboard (`saveClipboardNow`) both go through it (Rule 9).
+    private func gather(changeCount: Int, rereadEmpty: Bool) -> Result<CapturedPayload, Rejection> {
+        if ownWrites.contains(changeCount: changeCount) { return .failure(.skipped(.capPol004)) }
 
         let types = pasteboard.currentTypeIdentifiers()
-        if types.isEmpty { return noteEmptyRead(changeCount: changeCount) }
+        if types.isEmpty { return .failure(noteEmptyRead(changeCount: changeCount, rereading: rereadEmpty)) }
         // Listed types are readable type data, so every exit below marks readable (and resumes a suspension) except
         // the one where the snapshot then yields no bytes: that is an empty read, counted by `noteEmptyRead` like an
         // empty type list (FR-001-18 b), and must not reset `consecutiveEmptyReads` on the way.
         var readable = true
         defer { if readable { _ = noteReadability(.readable) } }
-        if types.contains(PasteboardMarkers.ownWrite) { return skip(.capPol004) }
-        if types.contains(where: PasteboardMarkers.neverStore.contains) { return skip(.capPol001) }
+        if types.contains(PasteboardMarkers.ownWrite) { return .failure(.skipped(.capPol004)) }
+        if types.contains(where: PasteboardMarkers.neverStore.contains) { return .failure(.skipped(.capPol001)) }
 
         let source = resolveSource(types: types)
-        if let bundleId = source?.bundleId, ignoredApps().contains(bundleId) { return skip(.capPol002) }
+        if let bundleId = source?.bundleId, ignoredApps().contains(bundleId) { return .failure(.skipped(.capPol002)) }
         guard PasteboardTypes.hasHonoured(in: types) else {
-            return raise(FlotsamError(.capVal001, "pasteboard holds no honoured type"))
+            return .failure(.failed(FlotsamError(.capVal001, "pasteboard holds no honoured type")))
         }
 
         let snapshot: PasteboardSnapshot
         switch pasteboard.readSnapshot(types: PasteboardTypes.typesToRead(from: types)) {
         case .failure(let error):
             // FR-001-22: one bad read drops this change; the timer carries on.
-            return raise(FlotsamError(.capOs001, "pasteboard read failed", underlying: error.underlying))
+            return .failure(.failed(FlotsamError(.capOs001, "pasteboard read failed", underlying: error.underlying)))
         case .success(let value):
             guard value.changeCount == changeCount else {
-                return raise(FlotsamError(.capOs001, "pasteboard changed during read"))
+                return .failure(.failed(FlotsamError(.capOs001, "pasteboard changed during read")))
             }
             snapshot = value
         }
         if snapshot.representations.isEmpty {
             readable = false
-            return noteEmptyRead(changeCount: changeCount)
+            return .failure(noteEmptyRead(changeCount: changeCount, rereading: rereadEmpty))
         }
         rereadingChangeCount = nil
 
-        continuation?.yield(CapturedPayload(
+        return .success(CapturedPayload(
             representations: snapshot.representations, source: source, capturedAt: clock.now(), origin: .pasteboard))
+    }
+
+    // MARK: Save Clipboard (FR-005-06)
+
+    /// Reads the pasteboard now and runs gates 2 to 5 and the ingest pipeline on it whatever the capture mode, so it
+    /// also works while Paused or Curated. A clip already stored is deduplicated and counts as saved. The result is
+    /// returned for the caller to show; a rejection is not also raised as a Notice.
+    public func saveClipboardNow() async -> SaveClipboardOutcome {
+        let changeCount = pasteboard.changeCount
+        // This change is handled here, so the poll must not ingest it a second time.
+        lastProcessedChangeCount = changeCount
+        rereadingChangeCount = nil
+        switch gather(changeCount: changeCount, rereadEmpty: false) {
+        case .failure(.skipped(let policy)):
+            return .rejected(FlotsamError(policy, "Save Clipboard: the pasteboard change was skipped by policy"))
+        case .failure(.failed(let error)):
+            return .rejected(error)
+        case .failure(.silent(let code)):
+            return .rejected(FlotsamError(code, "Save Clipboard: pasteboard reads return no data"))
+        case .success(let payload):
+            let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink)
+            if let error = await worker.handle(payload, reportingFailure: false) { return .rejected(error) }
+            return .saved
+        }
     }
 
     // MARK: Source (FR-001-13, FR-001-14)
@@ -193,22 +236,27 @@ public final class ClipboardCapture {
 
     private enum Readability { case readable, empty }
 
-    /// An empty read of `changeCount`. The first `emptyAttemptsPerChange - 1` are silent and the same count is read again
-    /// on the next tick; only the last one counts as an empty change (and can suspend capture, FR-001-18 b).
-    private func noteEmptyRead(changeCount: Int) {
-        if rereadingChangeCount != changeCount {
-            rereadingChangeCount = changeCount
-            emptyAttempts = 0
+    /// An empty read of `changeCount`. When `rereading` (a poll), the first `emptyAttemptsPerChange - 1` are silent and
+    /// the same count is read again on the next tick; only the last one counts as an empty change (and can suspend
+    /// capture, FR-001-18 b). Save Clipboard does not reread (nothing will tick again for it): its empty read counts and
+    /// is reported at once.
+    private func noteEmptyRead(changeCount: Int, rereading: Bool) -> Rejection {
+        if rereading {
+            if rereadingChangeCount != changeCount {
+                rereadingChangeCount = changeCount
+                emptyAttempts = 0
+            }
+            emptyAttempts += 1
+            if emptyAttempts < Self.emptyAttemptsPerChange { return .silent(.capVal001) }
+            rereadingChangeCount = nil
         }
-        emptyAttempts += 1
-        if emptyAttempts < Self.emptyAttemptsPerChange { return }
-        rereadingChangeCount = nil
-        _ = noteReadability(.empty)
+        // `.empty` always yields a rejection; the fallback only satisfies the optional.
+        return noteReadability(.empty) ?? .silent(.capVal001)
     }
 
-    /// Counts changes that yield no type data. Returns false when the change should not go further (it was empty).
-    /// Three in a row suspend capture with `CAP-PRM-001`; the first readable change afterwards resumes it.
-    private func noteReadability(_ readability: Readability) -> Bool {
+    /// Counts changes that yield no type data. Returns nil to go on, or why the change should not go further (it was
+    /// empty). Three in a row suspend capture with `CAP-PRM-001`; the first readable change afterwards resumes it.
+    private func noteReadability(_ readability: Readability) -> Rejection? {
         switch readability {
         case .readable:
             consecutiveEmptyReads = 0
@@ -219,23 +267,23 @@ public final class ClipboardCapture {
                 let reporter = reporter
                 Task { await reporter.clearNotices(code: .capPrm001) }
             }
-            return true
+            return nil
         case .empty:
             consecutiveEmptyReads += 1
             if consecutiveEmptyReads >= Self.emptyReadsBeforeSuspension, suspendedSince == nil {
-                suspendForBlockedAccess(reason: "pasteboard reads return no data")
+                return .failed(beginSuspension(reason: "pasteboard reads return no data"))
             } else if suspendedSince == nil {
-                raise(FlotsamError(.capVal001, "pasteboard change carries no data"))
+                return .failed(FlotsamError(.capVal001, "pasteboard change carries no data"))
             }
-            return false
+            return .silent(.capVal001)
         }
     }
 
-    /// Suspends capture and raises `CAP-PRM-001`, for either trigger of FR-001-18 (a launch-time access check, b empty
-    /// reads). The one place the suspension begins.
-    private func suspendForBlockedAccess(reason: StaticString) {
+    /// Suspends capture and returns the `CAP-PRM-001` to raise, for either trigger of FR-001-18 (a launch-time access
+    /// check, b empty reads). The one place the suspension begins.
+    private func beginSuspension(reason: StaticString) -> FlotsamError {
         suspendedSince = clock.now()
-        raise(FlotsamError(.capPrm001, reason, context: [.permission: .permission(.pasteboard)]))
+        return FlotsamError(.capPrm001, reason, context: [.permission: .permission(.pasteboard)])
     }
 
     // MARK: Reporting
@@ -254,3 +302,5 @@ public final class ClipboardCapture {
         Task { await reporter.report(error, origin: .background) }
     }
 }
+
+extension ClipboardCapture: ClipboardSaver {}

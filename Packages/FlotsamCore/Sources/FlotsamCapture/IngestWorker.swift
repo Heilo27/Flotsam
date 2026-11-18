@@ -10,11 +10,15 @@ struct IngestWorker: Sendable {
     let reporter: ErrorReporter
     let sink: any LogSink
 
-    func handle(_ payload: CapturedPayload) async {
+    /// Classifies and ingests `payload`. A failure is reported in the background unless `reportingFailure` is false
+    /// (Save Clipboard shows it itself); it is returned either way, nil on success.
+    @discardableResult
+    func handle(_ payload: CapturedPayload, reportingFailure: Bool = true) async -> FlotsamError? {
         let classification: Classification
         switch CaptureClassifier.classify(payload.representations) {
         case .failure(let error):
-            return await reporter.report(error, origin: .background)
+            if reportingFailure { await reporter.report(error, origin: .background) }
+            return error
         case .success(let value):
             classification = value
         }
@@ -26,7 +30,9 @@ struct IngestWorker: Sendable {
         switch await ingest.ingest(candidate) {
         case .failure(let error):
             // FR-001-22: this item is lost, the pipeline carries on with the next.
-            await reporter.report(Self.captureFailure(error), origin: .background)
+            let failure = Self.captureFailure(error)
+            if reportingFailure { await reporter.report(failure, origin: .background) }
+            return failure
         case .success(let result):
             for warning in result.warnings { await reporter.report(warning, origin: .background) }
             FlotsamLog.log(
@@ -34,6 +40,7 @@ struct IngestWorker: Sendable {
                     kind: classification.kind, byteSize: payload.representations.reduce(0) { $0 + $1.data.count },
                     outcome: result.outcome.isBump ? .deduped : .stored, policy: nil),
                 sink: sink)
+            return nil
         }
     }
 }

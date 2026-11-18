@@ -16,12 +16,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         self.showSetupGuide = showSetupGuide
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
+        // AppKit logs "makeKeyWindow called on _NSGlassEffectWindow which returned NO from canBecomeKeyWindow" each time
+        // a status-item menu opens (its glass-backed window cannot become key). It is not the Shelf: the Shelf panel
+        // never logs it, and Apple's own menu-bar extras log the same line. Harmless; nothing here can silence it.
         let menu = NSMenu()
         menu.delegate = self
         menu.autoenablesItems = false
         item.menu = menu
         refreshIcon()
         container.presenter.onNoticesChanged = { [weak self] in self?.refreshIcon() }
+        container.onTriggerStatusChange = { [weak self] in self?.refreshIcon() }
         unsubscribe = container.settings.subscribe { [weak self] _ in
             Task { @MainActor in self?.refreshIcon() }
         }
@@ -33,7 +37,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     private var icon: MenuIcon {
         MenuBarModel.icon(
-            mode: container.settings.value(SettingKeys.captureMode), hasWarning: container.presenter.hasBadge)
+            mode: container.settings.value(SettingKeys.captureMode), hasWarning: container.presenter.hasBadge || container.showsTriggerWarning)
     }
 
     private func refreshIcon() {

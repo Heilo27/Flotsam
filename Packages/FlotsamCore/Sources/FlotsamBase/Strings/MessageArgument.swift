@@ -52,7 +52,7 @@ public enum MessageArgument: Sendable, Equatable {
     }
 
     /// Human-readable size in binary units (10 MiB reads "10 MB", per FR-007-06). One formatter so a limit reads the same in every message (ADR-0009).
-    /// A negative size reads as 0, and zero reads in digits ("0 KB"), never as the word "Zero KB" (FR-000-06).
+    /// A negative size reads as 0, and zero reads in digits ("0 bytes"), never as the word "Zero KB" (FR-000-06).
     public static func formatBytes(_ bytes: Int) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .memory

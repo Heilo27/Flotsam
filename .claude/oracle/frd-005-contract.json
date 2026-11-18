@@ -1077,7 +1077,7 @@
       "requirement": "FR-005-16",
       "given": "A password copied from a password manager (Concealed) is on the clipboard; trigger ';sig'",
       "when": "user types ';sig' Space",
-      "then": "after the restore the password is back on the clipboard; no history item contains it; it is in no log or diagnostics",
+      "then": "the password is never read, held or restored (FR-005-16): after the expansion the clipboard holds the expanded item, not the password; no history item contains it; it is in no log or diagnostics",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
