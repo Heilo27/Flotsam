@@ -926,3 +926,50 @@ Capture interval: from `SystemPasteboard.write`, on a private NSPasteboard (neve
 **Capture p95 rerun under load < 10: PENDING a quiet box.** The 1-min load average was 78.5 at 23:54, with other sessions' test runs in progress.
 
 **Defects / follow-ups for S1:** none new. OC-381-21 fake-timer rewrite is on obrien-430, per S1.
+
+## 2026-11-17: A1 + A2 (+ symlinked screenshot folder) on `main` @ df9bf09
+
+Contains the S1-named commits (checked with `git merge-base --is-ancestor`). Toolchain: macOS 27.3, Xcode 27.0, Apple Swift 6.4, M1 Max. Clean clone in the session scratchpad, detached at df9bf09. **Verdict: A1 PASS (one load-induced flake, green on re-run). A2 PARTIAL: text, URL, image, concealed-type and menu bar PASS; file copy NOT stored in 5 attempts (known intermittent, see below). Symlinked Desktop: PASS, matches AC-002-14. Symlinked override folder: NOT TESTED.**
+
+**A1**
+
+| Step | Result |
+|---|---|
+| `bin/bootstrap.sh` | exit 0 |
+| `swift test` (Packages/FlotsamCore) | first run: 11 Swift Testing runs, 1848 tests, 1 failure: OC-381-21 "a second start() adds no second tick source" (`fired >= 2 && fired <= 4`, a timing expectation, machine load was high). Re-run of that suite: green |
+| Known issues | 9 |
+| `bin/check-architecture.sh` | exit 0, "architecture checks passed" |
+| `bin/build.sh` (Debug) | exit 0, BUILD SUCCEEDED |
+
+- Counting method as in the previous A1 entry (ANSI stripped, `grep "Test run with"`, sum of the count field). I did not keep the counts of the green re-run, so the 1848 figure is from the run that had the one failure; XCTest "Executed" lines showed 0 in the retained output and I did not break the XCTest total out.
+- OC-381-21 is the fake-timer test S1 already has on obrien-430.
+
+**A2 launch smoke (Debug build, scratch `CFFIXED_USER_HOME`, no TCC grants)**
+
+| Check | Result |
+|---|---|
+| Launch, menu bar item, quit via menu item | pass. Process exited after the menu Quit |
+| Text copy | stored once (`kind=text`, copyCount 1) |
+| URL copy | stored once (`kind=link`) |
+| Image copy | stored once (`kind=image`, 267 B) |
+| Concealed-type copy | nothing stored; log shows `CAP-POL-001 outcome=skipped` |
+| File copy | **not stored**: 5 attempts (including one after an intervening text copy) each logged `CAP-VAL-001`; no `item` or `bundleMember` row |
+| `~/Library/Logs/DiagnosticReports/Flotsam*` | none; no fault-level log lines from the process |
+
+- First round of text and URL copies: the first read logged `CAP-VAL-001`, then `CAP-PRM-001 warning permission=pasteboard`; nothing stored for text and URL. After the image capture, a second round stored text and URL once each. Another session's perf harness was also writing the shared pasteboard about every 0.5 s at the start, so the first round is contaminated and I count the second round as the result.
+- File copy matches the intermittent capture already logged at 2990d01. This run it never stored. A file URL is an honoured type (FR-001-05) and is the first precedence in FR-001-08, so a copied file should be stored. Cause not determined; harness timing is not ruled out, but 0 of 5 is stronger than the earlier 3 misses.
+
+**Symlinked screenshot folder (FRD-002, TASK-428 guard)**
+
+- Method: `CFFIXED_USER_HOME` does not redirect CFPreferences on this macOS (a scratch `com.apple.screencapture` plist was ignored, so my first attempt tested nothing). Instead the scratch home's `Desktop` was made a symlink to a real directory in the session scratchpad. That is the default resolution path (`ScreenshotLocation.resolve`, `resolvingSymlinksInPath`), the "Desktop is a relocated or symlinked folder" case in FR-002-16.
+- Observed: after launch, a PNG named `Screenshot <date>.png`, written under a hidden name and renamed into the real directory, was picked up within about 10 s: one `item` row `kind=screenshot`, `originalPath` set, 120 px wide, 28953 B; log `screenshot.imported byteSize=28953B outcome=stored`; `meta` row `screenshots.lastScanAt` written.
+- Specified: FR-002-01 / FR-002-16 / AC-002-14: the watched folder itself may be a symlink, its target is watched, qualifying files are listed. **Observed matches specified.**
+- Not tested: the folder override (`screenshots.folderOverride`) pointing at a symlink. Creating a bookmark for the symlink URL failed ("Could not open() the item"), and a bookmark for a real folder passed as a launch argument was rejected with SET-DAT-001; I did not find out why. Links inside the folder being dropped, and the no-follow read with `SSP-VAL-001` on a swap (AC-002-13), were also not exercised.
+
+**Data isolation:** the real app DB, its `-wal` and the real prefs plist were hashed before and after; sha1 identical (the `-shm` was not compared, it is volatile). No `defaults write` was run. The scratch home isolated files only; prefs are not redirected on this macOS, so the app's UserDefaults domain was the real one, but the plist hash is unchanged. Pasteboard: contents are not personal data; I overwrote it with test strings and cleared it at the end (the prior contents were not restored beyond empty). Clone and scratch homes deleted; no Flotsam process left running.
+
+**Not done / unknown:** symlinked override folder and AC-002-13 swap check; full-suite re-run counts; cause of the file-copy misses; cause of SET-DAT-001 for the launch-argument bookmark.
+
+**Defects / follow-ups for S1:**
+- File copy is not stored (0 of 5), `CAP-VAL-001` logged, FR-001-05 / FR-001-08 expect a `file` item. Repeats the earlier intermittent miss; needs a deterministic repro (real Finder copy) from S1 or me.
+- The first text and URL reads after launch gave `CAP-VAL-001` then `CAP-PRM-001` before capture worked; confirm whether that is the expected permission warm-up on macOS 27.
