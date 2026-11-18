@@ -1542,3 +1542,18 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
 - **`bin/check-architecture.sh`:** exit 0 on both targets ("architecture checks passed").
 - **Machine load:** this Mac was heavily loaded the whole time. The 1-min load average ran 27-77 on a machine that normally sits far lower. Afterwards the top processes were `bird` (iCloud Drive) at about 52 % CPU and `backupd` (Time Machine) at about 50 %. Read the timing tests in these runs as being under stress.
 - Nothing was fixed or committed. The clones are kept in the session scratchpad.
+
+## 2026-11-18 · 3× full suite on origin/obrien-461 @ b6f83ec (S1 request; replaces the stale 986bea7 runs)
+
+- **Result:** 3 of 3 runs green. `swift test --package-path Packages/FlotsamCore` exited 0 every time.
+  - No `recorded an issue` lines.
+  - 15 known issues per run.
+  - Wall time 66-75 s.
+  - Tests per run: 2562. This is the sum of the "Test run with N tests" lines after stripping ANSI. The run agent reported 2547, so one of the two counts double-counts something; I'm not resolving it here.
+- **FRD002GapTests220:198:** no issue recorded in any run. The TASK-220 suite ran and passed all 3 times.
+  - b6f83ec does NOT contain main's TASK-459 merge: torres-459 merge 359cd18 and worf-459 merge 01fed85 are both outside it (`merge-base --is-ancestor` = 1).
+  - So these runs say nothing about the fix. The flake simply did not show up here.
+- **SystemClockTests:64 (TASK-462):** no occurrences.
+- **`bin/check-architecture.sh`:** exit 0.
+- **Load:** 1-min load ranged 3-93, mostly 40-75. No other swift-test, swift-build or xctest was running during the runs.
+- Nothing was fixed or committed. Logs are in the session scratchpad (`runs/461b-run{1,2,3}.txt`).
