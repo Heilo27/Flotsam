@@ -500,15 +500,17 @@ struct Adversarial372ProbeCopyTests {
         #expect(V372.probeDirs(root).isEmpty)
     }
 
-    /// OC-372-16 (exploratory, spec silent): given a zero-byte main file beside a -wal that holds committed frames,
-    /// when opened, then the library is new and empty, but the -wal bytes must not be destroyed: they must still
-    /// exist (live or set aside) byte-identical. FR-007-13 promises user data is never deleted. Dies if SQLite's
-    /// "empty database => discard the WAL" rule deletes them.
-    @Test func zeroByteMain_withNonEmptyWal_walBytesSurvivePlaceKnown() async throws {
+    /// OC-372-16 / TASK-380: given a zero-byte main file beside a -wal that holds committed frames, when opened, then
+    /// SQLite would delete the -wal (an empty database discards its WAL), so the pair is damage (FR-007-13): the
+    /// zero-byte main, the -wal and the -shm are moved byte-identical into `corrupt-<ms>/` before any open, a new
+    /// empty library opens, and `STO-DB-002` is raised. Dies if the -wal bytes exist nowhere under the data folder.
+    @Test func zeroByteMain_withNonEmptyWal_quarantinedByteIdentical() async throws {
         let root = makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         try V370.buildWithWal(into: root)
         let walSha = V370.sha(V370.walURL(root))!
+        let shmURL = root.appendingPathComponent("flotsam.sqlite-shm")
+        try Data("shm".utf8).write(to: shmURL)
         try Data().write(to: V370.dbURL(root))
         #expect(V370.size(V370.dbURL(root)) == 0)
 
@@ -516,14 +518,30 @@ struct Adversarial372ProbeCopyTests {
 
         #expect(opened.failure == nil)
         #expect(opened.count == 0)
-        func allFiles(_ url: URL) -> [URL] {
-            let names = (try? FileManager.default.subpathsOfDirectory(atPath: url.path)) ?? []
-            return names.map { url.appendingPathComponent($0) }
-        }
-        let survivors = allFiles(root).filter { V370.sha($0) == walSha }
-        withKnownIssue("FINDING TASK-372-F1: SQLite deletes the -wal of a zero-byte main file; spec is silent (not part of TASK-372)") {
-            #expect(!survivors.isEmpty, "the committed -wal bytes (sha \(walSha.prefix(8))) no longer exist anywhere under the data folder")
-        }
+        #expect(opened.notice?.code == .stoDb002)
+        let folders = V370.corruptFolders(root)
+        #expect(folders.count == 1, "exactly one corrupt-<ts> folder, got \(folders.count)")
+        guard let folder = folders.first else { return }
+        #expect(V370.sha(folder.appendingPathComponent("flotsam.sqlite-wal")) == walSha, "quarantined -wal differs from input")
+        #expect(V370.size(folder.appendingPathComponent("flotsam.sqlite")) == 0)
+        #expect(V370.size(folder.appendingPathComponent("flotsam.sqlite-shm")) == 3)
+        #expect(V370.size(V370.dbURL(root)) > 0, "a new library must be open")
+    }
+
+    /// TASK-380: a zero-byte main beside an empty -wal holds nothing SQLite could discard, so it stays a new empty
+    /// library: no notice, no quarantine.
+    @Test func zeroByteMain_withEmptyWal_newLibrary_noQuarantine() async throws {
+        let root = makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data().write(to: V370.dbURL(root))
+        try Data().write(to: V370.walURL(root))
+
+        let opened = try await V372.open(root, fs: LocalFileSystem())
+
+        #expect(opened.failure == nil)
+        #expect(opened.notice == nil)
+        #expect(opened.count == 0)
+        #expect(V370.corruptFolders(root).isEmpty)
     }
 
     // MARK: leftovers from a crash
