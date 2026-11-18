@@ -1517,3 +1517,28 @@ Branch `s2/frd005-8t` is at **5ce3c78**.
 - Full run of FlotsamCore after the merge: **2664 tests, 0 failures, 15 known issues**, exit 0.
 
 **Exact 24 h boundary.** The 89866d2 contract line says "a sweep 24 h or more after the clear removes it". FR-007-09 says eligible when `exemptReleasedAt` is "older than 24 h", which is a strict comparison. The code (`exemptReleasedAt < now-24h`) keeps the item at exactly 24 h. The test follows the FRD and the code. The contract line should say "more than 24 h" (contract drift, OC-5137).
+
+## 2026-11-18: 3× full-suite runs: torres-447 @ db9f24f, obrien-461 @ 986bea7 (verify only)
+
+Fresh clone for each target. The runs used `swift test --package-path Packages/FlotsamCore` with the build cache kept, so run 1 is cold and runs 2-3 are warm. The two targets ran one after the other, with no other S2 tests running at the same time.
+
+| Target | Run | Exit | Tests | Failed | Known issues | Wall | 1-min load min/max |
+|---|---|---|---|---|---|---|---|
+| 447 | 1 (cold) | 0 | 2540 | 0 | 15 | 118 s | 28.5 / 70.1 |
+| 447 | 2 | 0 | 2540 | 0 | 15 | 68 s | 44.9 / 74.1 |
+| 447 | 3 | 0 | 2540 | 0 | 15 | 68 s | 45.9 / 68.7 |
+| 461 | 1 (cold) | 1 | 2544 | 1 | 15 | 114 s | 26.6 / 65.3 |
+| 461 | 2 | 0 | 2544 | 0 | 15 | 69 s | 41.5 / 77.2 |
+| 461 | 3 | 0 | 2544 | 0 | 15 | 67 s | 41.4 / 70.5 |
+
+- **One failure, on 461 run 1:** `SystemClockTests.swift:64:9`, in "cancelling during a 10 s sleep wakes it early" (OC-0077). The failed expectation is `outcome.elapsed < .seconds(1)`, a wall-clock bound. It passed on runs 2 and 3. Load was very high during that run. That load is the likely cause, but this is not proven.
+- **Watched locations:** no issue recorded in any of the 6 runs, checked by grepping every log for "recorded an issue at".
+  - FRD002GapTests218_219:103
+  - Task456ImportRecentFailureTests:147
+  - ClipboardLateWriteTests:67-148
+  - FRD002GapTests220:171/198
+  - FRD001ContractPart2Tests:681
+  - ThumbnailMemoryTests:23
+- **`bin/check-architecture.sh`:** exit 0 on both targets ("architecture checks passed").
+- **Machine load:** this Mac was heavily loaded the whole time. The 1-min load average ran 27-77 on a machine that normally sits far lower. Afterwards the top processes were `bird` (iCloud Drive) at about 52 % CPU and `backupd` (Time Machine) at about 50 %. Read the timing tests in these runs as being under stress.
+- Nothing was fixed or committed. The clones are kept in the session scratchpad.
