@@ -346,7 +346,8 @@ final class AppContainer {
             openSettings: { [weak self] in self?.actions.openSettings?() },
             // Pin, tags, note, edit, delete and ungroup are FRD-004; ⌘K reaches FRD-005 through `actions`.
             external: { [weak organize] command, ids in organize?.perform(command, ids: ids) },
-            isAccessibilityTrusted: { probe.isAccessibilityTrusted })
+            isAccessibilityTrusted: { probe.isAccessibilityTrusted },
+            openAccessibilitySettings: { probe.openSystemSettings(.accessibility) })
         let capture = capture
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
