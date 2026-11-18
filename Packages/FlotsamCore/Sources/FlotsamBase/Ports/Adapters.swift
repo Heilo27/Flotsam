@@ -27,7 +27,10 @@ public struct LocalFileSystem: FileSystemPort {
 
     public func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> {
         do {
-            return .success(try FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: nil))
+            // `contentsOfDirectory(at:)` fails with NSCocoa 256 "Not a directory" on a link to a folder, so the folder
+            // itself is resolved first. Entries inside it are not touched: a link among them is still listed as a link.
+            let folder = url.resolvingSymlinksInPath()
+            return .success(try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))
         } catch {
             return .failure(Self.mapped(error))
         }

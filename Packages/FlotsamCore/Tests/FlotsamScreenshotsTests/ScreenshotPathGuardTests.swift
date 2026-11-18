@@ -140,4 +140,59 @@ import FlotsamBase
         let names = try scanner.scan(folder).get().map(\.url.lastPathComponent)
         #expect(names == ["Screenshot real.png"])
     }
+
+    // TASK-428: FileManager refuses to list a link-to-folder ("Not a directory"), so a watched folder reached through
+    // a link (a relocated Desktop, an override folder) failed its whole scan. The root is resolved once, then listed.
+    @Test("TASK-428: scanning a watched folder that is itself a symlink lists its files")
+    func symlinkedRootIsScanned() throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let real = try temp.folder("realshots")
+        _ = try temp.file("realshots/Screenshot 1.png", screenCapture: true)
+        let viaLink = temp.root.appendingPathComponent("linkedshots")
+        try FileManager.default.createSymbolicLink(at: viaLink, withDestinationURL: real)
+        let scanner = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences())
+        let files = try scanner.scan(viaLink).get()
+        #expect(files.map(\.url.lastPathComponent) == ["Screenshot 1.png"])
+        // Files keep the folder's own path form, so seen/pending keys agree with FSEvents candidates.
+        #expect(files.first?.url.deletingLastPathComponent().path == viaLink.path)
+    }
+
+    @Test("TASK-428: through a symlinked root, links inside the folder are still dropped")
+    func symlinkedRootStillDropsInnerLinks() throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let real = try temp.folder("realshots")
+        let target = try temp.file("realshots/Screenshot real.png", screenCapture: true)
+        let outside = try temp.file("elsewhere/Screenshot out.png", screenCapture: true)
+        try FileManager.default.createSymbolicLink(
+            at: real.appendingPathComponent("Screenshot inner.png"), withDestinationURL: target)
+        try FileManager.default.createSymbolicLink(
+            at: real.appendingPathComponent("Screenshot outer.png"), withDestinationURL: outside)
+        try FileManager.default.createSymbolicLink(
+            atPath: real.appendingPathComponent("Screenshot dotdot.png").path, withDestinationPath: "../elsewhere/Screenshot out.png")
+        let viaLink = temp.root.appendingPathComponent("linkedshots")
+        try FileManager.default.createSymbolicLink(at: viaLink, withDestinationURL: real)
+        let scanner = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences())
+        let names = try scanner.scan(viaLink).get().map(\.url.lastPathComponent)
+        #expect(names == ["Screenshot real.png"])
+    }
+
+    @Test("TASK-428: a symlinked root does not make a file that escapes it importable")
+    func symlinkedRootEscapeRejectedByImporter() async throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let real = try temp.folder("realshots")
+        let outside = try temp.file("elsewhere/Screenshot out.png", screenCapture: true)
+        let viaLink = temp.root.appendingPathComponent("linkedshots")
+        try FileManager.default.createSymbolicLink(at: viaLink, withDestinationURL: real)
+        let escape = viaLink.appendingPathComponent("Screenshot escape.png")
+        try FileManager.default.createSymbolicLink(atPath: escape.path, withDestinationPath: "../elsewhere/Screenshot out.png")
+        #expect(FileManager.default.fileExists(atPath: outside.path))
+        let recorder = IngestRecorder()
+        let attempt = await run(importer(recorder), escape)
+        guard case .rejected(let error, _) = attempt else { Issue.record("expected rejected, got \(attempt)"); return }
+        #expect(error.code == .sspVal001)
+        #expect(recorder.candidates.isEmpty)
+    }
 }
