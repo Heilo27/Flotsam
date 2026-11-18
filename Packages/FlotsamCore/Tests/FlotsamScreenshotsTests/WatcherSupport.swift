@@ -1,6 +1,7 @@
 import Foundation
 import FlotsamBase
 import FlotsamPayload
+import Testing
 @testable import FlotsamScreenshots
 @testable import FlotsamStorage
 
@@ -370,11 +371,30 @@ final class WatcherRig: @unchecked Sendable {
 
 extension ScreenshotWatcher {
     /// `importRecent()`'s created count for the tests that predate its `FlotsamResult`; a failed run is -1, so it can
-    /// never equal a count an existing test expects.
-    func importRecentCount() async -> Int {
-        switch await importRecent() {
-        case .success(let created): created
-        case .failure: -1
+    /// never equal a count an existing test expects. Bounded (TASK-479): a press that never resolves records an issue
+    /// at the caller's line and returns -1, instead of hanging the suite.
+    func importRecentCount(
+        timeout: Duration = .seconds(10), sourceLocation: SourceLocation = #_sourceLocation
+    ) async -> Int {
+        guard let result = await importRecentWithin(timeout) else {
+            Issue.record("Import recent never resolved within \(timeout): the press hung", sourceLocation: sourceLocation)
+            return -1
+        }
+        switch result {
+        case .success(let created): return created
+        case .failure: return -1
+        }
+    }
+
+    /// `importRecentAnnouncing(hud:)` bounded (TASK-479): a press whose HUD action never resolves records an issue at
+    /// the caller's line and returns, instead of hanging the suite.
+    func importRecentAnnouncingWithin(
+        _ timeout: Duration = .seconds(10), sourceLocation: SourceLocation = #_sourceLocation,
+        hud: @escaping @MainActor @Sendable (String) -> Void
+    ) async {
+        let ended = await finishes(within: timeout) { await self.importRecentAnnouncing(hud: hud) }
+        if !ended {
+            Issue.record("Import recent (announcing) never resolved within \(timeout): the press hung", sourceLocation: sourceLocation)
         }
     }
 }

@@ -94,14 +94,14 @@ import Testing
         #expect(FlotsamStrings.formatted(forKey: "ui.organize.confirmDeleteTag", [name, 2]) == "Remove tag '\(name)' from 2 items?")
     }
 
-    @Test("FR-000-05 KNOWN (Minor, latent): a count passed as Int64/Int32 equal to 1 reads 'other' on the raw fallback; every shipped caller passes Int")
+    @Test("FR-000-05 given a count passed as Int64/Int32/UInt8 equal to 1, when resolved on the raw fallback, then it reads 'one' like Int")
     func nonIntCounts() throws {
         let entry = try #require(FlotsamCatalogue.englishEntries().get()["ui.library.footerItems"])
-        // Red (known issue clears) when resolvingPlurals reads any BinaryInteger count; then drop withKnownIssue.
-        withKnownIssue("resolvingPlurals reads the count with `as? Int`, so Int64(1) and Int32(1) take 'other'") {
-            #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [Int64(1)]) == "%1$lld item")
-            #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [Int32(1)]) == "%1$lld item")
-        }
+        #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [Int64(1)]) == "%1$lld item")
+        #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [Int32(1)]) == "%1$lld item")
+        #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [UInt8(1)]) == "%1$lld item")
+        #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [Int64(2)]) == "%1$lld items")
+        #expect(FlotsamStrings.resolvingPlurals(in: entry, arguments: [UInt64.max]) == "%1$lld items")
     }
 
     @Test("FR-000-05 given every key in the catalogue, when its template is read with no arguments, then no plural slot or %arg survives on the fallback")

@@ -49,16 +49,29 @@ struct Worf466AdversarialTests {
         rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         await rig.watcher.settingsDidChange()
         rig.ingest.releaseIngests()
-        await letItSettle()
+        // TASK-480: the pair's end is an async tail (ingest returns, then `finish` writes the watermark, logs
+        // `screenshot.imported`, and only then `complete` + `pump` run, in one actor turn with no suspension left). Wait
+        // for both pairs' log lines (the last visible step of that tail), not a fixed 150 ms: under load the pair had
+        // not always recorded by then, and a count taken before the pump ran passes whether or not the pump imports the
+        // dropped pair. The press below is an actor call, so it runs after that last turn.
+        let finished = await eventually(timeout: .seconds(10)) {
+            rig.ingest.candidates.count == 2 && rig.sink.records.filter { $0.headline == "screenshot.imported" }.count == 2
+        }
+        #expect(finished, "the 2 in-flight imports must end: \(rig.ingest.names)")
         // then: the queued pair was not imported by anyone
         #expect(rig.ingest.candidates.count == 2, "capture paused: the 2 queued files are not imported")
         // when: the user presses Import Recent (still paused)
         let pressed = await rig.watcher.importRecentWithin()
-        // then: the press imports exactly the 2 files that are not in the library, once each
-        #expect(pressed == .success(2))
-        await letItSettle()
-        #expect(rig.ingest.candidates.count == 4, "each of the 4 files ingested once")
+        // then: the press imports exactly the 2 files that are not in the library, once each, as its own request. A
+        // dropped live job that survived (imported by `pump` or joined by the press) is ingested as live pickup
+        // (`countsAsCopy` true) or makes the press count 0: either turns this red whatever the timing.
+        #expect(pressed == .success(2), "the press must resolve with the 2 files the library did not have")
+        #expect(await eventually { rig.ingest.candidates.count == 4 }, "the press ingested the 2 remaining files")
+        let candidates = rig.ingest.candidates
+        #expect(candidates.count == 4, "each of the 4 files ingested once")
         #expect(Set(rig.ingest.names).count == 4, "no file ingested twice")
+        #expect(candidates.prefix(2).allSatisfy { $0.countsAsCopy }, "the first pair was live pickup")
+        #expect(candidates.suffix(2).allSatisfy { !$0.countsAsCopy }, "the last pair was the press's own import, not live pickup")
     }
 
     // Red when only the first joined press is credited with the handed-over job (a second press that joined the same

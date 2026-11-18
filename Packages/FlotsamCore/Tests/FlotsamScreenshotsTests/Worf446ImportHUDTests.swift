@@ -19,7 +19,7 @@ private func earlierLaunch() -> Date { Date().addingTimeInterval(-10) }
 struct Worf446ImportHUDTests {
     private func run(_ rig: WatcherRig, into record: HUDRecord) async {
         let ingest = rig.ingest
-        await rig.watcher.importRecentAnnouncing { message in
+        await rig.watcher.importRecentAnnouncingWithin { message in
             record.shown.append((message, ingest.candidates.count))
         }
     }
