@@ -313,10 +313,10 @@ struct FRD002AuditATests {
         #expect(rig.ingest.candidates.isEmpty)
 
         // when / then: first run creates 3 (the HUD count), second creates 0
-        #expect(await rig.watcher.importRecent() == 3)
+        #expect(await rig.watcher.importRecentCount() == 3)
         #expect(Set(rig.ingest.names) == Set(shots.map(\.lastPathComponent)))
         #expect(rig.ingest.names.count == 3)
-        #expect(await rig.watcher.importRecent() == 0)
+        #expect(await rig.watcher.importRecentCount() == 0)
     }
 
     // Fails if the default of `screenshots.enabled` becomes false, or the watcher does not start on defaults. The

@@ -156,7 +156,7 @@ struct FRD002AuditBTests {
         let oldest = Set((500..<700).map { "Screenshot n\($0).png" })
 
         // when: Import recent screenshots runs
-        let created = await rig.watcher.importRecent()
+        let created = await rig.watcher.importRecentCount()
 
         // then: +500, each of the 500 newest found by name, none of the 200 oldest
         #expect(created == 500)
@@ -165,7 +165,7 @@ struct FRD002AuditBTests {
         #expect(Set(rig.ingest.names).isDisjoint(with: oldest))
 
         // when: run again. then: no item is created and no new file name appears (delta 0)
-        #expect(await rig.watcher.importRecent() == 0)
+        #expect(await rig.watcher.importRecentCount() == 0)
         #expect(Set(rig.ingest.names) == newest)
     }
 
@@ -179,7 +179,7 @@ struct FRD002AuditBTests {
         try rig.shot(in: rig.desktop, "Screenshot 10d.png", born: Date().addingTimeInterval(-10 * auditBDay))
 
         // when / then: count +1, the 3 day file
-        #expect(await rig.watcher.importRecent() == 1)
+        #expect(await rig.watcher.importRecentCount() == 1)
         #expect(rig.ingest.names == [threeDays.lastPathComponent])
     }
 
@@ -193,7 +193,7 @@ struct FRD002AuditBTests {
         try rig.shot(in: rig.desktop, "Screenshot out.png", born: Date().addingTimeInterval(-7.5 * auditBDay))
 
         // when / then
-        #expect(await rig.watcher.importRecent() == 1)
+        #expect(await rig.watcher.importRecentCount() == 1)
         #expect(rig.ingest.names == [inside.lastPathComponent])
     }
 
@@ -210,7 +210,7 @@ struct FRD002AuditBTests {
         try rig.shot(in: rig.desktop, "Screenshot 40d.png", born: Date().addingTimeInterval(-40 * auditBDay))
 
         // when / then: the 20 and 29 day files only
-        #expect(await rig.watcher.importRecent() == 2)
+        #expect(await rig.watcher.importRecentCount() == 2)
         #expect(Set(rig.ingest.names) == [twenty.lastPathComponent, edgeIn.lastPathComponent])
     }
 

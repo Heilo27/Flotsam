@@ -400,10 +400,10 @@ struct WatcherSettingsTests {
         defer { rig.cleanUp() }
         rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
         let shots = try (0..<3).map { _ in try rig.shot(in: rig.desktop) }
-        #expect(await rig.watcher.importRecent() == 3, "available while pickup is off")
+        #expect(await rig.watcher.importRecentCount() == 3, "available while pickup is off")
         #expect(Set(rig.ingest.names) == Set(shots.map(\.lastPathComponent)))
         #expect(rig.ingest.candidates.allSatisfy { !$0.countsAsCopy })
-        #expect(await rig.watcher.importRecent() == 0)
+        #expect(await rig.watcher.importRecentCount() == 0)
     }
 
     @MainActor
@@ -443,7 +443,7 @@ struct WatcherSettingsTests {
         for index in 0..<500 {
             try rig.shot(in: rig.desktop, "Screenshot old \(index).png", born: now.addingTimeInterval(-Double(index) - 60))
         }
-        let backfill = Task { await rig.watcher.importRecent() }
+        let backfill = Task { await rig.watcher.importRecentCount() }
         #expect(await eventually { rig.ingest.candidates.count >= 4 }, "the backfill is under way")
         let live = try rig.shot(in: rig.desktop, "Screenshot live.png")
         rig.event(live)
@@ -459,7 +459,7 @@ struct WatcherSettingsTests {
         defer { rig.cleanUp() }
         rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         try rig.shot(in: rig.desktop)
-        #expect(await rig.watcher.importRecent() == 1)
+        #expect(await rig.watcher.importRecentCount() == 1)
     }
 
     @Test("OC-2057/2058: Import recent screenshots stops at the retention window and the 30 day cap")
@@ -469,7 +469,7 @@ struct WatcherSettingsTests {
         let day: TimeInterval = 86_400
         let recent = try rig.shot(in: rig.desktop, "Screenshot recent.png", born: Date().addingTimeInterval(-3 * day))
         try rig.shot(in: rig.desktop, "Screenshot ancient.png", born: Date().addingTimeInterval(-40 * day))
-        #expect(await rig.watcher.importRecent() == 1)
+        #expect(await rig.watcher.importRecentCount() == 1)
         #expect(rig.ingest.names == [recent.lastPathComponent])
     }
 
@@ -479,7 +479,7 @@ struct WatcherSettingsTests {
         defer { rig.cleanUp() }
         let now = Date()
         for index in 0..<520 { try rig.shot(in: rig.desktop, "Screenshot \(index).png", born: now.addingTimeInterval(-Double(index))) }
-        #expect(await rig.watcher.importRecent() == 500)
+        #expect(await rig.watcher.importRecentCount() == 500)
         let imported = Set(rig.ingest.names)
         #expect(imported.contains("Screenshot 0.png") && imported.contains("Screenshot 499.png"))
         #expect(!imported.contains("Screenshot 500.png") && !imported.contains("Screenshot 519.png"))

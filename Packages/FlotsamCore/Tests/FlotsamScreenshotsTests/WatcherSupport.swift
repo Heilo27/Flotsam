@@ -316,3 +316,14 @@ final class WatcherRig: @unchecked Sendable {
         clock.advance(by: 5)
     }
 }
+
+extension ScreenshotWatcher {
+    /// `importRecent()`'s created count for the tests that predate its `FlotsamResult`; a failed run is -1, so it can
+    /// never equal a count an existing test expects.
+    func importRecentCount() async -> Int {
+        switch await importRecent() {
+        case .success(let created): created
+        case .failure: -1
+        }
+    }
+}

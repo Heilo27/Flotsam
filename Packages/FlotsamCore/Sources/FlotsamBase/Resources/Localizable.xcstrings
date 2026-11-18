@@ -521,6 +521,16 @@
         }
       }
     },
+    "ui.hud.screenshotsImporting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importing…"
+          }
+        }
+      }
+    },
     "ui.kind.bundle" : {
       "localizations" : {
         "en" : {
