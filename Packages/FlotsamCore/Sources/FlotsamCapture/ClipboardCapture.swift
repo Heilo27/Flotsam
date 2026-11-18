@@ -21,11 +21,13 @@ public final class ClipboardCapture {
     static let pollTolerance = PollTick.tolerance
     /// FR-001-18: consecutive changes that return no type data before capture suspends.
     static let emptyReadsBeforeSuspension = 3
-    /// FR-001-01: reads of one `changeCount` that may come back empty before the change counts as an empty change. A
-    /// copy is not atomic: `clearContents` bumps the count, and `writeObjects` or `setData` fills the board without a
-    /// second bump, so a poll in between sees a new count and nothing to read. Re-reading on the next ticks (about 1 s
-    /// in all) catches the data when it lands instead of dropping the copy until the user copies something else.
-    static let emptyAttemptsPerChange = 3
+    /// FR-001-01: how long (seconds, counted from the poll that first saw the change) one `changeCount` that reads
+    /// empty is watched: re-read on every tick until data lands, a newer change arrives, or this much time has passed.
+    /// A copy is not atomic: `clearContents` bumps the count, and `writeObjects` or `setData` fills the board without a
+    /// second bump, so a poll in between sees a new count and nothing to read. Re-reading catches the data when it
+    /// lands instead of dropping the copy until the user copies something else. Only a change still empty when its
+    /// watch ends counts as an empty change (FR-001-18 b).
+    static let emptyChangeWatchLimit: TimeInterval = 10
     /// FR-001-18: how often a suspended capture re-probes the pasteboard.
     static let suspendedProbeInterval: TimeInterval = 60
 
@@ -55,9 +57,13 @@ public final class ClipboardCapture {
 
     private var lastProcessedChangeCount: Int?
     private var consecutiveEmptyReads = 0
-    /// The count whose last read came back empty and is still being re-read, and how many reads it has had.
-    private var rereadingChangeCount: Int?
-    private var emptyAttempts = 0
+    /// The change whose reads have all come back empty so far and that is still being re-read (FR-001-01), and when the
+    /// poll first saw it. At most one: a newer change ends the watch of the one before.
+    private struct EmptyWatch {
+        let changeCount: Int
+        let began: Date
+    }
+    private var emptyWatch: EmptyWatch?
     /// The last `changeCount` that was counted as an empty change. FR-001-18 b counts changeCount increments, so a
     /// second read of the same count (Save Clipboard pressed again, a suspended probe) is not another.
     private var lastCountedEmptyChangeCount: Int?
@@ -145,7 +151,7 @@ public final class ClipboardCapture {
         syncTimer()
         guard !paused else { return true }
         lastProcessedChangeCount = pasteboard.changeCount
-        rereadingChangeCount = nil
+        emptyWatch = nil
         captureNow()
         return true
     }
@@ -209,9 +215,8 @@ public final class ClipboardCapture {
     private func poll(retrySuspended: Bool = false) {
         let changeCount = pasteboard.changeCount
         let probeDue = suspendedSince != nil && (retrySuspended || clock.now().timeIntervalSince(lastProbe) >= Self.suspendedProbeInterval)
-        if rereadingChangeCount != changeCount { rereadingChangeCount = nil }
-        let rereadDue = rereadingChangeCount != nil
-        guard changeCount != lastProcessedChangeCount || probeDue || rereadDue else { return }
+        // A watched change is visited on every tick until its watch ends, in `handleChange`.
+        guard changeCount != lastProcessedChangeCount || probeDue || emptyWatch != nil else { return }
         lastProcessedChangeCount = changeCount
         lastProbe = clock.now()
         handleChange(changeCount: changeCount)
@@ -230,12 +235,35 @@ public final class ClipboardCapture {
         guard settings.value(SettingKeys.captureMode).capturesClipboardAutomatically else {
             return skip(.capPol003)
         }
+        if endWatchIfFinished(at: changeCount) { return }
         switch gather(changeCount: changeCount, rereadEmpty: true) {
         case .success(let payload): continuation?.yield(payload)
-        case .failure(.skipped(let policy)): skip(policy)
-        case .failure(.failed(let error)): raise(error)
-        case .failure(.silent): break
+        case .failure(let rejection): report(rejection)
         }
+    }
+
+    private func report(_ rejection: Rejection) {
+        switch rejection {
+        case .skipped(let policy): skip(policy)
+        case .failed(let error): raise(error)
+        case .silent: break
+        }
+    }
+
+    /// Ends the empty-change watch (FR-001-01) when it is over, counting the change as an empty change (FR-001-18 b),
+    /// which is the only moment a watched change counts: one that fills in time is a readable change and never was
+    /// empty. A watch is over when a newer change has arrived (`changeCount` differs) or when `emptyChangeWatchLimit`
+    /// has passed since it began. Reads made at or after the limit are outside the watch, so the tick that finds it
+    /// over does not read again. Returns whether it ended by running out of time, which is when this tick must not
+    /// read the change.
+    private func endWatchIfFinished(at changeCount: Int) -> Bool {
+        guard let watch = emptyWatch else { return false }
+        let timedOut = changeCount == watch.changeCount
+            && clock.now().timeIntervalSince(watch.began) >= Self.emptyChangeWatchLimit
+        guard timedOut || changeCount != watch.changeCount else { return false }
+        emptyWatch = nil
+        report(countEmptyChange(watch.changeCount))
+        return timedOut
     }
 
     /// FR-001-04 gates 2 to 5 and the read, in order, stopping at the first that rejects. Gates 2 to 4 read type
@@ -275,7 +303,7 @@ public final class ClipboardCapture {
             readable = false
             return .failure(noteEmptyRead(changeCount: changeCount, rereading: rereadEmpty))
         }
-        rereadingChangeCount = nil
+        emptyWatch = nil
 
         return .success(CapturedPayload(
             representations: snapshot.representations, source: source, capturedAt: clock.now(), origin: .pasteboard))
@@ -290,7 +318,7 @@ public final class ClipboardCapture {
         let changeCount = pasteboard.changeCount
         // This change is handled here, so the poll must not ingest it a second time.
         lastProcessedChangeCount = changeCount
-        rereadingChangeCount = nil
+        emptyWatch = nil
         switch gather(changeCount: changeCount, rereadEmpty: false) {
         case .failure(.skipped(let policy)):
             return .rejected(FlotsamError(policy, "Save Clipboard: the pasteboard change was skipped by policy"))
@@ -329,21 +357,23 @@ public final class ClipboardCapture {
 
     private enum Readability { case readable, empty }
 
-    /// An empty read of `changeCount`. When `rereading` (a poll), the first `emptyAttemptsPerChange - 1` are silent and
-    /// the same count is read again on the next tick; only the last one counts as an empty change (and can suspend
-    /// capture, FR-001-18 b). Save Clipboard does not reread (nothing will tick again for it): its empty read is
-    /// reported at once. Either way a `changeCount` counts as an empty change once: a repeat read of the same count
-    /// (three Save Clipboard presses on one unchanged empty pasteboard) is rejected as empty but not counted.
+    /// An empty read of `changeCount`. When `rereading` (a poll) the change is not counted yet: the first empty read
+    /// opens its watch (`emptyWatch`) and every later tick reads it again until the watch ends
+    /// (`endWatchIfFinished`), which is when it counts as an empty change (FR-001-18 b). Save Clipboard does not
+    /// reread (nothing will tick again for it): its empty read is counted and reported at once. Either way a
+    /// `changeCount` counts as an empty change once: a repeat read of the same count (three Save Clipboard presses on
+    /// one unchanged empty pasteboard, a suspended probe) is rejected as empty but not counted, and opens no watch.
     private func noteEmptyRead(changeCount: Int, rereading: Bool) -> Rejection {
-        if rereading {
-            if rereadingChangeCount != changeCount {
-                rereadingChangeCount = changeCount
-                emptyAttempts = 0
-            }
-            emptyAttempts += 1
-            if emptyAttempts < Self.emptyAttemptsPerChange { return .silent(.capVal001) }
-            rereadingChangeCount = nil
+        guard rereading else { return countEmptyChange(changeCount) }
+        if emptyWatch?.changeCount != changeCount, changeCount != lastCountedEmptyChangeCount {
+            emptyWatch = EmptyWatch(changeCount: changeCount, began: clock.now())
         }
+        return .silent(.capVal001)
+    }
+
+    /// Counts `changeCount` as an empty change, once, and says what to do with it: `CAP-VAL-001` for the first two,
+    /// the suspension for the third in a row. The one place a change is counted.
+    private func countEmptyChange(_ changeCount: Int) -> Rejection {
         guard changeCount != lastCountedEmptyChangeCount else { return .silent(.capVal001) }
         lastCountedEmptyChangeCount = changeCount
         // `.empty` always yields a rejection; the fallback only satisfies the optional.
@@ -384,16 +414,16 @@ public final class ClipboardCapture {
 
     // MARK: Reporting
 
-    /// Every skip and raise is final for the change it handled, so it ends any reread of that change (FR-001-22). A latch
-    /// left set would re-handle the same `changeCount` on every tick. Clearing here, not at the read, keeps the attempt
-    /// budget of a change whose types are listed but whose bytes come back empty (`noteEmptyRead` below the snapshot).
+    /// Every skip and raise is final for the change it handled, so it ends any watch of that change (FR-001-22). A watch
+    /// left open would re-handle the same `changeCount` on every tick. Clearing here, not at the read, keeps the watch of
+    /// a change whose types are listed but whose bytes come back empty (`noteEmptyRead` below the snapshot).
     private func skip(_ policy: ErrorCode) {
-        rereadingChangeCount = nil
+        emptyWatch = nil
         FlotsamLog.log(.pasteboardProcessed(kind: nil, byteSize: 0, outcome: .skipped, policy: policy), sink: sink)
     }
 
     private func raise(_ error: FlotsamError) {
-        rereadingChangeCount = nil
+        emptyWatch = nil
         let reporter = reporter
         Task { await reporter.report(error, origin: .background) }
     }

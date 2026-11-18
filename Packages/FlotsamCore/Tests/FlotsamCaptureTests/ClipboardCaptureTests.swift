@@ -80,6 +80,8 @@ final class ClipboardCaptureTests: XCTestCase {
     private var capture: ClipboardCapture!
     private var presenter: RecordingPresenter!
     private var ignored: Set<String> = []
+    /// Time is a port: the watch on an empty change (FR-001-01) is a duration, so tests move it by hand.
+    private var clock: ManualClock!
     private let textType = "public.utf8-plain-text"
 
     override func setUp() async throws {
@@ -90,10 +92,28 @@ final class ClipboardCaptureTests: XCTestCase {
         settings = SettingsStore(store: MemoryKV())
         ignored = []
         presenter = RecordingPresenter()
+        clock = ManualClock()
         capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: FakeSourceApps(frontmost: SourceApp(bundleId: "com.example.writer", name: "Writer")),
             ownWrites: ledger, ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: presenter), ignoredApps: { [unowned self] in ignored })
+            reporter: ErrorReporter(presenter: presenter), ignoredApps: { [unowned self] in ignored }, clock: clock)
+    }
+
+    /// Reads the change being watched once, then lets its watch run out (FR-001-01) and ticks so it ends: the change
+    /// counts as an empty change (FR-001-18 b) if it is still empty.
+    private func readThenLetEmptyWatchEnd() {
+        capture.captureNow()
+        clock.advance(by: ClipboardCapture.emptyChangeWatchLimit)
+        capture.captureNow()
+    }
+
+    /// Starts capture with the launch read baselined away: Paused then Active re-reads the baseline (FR-001-19). The
+    /// empty board at launch would otherwise open the watch of an empty change that the first copy supersedes and
+    /// counts (FR-001-01, FR-001-18 b), a count the sequences that call this do not mean to make.
+    private func startWithLaunchReadBaselined() {
+        capture.start()
+        settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        settings.set(CaptureMode.active, for: SettingKeys.captureMode)
     }
 
     override func tearDown() async throws {
@@ -206,10 +226,10 @@ final class ClipboardCaptureTests: XCTestCase {
 
     /// FR-001-18 b still holds: a change that stays empty across its re-reads counts, and three such changes suspend.
     func testThreeChangesThatStayEmptyStillSuspendCapture() async throws {
-        capture.start()
+        startWithLaunchReadBaselined()
         for _ in 1...3 {
             pasteboard.beginCopy()
-            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+            readThenLetEmptyWatchEnd()
         }
         for _ in 0..<100 where !presenter.noticeCodes.contains(.capPrm001) { try await Task.sleep(nanoseconds: 20_000_000) }
 
@@ -219,11 +239,11 @@ final class ClipboardCaptureTests: XCTestCase {
     /// TASK-408: types listed but bytes empty is "no readable type data" (FR-001-18 b) just as an empty type list is,
     /// so it reaches CAP-PRM-001 at the same threshold. Listing types must not reset the count.
     func testThreeChangesWithTypesListedButEmptyBytesSuspendCapture() async throws {
-        capture.start()
+        startWithLaunchReadBaselined()
         pasteboard.returnsEmptyBytes = true
         for n in 1...3 {
             pasteboard.copy([textType: Data("gated \(n)".utf8)])
-            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+            readThenLetEmptyWatchEnd()
             if n < ClipboardCapture.emptyReadsBeforeSuspension {
                 try await Task.sleep(nanoseconds: 200_000_000)  // reports are raised from unstructured tasks
                 XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "\(n) empty changes are below the threshold")
@@ -237,11 +257,11 @@ final class ClipboardCaptureTests: XCTestCase {
     /// A change that yields bytes still resets the count: two listed-but-empty changes, a real copy, two more never
     /// reach three in a row.
     func testReadableChangeResetsTheListedButEmptyCount() async throws {
-        capture.start()
+        startWithLaunchReadBaselined()
         for _ in 1...2 {
             pasteboard.returnsEmptyBytes = true
             pasteboard.copy([textType: Data("gated".utf8)])
-            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+            readThenLetEmptyWatchEnd()
         }
         pasteboard.returnsEmptyBytes = false
         pasteboard.copy([textType: Data("real".utf8)])
@@ -249,7 +269,7 @@ final class ClipboardCaptureTests: XCTestCase {
         for _ in 1...2 {
             pasteboard.returnsEmptyBytes = true
             pasteboard.copy([textType: Data("gated".utf8)])
-            for _ in 1...ClipboardCapture.emptyAttemptsPerChange { capture.captureNow() }
+            readThenLetEmptyWatchEnd()
         }
         let count = try await settle()
         try await Task.sleep(nanoseconds: 200_000_000)
