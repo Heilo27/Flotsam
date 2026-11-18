@@ -633,3 +633,32 @@ Known flakes (OC-7132, `optionArrowsStepThroughSidebarFilters`) did not fail, so
 **Unreachable from the package:** OC-3002 to 3007 (Spaces, hotkey, focus), 3014 (signpost p95), 3016 (AX hierarchy), 3021 (pt measurement), 3048/3055/3056 (perf, memory), 3059 and 3097 (network monitor), 3063 to 3067 and 3070 to 3076 (real target apps, real key posting), 3082 (double-length localisation), 3083 (human study), 3086 (VoiceOver order), 3088 to 3090 (Full Keyboard Access, Reduce Motion, appearance), 3091 to 3094 and 3099 (drag: need a real drag session). View-level halves of 3057 (280 pt), 3058 (rendering), 3060 (image fit), 3062 (click focus). HUD placement and 2.5 s timing in 3068, 3075, 3077, 3084, 3100 to 3103. "Times copied" half of OC-3095 (no public read API; copyCount is not exposed). OC-4102 left alone per S1.
 
 **Note:** the oracle writes "120 x 80" in ASCII where the product shows "×"; normalised in the test, not a defect.
+
+## 2026-11-17: B FRD-001 8T, part 2 on `s2/frd001-8t` (INCOMPLETE: stopped on the compaction cap, handoff)
+
+**Branch SHA:** 3bf08ef (merge of main 1c87093 into de23097; test commits b70f53a, b37e4c1, 9142dbf, de23097). Main tested against: **1c87093**. Pushed.
+
+**Status.** All of OC-1056..OC-1110 that are reachable from the package now have tests. Open work for the next agent, in this order: (1) mutation checks for batch 3b (OC-1088, 1091, 1092/1110, 1093, 1094, 1095, 1097, 1100..1106 were never mutated; batches 1 to 3a were, M1..M9 all went red); (2) make OC-1087 and OC-1088 robust under parallel load (see Flake); (3) re-run the full suite and record the result. **Next OC ID for the mutation pass: OC-1088.**
+
+**Counts.** `swift test --filter FRD001` (before the merge): 100 tests in 8 suites (49 part 1, 51 part 2), 6 issues, all in the 3 tests below that pin defects. Full `swift test` after the merge, one run: failures outside my files are OC-7002 (StorageConcurrency), OC-408-W12 and GapPollingTests (OC-115-02), all timing tests under parallel load; I did not re-run them in isolation and did not compare against main. Inside my file the full run also failed OC-1087 and OC-1088 (see Flake).
+
+**PASS (literal oracle assertions, real DB, faked OS seams):** OC-1056..1075, 1076, 1077, 1078, 1080, 1082, 1085 (Curated half), 1087, 1088, 1091, 1093 (sink half), 1094, 1095, 1097, 1098, 1099, 1100..1106, 1107, 1109 (1087 and 1088 pass in isolation, see Flake).
+
+**FAIL (defects, product untouched, tests left red as proof):**
+| ID | Sev | Where | Evidence |
+|---|---|---|---|
+| OC-1081, OC-1083 | Major | `Sources/FlotsamCapture/ClipboardCapture.swift` `noteReadability(.readable)` (about lines 205-215) | After suspension and resume the copy IS stored, but the CAP-PRM-001 Notice and the warning dot never clear (`latestNotices` non-empty). The only non-test `clearNotices(code:)` caller is `App/Flotsam/AppContainer.swift:136` (screenshot watcher). Fix: `reporter.clearNotices(code: .capPrm001)` on resume, plus the FRD edit, same commit. |
+| OC-1110 (and the CAP-IO-001 half of OC-1092) | Major | `Sources/FlotsamBase/Errors/ErrorCode.swift:40` declares `capIo001`; no other file in Sources references it | With the DB refusing writes (`PRAGMA query_only = ON`) nothing is stored and an STO-* code surfaces (OC-1092's "or an STO-* code" branch passes), but the CAP-IO-001 message "Flotsam couldn't save a copy. The disk may be full or its data folder unreadable." is never shown and no error-level CAP-IO-001 record is logged. Recovery after `query_only = OFF` works. |
+| OC-1084 | Major (code reading, no test possible) | `Sources/FlotsamCapture` | Nothing raises CAP-PRM-001 at launch when the system pasteboard access is not Allow; `PasteboardAccess` feeds onboarding only. |
+
+**Leads:** L-A refuted (CAP-LIM-003 context is `members.count`; pinned by OC-1078). L-B refuted (CAP-LIM-001 Notice carries "over 10 MB" / "over 100 MB"; dropping `.limitBytes` turns OC-1076 and OC-1078 red).
+
+**Minor (Rule 9):** the literal "Another device" is duplicated in `SourceApp.anotherDeviceName` and the catalogue key `ui.source.remoteDevice`. They agree today; a change to one must change the other.
+
+**Mutation checks done (product edited, mapped tests red, product reverted):** M1..M9 over IngestLimits.swift, ClipboardCapture.swift and SettingValues.swift (batches 1 to 3a). None for batch 3b.
+
+**Flake (mine, to fix).** OC-1087 (0.9 s window after resume) and OC-1088 (50 copies, 0.75 s each, real timer) pass alone and failed once in the full parallel run. They measure real-timer latency, so CPU load from the other suites widens them. Remediation: keep the 0.6 s contract bound but measure against the capture's own poll count or widen the load margin, and say so in the test comment. Not done.
+
+**Unreachable from the package (reasons are in the test file's trailing comment):** OC-1079, 1089, 1090 (performance, memory, signposts need the app); OC-1084 (no seam, defect above); the Save Clipboard halves of OC-1085/1086 (`saveClipboard` at `AppContainer.swift:222` is a UI entry point, never assigned); OC-1096 (network monitor); the `log show` half of OC-1093; UI halves of OC-1059, 1064, 1069, 1070, 1077, 1100..1107 (rows, preview, menu-bar icon, HUD pixels, Data's 8V).
+
+**Verdict:** FAIL (3 Major defects open). L-A refuted, L-B refuted. Confidence: Moderate (batch 3b has not been mutation-checked, and one full run showed load flakes).
