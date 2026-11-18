@@ -34,7 +34,7 @@ struct Task441OnboardingGatesTests {
         #expect(fresh.current == .welcome)
     }
 
-    // OC-8141 / FR-008-12 step 5. Red if any of the four rows flips.
+    // FR-008-12 step 5. Red if any of the four rows flips.
     @Test("FR-008-12: Continue on step 5 imports only when the box is checked and pickup is on")
     func importTruthTable() {
         #expect(OnboardingFlow.shouldImportScreenshots(importRecent: true, pickupEnabled: true))
