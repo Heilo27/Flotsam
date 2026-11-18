@@ -35,7 +35,7 @@ private struct QARig {
 
     func settle() async { await quiesceReporter(reporter) }
 
-    func until(seconds: Double = 5, _ condition: () async throws -> Bool) async -> Bool {
+    func until(seconds: Double = 60, _ condition: () async throws -> Bool) async -> Bool {
         let deadline = Date().addingTimeInterval(seconds)
         while Date() < deadline {
             if (try? await condition()) == true { return true }

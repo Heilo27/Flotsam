@@ -38,6 +38,11 @@ actor ThumbnailCache {
         }
     }
 
+    /// Runs `work` as one uninterrupted step, serial with every other call on this actor. Thumbnail file writes and
+    /// the deletion's file removal both go through here, which is what makes "check the item exists, then write" and
+    /// "remove the item's files" unable to interleave (FR-007-15). `work` must not suspend, and it must be short.
+    func exclusively<T: Sendable>(_ work: @Sendable (isolated ThumbnailCache) -> T) -> T { work(self) }
+
     func removeAll() {
         entries = [:]
         order = []
@@ -87,21 +92,21 @@ extension FlotsamDatabase {
 
     /// Ingest warm-up (S5): writes both thumbnails of a new image to disk and nowhere else, since nobody is looking at
     /// it yet and it must not sit in the memory LRU. `source` is the stored image, already in memory at ingest, so there
-    /// is no re-read. Skips a deleted item, and cleans up if the delete lands while it renders: the delete's own
-    /// `discardThumbnails` can run before a write completes, which would leave an orphan file.
+    /// is no re-read. Skips a deleted item. A delete that lands while it renders cannot leave an orphan: every write
+    /// re-checks the item inside `publishThumbnail`, which is serial with the delete's `discardThumbnails`.
     func warmThumbnails(itemId: UUID, source: Data) async {
-        guard await itemExists(itemId) else { return }
+        guard itemExists(itemId) else { return }
         await writeThumbnails(itemId: itemId, source: source)
-        if await !itemExists(itemId) { await discardThumbnails(itemIds: [itemId]) }
     }
 
     func writeThumbnails(itemId: UUID, source: Data) async {
-        for size in ThumbnailSize.allCases { _ = await renderThumbnail(source, itemId: itemId, size: size) }
+        for size in ThumbnailSize.allCases { _ = await renderThumbnail(source, itemId: itemId, size: size, cacheKey: nil) }
     }
 
-    private func itemExists(_ itemId: UUID) async -> Bool {
+    /// Synchronous on purpose: `publishThumbnail` must check and write without a suspension between the two.
+    private func itemExists(_ itemId: UUID) -> Bool {
         do {
-            return try await pool.read { db in
+            return try pool.read { db in
                 try Bool.fetchOne(db, sql: "SELECT EXISTS (SELECT 1 FROM item WHERE id = ?)", arguments: [itemId.uuidString]) ?? false
             }
         } catch {
@@ -110,13 +115,30 @@ extension FlotsamDatabase {
         }
     }
 
-    /// The one place a thumbnail is rendered and written: JPEG from `source`, then to disk. Best effort: a failed disk
-    /// write only means it is rebuilt next time, but it is logged (FRD-000).
-    private func renderThumbnail(_ source: Data, itemId: UUID, size: ThumbnailSize) async -> Data? {
-        guard let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue) else { return nil }
-        if case .failure(let error) = blobs.writeAtomically(jpeg, to: folder.thumbnailURL(itemId: itemId, edge: size.rawValue)) {
-            report(error)
+    /// The only way a thumbnail reaches disk or the memory cache. Inside the thumbnail actor's serial section it checks
+    /// that the item still exists and then writes, so it cannot interleave with `discardThumbnails` (which removes the
+    /// files and the cache entries in the same section, after the delete has committed): either the write sees the
+    /// committed delete and does nothing, or it finishes first and the discard removes what it wrote. Returns false
+    /// when the item is gone. `cacheKey` also puts the bytes in the memory LRU (a panel asked for them); nil is the
+    /// disk-only warm-up. A failed disk write is only logged: the thumbnail is rebuilt next time (FRD-000).
+    private func publishThumbnail(_ jpeg: Data, itemId: UUID, size: ThumbnailSize, cacheKey: String?) async -> Bool {
+        let url = folder.thumbnailURL(itemId: itemId, edge: size.rawValue)
+        let outcome: FlotsamResult<Void>? = await thumbnails.exclusively { cache in
+            guard itemExists(itemId) else { return nil }
+            let written = blobs.writeAtomically(jpeg, to: url)
+            if let cacheKey { cache.store(jpeg, for: cacheKey) }
+            return written
         }
+        guard let outcome else { return false }
+        if case .failure(let error) = outcome { report(error) }
+        return true
+    }
+
+    /// The one place a thumbnail is rendered and published: JPEG from `source`, then `publishThumbnail`. Nil when the
+    /// source does not decode or the item was deleted meanwhile.
+    private func renderThumbnail(_ source: Data, itemId: UUID, size: ThumbnailSize, cacheKey: String?) async -> Data? {
+        guard let jpeg = await imageWorker.thumbnail(from: source, edge: size.rawValue) else { return nil }
+        guard await publishThumbnail(jpeg, itemId: itemId, size: size, cacheKey: cacheKey) else { return nil }
         return jpeg
     }
 
@@ -131,18 +153,19 @@ extension FlotsamDatabase {
             }
         } catch { return nil }
         guard let blobName, case .success(let source) = blobs.read(blobName: blobName),
-              let jpeg = await renderThumbnail(source, itemId: itemId, size: size)
+              let jpeg = await renderThumbnail(source, itemId: itemId, size: size, cacheKey: key)
         else { return nil }
-        await thumbnails.store(jpeg, for: key)
         return jpeg
     }
 
-    /// Drops memory and disk thumbnails for deleted items (FR-007-15).
+    /// Drops memory and disk thumbnails for deleted items (FR-007-15). Call it after the delete has committed: it is
+    /// serial with `publishThumbnail`, so no write can put a file back afterwards.
     func discardThumbnails(itemIds: [UUID]) async {
         for itemId in itemIds {
-            await thumbnails.evict(itemId: itemId)
-            for size in ThumbnailSize.allCases {
-                _ = fileSystem.removeItem(at: folder.thumbnailURL(itemId: itemId, edge: size.rawValue))
+            let urls = ThumbnailSize.allCases.map { folder.thumbnailURL(itemId: itemId, edge: $0.rawValue) }
+            await thumbnails.exclusively { cache in
+                cache.evict(itemId: itemId)
+                for url in urls { _ = fileSystem.removeItem(at: url) }
             }
         }
     }
