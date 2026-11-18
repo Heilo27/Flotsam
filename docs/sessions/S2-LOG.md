@@ -374,3 +374,6 @@ Clipboard: restored after the run.
 - Paste, Plain and Copy menu actions apply to the clicked card; Pin and Delete apply to the selection if it contains the clicked card, else to that card alone.
 - Arrow movement clamps at the ends (no wrap). Cmd-C and Shift-Return both map to copyOnly. `fileExists` runs on the main actor.
 - OC-6056 is an extra test beyond the assigned list; the OC-6062 test covers the selection half only.
+
+## 2026-11-17: Merge origin/main into `s2/frd006` @ 4c1e70b (from `origin/main` 86fc162)
+- Clean merge, no conflicts. `swift test` 295 tests in 46 suites passed (8 known issues, 0 failures); `bin/check-architecture.sh` pass.
