@@ -42,7 +42,7 @@ struct Task424TriggerOwnWriteCaptureTests {
             capture = ClipboardCapture(
                 pasteboard: h.pasteboard, sourceApps: NoSourceApp(), ownWrites: h.ledger,
                 ingest: IngestActor(database: database, settings: settings), settings: settings,
-                reporter: reporter, ignoredApps: { [] }, clock: h.clock, sink: sink,
+                reporter: reporter, ignoredApps: { [] }, access: AllowedPasteboardAccess(), clock: h.clock, sink: sink,
                 scheduleTimer: { _, _, _ in { } })
         }
 

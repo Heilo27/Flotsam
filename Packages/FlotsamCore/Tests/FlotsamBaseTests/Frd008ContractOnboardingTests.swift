@@ -60,7 +60,7 @@ struct Frd008ContractOnboardingTests {
         let settings = SettingsStore(store: MemoryKeyValueStore())
         // when Flotsam launches
         let show = OnboardingFlow.shouldShowAutomatically(settings: settings)
-        let flow = OnboardingFlow(gatesPasteboard: true)
+        let flow = OnboardingFlow()
         // then onboarding opens, on step 1 of 8, with both statements
         #expect(show)
         #expect(flow.current == .welcome)
@@ -77,7 +77,7 @@ struct Frd008ContractOnboardingTests {
     // position indicator skips, or a permission step loses its "what stops without it" line.
     @Test("OC-8083: every step has a title and one-sentence purpose, Back on steps 2-8, and an ordered progress position")
     func everyStepHasChrome() {
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        var flow = OnboardingFlow()
         var seen: [(OnboardingStep, Int, Int, Bool)] = []
         // when the user advances through every step
         while true {
@@ -116,30 +116,13 @@ struct Frd008ContractOnboardingTests {
     // OC-8084 (navigation half). Red if the clipboard step is not step 2 on a gated macOS.
     @Test("OC-8084: on a gated macOS step 2 is Clipboard access, with the Paste from Other Apps instruction")
     func gatedMacShowsClipboardStepSecond() {
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        var flow = OnboardingFlow()
         flow.advance()
         #expect(flow.current == .clipboard)
         #expect(flow.position == 2)
         #expect(text("ui.onboarding.clipboardMissing").contains("Paste from Other Apps"))
         #expect(text("ui.onboarding.openSystemSettings") == "Open System Settings")
         // negative: Back from step 2 returns to Welcome
-        flow.back()
-        #expect(flow.current == .welcome)
-    }
-
-    // OC-8085. Red if the clipboard step is shown when the OS does not gate pasteboard reads.
-    @Test("OC-8085: on macOS 14 step 2 is skipped and Accessibility follows Welcome")
-    func ungatedMacSkipsClipboardStep() {
-        var flow = OnboardingFlow(gatesPasteboard: false)
-        #expect(flow.steps == [.welcome, .accessibility, .inputMonitoring, .screenshots, .hotkey, .loginItem, .done])
-        #expect(flow.total == 7)
-        flow.advance()
-        #expect(flow.current == .accessibility)
-        #expect(flow.position == 2)
-        // Back returns past the skipped step to Welcome
-        flow.back()
-        #expect(flow.current == .welcome)
-        // boundary: Back on the first step stays put
         flow.back()
         #expect(flow.current == .welcome)
     }
@@ -210,7 +193,7 @@ struct Frd008ContractOnboardingTests {
         }
         // given steps 1-3 finished (advance x3, saved on each move) and the app quit without closing the window
         let (progress, _) = launch()
-        var flow = OnboardingFlow(gatesPasteboard: true, resumingAt: progress.savedStep())
+        var flow = OnboardingFlow(resumingAt: progress.savedStep())
         for _ in 0..<3 {
             flow.advance()
             progress.save(flow.current)
@@ -218,14 +201,14 @@ struct Frd008ContractOnboardingTests {
         #expect(flow.current == .inputMonitoring)
         // when relaunched (a fresh reader over the same defaults)
         let (relaunchedProgress, relaunchedSettings) = launch()
-        let relaunched = OnboardingFlow(gatesPasteboard: true, resumingAt: relaunchedProgress.savedStep())
+        let relaunched = OnboardingFlow(resumingAt: relaunchedProgress.savedStep())
         let shownAutomatically = OnboardingFlow.shouldShowAutomatically(settings: relaunchedSettings)
         // then steps 1-3 are not shown again: either it stays closed or it resumes past step 3
         #expect(!shownAutomatically || relaunched.position > 3)
         #expect(relaunched.current == .inputMonitoring)
         // negative: with no saved step (Show Setup Guide, or a first launch) the flow starts at step 1
         relaunchedProgress.clear()
-        #expect(OnboardingFlow(gatesPasteboard: true, resumingAt: relaunchedProgress.savedStep()).position == 1)
+        #expect(OnboardingFlow(resumingAt: relaunchedProgress.savedStep()).position == 1)
     }
 
     // OC-8100. Red if the default capture mode stops capturing, so onboarding being open would block capture.
@@ -244,7 +227,7 @@ struct Frd008ContractOnboardingTests {
     @Test("OC-8101: Back from step 4 shows step 3 and changes no setting")
     func backChangesNoSetting() {
         let raw = MemoryKeyValueStore()
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        var flow = OnboardingFlow()
         for _ in 0..<3 { flow.advance() }
         #expect(flow.current == .inputMonitoring)
         flow.back()
@@ -260,7 +243,7 @@ struct Frd008ContractOnboardingTests {
         defer { defaults.wipe() }
         defaults.store().set(true, for: SettingKeys.onboardingCompleted)
         // when the user opens the Setup Guide from the menu
-        let guide = OnboardingFlow(gatesPasteboard: true)
+        let guide = OnboardingFlow()
         // then it is on step 1, and a relaunch still does not open it automatically
         #expect(guide.current == .welcome)
         #expect(guide.position == 1)

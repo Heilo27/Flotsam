@@ -24,7 +24,6 @@ final class OnboardingModel {
     init(container: AppContainer, resuming: Bool) {
         self.container = container
         flow = OnboardingFlow(
-            gatesPasteboard: true,
             resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: resuming, saved: container.onboardingProgress.savedStep()))
         refresh()
     }

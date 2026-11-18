@@ -474,7 +474,7 @@
       "requirement": "FR-007-07",
       "given": "A Library of 2,000 image items, release build",
       "when": "The user scrolls the entire Library grid and then the Shelf",
-      "then": "Resident memory stays under 150 MB throughout (thumbnail cache bounded)",
+      "then": "Physical footprint stays under 150 MB throughout (thumbnail cache bounded)",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -1335,7 +1335,7 @@
       "requirement": "FR-007-16",
       "given": "Release build; 10,000-item database with 2,000 images",
       "when": "The user opens the Library and scrolls through every image so the thumbnail cache fills, then the Shelf",
-      "then": "Resident memory never exceeds 150 MB",
+      "then": "Physical footprint never exceeds 150 MB",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true

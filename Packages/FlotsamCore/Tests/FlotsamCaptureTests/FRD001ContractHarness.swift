@@ -233,7 +233,7 @@ final class ContractRig {
         self.capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: sourceApps, ownWrites: ledger,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { box.value }, clock: clock, sink: sink, scheduleTimer: scheduleTimer)
+            reporter: reporter, ignoredApps: { box.value }, access: AllowedPasteboardAccess(), clock: clock, sink: sink, scheduleTimer: scheduleTimer)
         if startCapture { capture.start() }
     }
 

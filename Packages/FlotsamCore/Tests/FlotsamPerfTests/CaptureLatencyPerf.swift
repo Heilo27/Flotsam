@@ -108,7 +108,7 @@ struct CaptureLatencyPerf {
         let capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: FixedSourceApps(), ownWrites: OwnWriteLedger(),
             ingest: IngestActor(database: database, settings: settings),
-            settings: settings, reporter: ErrorReporter(presenter: presenter), ignoredApps: { [] })
+            settings: settings, reporter: ErrorReporter(presenter: presenter), ignoredApps: { [] }, access: AllowedPasteboardAccess())
         let committed = Stamp()
         let unsubscribe = database.events.subscribe { if $0 == .itemsChanged { committed.set() } }
         defer { unsubscribe() }
@@ -175,4 +175,10 @@ struct CaptureLatencyPerf {
             ("warmups", "\(Self.warmups)"), ("poll_s", "\(PollTick.interval)"),
         ])
     }
+}
+
+/// Pasteboard reads allowed ("Paste from Other Apps" set to Allow): the access the capture tests run under unless a
+/// test supplies its own stub.
+private struct AllowedPasteboardAccess: PasteboardAccessPort {
+    var isReadAllowed: Bool { true }
 }

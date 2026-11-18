@@ -136,7 +136,7 @@ final class GapRig {
             pasteboard: pasteboard,
             sourceApps: GapSourceApps(frontmost: SourceApp(bundleId: Self.frontmostBundle, name: "Writer")),
             ownWrites: ledger, ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { ignored.value }, sink: sink, pollTick: pollTick,
+            reporter: reporter, ignoredApps: { ignored.value }, access: AllowedPasteboardAccess(), sink: sink, pollTick: pollTick,
             scheduleTimer: scheduleTimer)
     }
 
@@ -195,4 +195,10 @@ func eventually(seconds: Double = 10, _ condition: () async -> Bool) async -> Bo
         try? await Task.sleep(for: .milliseconds(20))
     }
     return await condition()
+}
+
+/// Pasteboard reads allowed ("Paste from Other Apps" set to Allow): the access the capture tests run under unless a
+/// test supplies its own stub.
+struct AllowedPasteboardAccess: PasteboardAccessPort {
+    var isReadAllowed: Bool { true }
 }

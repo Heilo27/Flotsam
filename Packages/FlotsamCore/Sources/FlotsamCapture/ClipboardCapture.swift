@@ -76,7 +76,7 @@ public final class ClipboardCapture {
         pasteboard: any PasteboardPort, sourceApps: any SourceAppPort, ownWrites: OwnWriteLedger,
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
-        access: any PasteboardAccessPort = UngatedPasteboardAccess(),
+        access: any PasteboardAccessPort,
         clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick(),
         scheduleTimer: @escaping TimerScheduler = ClipboardCapture.systemTimer
     ) {

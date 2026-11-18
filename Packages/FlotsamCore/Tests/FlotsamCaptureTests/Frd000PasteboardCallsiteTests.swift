@@ -76,7 +76,7 @@ struct Frd000PasteboardCallsiteTests {
         let capture = ClipboardCapture(
             pasteboard: board, sourceApps: App37(), ownWrites: OwnWriteLedger(),
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: Presenter37(), sink: sink), ignoredApps: { [] }, sink: sink)
+            reporter: ErrorReporter(presenter: Presenter37(), sink: sink), ignoredApps: { [] }, access: AllowedPasteboardAccess(), sink: sink)
         let marker = "OC37-MARKER-TEXT"  // 16 bytes
         capture.start()
 

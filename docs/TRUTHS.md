@@ -32,7 +32,7 @@ pasted, OR any feature requires a network call carrying clip content. Either →
    built for a panel (thumbnails, row caches) is released when it closes. *Serves primary: a
    history you'd switch off for its cost recalls nothing.*
    Falsifier: idle over 10 min averages > 0.2 % of one core, > 2.5 wake-ups/s, or > 60 MB physical footprint
-   (`phys_footprint`, as reported by `footprint`) with 10,000 items; or the panel open exceeds 150 MB.
+   (`phys_footprint`, as reported by `footprint`) with 10,000 items; or the panel open exceeds 150 MB physical footprint.
 
 ## ANTI-TRUTHS
 1. **Not a sync service.** No iCloud, no account, no server. Paste owns cross-device. A sync request

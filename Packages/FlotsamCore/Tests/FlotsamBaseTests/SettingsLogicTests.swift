@@ -62,24 +62,13 @@ import Testing
 
 @Suite struct OnboardingFlowTests {
     @Test func eightStepsInOrderWhenPasteboardIsGated() {
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        var flow = OnboardingFlow()
         #expect(flow.total == 8 && flow.isFirst)
         var seen = [flow.current]
         while !flow.isLast { flow.advance(); seen.append(flow.current) }
         #expect(seen == OnboardingStep.allCases)
         flow.advance()
         #expect(flow.current == .done, "advance stops at the last step")
-    }
-
-    @Test func clipboardStepIsSkippedWhenNotGated() {
-        var flow = OnboardingFlow(gatesPasteboard: false)
-        #expect(flow.total == 7)
-        flow.advance()
-        #expect(flow.current == .accessibility)
-        flow.back()
-        #expect(flow.current == .welcome)
-        flow.back()
-        #expect(flow.current == .welcome, "back stops at the first step")
     }
 
     @Test func showsAutomaticallyOnlyUntilCompleted() {
@@ -91,7 +80,7 @@ import Testing
 
     @Test func navigationAloneChangesNoSetting() {
         let raw = MemoryKeyValueStore()
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        var flow = OnboardingFlow()
         while !flow.isLast { flow.advance() }
         #expect(raw.string(forKey: "onboarding.completed") == nil)
     }

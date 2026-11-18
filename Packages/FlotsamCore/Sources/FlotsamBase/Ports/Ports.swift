@@ -62,12 +62,6 @@ public protocol PasteboardAccessPort {
     var isReadAllowed: Bool { get }
 }
 
-/// Access with no gate (reads always allowed): the default when no system probe is supplied.
-public struct UngatedPasteboardAccess: PasteboardAccessPort {
-    public init() {}
-    public var isReadAllowed: Bool { true }
-}
-
 /// String-valued key-value storage behind `SettingsStore`. Only `SettingsStore` may use it for settings (ADR-0009).
 public protocol KeyValueStore: Sendable {
     func string(forKey key: String) -> String?

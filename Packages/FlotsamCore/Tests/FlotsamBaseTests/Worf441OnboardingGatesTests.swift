@@ -8,11 +8,11 @@ import Testing
 
 @Suite("TASK-441 Worf: onboarding gates")
 struct Worf441OnboardingGatesTests {
-    private func startStep(automatic: Bool, raw: String?, gated: Bool = true) -> OnboardingStep {
+    private func startStep(automatic: Bool, raw: String?) -> OnboardingStep {
         let store = MemoryKeyValueStore()
         if let raw { store.setString(raw, forKey: "onboarding.resumeStep") }
         let saved = OnboardingProgress(store: store).savedStep()
-        return OnboardingFlow(gatesPasteboard: gated, resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: automatic, saved: saved)).current
+        return OnboardingFlow(resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: automatic, saved: saved)).current
     }
 
     // Red if resumeStep ignores isAutomaticShow, or drops/changes the saved step, for any step.
@@ -34,13 +34,6 @@ struct Worf441OnboardingGatesTests {
     func nothingSaved() {
         #expect(startStep(automatic: true, raw: nil) == .welcome)
         #expect(startStep(automatic: false, raw: nil) == .welcome)
-    }
-
-    // Red if resumeStep stops composing with the flow's hidden-step guard.
-    @Test("OC-8098: saved Clipboard step on a Mac that skips it starts at step 1, automatic show")
-    func hiddenStep() {
-        #expect(startStep(automatic: true, raw: "1", gated: false) == .welcome)
-        #expect(startStep(automatic: true, raw: "1", gated: true) == .clipboard)
     }
 
     // Red if any of the four rows flips, or the operands are swapped (distinct rows pin each argument).

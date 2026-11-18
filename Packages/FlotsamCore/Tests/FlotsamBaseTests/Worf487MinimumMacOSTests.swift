@@ -27,8 +27,8 @@ struct Worf487MinimumMacOSTests {
     // OC-487-01. Red if the flow drops a step, re-adds the skip, or reorders: the always-on flow is exactly eight steps.
     @Test("OC-487-01: the gated onboarding flow is exactly eight steps, Clipboard second")
     func eightSteps() {
-        // given the flow the app builds (gatesPasteboard is always true on macOS 26)
-        var flow = OnboardingFlow(gatesPasteboard: true)
+        // given the flow the app builds (every flow shows the Clipboard step on macOS 26)
+        var flow = OnboardingFlow()
         // when walking Welcome to Done
         var visited = [flow.current.rawValue]
         var positions = [flow.position]
@@ -41,15 +41,14 @@ struct Worf487MinimumMacOSTests {
         #expect(flow.current == .done)
     }
 
-    // OC-487-02. Red if the model's flow stops being built with gatesPasteboard: true (e.g. the old probe comes back).
+    // OC-487-02. Red if the model's flow regains a gate parameter or a probe (TASK-488: the gate parameter is gone, so the flow is always gated).
     @Test("OC-487-02: OnboardingModel always builds the flow gated; no probe, no availability branch")
     func modelAlwaysGated() throws {
         // given the model source (comments stripped)
         let code = try source("App/Flotsam/OnboardingModel.swift")
         // when reading how the flow is constructed
-        // then the gate is the literal true and nothing consults a probe or OS version
-        #expect(code.contains("gatesPasteboard: true"))
-        #expect(!code.contains("gatesPasteboard: false"))
+        // then there is no gate argument at all (TASK-488) and nothing consults a probe or OS version
+        #expect(!code.contains("gatesPasteboard"))
         #expect(!code.contains("isGated"))
         #expect(!code.contains("#available"))
         #expect(!code.contains("ProcessInfo.processInfo.operatingSystemVersion"))
@@ -85,19 +84,20 @@ struct Worf487MinimumMacOSTests {
         #expect(!code.contains("#available"))
     }
 
-    // OC-487-05. Red if any one of the five places that state the minimum OS is moved off 26.0.
-    @Test("OC-487-05: project.yml, Info.plist and Package.swift all state 26.0, nothing else")
+    // OC-487-05. Red if any one of the places that state the minimum OS is moved off 26.0. TASK-488: Info.plist no longer
+    // holds a literal; it derives from MACOSX_DEPLOYMENT_TARGET, which xcodegen sets from options.deploymentTarget, so the literals live in project.yml (once) and Package.swift.
+    @Test("OC-487-05: project.yml and Package.swift state 26.0, Info.plist derives it, nothing else")
     func minimumVersionsAgree() throws {
-        // given the five declarations
+        // given the declarations
         let yml = try source("project.yml")
         let plist = try source("App/Flotsam/Info.plist")
         let package = try source("Packages/FlotsamCore/Package.swift")
         // when reading them
-        // then each holds the literal 26.0 and none keeps the old value
+        // then the literals are 26.0, Info.plist derives from the deployment target, and none keeps the old value
         #expect(yml.contains("macOS: \"26.0\""))
-        #expect(yml.contains("MACOSX_DEPLOYMENT_TARGET: \"26.0\""))
-        #expect(yml.contains("LSMinimumSystemVersion: \"26.0\""))
-        #expect(plist.contains("<key>LSMinimumSystemVersion</key>\n\t<string>26.0</string>"))
+        #expect(!yml.contains("MACOSX_DEPLOYMENT_TARGET:"), "project.yml states the deployment target once, in options.deploymentTarget")
+        #expect(yml.contains("LSMinimumSystemVersion: \"$(MACOSX_DEPLOYMENT_TARGET)\""))
+        #expect(plist.contains("<key>LSMinimumSystemVersion</key>\n\t<string>$(MACOSX_DEPLOYMENT_TARGET)</string>"))
         #expect(package.contains("platforms: [.macOS(\"26.0\")]"))
         for (name, text) in [("project.yml", yml), ("Info.plist", plist), ("Package.swift", package)] {
             #expect(!text.contains("14.0"), "\(name) still names 14.0")

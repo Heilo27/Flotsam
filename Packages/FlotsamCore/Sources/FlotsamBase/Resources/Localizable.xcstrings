@@ -3312,7 +3312,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow."
+            "value" : "macOS asks before apps read the clipboard. Choose Always Allow."
           }
         }
       }

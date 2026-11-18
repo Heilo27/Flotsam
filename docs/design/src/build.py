@@ -241,7 +241,7 @@ def prmrow(n,ok,help_,btn='Open System Settings'):
     pill=f'<span class="pill ok">{ic("check",sz=11)}Allowed</span>' if ok else f'<span class="pill no">{ic("warn",sz=11)}Not allowed</span>'
     b='' if ok else f'<span class="btn sm" style="margin-left:auto">{btn}</span>'
     return f'<div class="status" style="flex-direction:column;align-items:flex-start;gap:4px"><div style="display:flex;gap:8px;align-items:center;width:100%"><b>{n}</b>{pill}{b}</div><div class="help">{help_}</div></div>'
-privacy=(prmrow('Accessibility',True,'Lets Flotsam paste into the app you are using.')+prmrow('Input Monitoring',False,'Lets triggers notice the text you type. Flotsam never stores keystrokes.')+prmrow('Paste from Other Apps',False,'macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow.')
+privacy=(prmrow('Accessibility',True,'Lets Flotsam paste into the app you are using.')+prmrow('Input Monitoring',False,'Lets triggers notice the text you type. Flotsam never stores keystrokes.')+prmrow('Paste from Other Apps',False,'macOS asks before apps read the clipboard. Choose Always Allow.')
  +f'<div class="form" style="margin-top:2px">{fr("Ignored apps",lbox([(app("oklch(0.5 0.1 30)"),"Keychain Access",""),(app("oklch(0.55 0.12 250)"),"Passwords","")]),True)}</div><div style="display:flex;gap:8px"><span class="btn sm">Reset Defaults</span></div>')
 storage=F(fr('Keep history for',popup('1 year')+'<div class="help">Pinned items and items with a shortcut are always kept.</div>',True),
  fr('Maximum size',popup('2 GB')),
@@ -258,7 +258,7 @@ sheet('06-settings','Settings',[
  wrap('General',bd(win('General','General',general),pad=20)),
  wrap('Shortcuts (recording a shortcut)',bd(win('Shortcuts','Shortcuts',shortcuts),pad=20)),
  wrap('Triggers',bd(win('Triggers','Triggers',triggers),pad=20)),
- wrap('Privacy (includes 15.4+ row)',bd(win('Privacy','Privacy',privacy),pad=20)),
+ wrap('Privacy',bd(win('Privacy','Privacy',privacy),pad=20)),
  wrap('Storage',bd(win('Storage','Storage',storage),pad=20)),
  wrap('About',bd(win('About','About',about),pad=20)),
  wrap('Clear History sheet',bd(clear)),
@@ -275,7 +275,7 @@ def onb(step,icon,h,p,ctl='',skip='Skip',primary='Continue',stakes=''):
       f'<div class="nav"><span class="btn sm" style="visibility:{"hidden" if step==1 else "visible"}">Back</span><div class="dots">{dots}</div><span class="btn sm">{skip}</span><span class="btn pri">{primary}</span></div></div>')
 ON=[
  onb(1,'swoosh','Everything you copy, within reach','Flotsam keeps your clipboard and screenshot history on this Mac. Nothing leaves it.',skip='Skip Setup',primary='Get Started'),
- onb(2,'paste','Allow Paste from Other Apps','macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow so Flotsam can save what you copy.',ctl='<span class="btn">Open Settings</span>',stakes='Skip this and Flotsam can’t record new copies.'),
+ onb(2,'paste','Allow Paste from Other Apps','macOS asks before apps read the clipboard. Choose Always Allow so Flotsam can save what you copy.',ctl='<span class="btn">Open Settings</span>',stakes='Skip this and Flotsam can’t record new copies.'),
  onb(3,'hand','Allow Accessibility','Accessibility lets Flotsam paste into the app you are using.',ctl='<div class="status" style="width:300px;justify-content:center"><span class="pill no">'+ic('warn',sz=11)+'Not allowed</span></div><span class="btn">Open Settings</span>',stakes='Skip this and Flotsam copies only. You press ⌘V yourself.'),
  onb(4,'kbd','Add triggers (optional)','Input Monitoring lets Flotsam notice the text you type to expand triggers. It never stores keystrokes.',ctl='<span class="btn">Open Settings</span>',skip='Not Now',stakes='You can turn this on later in Settings.'),
  onb(5,'shot','Pick up screenshots','Choose the folder where macOS saves screenshots. Flotsam adds new ones to your history.',ctl='<div class="field" style="width:300px">'+ic('folder')+'<span>~/Desktop</span></div><span class="btn">Choose Folder…</span>'),

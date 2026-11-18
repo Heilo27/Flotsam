@@ -27,9 +27,9 @@ struct Task441OnboardingGatesTests {
     @Test("OC-8098: the resume rule feeds the flow's starting step")
     func flowStartsWhereRuleSays() {
         let resumed = OnboardingFlow(
-            gatesPasteboard: true, resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: true, saved: .hotkey))
+            resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: true, saved: .hotkey))
         let fresh = OnboardingFlow(
-            gatesPasteboard: true, resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: false, saved: .hotkey))
+            resumingAt: OnboardingFlow.resumeStep(isAutomaticShow: false, saved: .hotkey))
         #expect(resumed.current == .hotkey)
         #expect(fresh.current == .welcome)
     }
