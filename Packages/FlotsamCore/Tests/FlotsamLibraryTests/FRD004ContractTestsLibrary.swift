@@ -6,7 +6,7 @@ import Testing
 @testable import FlotsamLibrary
 
 // FRD-004 8T contract tests, slice Library (oracle .claude/oracle/frd-004-contract.json): the Library-target half of
-// OC-4017 4030 4031 4062 4072 4073 4075 4077 4082 4084 4096 4097 4105 4108 4109. These drive the shipping
+// OC-4017 4030 4031 4062 4072 4073 4075 4077 4082 4084 4096 4097 4099 4105 4108 4109. These drive the shipping
 // LibraryViewModel, LibraryOrganizer, LibraryContextMenu and SettingsLibraryPreferences over a REAL FlotsamDatabase in
 // a temp folder (never the real Flotsam data folder, never UserDefaults). What the package cannot reach (the
 // OrganizeCoordinator confirm overlays and the hotkey registry live in the App target, which has no test target) is
@@ -288,6 +288,20 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
         #expect(LibraryOrganizer.ungroupNeedsConfirmation(itemRow(1, kind: .bundle, shortcut: true), hasNote: false) == true)
         #expect(LibraryText.string("ui.organize.confirmUngroup")
             == "Ungroup this bundle? Its note, pin, trigger and hotkey are not carried over to the new items.")
+    }
+
+    @Test("OC-4073 given the contract's string key, when the catalogue is asked for it, then it is the stale name and the FRD key is the live one")
+    func oc4073ContractKeyIsStale() {
+        // [Spec Drift] The contract (and docs/DESIGN.md) call the confirmation `organize.confirm.ungroup`; FR-004-11 and the
+        // shipped catalogue call it `ui.organize.confirmUngroup`. The FRD wins, so the contract's own assertion (the key
+        // resolves to copy) is a known issue, while the FRD key must resolve to the ungroup warning.
+        // Red if: the FRD key loses its copy (second expect), or the catalogue gains the contract key and the known issue
+        // stops recording (withKnownIssue then fails, telling us the drift is resolved and the wrapper can go).
+        withKnownIssue("contract key organize.confirm.ungroup is not in the catalogue; FR-004-11 names ui.organize.confirmUngroup") {
+            #expect(!LibraryText.string("organize.confirm.ungroup").isEmpty)
+        }
+        #expect(LibraryText.string(LibraryText.confirmUngroup).hasPrefix("Ungroup this bundle?"))
+        #expect(LibraryText.confirmUngroup == "ui.organize.confirmUngroup")
     }
 
     @Test("OC-4073 given a real 4-file bundle with a tag, a note and a pin, when its row and note are read, then Ungroup asks first")
@@ -616,5 +630,74 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
         }
         // control: the Rename string exists for the sidebar TAG menu, so the item-menu absence above is meaningful
         #expect(catalogue["ui.organize.menuRename"] == "Rename")
+    }
+
+    // MARK: OC-4099 counts and footer follow every organize command
+
+    @Test("OC-4099 given 3 texts, a link and a 2-member bundle, when an item is pinned, tagged, edited, ungrouped, deleted and a new capture is refreshed in, then after each command the sidebar counts and footer count text are the new literals and the footer equals the rows listed")
+    func oc4099SidebarAndFooterFollowEachCommand() async throws {
+        // Red if: any organize command leaves the sidebar counts (all, pinned, kinds, tags) or the footer count text at their
+        // old value, or the footer count text stops equalling the rows under the active filter. The 200 ms bound is a
+        // scheduler matter the package cannot clock reliably (listed in FRD004ContractTestsGaps.swift); what is checked
+        // here is that each command's own await already leaves the new numbers in place, with no second refresh.
+        let rig = try await OrganizeRig.make()
+        defer { rig.cleanUp() }
+        let t1 = try await rig.add(.text, key: "t1", text: "one", secondsAgo: 5)
+        let t2 = try await rig.add(.text, key: "t2", text: "two", secondsAgo: 4)
+        _ = try await rig.add(.text, key: "t3", text: "three", secondsAgo: 3)
+        let link = try await rig.add(.link, key: "l1", text: "https://one.example", secondsAgo: 2)
+        let bundle = try await rig.bundle("b1", memberCount: 2, secondsAgo: 1)
+        await rig.open()
+        let start = try #require(rig.model.sidebar)
+        #expect(start.all == 5 && start.pinned == 0 && start.tags.isEmpty)
+        #expect(start.kinds == [.text: 3, .link: 1, .bundle: 1])
+        #expect(rig.model.footer().countText == "5 items" && rig.model.loadedRows.count == 5)
+
+        // pin t1
+        rig.model.select(id: t1)
+        #expect(await rig.model.togglePinSelected() == true)
+        #expect(rig.model.sidebar?.pinned == 1 && rig.model.sidebar?.all == 5)
+        #expect(rig.model.footer().countText == "5 items")
+
+        // tag t1 with a new tag
+        let tag = try #require(await rig.model.createTagOnSelection(name: "x"))
+        #expect(rig.model.sidebar?.tags.map(\.name) == ["x"] && rig.model.sidebar?.tags.map(\.count) == [1])
+
+        // edit the link into plain text: Links disappears from the sidebar and Text gains one
+        rig.model.select(id: link)
+        #expect(await rig.model.saveEdit(text: "plain words") == .text)
+        #expect(rig.model.sidebar?.kinds == [.text: 4, .bundle: 1])
+        #expect(rig.model.footer().countText == "5 items")
+
+        // ungroup the bundle: one bundle becomes two files
+        rig.model.select(id: bundle)
+        #expect(await rig.model.ungroupSelected() != nil)
+        #expect(rig.model.sidebar?.all == 6 && rig.model.sidebar?.kinds[.bundle] == nil && rig.model.sidebar?.kinds[.file] == 2)
+        // the two files it made are selected, so the footer shows the selection, while the list total is the new 6
+        #expect(rig.model.footer().countText == "2 selected" && rig.model.totalCount == 6 && rig.model.loadedRows.count == 6)
+
+        // delete t2
+        rig.model.select(id: t2)
+        #expect(await rig.model.deleteSelected() == [t2])
+        #expect(rig.model.sidebar?.all == 5 && rig.model.sidebar?.kinds[.text] == 3)
+        #expect(rig.model.footer().countText == "5 items" && rig.model.loadedRows.count == 5)
+        #expect(!rig.model.loadedRows.map(\.id).contains(t2))
+
+        // a new capture arrives (the model does not subscribe to storage; the App calls refresh, see the Gaps file)
+        _ = try await rig.add(.text, key: "t4", text: "four", secondsAgo: 0)
+        await rig.model.refresh()
+        #expect(rig.model.sidebar?.all == 6 && rig.model.footer().countText == "6 items" && rig.model.loadedRows.count == 6)
+
+        // under the tag filter the footer equals the rows under that filter, and deleting that row empties both
+        rig.model.select(filter: .tag(tag))
+        await rig.model.settled()
+        #expect(rig.model.loadedRows.map(\.id) == [t1])
+        #expect(rig.model.footer().countText == "1 item")
+        #expect(await rig.model.deleteSelected() == [t1])
+        #expect(rig.model.footer().countText == "0 items" && rig.model.loadedRows.isEmpty)
+        #expect(rig.model.sidebar?.all == 5 && rig.model.sidebar?.pinned == 0)
+        #expect(rig.model.sidebar?.tags.map(\.count) == [0])
+        // read fresh: the database agrees with what the model shows
+        #expect(try await rig.allRows().count == 5)
     }
 }
