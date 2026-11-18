@@ -64,6 +64,10 @@ public enum ErrorCode: String, CaseIterable, Sendable {
     case libIo001 = "LIB-IO-001"
     /// No paste; HUD; row marked Missing.
     case libDat001 = "LIB-DAT-001"
+    /// Secure item not copied: the user cancelled or failed the device-owner check; no pasteboard write; HUD.
+    case libOs002 = "LIB-OS-002"
+    /// Secure item unavailable: its Keychain key is missing or unreadable, or the stored ciphertext does not open; HUD.
+    case libDat002 = "LIB-DAT-002"
 
     // MARK: ORG, organize (FRD-004)
 
@@ -92,6 +96,8 @@ public enum ErrorCode: String, CaseIterable, Sendable {
     case trgVal004 = "TRG-VAL-004"
     /// Saved; inline notice.
     case trgVal005 = "TRG-VAL-005"
+    /// A secure item cannot carry a hotkey or a trigger; rejected inline.
+    case trgVal006 = "TRG-VAL-006"
     /// Not registered; kept for retry.
     case trgOs001 = "TRG-OS-001"
     /// Abort expansion; HUD.
@@ -162,11 +168,11 @@ public enum ErrorCode: String, CaseIterable, Sendable {
             .fatal
         case .sysInt001, .capIo001, .libOs001, .libIo001, .orgVal001, .orgVal002, .orgVal003,
              .orgLim001, .orgLim002, .orgLim003, .trgVal001, .trgVal002, .trgVal003, .trgVal004,
-             .trgOs001, .trgOs002, .shfOs001, .stoDb001, .stoDb002, .stoDb004, .stoIo001, .setOs001,
+             .trgOs001, .trgOs002, .trgVal006, .shfOs001, .stoDb001, .stoDb002, .stoDb004, .stoIo001, .setOs001,
              .setVal001, .setVal002:
             .error
         case .capPrm001, .capOs001, .capLim001, .capLim003, .sspPrm001, .sspIo001, .sspIo003, .sspLim001,
-             .sspOs001, .libDat001, .trgVal005, .trgOs003, .shfIo001, .shfLim001, .shfVal001, .stoLim001,
+             .sspOs001, .libDat001, .libOs002, .libDat002, .trgVal005, .trgOs003, .shfIo001, .shfLim001, .shfVal001, .stoLim001,
              .stoLim002, .setPrm001, .setPrm002, .setDat001:
             .warning
         case .capOs002, .capPol001, .capPol002, .capPol003, .capPol004, .capVal001, .capDat001, .capLim002,

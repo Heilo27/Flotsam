@@ -61,6 +61,16 @@
         }
       }
     },
+    "error.LIB-DAT-002" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This secure item can't be unlocked on this Mac."
+          }
+        }
+      }
+    },
     "error.LIB-IO-001" : {
       "localizations" : {
         "en" : {
@@ -77,6 +87,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't paste into that app. The item is on your clipboard; press ⌘V."
+          }
+        }
+      }
+    },
+    "error.LIB-OS-002" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not copied. Confirm it's you to copy a secure item."
           }
         }
       }
@@ -457,6 +477,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "An unknown variable was left as plain text."
+          }
+        }
+      }
+    },
+    "error.TRG-VAL-006" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure items can't have a trigger or a shortcut."
           }
         }
       }
@@ -1179,6 +1209,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Types"
+          }
+        }
+      }
+    },
+    "ui.library.secureUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
           }
         }
       }
@@ -2505,6 +2545,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "ui.secure.authReason" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "copy a secure item"
           }
         }
       }
@@ -3933,6 +3983,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Recent"
+          }
+        }
+      }
+    },
+    "ui.shelf.secureUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
           }
         }
       }
