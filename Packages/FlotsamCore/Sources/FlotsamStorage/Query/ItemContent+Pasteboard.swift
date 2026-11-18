@@ -24,8 +24,22 @@ extension ItemContent {
 
     /// Where each member is now, in member order; members whose file is gone are left out.
     public func existingMemberURLs(files: any FileSystemPort) -> [URL] {
-        members.compactMap {
-            FileMemberLocator.currentURL(path: $0.path, bookmark: $0.bookmark, isDirectory: $0.isDirectory, files: files)
-        }
+        members.compactMap { $0.currentURL(files: files) }
+    }
+}
+
+extension ItemMember {
+    /// Where this member is now (`FileMemberLocator`); nil when nothing exists there any more.
+    public func currentURL(files: any FileSystemPort) -> URL? {
+        FileMemberLocator.currentURL(path: path, bookmark: bookmark, isDirectory: isDirectory, files: files)
+    }
+}
+
+extension Collection where Element == ItemMember {
+    /// Whether at least one member still exists. The Missing state is its negation for a file, folder or bundle
+    /// item (FRD-003 FR-003-07): a bundle with one member left is not Missing, and an empty one is. The Library's
+    /// rows and the Shelf's cards both ask this, so the two cannot disagree.
+    public func anyExists(files: any FileSystemPort) -> Bool {
+        contains { $0.currentURL(files: files) != nil }
     }
 }

@@ -868,10 +868,11 @@
       "requirement": "AC-006-13",
       "given": "A Shelf card",
       "when": "user drags it back onto the Shelf",
-      "then": "no highlight; refused; item count and the card's copy count unchanged",
+      "then": "no highlight; refused silently, no HUD; item count and the card's copy count unchanged",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "S1 ruling 2026-11-17"
     },
     {
       "id": "OC-6088",
@@ -986,12 +987,13 @@
     {
       "id": "OC-6099",
       "requirement": "AC-006-16",
-      "given": "3 files: one unreadable (no read permission), one over the FRD-007 size ceiling, one readable; count N",
+      "given": "3 files: one unreadable (no read permission), one huge but readable, one readable; count N",
       "when": "user drops all 3 onto the Shelf",
-      "then": "count N+1: the readable file stored as a single item (not a bundle); SHF-IO-001 'A dropped file couldn't be read and was skipped.' and SHF-LIM-001 'A dropped item was too large to save (over <limit>).' with the limit filled in, subject to throttling",
+      "then": "count N+1: the 2 readable files are stored by reference as a bundle of 2, with one SHF-IO-001 HUD 'A dropped file couldn't be read and was skipped.' (subject to throttling) and no SHF-LIM-001",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "S1 ruling 2026-11-17"
     },
     {
       "id": "OC-6100",

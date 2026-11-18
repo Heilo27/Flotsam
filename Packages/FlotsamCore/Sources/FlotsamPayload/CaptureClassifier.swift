@@ -1,28 +1,6 @@
 import FlotsamBase
 import Foundation
 
-/// A file or folder held by reference (FR-001-12). Payload may not import Storage (ADR-0001), so Capture maps this to
-/// Storage's `IngestMember`.
-public struct ClassifiedMember: Sendable, Equatable {
-    public let path: String
-    public let bookmark: Data?
-    public let isDirectory: Bool
-}
-
-/// What a pasteboard classified as (FR-001-08): everything ingest needs except the source app and the time, which the
-/// poll knows and the classifier does not.
-public struct Classification: Sendable, Equatable {
-    public let kind: ItemKind
-    public let contentKey: String
-    /// The text of text-like kinds; nil for image, file, folder and bundle.
-    public let plainText: String?
-    /// Everything that becomes a blob: rich text for text-like kinds, the chosen image for `image`.
-    public let representations: [PasteboardRepresentation]
-    /// Every member in pasteboard order, never trimmed here: the bundle ceiling and its `CAP-LIM-003` belong to
-    /// `IngestLimits` alone (FR-007-06), which is the only layer that sees the true count.
-    public let members: [ClassifiedMember]
-}
-
 /// Turns the representations read from the pasteboard into one classified candidate (FR-001-08 to FR-001-12,
 /// FR-001-15). Pure apart from reading file metadata, so it runs on the ingest side of the hand-off and never on the
 /// main thread (FR-001-17).
@@ -95,7 +73,7 @@ public enum CaptureClassifier {
         var members: [ClassifiedMember] = []
         var seenAny = false
         for entry in entries {
-            guard let url = fileURL(from: entry.data) else { continue }
+            guard let url = PasteboardTypes.fileURL(from: entry.data) else { continue }
             let standardized = url.standardizedFileURL
             var isDirectory: ObjCBool = false
             // Filtered to what exists at capture time (FR-001-12).
@@ -118,12 +96,5 @@ public enum CaptureClassifier {
         return .success(Classification(
             kind: kind, contentKey: ContentKey.files(paths: paths), plainText: nil,
             representations: [], members: members))
-    }
-
-    /// `public.file-url` data is the URL string as UTF-8, `file:///...`.
-    private static func fileURL(from data: Data) -> URL? {
-        let string = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: string), url.isFileURL else { return nil }
-        return url
     }
 }

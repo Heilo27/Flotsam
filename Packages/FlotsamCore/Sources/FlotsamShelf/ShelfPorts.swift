@@ -18,24 +18,34 @@ public protocol ShelfDataSource: Sendable {
 
 extension FlotsamDatabase: ShelfDataSource {}
 
+/// How a drop reaches storage (FR-006-13): the same ingest pipeline clipboard capture uses (FRD-007 FR-007-05).
+/// `IngestActor` conforms below; tests use it over a real database, or a fake to inject a failure.
+public protocol ShelfIngesting: Sendable {
+    func ingest(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult>
+}
+
+extension IngestActor: ShelfIngesting {}
+
 /// What a card needs that `ItemRow` does not carry: the stored text of a text item (the row's primary line is cut to
-/// two lines, the card shows three) and the file paths of a file, folder or bundle item (for the Missing badge).
+/// two lines, the card shows three) and the members of a file, folder or bundle item (for the Missing badge).
 ///
-/// Protocol only. DEFERRED: no storage query serves `cardTexts` or `memberPaths` yet, so `FlotsamDatabase` does not
+/// Protocol only. DEFERRED: no storage query serves `cardTexts` or `fileMembers` yet, so `FlotsamDatabase` does not
 /// conform and the app composes `NoShelfCardDetails`, which makes a card fall back to the row's primary line and show
-/// no Missing badge. The badge itself is an FRD-003 gap owned by that FRD; the Shelf only keeps this seam.
+/// no Missing badge. The Missing rule itself is not the Shelf's: the model asks `ItemMember.anyExists`, the same
+/// test the Library's rows use (FRD-003 FR-003-07, `FileMemberLocator`).
 public protocol ShelfCardDetails: Sendable {
     /// The stored plain text of each listed item that has some; items without text are left out.
     func cardTexts(for ids: [UUID]) async -> [UUID: String]
-    /// The member file paths of each listed file, folder or bundle item; other items are left out.
-    func memberPaths(of ids: [UUID]) async -> [UUID: [String]]
+    /// The members of each listed file, folder or bundle item, with their bookmarks so a moved file is found; other
+    /// items are left out. An item with no members is listed with an empty array (it reads as Missing).
+    func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]]
 }
 
-/// The inert details: no stored texts, no member paths.
+/// The inert details: no stored texts, no members.
 public struct NoShelfCardDetails: ShelfCardDetails {
     public init() {}
     public func cardTexts(for ids: [UUID]) async -> [UUID: String] { [:] }
-    public func memberPaths(of ids: [UUID]) async -> [UUID: [String]] { [:] }
+    public func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]] { [:] }
 }
 
 // MARK: Paste
@@ -79,21 +89,17 @@ public struct ShelfEffects {
     /// Asks the user to confirm a delete (FR-004-09); the text is the question. Declining is the default, so an unwired
     /// confirmation never deletes.
     public var confirmDelete: @MainActor (String) async -> Bool
-    /// Whether a file exists, for the Missing badge. Everything exists by default, so nothing shows as missing.
-    public var fileExists: @Sendable (String) -> Bool
     public var now: @MainActor () -> Date
 
     public init(
         report: @escaping @MainActor (FlotsamError) -> Void = { _ in },
         captureNow: @escaping @MainActor () async -> Void = {},
         confirmDelete: @escaping @MainActor (String) async -> Bool = { _ in false },
-        fileExists: @escaping @Sendable (String) -> Bool = { _ in true },
         now: @escaping @MainActor () -> Date = { Date() }
     ) {
         self.report = report
         self.captureNow = captureNow
         self.confirmDelete = confirmDelete
-        self.fileExists = fileExists
         self.now = now
     }
 }

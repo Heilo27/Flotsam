@@ -35,4 +35,12 @@ public enum PasteboardTypes {
 
     /// Accepted image representations, best first (FR-001-11).
     public static let imagePriority = [png, tiff, jpeg]
+
+    /// The file URL a `public.file-url` representation names: its data is the URL string as UTF-8, `file:///...`.
+    /// The one parse, shared by the classifier (clipboard capture) and the Shelf drop's readability check.
+    public static func fileURL(from data: Data) -> URL? {
+        let string = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: string), url.isFileURL else { return nil }
+        return url
+    }
 }
