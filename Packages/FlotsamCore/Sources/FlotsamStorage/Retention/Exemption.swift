@@ -47,38 +47,42 @@ extension FlotsamDatabase {
     public func applyExemptionEdit(_ edit: ExemptionEdit, to id: UUID) async -> FlotsamResult<Bool> {
         let now = clock.now().epochMillis
         do {
-            return .success(try await pool.write { db in
-                let key = id.uuidString
-                guard let wasExempt = try Bool.fetchOne(
-                    db, sql: "SELECT \(Exemption.sqlPredicate) FROM item WHERE id = ?", arguments: [key])
-                else { return false }
-
-                switch edit {
-                case .setPinned(let pinned):
-                    try db.execute(sql: "UPDATE item SET pinned = ? WHERE id = ?", arguments: [pinned ? 1 : 0, key])
-                case .setTrigger(let trigger):
-                    try db.execute(sql: "UPDATE item SET \"trigger\" = ? WHERE id = ?", arguments: [trigger, key])
-                case .setHotkey(let chord):
-                    try db.execute(
-                        sql: "UPDATE item SET hotkeyCode = ?, hotkeyModifiers = ? WHERE id = ?",
-                        arguments: [chord.map { Int($0.keyCode) }, chord.map { Int($0.modifiers.rawValue) }, key])
-                }
-
-                // Exempt after the edit: clear any release stamp. Not exempt: stamp only on the exempt -> not exempt
-                // transition, so editing an already-released item does not extend its grace.
-                try db.execute(
-                    sql: """
-                        UPDATE item SET updatedAt = ?, exemptReleasedAt = CASE
-                            WHEN \(Exemption.sqlPredicate) THEN NULL
-                            WHEN ? THEN ?
-                            ELSE exemptReleasedAt END
-                        WHERE id = ?
-                        """,
-                    arguments: [now, wasExempt, now, key])
-                return true
-            })
+            return .success(try await pool.write { db in try Self.applyExemptionEdit(db, edit: edit, id: id, now: now) })
         } catch {
             return .failure(Self.writeFailure(error))
         }
+    }
+
+    /// The body of `applyExemptionEdit`, for a caller that already holds a write transaction and edits several items in
+    /// it (FR-004-01 multi-selection pin). The only place `exemptReleasedAt` is maintained.
+    static func applyExemptionEdit(_ db: Database, edit: ExemptionEdit, id: UUID, now: Int64) throws -> Bool {
+        let key = id.uuidString
+        guard let wasExempt = try Bool.fetchOne(
+            db, sql: "SELECT \(Exemption.sqlPredicate) FROM item WHERE id = ?", arguments: [key])
+        else { return false }
+
+        switch edit {
+        case .setPinned(let pinned):
+            try db.execute(sql: "UPDATE item SET pinned = ? WHERE id = ?", arguments: [pinned ? 1 : 0, key])
+        case .setTrigger(let trigger):
+            try db.execute(sql: "UPDATE item SET \"trigger\" = ? WHERE id = ?", arguments: [trigger, key])
+        case .setHotkey(let chord):
+            try db.execute(
+                sql: "UPDATE item SET hotkeyCode = ?, hotkeyModifiers = ? WHERE id = ?",
+                arguments: [chord.map { Int($0.keyCode) }, chord.map { Int($0.modifiers.rawValue) }, key])
+        }
+
+        // Exempt after the edit: clear any release stamp. Not exempt: stamp only on the exempt -> not exempt
+        // transition, so editing an already-released item does not extend its grace.
+        try db.execute(
+            sql: """
+                UPDATE item SET updatedAt = ?, exemptReleasedAt = CASE
+                    WHEN \(Exemption.sqlPredicate) THEN NULL
+                    WHEN ? THEN ?
+                    ELSE exemptReleasedAt END
+                WHERE id = ?
+                """,
+            arguments: [now, wasExempt, now, key])
+        return true
     }
 }

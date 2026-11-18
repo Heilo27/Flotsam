@@ -42,6 +42,48 @@ public enum LibraryText {
     /// "and 3 more": the file members past the preview's limit.
     public static func previewMore(_ count: Int) -> String { format("ui.library.previewMore", count) }
 
+    // MARK: Organize (FRD-004)
+
+    public static func sortName(_ sort: LibrarySort) -> String { string("ui.organize.sort" + sort.rawValue.prefix(1).uppercased() + sort.rawValue.dropFirst()) }
+
+    public static func confirmDeleteTag(name: String, itemCount: Int) -> String {
+        format("ui.organize.confirmDeleteTag", name, itemCount)
+    }
+
+    public static func confirmDelete(count: Int) -> String {
+        DeleteConfirmation.message(count: count)
+    }
+
+    public static let confirmUngroup = "ui.organize.confirmUngroup"
+
+    public static let tagFieldPlaceholder = "ui.organize.tagFieldPlaceholder"
+    public static let tagsTitle = "ui.organize.tagsTitle"
+    public static let noteTitle = "ui.organize.noteTitle"
+    public static let editTitle = "ui.organize.editTitle"
+    public static let menuPin = "ui.organize.menuPin"
+    public static let menuUnpin = "ui.organize.menuUnpin"
+    public static let menuTags = "ui.organize.menuTags"
+    public static let menuNote = "ui.organize.menuNote"
+    public static let menuEdit = "ui.organize.menuEdit"
+    public static let menuUngroup = "ui.organize.menuUngroup"
+    public static let menuDelete = "ui.organize.menuDelete"
+    public static let menuRename = "ui.organize.menuRename"
+    public static let menuColor = "ui.organize.menuColor"
+    public static let buttonSave = "ui.organize.buttonSave"
+    public static let buttonCancel = "ui.organize.buttonCancel"
+    public static let buttonDelete = "ui.organize.buttonDelete"
+    public static let buttonRemove = "ui.organize.buttonRemove"
+    public static let buttonUngroup = "ui.organize.buttonUngroup"
+
+    public static func colorName(_ color: TagColor) -> String {
+        string("ui.organize.color" + color.rawValue.prefix(1).uppercased() + color.rawValue.dropFirst())
+    }
+
+    public static func createTag(name: String) -> String { format("ui.organize.tagCreate", name) }
+
+    public static func noteCounter(_ count: Int) -> String { format("ui.organize.noteCounter", count) }
+    public static let editFormattingRemoved = "ui.organize.editFormattingRemoved"
+
     public static func selectedCount(_ count: Int) -> String { format("ui.library.footerSelected", count) }
 
     /// "Files", "Rich Text": the plural type names of the sidebar (distinct from `KindLabel`, which is the singular used

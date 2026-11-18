@@ -141,6 +141,9 @@ import FlotsamBase
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         let existing = try await rig.create(rig.image("k-7025-a", TestImage.make(width: 48, height: 48, format: .png)))
+        // ingest returns before the image's thumbnails are on disk (FR-007-07), and while one is being written its
+        // staging file is in tmp/. Wait it out, or the tmp/ check below sees that file (TASK-404).
+        #expect(await rig.awaitThumbnails(existing), "the stored image's thumbnails were never written")
         let existingRep = try #require(try rig.reps(existing).first)
         let blobsBefore = rig.blobFiles()
         #expect(blobsBefore == [existingRep.blobName])
@@ -161,6 +164,69 @@ import FlotsamBase
         #expect(try rig.store.count("representation") == 1)
         #expect(try rig.reps(existing) == [existingRep])
         #expect(rig.store.names(in: rig.store.root.appendingPathComponent("tmp")).isEmpty)
+    }
+
+    /// TASK-404. The first image's thumbnail warm-up is unawaited, so for a moment a staged thumbnail sits in tmp/. That is
+    /// legitimate, and it is why OC-7025's "tmp/ is empty" can only be read once the warm-up is done. The gate parks
+    /// the first thumbnail move so the moment can be held and looked at.
+    @Test("TASK-404 a stored image's warm-up stages a thumbnail in tmp until it finishes")
+    func warmUpStagesInTmpUntilItFinishes() async throws {
+        // given a gate that parks the first thumbnail move
+        let gate = ThumbnailGateFileSystem()
+        let rig = try await Rig.make(on: gate)
+        defer { rig.cleanUp() }
+        let tmp = rig.store.root.appendingPathComponent("tmp")
+        gate.arm()
+
+        // when an image is stored
+        let id = try await rig.create(rig.image("k-7025-warm", TestImage.make(width: 48, height: 48, format: .png)))
+
+        // then the ingest has returned while exactly one staged thumbnail is in tmp/
+        #expect(await waitUntil { gate.isParked }, "the warm-up never reached its first thumbnail move")
+        #expect(rig.store.names(in: tmp).count == 1)
+        #expect(!rig.store.names(in: tmp).isEmpty)
+
+        // and once the warm-up finishes, both thumbnails are on disk and tmp/ is empty
+        gate.open()
+        #expect(await rig.awaitThumbnails(id))
+        #expect(rig.store.names(in: tmp).isEmpty)
+    }
+
+    /// OC-7025 with a warm-up held mid-write. The failed copy must add nothing to tmp/ and nothing to blobs/: tmp/ holds
+    /// exactly what it held before the copy (the stored image's staged thumbnail), not a leftover of the failed write.
+    @Test("OC-7025 a failed write leaves tmp exactly as it was, even with another image's warm-up in flight")
+    func oc7025_failedWriteAddsNothingToTmp() async throws {
+        // given an image stored, its first thumbnail held in tmp/, then a forced write failure
+        let gate = ThumbnailGateFileSystem()
+        let rig = try await Rig.make(on: gate)
+        defer { rig.cleanUp() }
+        let tmp = rig.store.root.appendingPathComponent("tmp")
+        gate.arm()
+        let existing = try await rig.create(rig.image("k-7025-held", TestImage.make(width: 48, height: 48, format: .png)))
+        #expect(await waitUntil { gate.isParked })
+        let tmpBefore = rig.store.names(in: tmp)
+        let blobsBefore = rig.blobFiles()
+        #expect(tmpBefore.count == 1)
+        try await failEveryRepresentationInsert(rig)
+
+        // when a different image is copied
+        let result = await rig.ingest.ingest(rig.image("k-7025-held-b", TestImage.make(width: 64, height: 40, format: .png)))
+
+        // then it fails, and neither tmp/ nor blobs/ changed
+        guard case .failure(let error) = result else {
+            gate.open()
+            Issue.record("expected a failure")
+            return
+        }
+        #expect(error.code == .stoDb001)
+        #expect(rig.store.names(in: tmp) == tmpBefore)
+        #expect(rig.blobFiles() == blobsBefore)
+        #expect(try rig.itemCount() == 1)
+
+        // and after the warm-up finishes, tmp/ is empty
+        gate.open()
+        #expect(await rig.awaitThumbnails(existing))
+        #expect(rig.store.names(in: tmp).isEmpty)
     }
 
     /// Counts file writes once armed and says whether the current one is the Nth, from any thread.

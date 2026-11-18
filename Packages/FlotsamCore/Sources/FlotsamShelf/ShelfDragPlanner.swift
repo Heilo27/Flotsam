@@ -1,0 +1,88 @@
+import FlotsamBase
+import FlotsamPayload
+import FlotsamStorage
+import Foundation
+
+/// One card being dragged out, with its loaded content (FR-006-10). The app layer loads the content (`content(of:)`)
+/// for the cards `ShelfModel.covered(by:)` returns and hands them over in that order.
+public struct ShelfDragCandidate: Sendable, Equatable {
+    public let itemId: UUID
+    public let content: ItemContent
+
+    public init(itemId: UUID, content: ItemContent) {
+        self.itemId = itemId
+        self.content = content
+    }
+}
+
+/// What one drag-pasteboard item carries.
+public enum ShelfDragPayload: Sendable, Equatable {
+    /// Written as they are: text and its stored representations, or one file URL.
+    case representations([PasteboardRepresentation])
+    /// An image: the app layer builds an `NSImage` from the bytes (FR-006-10 "image data through `NSImage`").
+    case image(PasteboardRepresentation)
+}
+
+/// One drag-pasteboard item, and the card it came from.
+public struct ShelfDragItem: Sendable, Equatable {
+    public let itemId: UUID
+    public let payload: ShelfDragPayload
+
+    public init(itemId: UUID, payload: ShelfDragPayload) {
+        self.itemId = itemId
+        self.payload = payload
+    }
+}
+
+/// What a drag-out puts on the drag pasteboard.
+public struct ShelfDragPlan: Sendable, Equatable {
+    /// The pasteboard items, in on-screen order of their cards; a bundle contributes one per existing member.
+    public let items: [ShelfDragItem]
+
+    /// The cards that contributed at least one item, in on-screen order. On an accepted drag each gets one paste
+    /// counted (FR-006-11), a bundle once however many members it has.
+    public let draggedItemIds: [UUID]
+
+    /// The number on the drag image's badge when more than one card is dragged, and the `shelf.dragOut` log count
+    /// (FR-006-10, FR-006-18). Counts cards, not pasteboard items.
+    public var cardCount: Int { draggedItemIds.count }
+}
+
+/// Decides what a drag-out provides (FR-006-10, FR-006-11). Pure: no AppKit, no pasteboard, no database. It follows the
+/// paste rules (FRD-003 FR-003-15), which live on `ItemContent`, and differs only where FR-006-10 says: a bundle is one
+/// pasteboard item per member, nothing is marked own-write, and the general pasteboard is never touched.
+public enum ShelfDragPlanner {
+    /// - Parameter candidates: the dragged cards in on-screen order.
+    /// - Returns: the plan; `SHF-OS-001` when there is nothing to drag; `LIB-DAT-001` when no card has anything left to
+    ///   provide (every member of a file card gone, so the drag does not start).
+    public static func plan(_ candidates: [ShelfDragCandidate], files: any FileSystemPort) -> FlotsamResult<ShelfDragPlan> {
+        guard !candidates.isEmpty else {
+            return .failure(FlotsamError(.shfOs001, "No card to drag"))
+        }
+        var items: [ShelfDragItem] = []
+        var contributing: [UUID] = []
+        for candidate in candidates {
+            let payloads = payloads(of: candidate.content, files: files)
+            guard !payloads.isEmpty else { continue }
+            items += payloads.map { ShelfDragItem(itemId: candidate.itemId, payload: $0) }
+            contributing.append(candidate.itemId)
+        }
+        guard !items.isEmpty else {
+            let context: [LogKey: LogSafeValue] = candidates.count == 1 ? [.itemId: .id(candidates[0].itemId)] : [:]
+            return .failure(FlotsamError(.libDat001, "Nothing left to drag", context: context))
+        }
+        return .success(ShelfDragPlan(items: items, draggedItemIds: contributing))
+    }
+
+    private static func payloads(of content: ItemContent, files: any FileSystemPort) -> [ShelfDragPayload] {
+        if content.kind.referencesFiles {
+            return content.existingMemberURLs(files: files).map { .representations([ItemContent.fileURLRepresentation(for: $0)]) }
+        }
+        if content.kind.isImage {
+            let best = PasteboardTypes.imagePriority.lazy.compactMap { uti in content.representations.first { $0.uti == uti } }.first
+            return best.map { [.image($0)] } ?? []
+        }
+        let representations = content.storedRepresentations
+        return representations.isEmpty ? [] : [.representations(representations)]
+    }
+}

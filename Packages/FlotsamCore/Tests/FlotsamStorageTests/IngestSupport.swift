@@ -40,6 +40,45 @@ final class CapacityFileSystem: FileSystemPort, @unchecked Sendable {
     func availableCapacity(at url: URL) -> Int64? { lock.withLock { capacity } }
 }
 
+/// The local file system, except that the first move into thumbs/ parks until the test opens the gate. While it is
+/// parked, the staged thumbnail sits in tmp/, which is exactly what an unawaited ingest warm-up looks like to a test
+/// that looks at tmp/ too early (TASK-404). A wait of its own caps the park so a broken test cannot hang.
+final class ThumbnailGateFileSystem: FileSystemPort, @unchecked Sendable {
+    private let real = LocalFileSystem()
+    private let lock = NSLock()
+    private let gate = DispatchSemaphore(value: 0)
+    private var armed = false
+    private var parkedNow = false
+
+    func arm() { lock.withLock { armed = true } }
+    var isParked: Bool { lock.withLock { parkedNow } }
+    func open() { gate.signal() }
+
+    func fileExists(at url: URL) -> Bool { real.fileExists(at: url) }
+    func createDirectory(at url: URL, permissions: Int) -> FlotsamResult<Void> { real.createDirectory(at: url, permissions: permissions) }
+    func copyItem(at source: URL, to destination: URL) -> FlotsamResult<Void> { real.copyItem(at: source, to: destination) }
+    func moveItem(at source: URL, to destination: URL) -> FlotsamResult<Void> {
+        let park = lock.withLock { () -> Bool in
+            guard armed, destination.path.contains("/thumbs/") else { return false }
+            armed = false
+            parkedNow = true
+            return true
+        }
+        if park {
+            _ = gate.wait(timeout: .now() + 15)
+            lock.withLock { parkedNow = false }
+        }
+        return real.moveItem(at: source, to: destination)
+    }
+    func removeItem(at url: URL) -> FlotsamResult<Void> { real.removeItem(at: url) }
+    func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> { real.contentsOfDirectory(at: url) }
+    func extendedAttribute(named name: String, at url: URL) -> Data? { real.extendedAttribute(named: name, at: url) }
+    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { real.writeFile(data, to: url, permissions: permissions) }
+    func readFile(at url: URL) -> FlotsamResult<Data> { real.readFile(at: url) }
+    func fileInfo(at url: URL) -> FileInfo? { real.fileInfo(at: url) }
+    func availableCapacity(at url: URL) -> Int64? { nil }
+}
+
 // MARK: Images
 
 enum TestImageFormat {
@@ -143,6 +182,15 @@ struct Rig {
         return Rig(store: store, settings: settings, ingest: IngestActor(database: store.database, settings: settings), fileSystem: fileSystem)
     }
 
+    /// A rig over a caller-supplied file system (a fault or a gate). The disk guard sees unknown capacity.
+    static func make(on fileSystem: any FileSystemPort) async throws -> Rig {
+        let store = try await Store.make(fileSystem: fileSystem)
+        let settings = SettingsStore(store: MemoryKV())
+        return Rig(
+            store: store, settings: settings, ingest: IngestActor(database: store.database, settings: settings),
+            fileSystem: CapacityFileSystem(capacity: nil))
+    }
+
     func cleanUp() { store.cleanUp() }
 
     // MARK: Building candidates
@@ -187,6 +235,14 @@ struct Rig {
     }
 
     enum RigError: Error { case expectedCreated, missingRow }
+
+    /// Waits for the unawaited ingest warm-up of image `id` to finish: both thumbnails are on disk, which is also the
+    /// moment their staging files have left tmp/. Ingest returns before this (FR-007-07), so a test that looks at tmp/
+    /// or thumbs/ after storing an image must wait first (TASK-404).
+    func awaitThumbnails(_ id: UUID) async -> Bool {
+        let urls = ThumbnailSize.allCases.map { store.thumbsDir.appendingPathComponent("\(id.uuidString)-\($0.rawValue).jpg") }
+        return await waitUntil(seconds: 30) { urls.allSatisfy { FileManager.default.fileExists(atPath: $0.path) } }
+    }
 
     // MARK: Reading back through a separate connection
 

@@ -3,6 +3,8 @@ import FlotsamBase
 import FlotsamCapture
 import FlotsamLibrary
 import FlotsamPaste
+import FlotsamPayload
+import FlotsamScreenshots
 import FlotsamStorage
 import Foundation
 
@@ -28,6 +30,9 @@ final class AppContainer {
     private(set) var library: LibraryPanelController?
     private var libraryHotkey: LibraryHotkey?
     private var unsubscribeHotkey: (@Sendable () -> Void)?
+    private var unsubscribeScreenshots: (@Sendable () -> Void)?
+    /// Retained for the life of the app (FRD-002).
+    private(set) var screenshots: ScreenshotWatcher?
     private var observers: [any NSObjectProtocol] = []
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
@@ -87,6 +92,7 @@ final class AppContainer {
             database = opened
             startCapture(database: opened)
             startLibrary(database: opened)
+            startScreenshots(database: opened)
         case .failure(let error): await reporter.report(error, origin: .background)
         }
     }
@@ -115,6 +121,43 @@ final class AppContainer {
         capture.start()
     }
 
+    /// FRD-002: wires screenshot pickup. The watcher itself reads `screenshots.enabled`, so with the setting off it
+    /// creates no stream, no timer and touches no folder (FR-002-05).
+    private func startScreenshots(database: FlotsamDatabase) {
+        let reporter = reporter
+        let settings = settings
+        let watcher = ScreenshotWatcher(
+            fileSystem: LocalFileSystem(), preferences: SystemScreenCapturePreferences(),
+            home: FileManager.default.homeDirectoryForCurrentUser, clock: SystemClock(),
+            eventSource: FSEventsFolderSource(), settings: settings,
+            ingest: IngestActor(database: database, settings: settings),
+            watermarkStore: DatabaseWatermarkStore(database: database),
+            report: { error in await reporter.report(error, origin: .background) },
+            clear: { code in await reporter.clearNotices(code: code) })
+        screenshots = watcher
+
+        let watched: Set<String> = [
+            SettingKeys.screenshotsEnabled.name, SettingKeys.screenshotsFolderOverride.name, SettingKeys.captureMode.name,
+        ]
+        unsubscribeScreenshots = settings.subscribe { change in
+            guard watched.contains(change.name) else { return }
+            Task { await watcher.settingsDidChange() }
+        }
+        let center = NotificationCenter.default
+        let workspace = NSWorkspace.shared.notificationCenter
+        observers += [
+            workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+                Task { await watcher.didWake() }
+            },
+            center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+                Task { await watcher.didBecomeActive() }
+            },
+        ]
+        // FR-002-12: onboarding's checkbox and Settings' button both call this. The count is not shown here.
+        actions.importRecentScreenshots = { Task { _ = await watcher.importRecent() } }
+        Task { await watcher.start() }
+    }
+
     /// Builds the Library stack over the opened database and registers its hotkey (FR-003-01, FR-005-01).
     private func startLibrary(database: FlotsamDatabase) {
         let reporter = reporter
@@ -124,19 +167,29 @@ final class AppContainer {
             store: database, pasteboard: SystemPasteboard(), files: LocalFileSystem(), frontmost: frontmost,
             accessibility: probe, keys: CGEventKeyPoster(), clock: SystemClock(), ownWrites: ownWrites)
 
+        // FRD-004: the coordinator and the organizer need each other (rejected input shows inline), so the organizer is
+        // handed over after both exist.
+        let organize = OrganizeCoordinator(
+            report: { error, origin in Task { await reporter.report(error, origin: origin) } },
+            loadContent: { await database.content(of: $0) },
+            shortcutAndTrigger: { [weak self] ids in self?.actions.editShortcutAndTrigger?(ids) })
+        let organizer = LibraryOrganizer(
+            store: database, classifiers: .live, report: { [weak organize] error in organize?.surface(error) })
+        organize.organizer = organizer
+
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             reveal: { paths in
                 NSWorkspace.shared.activateFileViewerSelecting(paths.map { URL(fileURLWithPath: $0) })
             },
-            // The organise/trigger commands (FRD-004, FRD-005) are not built yet: inert until then.
             openSettings: { [weak self] in self?.actions.openSettings?() },
-            external: { _, _ in },
+            // Pin, tags, note, edit, delete and ungroup are FRD-004; ⌘K reaches FRD-005 through `actions`.
+            external: { [weak organize] command, ids in organize?.perform(command, ids: ids) },
             isAccessibilityTrusted: { probe.isAccessibilityTrusted })
         let capture = capture
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
-            effects: effects, frontmost: frontmost,
+            effects: effects, organizer: organizer, organize: organize, frontmost: frontmost,
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller
@@ -167,6 +220,8 @@ struct AppActions {
     var openLibrary: (@MainActor () -> Void)?
     /// FRD-005 Save Clipboard.
     var saveClipboard: (@MainActor () -> Void)?
+    /// FRD-005 ⌘K in the Library: edit the selected item's shortcut and trigger. Inert until FRD-005 fills it.
+    var editShortcutAndTrigger: (@MainActor ([UUID]) -> Void)?
     /// FRD-006 Shelf.
     var toggleShelf: (@MainActor () -> Void)?
     /// FR-008-03 Settings window; assigned by `installSettings`. The menu row and the Library both call this one closure.

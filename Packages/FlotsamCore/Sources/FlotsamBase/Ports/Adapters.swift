@@ -67,10 +67,19 @@ public struct LocalFileSystem: FileSystemPort {
     }
 
     public func fileInfo(at url: URL) -> FileInfo? {
+        // `attributesOfItem` does not follow a symbolic link, so a link reports `.symbolicLink`, not its target.
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
             let size = attributes[.size] as? Int, let modified = attributes[.modificationDate] as? Date
         else { return nil }
-        return FileInfo(byteSize: size, modifiedAt: modified)
+        let kind: FileKind =
+            switch attributes[.type] as? FileAttributeType {
+            case .typeRegular?: .regular
+            case .typeDirectory?: .directory
+            case .typeSymbolicLink?: .symbolicLink
+            default: .other
+            }
+        return FileInfo(
+            byteSize: size, modifiedAt: modified, createdAt: attributes[.creationDate] as? Date, kind: kind)
     }
 
     public func availableCapacity(at url: URL) -> Int64? {
@@ -116,4 +125,23 @@ public struct UserDefaultsStore: KeyValueStore {
 extension KeyValueStore where Self == UserDefaultsStore {
     /// The app's settings store, named so callers outside this file never spell the UserDefaults type (ADR-0009).
     public static var standard: UserDefaultsStore { UserDefaultsStore() }
+}
+
+/// `com.apple.screencapture` read through CFPreferences. Synchronises before each read so a `defaults write` made
+/// while Flotsam runs is seen at the next re-resolution (FR-002-02).
+public struct SystemScreenCapturePreferences: ScreenCapturePreferences {
+    private static let domain = "com.apple.screencapture"
+
+    public init() {}
+
+    public func location() -> String? { Self.string("location") }
+    public func name() -> String? { Self.string("name") }
+
+    private static func string(_ key: String) -> String? {
+        CFPreferencesAppSynchronize(domain as CFString)
+        guard let value = CFPreferencesCopyAppValue(key as CFString, domain as CFString) as? String, !value.isEmpty else {
+            return nil
+        }
+        return value
+    }
 }

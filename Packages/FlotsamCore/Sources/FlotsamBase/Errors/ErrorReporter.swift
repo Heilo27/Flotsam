@@ -6,6 +6,9 @@ public enum ErrorOrigin: Sendable, Equatable {
     case userInitiated
     /// Capture, screenshot pickup, retention and other work the user did not just ask for: a Notice and a badge.
     case background
+    /// The user's input was rejected and the view that took it shows the message in place (ORG-VAL, ORG-LIM, TRG-VAL):
+    /// logged and recorded like any Warning or Error, but never a HUD or a Notice (FR-000-08 d).
+    case inline
 }
 
 /// The newest-first list behind menu bar, Notices (FR-000-08 b): at most 10, memory only.
@@ -19,6 +22,13 @@ struct NoticeBoard: Sendable, Equatable {
     }
 
     mutating func removeAll() { notices.removeAll() }
+
+    /// Drops the notices of one code; true when any were there.
+    mutating func remove(code: ErrorCode) -> Bool {
+        let before = notices.count
+        notices.removeAll { $0.code == code }
+        return notices.count != before
+    }
 }
 
 /// FR-000-08 throttle: the same code surfaces at most once per 60 s and at most 3 HUDs per minute overall.
@@ -93,9 +103,13 @@ public actor ErrorReporter {
             await presenter.presentFatal(error)
         case .warning, .error:
             ring.record(RaisedError(code: error.code, severity: error.severity, timestamp: now))
+            // The caller shows an inline message itself; surfacing it again would also spend the HUD throttle.
+            guard origin != .inline else { return }
             guard throttle.admit(error.code, isHUD: origin == .userInitiated, now: now) else { return }
             let message = FlotsamStrings.message(for: error)
             switch origin {
+            case .inline:
+                return
             case .userInitiated:
                 await presenter.showHUD(message: message)
             case .background:
@@ -109,6 +123,14 @@ public actor ErrorReporter {
     public func dismissAllNotices() async {
         board.removeAll()
         await presenter.noticesChanged([])
+    }
+
+    /// Removes the Notices of `code` once the condition behind them has ended (FRD-002 FR-002-03, FR-002-04: "the warning
+    /// clears"). The owner of a long-lived condition calls this; the user's "Dismiss all" is separate. Does nothing
+    /// when there is no such Notice, so the owner may call it on every recovery without checking.
+    public func clearNotices(code: ErrorCode) async {
+        guard board.remove(code: code) else { return }
+        await presenter.noticesChanged(board.notices)
     }
 
     /// The ring buffer for the diagnostics report (FR-000-14).

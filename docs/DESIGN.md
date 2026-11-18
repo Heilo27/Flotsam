@@ -416,11 +416,11 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 
 | Key | String | Count |
 |---|---|---|
-| `shelf.empty.title` | Shelf is empty | (14/40) |
-| `shelf.empty.body` | Copy something, or drag an item here to pin it. | (47/150) |
-| `shelf.drop` | Drop to pin | (11/15) |
-| `shelf.section.pinned` | Pinned | (6/15) |
-| `shelf.section.recent` | Recent | (6/15) |
+| `ui.shelf.empty` | Shelf is empty. Copy something, or drag an item here to pin it. | (63/150) |
+| `ui.shelf.drop` | Drop to pin | (11/15) |
+| `ui.shelf.sectionRecent` | Recent | (6/15) |
+
+The Pinned section label reuses `ui.library.pinned` (Library table).
 
 ### Feedback
 
