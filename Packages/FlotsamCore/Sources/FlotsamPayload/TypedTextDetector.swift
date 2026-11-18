@@ -31,12 +31,9 @@ public enum TypedTextDetector {
         text.count <= 254 && text.wholeMatch(of: /[^\s@]+@[^\s@]+\.[^\s@]{2,}/) != nil
     }
 
+    /// The notation rule lives in one place, `ColorChannels` (FR-003-14); this only classifies by it.
     private static func isColor(_ text: String) -> Bool {
-        if text.wholeMatch(of: /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})/) != nil { return true }
-        // rgb(), rgba(), hsl(), hsla(): three or four numeric or percentage arguments, comma, space or slash separated.
-        return text.wholeMatch(
-            of: /(?i)(?:rgba?|hsla?)\(\s*[+-]?(?:\d+\.?\d*|\.\d+)%?(?:\s*[,\/\s]\s*[+-]?(?:\d+\.?\d*|\.\d+)%?){2,3}\s*\)/
-        ) != nil
+        ColorChannels.isNotation(text)
     }
 
     private static func isPhone(_ text: String) -> Bool {
