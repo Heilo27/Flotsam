@@ -11,7 +11,7 @@ import FlotsamBase
 // that test red (mutation map in the comment above each test).
 
 /// Holds a hook the watcher awaits, so a test parks the watcher at exactly that suspension.
-private final class WorfGate: @unchecked Sendable {
+final class WorfGate: @unchecked Sendable {
     private let lock = NSLock()
     private var closed = false
     private var parked = 0
@@ -41,7 +41,7 @@ private final class WorfSlowLoadStore: ScreenshotWatermarkStore, @unchecked Send
 }
 
 /// The rig's file system, except that the import's single read of the bytes blocks while reads are held.
-private final class WorfHeldReadFileSystem: FileSystemPort, @unchecked Sendable {
+final class WorfHeldReadFileSystem: FileSystemPort, @unchecked Sendable {
     private let base: ProbedFileSystem
     private let lock = NSLock()
     private var held = false
@@ -72,6 +72,24 @@ private final class WorfHeldReadFileSystem: FileSystemPort, @unchecked Sendable 
     func availableCapacity(at url: URL) -> Int64? { base.availableCapacity(at: url) }
 }
 
+/// A folder event source that is unavailable (the watcher falls back to polling) and runs `action` on its first
+/// `start`, then keeps the actor busy for a moment. The action's calls into the watcher queue behind that busy
+/// stretch, so they are already waiting for the actor when the stretch ends, ahead of anything the watcher itself
+/// queues from it afterwards.
+private final class WorfBusyUnavailableSource: FolderEventSource, @unchecked Sendable {
+    private let lock = NSLock()
+    private var action: (@Sendable () -> Void)?
+    func onFirstStart(_ action: @escaping @Sendable () -> Void) { lock.withLock { self.action = action } }
+
+    func start(watching folder: URL, handler: @escaping @Sendable (FolderEvent) -> Void) -> FlotsamResult<any FolderWatch> {
+        if let action = lock.withLock({ () -> (@Sendable () -> Void)? in defer { self.action = nil }; return self.action }) {
+            action()
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        return .failure(FlotsamError(.sspOs001, "Fake source unavailable"))
+    }
+}
+
 @Suite("WORF-457: FR-002-05 suspension guards in ScreenshotWatcher", .serialized)
 struct Worf457WatcherAdversarialTests {
     // MARK: Rig helpers
@@ -80,12 +98,12 @@ struct Worf457WatcherAdversarialTests {
     /// code whose `clear` hook is held while its gate is closed.
     private func makeWatcher(
         _ rig: WatcherRig, files: (any FileSystemPort)? = nil, store: (any ScreenshotWatermarkStore)? = nil,
-        holdClear: (code: ErrorCode, gate: WorfGate)? = nil
+        holdClear: (code: ErrorCode, gate: WorfGate)? = nil, eventSource: (any FolderEventSource)? = nil
     ) -> ScreenshotWatcher {
         let notices = rig.notices
         return ScreenshotWatcher(
             fileSystem: files ?? rig.fileSystem, preferences: rig.preferences, home: rig.home, clock: rig.clock,
-            eventSource: rig.source, settings: rig.settings, ingest: rig.ingest, watermarkStore: store ?? rig.marks,
+            eventSource: eventSource ?? rig.source, settings: rig.settings, ingest: rig.ingest, watermarkStore: store ?? rig.marks,
             report: { notices.raise($0) },
             clear: { code in
                 if let holdClear, holdClear.code == code { await holdClear.gate.pass() }
@@ -373,9 +391,7 @@ struct Worf457WatcherAdversarialTests {
         #expect(rig.notices.raised(.sspIo002) == 1, "the unstable attempt was reported once")
     }
 
-    // MARK: Gaps: suspensions TASK-457 did not guard (pre-existing races of the same family).
-    // Each is a CONFIRMED defect, recorded with `withKnownIssue`: when the defect is fixed the test goes red with
-    // "expected a known issue", which is the prompt to delete the wrapper.
+    // MARK: Gaps: suspensions TASK-457 did not guard (pre-existing races of the same family, fixed in TASK-483).
 
     @Test("OC-W457-G1 activation parked on its watermark write, pickup off again: no poll timer is left registered")
     func activationOvertakenByDeactivateLeavesNoTimer() async throws {
@@ -394,9 +410,7 @@ struct Worf457WatcherAdversarialTests {
         try #require(await eventually { activated.value == true }, "activation ended")
 
         // then: FR-002-05 says no timer
-        withKnownIssue("DEFECT (TASK-457 follow-up): activate() registers its poll timer after deactivate() when overtaken") {
-            #expect(rig.pollTick.cadence == nil, "FR-002-05: off means no timer")
-        }
+        #expect(rig.pollTick.cadence == nil, "FR-002-05: off means no timer")
         #expect(await rig.watcher.status == .off)
     }
 
@@ -417,9 +431,7 @@ struct Worf457WatcherAdversarialTests {
 
         // then: pickup is off and no refusal notice is left standing for a folder nobody is reading
         #expect(await rig.watcher.status == .off)
-        withKnownIssue("DEFECT (TASK-457 follow-up): markAccessDenied raises SSP-PRM-001 after deactivate() when overtaken") {
-            #expect(lastNotice(rig, .sspPrm001) != .raised(.sspPrm001), "FR-002-05: no condition outlives pickup")
-        }
+        #expect(lastNotice(rig, .sspPrm001) != .raised(.sspPrm001), "FR-002-05: no condition outlives pickup")
     }
 
     @Test("OC-W457-G3 rebuild parked clearing the old notice, pickup off: SSP-IO-003 is not raised after the off-time clear")
@@ -445,8 +457,51 @@ struct Worf457WatcherAdversarialTests {
 
         // then: SSP-IO-003 does not stand after pickup is off
         #expect(await watcher.status == .off)
-        withKnownIssue("DEFECT (TASK-457 follow-up): updateLocationWarning raises SSP-IO-003 after deactivate() when overtaken") {
-            #expect(lastNotice(rig, .sspIo003) != .raised(.sspIo003), "FR-002-05: no condition outlives pickup")
+        #expect(lastNotice(rig, .sspIo003) != .raised(.sspIo003), "FR-002-05: no condition outlives pickup")
+    }
+
+    // MARK: TASK-483 (D4): the polling notice, and SSP-IO-002 after off
+
+    @Test("OC-W483-D4 pickup turned off while the watcher falls back to polling: SSP-OS-001 is not left raised")
+    func pollingNoticeRaisedAfterDeactivate() async throws {
+        // given: an event source that is unavailable, and an off request that is already waiting for the actor when
+        // the watcher installs its polling fallback
+        let rig = try WatcherRig(watermark: Date().addingTimeInterval(-60))
+        defer { rig.cleanUp() }
+        let source = WorfBusyUnavailableSource()
+        let watcher = makeWatcher(rig, eventSource: source)
+        let off = Handoff<Bool>()
+        source.onFirstStart {
+            Task {
+                rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
+                await watcher.settingsDidChange()
+                off.set(true)
+            }
         }
+
+        // when: pickup starts, falls back to polling, and is turned off straight away
+        await watcher.start()
+        try #require(await eventually { off.value == true }, "the off request ran")
+        await letItSettle()
+
+        // then: pickup is off and the polling notice is not the last word
+        #expect(await watcher.status == .off)
+        #expect(lastNotice(rig, .sspOs001) != .raised(.sspOs001), "FR-002-05: no condition outlives pickup")
+    }
+
+    @Test("OC-W483-IO002 an import in flight when pickup goes off and ending unstable reports no SSP-IO-002")
+    func unstableAfterOffReportsNothing() async throws {
+        // given: an import in flight at its read; the file then turns unreadable
+        let (rig, files, watcher) = try unstableRig()
+        defer { rig.cleanUp() }
+        _ = try await startUnstableImport(rig, files, watcher)
+
+        // when: pickup goes off and the import ends unstable
+        await turnPickupOff(rig, watcher)
+        files.releaseReads()
+        await letItSettle()
+
+        // then: no notice about a file nobody is watching
+        #expect(rig.notices.raised(.sspIo002) == 0, "FR-002-05: a live import of an ended session raises nothing")
     }
 }
