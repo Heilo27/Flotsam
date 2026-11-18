@@ -10,8 +10,8 @@ import FlotsamPayload
 // tree, fake clock / events / ingest / watermark / notices. Nothing here touches NSPasteboard, defaults, a real
 // database or ~/Library.
 //
-// Not testable at package level (no seam; see the audit table): OC-2055 HUD text, OC-2066 signposts and p95,
-// OC-2069 `log show` / Copy Diagnostics / Notices window, OC-2085 button visibility and label.
+// Not testable here (see the audit table): OC-2066 p95 (the signposts themselves have a seam: `SignpostProbe` and
+// ScreenshotImportSignpostTests), OC-2069 `log show` / Copy Diagnostics / Notices window, OC-2085 button visibility and label.
 
 private let auditBDay: TimeInterval = 86_400
 
