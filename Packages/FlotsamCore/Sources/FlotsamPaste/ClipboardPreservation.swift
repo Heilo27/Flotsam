@@ -71,7 +71,7 @@ public final class ClipboardPreserver {
         guard case .success(let snapshot) = pasteboard.readSnapshot(types: types) else {
             return HeldClipboard(disposition: .unreadable, plainText: "", representations: [])
         }
-        let text = snapshot.representations.first { $0.uti == PastePayload.plainTextType }
+        let text = snapshot.representations.first { $0.uti == PasteboardUTI.plainText }
             .flatMap { String(data: $0.data, encoding: .utf8) } ?? ""
         // The port has no size query, so the cap is applied after the read; the oversized copy is dropped here.
         let bytes = snapshot.representations.reduce(0) { $0 + $1.data.count }

@@ -50,19 +50,19 @@ final class ScriptedPasteboard: PasteboardPort {
 
     /// Simulates the expansion's own write, returning the changeCount it produced.
     private func expansionWrites(_ board: ScriptedPasteboard, _ ledger: OwnWriteLedger) throws -> Int {
-        try ledger.write([rep(PastePayload.plainTextType, "expanded")], to: board).get()
+        try ledger.write([rep(PasteboardUTI.plainText, "expanded")], to: board).get()
     }
 
     @Test func captureHoldsEveryTypeAndExposesThePlainText() {
-        let board = ScriptedPasteboard([rep("public.png", "img"), rep(PastePayload.plainTextType, "hello")])
+        let board = ScriptedPasteboard([rep("public.png", "img"), rep(PasteboardUTI.plainText, "hello")])
         let capture = preserver(board).0.capture()
         #expect(capture.disposition == .held)
         #expect(capture.plainText == "hello")
-        #expect(board.readTypes == [["public.png", PastePayload.plainTextType]])
+        #expect(board.readTypes == [["public.png", PasteboardUTI.plainText]])
     }
 
     @Test func restoreWritesTheCopyBackAfterTheDelayWhenNobodyElseCopied() async throws {
-        let board = ScriptedPasteboard([rep("public.png", "img"), rep(PastePayload.plainTextType, "hello")])
+        let board = ScriptedPasteboard([rep("public.png", "img"), rep(PasteboardUTI.plainText, "hello")])
         let (preserver, ledger, clock) = preserver(board)
         let capture = preserver.capture()
         let afterWrite = try expansionWrites(board, ledger)
@@ -72,7 +72,7 @@ final class ScriptedPasteboard: PasteboardPort {
         #expect(outcome == .restored)
         #expect(clock.slept == [.milliseconds(300)])
         let restored = try #require(board.writes.last)
-        #expect(restored.filter { $0.uti == "public.png" || $0.uti == PastePayload.plainTextType }.count == 2)
+        #expect(restored.filter { $0.uti == "public.png" || $0.uti == PasteboardUTI.plainText }.count == 2)
         #expect(restored.first { $0.uti == "public.png" }?.data == Data("img".utf8))
         // Written through the ledger: own-write markers present, change recorded so capture skips it.
         #expect(restored.contains { $0.uti == PasteboardMarkers.ownWrite })
@@ -80,7 +80,7 @@ final class ScriptedPasteboard: PasteboardPort {
     }
 
     @Test func restoreIsSkippedWhenAnotherAppCopiedInTheWindow() async throws {
-        let board = ScriptedPasteboard([rep(PastePayload.plainTextType, "hello")])
+        let board = ScriptedPasteboard([rep(PasteboardUTI.plainText, "hello")])
         let (preserver, ledger, _) = preserver(board)
         let capture = preserver.capture()
         let afterWrite = try expansionWrites(board, ledger)
@@ -93,7 +93,7 @@ final class ScriptedPasteboard: PasteboardPort {
 
     @Test func concealedAndTransientPasteboardsAreNeverReadHeldOrRestored() async throws {
         for marker in [PasteboardMarkers.concealed, PasteboardMarkers.transient] {
-            let board = ScriptedPasteboard([rep(PastePayload.plainTextType, "hunter2"), rep(marker, "")])
+            let board = ScriptedPasteboard([rep(PasteboardUTI.plainText, "hunter2"), rep(marker, "")])
             let (preserver, ledger, clock) = preserver(board)
             let capture = preserver.capture()
             #expect(capture.disposition == .concealed)
@@ -109,7 +109,7 @@ final class ScriptedPasteboard: PasteboardPort {
 
     @Test func overTheCapIsNotHeldAndNotRestored() async throws {
         let big = PasteboardRepresentation(uti: "public.tiff", data: Data(count: ClipboardPreserver.snapshotCap + 1))
-        let board = ScriptedPasteboard([big, rep(PastePayload.plainTextType, "caption")])
+        let board = ScriptedPasteboard([big, rep(PasteboardUTI.plainText, "caption")])
         let (preserver, ledger, _) = preserver(board)
         let capture = preserver.capture()
         #expect(capture.disposition == .tooLarge)
@@ -125,7 +125,7 @@ final class ScriptedPasteboard: PasteboardPort {
 
     @Test func anEmptyOrUnreadablePasteboardHoldsNothingAndHasNoText() {
         #expect(preserver(ScriptedPasteboard([])).0.capture().disposition == .empty)
-        let blocked = ScriptedPasteboard([rep(PastePayload.plainTextType, "secret")])
+        let blocked = ScriptedPasteboard([rep(PasteboardUTI.plainText, "secret")])
         blocked.readFailure = FlotsamError(.sysInt001, "blocked")
         let capture = preserver(blocked).0.capture()
         #expect(capture.disposition == .unreadable)

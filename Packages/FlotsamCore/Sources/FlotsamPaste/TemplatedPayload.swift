@@ -24,7 +24,7 @@ public enum TemplatedPayload {
         // The expanded text replaces the stored text, so any representation derived from it (a `public.url`, the stored
         // RTF) would now disagree with it. Only the plain text and, for rich text, the re-encoded rich forms are kept.
         let plain = PasteboardRepresentation(
-            uti: PastePayload.plainTextType,
+            uti: PasteboardUTI.plainText,
             data: Data(TemplateVariables.expand(plainText, context: context).utf8))
         guard content.kind == .richText,
             stored.contains(where: { RichTextTypes.all.contains($0.uti) })

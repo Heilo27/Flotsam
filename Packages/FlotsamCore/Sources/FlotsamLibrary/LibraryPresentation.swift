@@ -7,7 +7,7 @@ import Foundation
 public struct LibraryRowPresentation: Equatable, Identifiable {
     public static let maximumTagChips = 3
     /// VoiceOver reads at most this many characters of the primary line (FR-003-21).
-    public static let accessibilityPrimaryLimit = 100
+    public static let accessibilityPrimaryLimit = ItemSpeech.primaryLimit
 
     public let id: UUID
     public let kind: ItemKind
@@ -20,6 +20,10 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
     public let isPinned: Bool
     public let hasTrigger: Bool
     public let hasShortcut: Bool
+    /// The files this item references are all gone: the row shows the "Missing" badge (FR-003-07).
+    public let isMissing: Bool
+    /// The badge's text (`ui.library.missing`), nil when the item is not missing.
+    public let missingBadge: String?
     /// The "⌘1" to "⌘9" badge: only the first nine visible rows have one.
     public let shortcutBadge: String?
     public let accessibilityLabel: String
@@ -31,27 +35,18 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
         isPinned = row.isPinned
         hasTrigger = row.hasTrigger
         hasShortcut = row.hasShortcut
+        isMissing = row.isMissing
+        missingBadge = row.isMissing ? LibraryText.string("ui.library.missing") : nil
         shortcutBadge = (0..<9).contains(position) ? "⌘\(position + 1)" : nil
         tagChips = Array(row.tagNames.prefix(Self.maximumTagChips))
         let overflow = row.tagNames.count - Self.maximumTagChips
         tagOverflow = overflow > 0 ? LibraryText.format("ui.library.tagOverflow", overflow) : nil
 
-        let relative = Self.relativeTime(row.lastCopiedAt, now: now)
+        let relative = ItemSpeech.relativeTime(row.lastCopiedAt, now: now)
         secondaryText = [row.sourceName, relative].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
 
-        var spoken = [KindLabel.text(for: row.kind), String(row.primaryLine.prefix(Self.accessibilityPrimaryLimit))]
-        if let source = row.sourceName, !source.isEmpty { spoken.append(LibraryText.format("ui.library.fromApp", source)) }
-        spoken.append(relative)
-        if row.isPinned { spoken.append(LibraryText.string("ui.library.pinned")) }
-        accessibilityLabel = spoken.joined(separator: ", ")
-    }
-
-    /// "2 min ago", "yesterday". A copy time slightly in the future (clock skew) reads as now, never as "in 1 min".
-    static func relativeTime(_ date: Date, now: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        formatter.dateTimeStyle = .named
-        return formatter.localizedString(for: min(date, now), relativeTo: now)
+        // The Missing badge is read after the shared label (kind, primary line, source, age, pinned) (FR-003-07, FR-003-21).
+        accessibilityLabel = [ItemSpeech.label(for: row, now: now), missingBadge].compactMap { $0 }.joined(separator: ", ")
     }
 }
 
@@ -68,14 +63,14 @@ public struct SidebarEntry: Equatable, Identifiable {
 
     public var id: LibraryFilter { filter }
 
-    /// The sidebar in order: All, Pinned; the types that have items; tags alphabetically; the top apps by count. The
+    /// The sidebar in order: All, Pinned (each dimmed at zero); the types that have items; tags alphabetically; the top apps by count. The
     /// query layer already orders tags and caps apps (`SidebarCounts`), so this only labels them.
     public static func entries(from counts: SidebarCounts) -> [SidebarEntry] {
         var entries = [
-            SidebarEntry(filter: .all, section: .top, title: LibraryText.string("ui.library.sidebarAll"), count: counts.all, isDimmed: false),
-            SidebarEntry(filter: .pinned, section: .top, title: LibraryText.string("ui.library.sidebarPinned"), count: counts.pinned, isDimmed: false),
+            SidebarEntry(filter: .all, section: .top, title: LibraryText.string("ui.library.sidebarAll"), count: counts.all, isDimmed: counts.all == 0),
+            SidebarEntry(filter: .pinned, section: .top, title: LibraryText.string("ui.library.sidebarPinned"), count: counts.pinned, isDimmed: counts.pinned == 0),
         ]
-        for kind in ItemKind.allCases {
+        for kind in typeOrder {
             guard let count = counts.kinds[kind], count > 0 else { continue }
             entries.append(SidebarEntry(filter: .kind(kind), section: .types, title: LibraryText.typeTitle(kind), count: count, isDimmed: false))
         }
@@ -86,6 +81,26 @@ public struct SidebarEntry: Equatable, Identifiable {
             entries.append(SidebarEntry(filter: .sourceApp(app.identity), section: .apps, title: appTitle(app), count: app.count, isDimmed: false))
         }
         return entries
+    }
+
+    /// The Types rows in FR-003-12's order. The one home of that order: `ItemKind` itself stays in storage order, so
+    /// nothing that persists or counts by kind is affected. The exhaustive switch makes a new kind a compile error here.
+    static let typeOrder: [ItemKind] = ItemKind.allCases.sorted { typeRank($0) < typeRank($1) }
+
+    private static func typeRank(_ kind: ItemKind) -> Int {
+        switch kind {
+        case .text: 0
+        case .richText: 1
+        case .link: 2
+        case .color: 3
+        case .phone: 4
+        case .email: 5
+        case .image: 6
+        case .screenshot: 7
+        case .file: 8
+        case .folder: 9
+        case .bundle: 10
+        }
     }
 
     private static func appTitle(_ app: SidebarCounts.AppCount) -> String {
@@ -108,8 +123,11 @@ public struct LibraryFooter: Equatable {
     public let countText: String
     /// "Press ⌘V to paste" when Accessibility is off; "Select one item to paste" while several rows are selected.
     public let notice: String?
+    /// The active sort's name, shown beside the count (FR-004-12).
+    public let sortName: String
 
-    public init(totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool) {
+    public init(totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool, sort: LibrarySort) {
+        sortName = LibraryText.sortName(sort)
         let multi = selectionCount >= 2
         if multi {
             hints = [Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClearSelection"))]

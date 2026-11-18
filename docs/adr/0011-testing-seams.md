@@ -15,6 +15,7 @@ In the skeleton (used by real code today):
 | `FileSystemPort` (subset: exists, attributes, list, move, remove, extended attribute, permissions) | Sendable | `FileManager` | Storage blobs, Screenshots |
 | `PasteboardPort` (`changeCount`, `readSnapshot`, `write`) | `@MainActor` | `NSPasteboard.general` | Capture, Paste |
 | `KeyValueStore` (get/set/observe) | Sendable | `UserDefaults` | `SettingsStore` |
+| `ScreenCapturePreferences` (`location`, `name`) | Sendable | CFPreferences, `com.apple.screencapture` | Screenshots (FRD-002) |
 
 Declared when the owning FRD is built, not before: `FrontmostAppProvider`, `KeyEventPoster`, `KeyEventSource`, `HotkeyRegistrar`, `FolderEventSource`, `PermissionProbe`.
 

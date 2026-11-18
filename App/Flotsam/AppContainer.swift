@@ -3,6 +3,9 @@ import FlotsamBase
 import FlotsamCapture
 import FlotsamLibrary
 import FlotsamPaste
+import FlotsamPayload
+import FlotsamScreenshots
+import FlotsamShelf
 import FlotsamShortcuts
 import FlotsamStorage
 import FlotsamTriggers
@@ -28,6 +31,11 @@ final class AppContainer {
     private(set) var capture: ClipboardCapture?
     /// The Library panel (FR-003-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var library: LibraryPanelController?
+    /// The Shelf panel (FR-006-01). Nil until the database has opened; the menu item is disabled until then.
+    private(set) var shelf: ShelfPanelController?
+    private var unsubscribeScreenshots: (@Sendable () -> Void)?
+    /// Retained for the life of the app (FRD-002).
+    private(set) var screenshots: ScreenshotWatcher?
     /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
     /// it; the bindings are applied once the Library exists (`startLibrary`).
     let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
@@ -108,7 +116,16 @@ final class AppContainer {
         case .success(let opened):
             database = opened
             startCapture(database: opened)
-            startLibrary(database: opened)
+            // The Library and the Shelf paste through one service and read one frontmost app (FR-006-08).
+            let frontmost = WorkspaceFrontmostAppProvider()
+            let pasteboard = SystemPasteboard()
+            let keys = CGEventKeyPoster()
+            let paster = PasteService(
+                store: opened, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
+                accessibility: permissions, keys: keys, clock: SystemClock(), ownWrites: ownWrites)
+            startShelf(database: opened, paster: paster, frontmost: frontmost)
+            startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
+            startScreenshots(database: opened)
         case .failure(let error): await reporter.report(error, origin: .background)
         }
     }
@@ -141,16 +158,99 @@ final class AppContainer {
         capture.start()
     }
 
+    /// FRD-002: wires screenshot pickup. The watcher itself reads `screenshots.enabled`, so with the setting off it
+    /// creates no stream, no timer and touches no folder (FR-002-05).
+    private func startScreenshots(database: FlotsamDatabase) {
+        let reporter = reporter
+        let settings = settings
+        let watcher = ScreenshotWatcher(
+            fileSystem: LocalFileSystem(), preferences: SystemScreenCapturePreferences(),
+            home: FileManager.default.homeDirectoryForCurrentUser, clock: SystemClock(),
+            eventSource: FSEventsFolderSource(), settings: settings,
+            ingest: IngestActor(database: database, settings: settings),
+            watermarkStore: DatabaseWatermarkStore(database: database),
+            report: { error in await reporter.report(error, origin: .background) },
+            clear: { code in await reporter.clearNotices(code: code) })
+        screenshots = watcher
+
+        let watched: Set<String> = [
+            SettingKeys.screenshotsEnabled.name, SettingKeys.screenshotsFolderOverride.name, SettingKeys.captureMode.name,
+        ]
+        unsubscribeScreenshots = settings.subscribe { change in
+            guard watched.contains(change.name) else { return }
+            Task { await watcher.settingsDidChange() }
+        }
+        let center = NotificationCenter.default
+        let workspace = NSWorkspace.shared.notificationCenter
+        observers += [
+            workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { _ in
+                Task { await watcher.didWake() }
+            },
+            center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
+                Task { await watcher.didBecomeActive() }
+            },
+        ]
+        // FR-002-12: onboarding's checkbox and Settings' button both call this. The count is not shown here.
+        actions.importRecentScreenshots = { Task { _ = await watcher.importRecent() } }
+        Task { await watcher.start() }
+    }
+
+    /// FRD-006: builds the Shelf over the opened database and points `actions.toggleShelf` at it (FR-006-03c). The Shelf
+    /// pastes through the Library's `PasteService` (FR-006-08) and reads Missing from the same row flag (FR-006-14).
+    private func startShelf(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
+        let reporter = reporter
+        let capture = capture
+        let effects = ShelfEffects(
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+            captureNow: { capture?.captureNow() },
+            confirmDelete: { message in Self.confirmDelete(message) })
+        let controller = ShelfPanelController(
+            settings: settings, frontmost: frontmost, thumbnail: { await database.thumbnail(itemId: $0, size: .grid) },
+            makeModel: { host in
+                ShelfModel(
+                    source: database, paster: ShelfPasteAdapter(service: paster), host: host, events: database.events,
+                    details: database, effects: effects)
+            })
+        shelf = controller
+        // Only one Flotsam panel is open at a time: showing the Shelf hides the Library (FR-006-04). The reverse is
+        // `actions.openLibrary`, which the Library hotkey also runs.
+        controller.onReveal = { [weak self] in self?.library?.hidePanel() }
+        actions.toggleShelf = { [weak controller] in controller?.toggle() }
+
+        // The Toggle Shelf hotkey (FR-006-03c, FR-005-07) goes through the one registry (`startShortcuts` binds it from
+        // Settings and unregisters it while the Shelf is off). The hotkey passes its own trigger so the reveal log
+        // tells a hotkey toggle from the menu item.
+        shortcuts.setAction(.toggleShelf) { [weak controller] in controller?.toggle(.hotkey) }
+    }
+
+    /// The delete confirmation (FR-004-09) as a modal alert; the Shelf's panel is not key, so a sheet has no parent.
+    private static func confirmDelete(_ message: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: ShelfText.string(ShelfText.buttonDelete))
+        alert.addButton(withTitle: ShelfText.string(ShelfText.buttonCancel))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     /// Builds the Library stack over the opened database and registers its hotkey (FR-003-01, FR-005-01).
-    private func startLibrary(database: FlotsamDatabase) {
+    private func startLibrary(
+        database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster,
+        frontmost: WorkspaceFrontmostAppProvider
+    ) {
         let reporter = reporter
         let probe = permissions
-        let frontmost = WorkspaceFrontmostAppProvider()
-        let keys = CGEventKeyPoster()
-        let pasteboard = SystemPasteboard()
-        let paster = PasteService(
-            store: database, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
-            accessibility: probe, keys: keys, clock: SystemClock(), ownWrites: ownWrites)
+
+        // FRD-004: the coordinator and the organizer need each other (rejected input shows inline), so the organizer is
+        // handed over after both exist.
+        let organize = OrganizeCoordinator(
+            report: { error, origin in Task { await reporter.report(error, origin: origin) } },
+            loadContent: { await database.content(of: $0) },
+            shortcutAndTrigger: { [weak self] ids in self?.actions.editShortcutAndTrigger?(ids) })
+        let organizer = LibraryOrganizer(
+            store: database, classifiers: .live, report: { [weak organize] error in organize?.surface(error) })
+        organize.organizer = organizer
+
         // One snapshot-expand-write-restore home for item hotkeys and typed triggers (FR-005-16, FR-005-17).
         let clock = SystemClock()
         let files = LocalFileSystem()
@@ -175,23 +275,29 @@ final class AppContainer {
                 NSWorkspace.shared.activateFileViewerSelecting(paths.map { URL(fileURLWithPath: $0) })
             },
             openSettings: { [weak self] in self?.actions.openSettings?() },
-            // ⌘K opens the shortcut-and-trigger editor for the one selected item (FR-005-09). The organise commands
-            // (pin, tags, note, edit, delete, sort, ungroup) belong to FRD-004 and stay inert until it lands.
-            external: { [weak editor] command, ids in
-                guard let id = command.shortcutEditorTarget(selection: ids) else { return }
-                editor?.open(itemId: id)
-            },
+            // Pin, tags, note, edit, delete and ungroup are FRD-004; ⌘K reaches FRD-005 through `actions`.
+            external: { [weak organize] command, ids in organize?.perform(command, ids: ids) },
             isAccessibilityTrusted: { probe.isAccessibilityTrusted })
         let capture = capture
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
-            effects: effects, frontmost: frontmost,
+            effects: effects, organizer: organizer, organize: organize, frontmost: frontmost,
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller
-        actions.openLibrary = { [weak controller] in controller?.toggle() }
+        // Only one Flotsam panel is open at a time: opening the Library hides the Shelf (FR-006-04).
+        actions.openLibrary = { [weak controller, weak self] in
+            self?.shelf?.libraryOpened()
+            controller?.toggle()
+        }
 
-        startShortcuts(openLibrary: { [weak controller] in controller?.toggle() })
+        // ⌘K reaches the shortcut-and-trigger editor through `actions` (FR-005-09); a selection that is not exactly one
+        // item opens nothing.
+        actions.editShortcutAndTrigger = { [weak editor] ids in
+            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: ids) else { return }
+            editor?.open(itemId: id)
+        }
+        startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })
         startItemHotkeys(database: database, paster: paster, expansion: expansion, frontmost: frontmost)
         startTriggers(
             database: database, paster: paster, pasteboard: pasteboard, keys: keys, files: files, codec: codec,
@@ -307,13 +413,13 @@ final class AppContainer {
         }
     }
 
-    /// Points the registry's three global actions at their owners and binds them from Settings (FR-005-01). Save
-    /// Clipboard and Toggle Shelf go through `actions`, so an owner that plugs in later is picked up at the next press;
-    /// until then the press does nothing (FR-005-07). A rebinding in Settings, or the Shelf switch, takes effect at once.
+    /// Points the registry's global actions at their owners and binds them from Settings (FR-005-01). Save Clipboard
+    /// goes through `actions`, so an owner that plugs in later is picked up at the next press; Toggle Shelf's action is
+    /// set by `startShelf`, and until it is the press does nothing (FR-005-07). A rebinding in Settings, or the Shelf
+    /// switch, takes effect at once.
     private func startShortcuts(openLibrary: @escaping @MainActor () -> Void) {
         shortcuts.setAction(.openLibrary, openLibrary)
         shortcuts.setAction(.saveClipboard) { [weak self] in self?.actions.saveClipboard?() }
-        shortcuts.setAction(.toggleShelf) { [weak self] in self?.actions.toggleShelf?() }
         reportShortcutErrors(shortcuts.applyGlobalSettings(settings))
 
         let names: Set<String> = [
@@ -352,6 +458,8 @@ struct AppActions {
     var openLibrary: (@MainActor () -> Void)?
     /// FRD-005 Save Clipboard.
     var saveClipboard: (@MainActor () -> Void)?
+    /// FRD-005 ⌘K in the Library: edit the selected item's shortcut and trigger. Inert until FRD-005 fills it.
+    var editShortcutAndTrigger: (@MainActor ([UUID]) -> Void)?
     /// FRD-006 Shelf.
     var toggleShelf: (@MainActor () -> Void)?
     /// FR-008-03 Settings window; assigned by `installSettings`. The menu row and the Library both call this one closure.

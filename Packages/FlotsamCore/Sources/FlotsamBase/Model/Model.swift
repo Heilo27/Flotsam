@@ -3,6 +3,14 @@ import Foundation
 /// Item kinds (FRD-001 FR-001-05..15, FRD-002). One enum, shared by Storage, Payload and the UI.
 public enum ItemKind: String, CaseIterable, Sendable {
     case text, richText, link, color, phone, email, image, file, folder, bundle, screenshot
+
+    /// The kinds stored by reference to files on disk (FRD-001 FR-001-12): their content is the members, not a blob.
+    public var referencesFiles: Bool {
+        switch self {
+        case .file, .folder, .bundle: true
+        case .text, .richText, .link, .color, .phone, .email, .image, .screenshot: false
+        }
+    }
 }
 
 public enum CaptureOrigin: Sendable, Equatable {

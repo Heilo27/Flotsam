@@ -82,14 +82,36 @@ private struct RowInteraction: ViewModifier {
                 Divider()
                 Button(LibraryText.string(LibraryText.menuShortcutAndTrigger)) { act { model.perform(.external(.shortcutAndTrigger)) } }
                 Button(LibraryText.string(LibraryText.menuPreview)) { act { model.perform(.togglePreview) } }
-                if row.kind == .file || row.kind == .folder || row.kind == .bundle {
+                if row.kind.referencesFiles {
                     Button(LibraryText.string(LibraryText.menuReveal)) { act { model.perform(.revealInFinder) } }
                 }
+                Divider()
+                organizeMenu
             }
             .id(row.id)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(row.accessibilityLabel)
             .accessibilityAddTraits(model.selection.contains(row.id) ? .isSelected : [])
+    }
+
+    /// Pin, Tags, Note, Edit, Ungroup and Delete (FR-004-01, -03, -06, -07, -09, -11). Edit and Ungroup need exactly one
+    /// item; the coordinator checks again, so a stale menu cannot act on the wrong selection.
+    @ViewBuilder
+    private var organizeMenu: some View {
+        let single = !model.selection.contains(row.id) || model.selection.count == 1
+        Button(LibraryText.string(model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned) ? LibraryText.menuUnpin : LibraryText.menuPin)) { act { model.perform(.external(.pin)) } }
+        Button(LibraryText.string(LibraryText.menuTags)) { act { model.perform(.external(.tags)) } }
+        if single {
+            Button(LibraryText.string(LibraryText.menuNote)) { act { model.perform(.external(.note)) } }
+            if row.kind.isTextEditable {
+                Button(LibraryText.string(LibraryText.menuEdit)) { act { model.perform(.external(.edit)) } }
+            }
+            if row.kind == .bundle {
+                Button(LibraryText.string(LibraryText.menuUngroup)) { act { model.perform(.external(.ungroup)) } }
+            }
+        }
+        Divider()
+        Button(LibraryText.string(LibraryText.menuDelete), role: .destructive) { act { model.perform(.external(.delete)) } }
     }
 
     /// A context-menu command acts on the row it was opened on (FR-003-22).
@@ -105,7 +127,7 @@ private extension View {
     }
 }
 
-private func symbolName(for kind: ItemKind) -> String {
+func symbolName(for kind: ItemKind) -> String {
     switch kind {
     case .text: "text.alignleft"
     case .richText: "doc.richtext"
@@ -133,6 +155,10 @@ private struct StatusBadges: View {
             if row.isPinned { Image(systemName: "pin.fill") }
             if row.hasTrigger { Image(systemName: "text.cursor") }
             if row.hasShortcut { Image(systemName: "command") }
+            if let missing = row.missingBadge {
+                Text(verbatim: missing).font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(.quaternary, in: Capsule())
+            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)

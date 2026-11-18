@@ -2,22 +2,10 @@ import Foundation
 import FlotsamBase
 import FlotsamPaste
 
-/// A key as the panel's key handler sees it, independent of AppKit: the platform layer turns an `NSEvent` into this.
-public enum LibraryKeyInput: Sendable, Hashable {
-    /// A printable key, lowercased (`"p"`, `"1"`, `","`).
-    case character(Character)
-    case returnKey, space, escape, up, down, left, right, delete
-}
-
-public struct LibraryKeyStroke: Sendable, Hashable {
-    public let input: LibraryKeyInput
-    public let modifiers: ChordModifiers
-
-    public init(_ input: LibraryKeyInput, _ modifiers: ChordModifiers = []) {
-        self.input = input
-        self.modifiers = modifiers
-    }
-}
+/// The key types are shared with the Shelf (FlotsamBase `KeyInput`, `KeyStroke`), so the platform layer translates an
+/// `NSEvent` once; these names stay for the Library's callers.
+public typealias LibraryKeyInput = KeyInput
+public typealias LibraryKeyStroke = KeyStroke
 
 public enum LibraryDirection: Sendable, Equatable { case up, down, left, right }
 

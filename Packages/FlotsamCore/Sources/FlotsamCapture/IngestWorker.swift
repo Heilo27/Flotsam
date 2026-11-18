@@ -24,15 +24,8 @@ struct IngestWorker: Sendable {
         }
 
         let candidate = IngestCandidate(
-            kind: classification.kind, contentKey: classification.contentKey, plainText: classification.plainText,
-            representations: classification.representations,
-            members: classification.members.map {
-                IngestMember(path: $0.path, bookmark: $0.bookmark, isDirectory: $0.isDirectory)
-            },
-            source: payload.source, origin: payload.origin, occurredAt: payload.capturedAt)
-
-        // Classifier warnings (a trimmed bundle) are reported whether or not ingest succeeds.
-        for warning in classification.warnings { await reporter.report(warning, origin: .background) }
+            classification: classification, source: payload.source, origin: payload.origin,
+            occurredAt: payload.capturedAt)
 
         switch await ingest.ingest(candidate) {
         case .failure(let error):

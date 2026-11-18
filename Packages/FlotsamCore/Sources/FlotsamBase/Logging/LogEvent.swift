@@ -3,6 +3,22 @@ import Foundation
 /// A shelf interaction FR-000-11 requires a log line for.
 public enum ShelfAction: String, Sendable, Equatable { case reveal, dragOut, dropIn }
 
+/// What made the Shelf appear (FRD-006 FR-006-03, FR-006-18). A closed enum so the value is an enum raw value, which
+/// FR-000-10 allows in the clear. `hotkey` and `menuItem` are sticky reveals, the rest are transient.
+public enum ShelfTrigger: String, Sendable, Equatable, CaseIterable {
+    case drag, hover, hotkey, menuItem, menuBarIconDrag
+}
+
+/// The one extra fact a Shelf log line may carry beside its outcome (FRD-006 FR-006-18): the reveal trigger, the
+/// number of items dragged out, or the error code of a drop that was not fully stored. Counts and codes only, never
+/// a file name, clip text or app name.
+public enum ShelfLogDetail: Sendable, Equatable {
+    case none
+    case trigger(ShelfTrigger)
+    case count(Int)
+    case code(ErrorCode)
+}
+
 /// A database step FR-000-11 requires a log line for.
 public enum DatabaseStep: String, Sendable, Equatable { case open, migrate, integrityCheck }
 
@@ -19,7 +35,8 @@ public enum LogEvent: Sendable, Equatable {
     case screenshotImported(outcome: LogOutcome, byteSize: Int)
     case pasteBack(outcome: LogOutcome)
     case hotkeyRegistered(outcome: LogOutcome)
-    case shelf(ShelfAction, outcome: LogOutcome)
+    /// The detail defaults to `.none` so callers that only know the outcome keep compiling (FRD-006 FR-006-18).
+    case shelf(ShelfAction, outcome: LogOutcome, detail: ShelfLogDetail = .none)
     /// Matched yes or no only; the typed buffer and the trigger string never appear (FR-000-10).
     case triggerMatched(Bool)
     case permissionChanged(PermissionName, granted: Bool)
@@ -33,7 +50,7 @@ public enum LogEvent: Sendable, Equatable {
         case .screenshotImported: "screenshot.imported"
         case .pasteBack: "paste.back"
         case .hotkeyRegistered: "hotkey.registered"
-        case .shelf(let action, _): "shelf.\(action.rawValue)"
+        case .shelf(let action, _, _): "shelf.\(action.rawValue)"
         case .triggerMatched: "trigger.matched"
         case .permissionChanged: "permission.changed"
         case .retentionSwept: "retention.swept"
@@ -62,8 +79,17 @@ public enum LogEvent: Sendable, Equatable {
             return fields
         case let .screenshotImported(outcome, byteSize):
             return [.outcome: .outcome(outcome), .byteSize: .bytes(byteSize)]
-        case .pasteBack(let outcome), .hotkeyRegistered(let outcome), .shelf(_, let outcome), .database(_, let outcome):
+        case .pasteBack(let outcome), .hotkeyRegistered(let outcome), .database(_, let outcome):
             return [.outcome: .outcome(outcome)]
+        case let .shelf(_, outcome, detail):
+            var fields: [LogKey: LogSafeValue] = [.outcome: .outcome(outcome)]
+            switch detail {
+            case .none: break
+            case .trigger(let trigger): fields[.trigger] = .trigger(trigger)
+            case .count(let count): fields[.count] = .int(count)
+            case .code(let code): fields[.code] = .code(code)
+            }
+            return fields
         case .triggerMatched(let matched):
             return [.outcome: .outcome(matched ? .matched : .noMatch)]
         case let .permissionChanged(permission, granted):

@@ -52,15 +52,15 @@ final class FakeRichTextCodec: RichTextCodec, @unchecked Sendable {
     @Test func plainTextItemWritesExpandedPlainTextOnly() throws {
         let reps = try build(content(.text, "Hi {clipboard} on {date:yyyy}", representations: [
             PasteboardRepresentation(uti: "public.url", data: Data("x".utf8))])).get()
-        #expect(reps.map(\.uti) == [PastePayload.plainTextType])
-        #expect(text(reps, PastePayload.plainTextType) == "Hi CLIP on 2026")
+        #expect(reps.map(\.uti) == [PasteboardUTI.plainText])
+        #expect(text(reps, PasteboardUTI.plainText) == "Hi CLIP on 2026")
     }
 
     @Test func itemsWithoutVariablesKeepEveryStoredRepresentation() throws {
         let stored = [PasteboardRepresentation(uti: "public.url", data: Data("https://a.test".utf8))]
         let reps = try build(content(.link, "https://a.test {foo}", representations: stored)).get()
-        #expect(reps.map(\.uti) == [PastePayload.plainTextType, "public.url"])
-        #expect(text(reps, PastePayload.plainTextType) == "https://a.test {foo}")
+        #expect(reps.map(\.uti) == [PasteboardUTI.plainText, "public.url"])
+        #expect(text(reps, PasteboardUTI.plainText) == "https://a.test {foo}")
     }
 
     @Test func nonTextKindsAreNeverExpanded() throws {
@@ -84,8 +84,8 @@ final class FakeRichTextCodec: RichTextCodec, @unchecked Sendable {
         let stored = [PasteboardRepresentation(uti: RichTextTypes.rtf, data: Data("old".utf8))]
         let reps = try build(content(.richText, "See docs {date:yyyy} now!", representations: stored), codec: codec).get()
 
-        #expect(reps.map(\.uti) == [PastePayload.plainTextType, RichTextTypes.rtf, RichTextTypes.html])
-        #expect(text(reps, PastePayload.plainTextType) == "See docs 2026 now!")
+        #expect(reps.map(\.uti) == [PasteboardUTI.plainText, RichTextTypes.rtf, RichTextTypes.html])
+        #expect(text(reps, PasteboardUTI.plainText) == "See docs 2026 now!")
         #expect(text(reps, RichTextTypes.rtf) == "See docs 2026 now!")
 
         let result = try #require(codec.encoded.first)
@@ -129,6 +129,6 @@ final class FakeRichTextCodec: RichTextCodec, @unchecked Sendable {
 
     @Test func richTextWithOnlyPlainTextExpandsThePlainText() throws {
         let reps = try build(content(.richText, "{clipboard}")).get()
-        #expect(reps.map(\.uti) == [PastePayload.plainTextType])
+        #expect(reps.map(\.uti) == [PasteboardUTI.plainText])
     }
 }

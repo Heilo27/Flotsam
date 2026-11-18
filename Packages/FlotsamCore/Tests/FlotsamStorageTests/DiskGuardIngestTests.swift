@@ -41,7 +41,7 @@ import FlotsamBase
         defer { rig.cleanUp() }
 
         // when an image is copied
-        let image = try await rig.ingest.ingest(rig.image("k-img", png))
+        let image = await rig.ingest.ingest(rig.image("k-img", png))
 
         // then it is refused as a warning, no item or blob exists, and the code carries the free space
         guard case .failure(let error) = image else { Issue.record("expected the image to be skipped"); return }
@@ -72,7 +72,7 @@ import FlotsamBase
         let blobsBefore = rig.blobFiles()
 
         // when a screenshot file is picked up
-        let shot = try await rig.ingest.ingest(rig.image("k-shot", png, kind: .screenshot, origin: .screenshotFile))
+        let shot = await rig.ingest.ingest(rig.image("k-shot", png, kind: .screenshot, origin: .screenshotFile))
 
         // then it is skipped as STO-LIM-002 and the library is unchanged
         guard case .failure(let error) = shot else { Issue.record("expected the screenshot to be skipped"); return }
@@ -110,9 +110,9 @@ import FlotsamBase
         defer { rig.cleanUp() }
 
         // when text, a file copy and a Shelf drop are each attempted
-        let text = try await rig.ingest.ingest(rig.text("k-text", "no room"))
-        let files = try await rig.ingest.ingest(rig.files("k-files", count: 2))
-        let drop = try await rig.ingest.ingest(shelfDrop(rig, "k-drop"))
+        let text = await rig.ingest.ingest(rig.text("k-text", "no room"))
+        let files = await rig.ingest.ingest(rig.files("k-files", count: 2))
+        let drop = await rig.ingest.ingest(shelfDrop(rig, "k-drop"))
 
         // then each fails with STO-IO-001 at error severity, and the library is unchanged
         for result in [text, files, drop] {
@@ -142,19 +142,19 @@ import FlotsamBase
         defer { rig.cleanUp() }
 
         // exactly at the threshold the image is saved
-        let exact = try await rig.ingest.ingest(rig.image("k-a", png))
+        let exact = await rig.ingest.ingest(rig.image("k-a", png))
         #expect(isCreated(exact))
         #expect(try rig.itemCount() == 1)
 
         // one byte under it is skipped and the count does not move
         rig.fileSystem.setCapacity(500 * mebi - 1)
-        let under = try await rig.ingest.ingest(rig.image("k-b", png))
+        let under = await rig.ingest.ingest(rig.image("k-b", png))
         #expect(code(under) == .stoLim002)
         #expect(try rig.itemCount() == 1)
 
         // one byte over it is saved again
         rig.fileSystem.setCapacity(500 * mebi + 1)
-        let over = try await rig.ingest.ingest(rig.image("k-c", png))
+        let over = await rig.ingest.ingest(rig.image("k-c", png))
         #expect(isCreated(over))
         #expect(try rig.itemCount() == 2)
     }
@@ -168,20 +168,20 @@ import FlotsamBase
         defer { rig.cleanUp() }
 
         // exactly at the threshold text and files are saved
-        #expect(isCreated(try await rig.ingest.ingest(rig.text("k-t1", "at the line"))))
-        #expect(isCreated(try await rig.ingest.ingest(rig.files("k-f1", count: 1))))
+        #expect(isCreated(await rig.ingest.ingest(rig.text("k-t1", "at the line"))))
+        #expect(isCreated(await rig.ingest.ingest(rig.files("k-f1", count: 1))))
         #expect(try rig.itemCount() == 2)
 
         // one byte under it all three kinds fail with STO-IO-001 and the count does not move
         rig.fileSystem.setCapacity(50 * mebi - 1)
-        #expect(code(try await rig.ingest.ingest(rig.text("k-t2", "under"))) == .stoIo001)
-        #expect(code(try await rig.ingest.ingest(rig.files("k-f2", count: 1))) == .stoIo001)
-        #expect(code(try await rig.ingest.ingest(rig.image("k-i2", png))) == .stoIo001)
+        #expect(code(await rig.ingest.ingest(rig.text("k-t2", "under"))) == .stoIo001)
+        #expect(code(await rig.ingest.ingest(rig.files("k-f2", count: 1))) == .stoIo001)
+        #expect(code(await rig.ingest.ingest(rig.image("k-i2", png))) == .stoIo001)
         #expect(try rig.itemCount() == 2)
 
         // one byte over it text is saved again
         rig.fileSystem.setCapacity(50 * mebi + 1)
-        #expect(isCreated(try await rig.ingest.ingest(rig.text("k-t3", "back"))))
+        #expect(isCreated(await rig.ingest.ingest(rig.text("k-t3", "back"))))
         #expect(try rig.itemCount() == 3)
     }
 
@@ -194,13 +194,13 @@ import FlotsamBase
         defer { rig.cleanUp() }
 
         // then text and files save (only images are held back at this tier)
-        #expect(isCreated(try await rig.ingest.ingest(rig.text("k-t", "fine"))))
-        #expect(isCreated(try await rig.ingest.ingest(rig.files("k-f", count: 1))))
+        #expect(isCreated(await rig.ingest.ingest(rig.text("k-t", "fine"))))
+        #expect(isCreated(await rig.ingest.ingest(rig.files("k-f", count: 1))))
         #expect(try rig.itemCount() == 2)
 
         // when the volume cannot report free space, even an image saves (nothing to guard on)
         rig.fileSystem.setCapacity(nil)
-        #expect(isCreated(try await rig.ingest.ingest(rig.image("k-i", png))))
+        #expect(isCreated(await rig.ingest.ingest(rig.image("k-i", png))))
         #expect(try rig.itemCount() == 3)
     }
 }

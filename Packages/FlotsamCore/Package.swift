@@ -53,7 +53,7 @@ let package = Package(
             name: "FlotsamScreenshots",
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload"]
         ),
-        .testTarget(name: "FlotsamScreenshotsTests", dependencies: ["FlotsamScreenshots", "FlotsamBase"]),
+        .testTarget(name: "FlotsamScreenshotsTests", dependencies: ["FlotsamScreenshots", "FlotsamBase", "FlotsamStorage", "FlotsamPayload"]),
         .target(
             name: "FlotsamLibrary",
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPaste"]
@@ -76,14 +76,13 @@ let package = Package(
             name: "FlotsamShelf",
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload"]
         ),
-        .testTarget(name: "FlotsamShelfTests", dependencies: ["FlotsamShelf", "FlotsamBase"]),
+        .testTarget(name: "FlotsamShelfTests", dependencies: ["FlotsamShelf", "FlotsamBase", "FlotsamStorage", "FlotsamPayload"]),
         // Worf (TASK-318): compiles the App-target editor model and its recorder (symlinked sources) so the editor's
         // save and validation rules run under `swift test` with no app launch.
         .testTarget(
             name: "FlotsamAppModelTests",
             dependencies: [
                 "FlotsamBase", "FlotsamStorage", "FlotsamPaste", "FlotsamShortcuts", "FlotsamTriggers",
-                .product(name: "GRDB", package: "GRDB.swift"),
             ]
         ),
     ]
