@@ -3121,16 +3121,6 @@
         }
       }
     },
-    "ui.settings.permissionUnknown" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unknown"
-          }
-        }
-      }
-    },
     "ui.settings.pickUpScreenshots" : {
       "localizations" : {
         "en" : {

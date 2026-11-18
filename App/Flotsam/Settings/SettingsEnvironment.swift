@@ -63,7 +63,7 @@ struct SettingsEnvironment: Sendable {
     let report: @MainActor @Sendable (FlotsamError) -> Void
     /// The one-line HUD for a result that is not an error ("Diagnostics copied", "{n} items deleted").
     let hud: @MainActor @Sendable (String) -> Void
-    /// TODO(FRD-008 menu/onboarding builder): reopens onboarding (FR-008-12). Seam until that window exists.
+    /// Reopens onboarding (FR-008-12).
     let showSetupGuide: @MainActor @Sendable () -> Void
     /// FR-002-12: the same action onboarding calls; it shows the "Imported {n}" HUD itself. Read at click time, because
     /// pickup is wired after the database opens, which can be after this environment is built.

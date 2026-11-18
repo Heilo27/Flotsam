@@ -26,7 +26,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
 
     // Triggers and permissions
     case expandTriggers, permissionAccessibility, permissionInputMonitoring
-    case permissionGranted, permissionNotGranted, permissionUnknown
+    case permissionGranted, permissionNotGranted
     case permissionAccessibilityHelp, permissionInputMonitoringHelp, openSystemSettings
     case excludedApps, excludedAppsHelp
     /// The Triggers pane's inline text while Accessibility is missing (FR-008-06).

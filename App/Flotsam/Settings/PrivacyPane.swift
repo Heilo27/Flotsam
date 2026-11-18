@@ -1,3 +1,4 @@
+import AppKit
 import FlotsamBase
 import SwiftUI
 
@@ -16,19 +17,38 @@ struct PrivacyPane: View {
             }
             Section {
                 Text(.neverStored)
-                // The "Paste from Other Apps" state has no probe yet (FRD-001 FR-001-18 owns reading it), so the
-                // state is shown as unknown. TODO(FRD-001): read the real state here and show Granted / Not granted.
-                LabeledContent {
-                    Text(.permissionUnknown)
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(.pasteOtherApps)
-                        Text(.pasteOtherAppsHelp).settingsCaption()
-                    }
-                }
+                PasteboardAccessRow()
                 Text(.noNetwork)
             }
         }
         .settingsPaneChrome()
+    }
+}
+
+/// The "Paste from Other Apps" row (FR-008-07, FR-008-13). Reads the system setting through `PasteboardAccess`, the same
+/// probe onboarding uses; reading it never triggers the system alert. Re-read when the pane appears and whenever the app
+/// becomes active, so a change made in System Settings shows on return. Status is words, never colour alone (FR-008-17).
+private struct PasteboardAccessRow: View {
+    @State private var isAllowed = PasteboardAccess.isAllowed
+
+    var body: some View {
+        LabeledContent {
+            HStack {
+                Text(isAllowed ? .permissionGranted : .permissionNotGranted)
+                if PasteboardAccess.isGated {
+                    Button { PasteboardAccess.openSystemSettings() } label: { Text(.openSystemSettings) }
+                }
+            }
+        } label: {
+            VStack(alignment: .leading) {
+                Text(.pasteOtherApps)
+                Text(.pasteOtherAppsHelp).settingsCaption()
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .onAppear { isAllowed = PasteboardAccess.isAllowed }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            isAllowed = PasteboardAccess.isAllowed
+        }
     }
 }
