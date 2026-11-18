@@ -103,8 +103,10 @@ public final class TriggerEngine {
     /// Called on the main actor whenever `status` changes (menu-bar warning dot, Triggers pane).
     public var onStatusChange: ((TriggerEngineStatus) -> Void)?
 
-    /// FR-005-19: the menu-bar icon warning dot is set while the tap is latched off.
-    public var showsWarningDot: Bool { status == .latchedOff }
+    /// FR-005-19: the menu-bar icon warning dot is set while the tap is latched off. The latch (`TapHealth`) is the
+    /// source of truth: revoking a permission or removing the last trigger moves `status` to `.inert`/`.idle`, but
+    /// the latch persists until triggers are toggled off and on, so the dot holds.
+    public var showsWarningDot: Bool { health.isLatched || status == .latchedOff }
 
     public init(
         source: any KeyEventSource, snapshot: TriggerSnapshotStore, bindings: any ItemBindingSource,

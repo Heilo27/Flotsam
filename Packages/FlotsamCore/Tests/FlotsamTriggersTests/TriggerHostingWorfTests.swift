@@ -186,8 +186,7 @@ import Testing
     }
 
     // FR-005-19: "the menu-bar icon warning dot stays set" while latched. Revoking a permission while latched moves
-    // the status to .inert, so the dot disappears although the latch (TapHealth) is still held and returns when the
-    // permission does. Recorded as a known issue: this is the current behaviour, which the FRD wording does not allow.
+    // the status to .inert, but the latch (TapHealth) is still held, so the dot must stay set.
     @Test func theDotStaysSetWhileLatchedEvenIfAPermissionIsRevoked() async {
         let h = harness()
         await h.engine.start()
@@ -198,8 +197,6 @@ import Testing
         h.base.permissions.set(.inputMonitoring, granted: false)
         await h.engine.watchdogTick()
 
-        withKnownIssue("FR-005-19: dot should stay set while the tap is latched; engine reports .inert instead") {
-            #expect(h.engine.showsWarningDot)
-        }
+        #expect(h.engine.showsWarningDot)
     }
 }
