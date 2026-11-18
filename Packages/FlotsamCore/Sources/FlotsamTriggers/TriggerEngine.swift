@@ -329,13 +329,23 @@ public final class TriggerEngine {
     // MARK: Reconcile (FR-005-10)
 
     private func reconcileAndReport() async {
-        for error in reconcile() { await reporter.report(error, origin: .background) }
+        let result = reconcile()
+        // Clear first: a code that recovered and then fails again within the same pass must show again.
+        for code in result.recovered { await reporter.clearNotices(code: code) }
+        for error in result.reports { await reporter.report(error, origin: .background) }
+    }
+
+    /// What one reconcile pass asks of the reporter: new conditions to raise, and conditions it raised earlier that
+    /// have ended, whose Notices must clear so the menu-bar warning dot does not outlive the problem (FR-008-16).
+    private struct Reconciled {
+        var reports: [FlotsamError] = []
+        var recovered: [ErrorCode] = []
     }
 
     /// Brings the tap in line with the four conditions of FR-005-10 plus the latch, and returns what to report.
     /// Synchronous on purpose: no suspension point between reading the conditions and acting on them, so two callers
     /// cannot interleave a half-made decision.
-    private func reconcile() -> [FlotsamError] {
+    private func reconcile() -> Reconciled {
         guard triggersEnabled else { return settle(.off) }
         guard !snapshot.policy.triggers.isEmpty else { return settle(.idle) }
 
@@ -343,34 +353,44 @@ public final class TriggerEngine {
         guard missing.isEmpty else {
             let changed = missing != lastReportedMissing
             let reports = missing.map { FlotsamError($0, "Trigger permission missing") }
+            // A permission granted since the last pass, and any install failure (no tap is attempted while inert).
+            let recovered = lastReportedMissing.filter { !missing.contains($0) } + (lastReportedInstallFailure.map { [$0] } ?? [])
             _ = settle(.inert(missing))
             lastReportedMissing = missing  // after `settle`, which clears it for every other state
-            return changed ? reports : []
+            return Reconciled(reports: changed ? reports : [], recovered: recovered)
         }
+        var result = Reconciled(recovered: lastReportedMissing)
         lastReportedMissing = []
 
-        guard !health.isLatched else { return settle(.latchedOff) }
+        guard !health.isLatched else {
+            result.recovered += settle(.latchedOff).recovered
+            return result
+        }
 
         if !isInstalled {
             if let failure = install() {
                 let changed = lastReportedInstallFailure != failure.code
+                if changed, let previous = lastReportedInstallFailure { result.recovered.append(previous) }
                 lastReportedInstallFailure = failure.code
                 status = .tapUnavailable(failure.code)
-                return changed ? [failure] : []
+                if changed { result.reports = [failure] }
+                return result
             }
+            if let previous = lastReportedInstallFailure { result.recovered.append(previous) }
             lastReportedInstallFailure = nil
         }
         status = .running
-        return []
+        return result
     }
 
-    /// No tap should exist: remove it and set the status.
-    private func settle(_ target: TriggerEngineStatus) -> [FlotsamError] {
+    /// No tap should exist: remove it and set the status. Whatever this engine reported earlier no longer applies.
+    private func settle(_ target: TriggerEngineStatus) -> Reconciled {
         uninstall()
+        let recovered = lastReportedMissing + (lastReportedInstallFailure.map { [$0] } ?? [])
         lastReportedMissing = []
         lastReportedInstallFailure = nil
         status = target
-        return []
+        return Reconciled(recovered: recovered)
     }
 
     // MARK: Tap
