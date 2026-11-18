@@ -421,6 +421,19 @@ struct WatcherSettingsTests {
         #expect(await log.messages == ["Imported 3", "Imported 0"])
     }
 
+    @Test("FR-002-12: two overlapping Import actions show exactly one HUD, with the real count")
+    func overlappingImportsShowOneHUD() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        defer { rig.cleanUp() }
+        let shots = try (0..<20).map { _ in try rig.shot(in: rig.desktop) }
+        #expect(shots.count == 20)
+        let log = await HUDLog()
+        async let first: Void = rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
+        async let second: Void = rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
+        _ = await (first, second)
+        #expect(await log.messages == ["Imported 20"])
+    }
+
     @Test("FR-002-12: live pickup goes ahead of a running backfill")
     func livePickupBeatsBackfill() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())

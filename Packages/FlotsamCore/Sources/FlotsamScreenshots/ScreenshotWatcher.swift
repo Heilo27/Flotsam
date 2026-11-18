@@ -74,6 +74,8 @@ public actor ScreenshotWatcher {
     private var pending: Set<String> = []
     private var inFlight = 0
     private var batches: [UUID: Batch] = [:]
+    /// The in-flight `importRecentAnnouncing` run, which an overlapping call joins.
+    private var announcing: Task<Void, Never>?
 
     public init(
         fileSystem: any FileSystemPort,
@@ -149,10 +151,25 @@ public actor ScreenshotWatcher {
     /// The one action behind "Import recent screenshots" (FR-002-12), for onboarding's checkbox and Settings' button:
     /// runs `importRecent()` and tells `hud` "Imported {n}" with the real count, including 0 (the user asked, so a
     /// silent result would look like nothing happened).
-    public func importRecentAnnouncing(hud: @MainActor @Sendable (String) -> Void) async {
-        let created = await importRecent()
-        await hud(ScreenshotImportHUD.message(count: created))
+    ///
+    /// A call that arrives while another run is in flight joins it instead of starting a second scan: it waits for
+    /// that run and shows nothing itself, so exactly one HUD reports the run's real count and "Imported 0" never
+    /// appears for a call that merely overlapped.
+    public func importRecentAnnouncing(hud: @escaping @MainActor @Sendable (String) -> Void) async {
+        if let running = announcing {
+            await running.value
+            return
+        }
+        let run = Task {
+            let created = await self.importRecent()
+            await hud(ScreenshotImportHUD.message(count: created))
+            self.announcementFinished()
+        }
+        announcing = run
+        await run.value
     }
+
+    private func announcementFinished() { announcing = nil }
 
     /// "Import recent screenshots" (FR-002-12): the qualifying files of the resolved folder regardless of the
     /// watermark, bounded by the retention window and 500 files, oldest first. Returns how many items were created.
