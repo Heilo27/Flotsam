@@ -201,10 +201,25 @@ import Testing
         let row = fullRow(1, source: "Safari", copiedAt: Self.now.addingTimeInterval(-10 * 86_400))
         // when
         let line = LibraryRowPresentation(row: row, position: 0, now: Self.now).secondaryText
-        // then: starts with the source, and carries no relative phrase
+        // then: starts with the source; what follows is a calendar date (it has digits), not a relative phrase
         #expect(line.hasPrefix("Safari · "))
-        #expect(!line.contains("ago"))
-        #expect(!line.lowercased().contains("day"))
+        let tail = String(line.dropFirst("Safari · ".count))
+        #expect(!tail.contains("ago"))
+        #expect(!tail.contains("wk"))
+        #expect(!tail.lowercased().contains("last"))
+        #expect(tail.contains { $0.isNumber }, "a date after 7 days, got '\(tail)'")
+    }
+
+    // OC-3019. Boundary: 6 days old is still inside the relative window.
+    @Test("OC-3019 an item 6 days old still reads as a relative time")
+    func oc3019_sixDays() {
+        // given: copied 6 days ago from Safari
+        let row = fullRow(1, source: "Safari", copiedAt: Self.now.addingTimeInterval(-6 * 86_400))
+        // when
+        let line = LibraryRowPresentation(row: row, position: 0, now: Self.now).secondaryText
+        // then: 'Safari · 6d ago'
+        #expect(line.hasPrefix("Safari · "))
+        #expect(line.hasSuffix("ago"))
     }
 
     // OC-3019. Mutation: show all tags, or cap at 2.
@@ -234,8 +249,71 @@ import Testing
         #expect(triggered.hasTrigger && !triggered.isPinned)
         #expect(!plain.isPinned && !plain.hasTrigger)
         #expect(!plain.accessibilityLabel.contains("Pinned"))
-        // UNREACHABLE (second half of OC-3020): a 'Missing' badge. ItemRow and LibraryRowPresentation carry no
-        // missing-file flag, so there is nothing to observe from the package. Reported as defect D5.
+    }
+
+    // OC-3020 (third row). Defect D5: FR-003-07 and the OC want a 'Missing' badge ('Original file missing' for
+    // VoiceOver) on a file row whose file was deleted. Nothing in ItemRow, LibraryRowPresentation or the model
+    // carries that state, so this is red today. Mutation: none needed, it fails for the missing behaviour itself.
+    @Test("OC-3020 a file row whose file was deleted is marked Original file missing; one whose file exists is not")
+    func oc3020_missingBadge() async throws {
+        // given: two file rows; the first one's member path does not exist, the second's does
+        let gone = fullRow(1, kind: .file, primary: "gone.txt")
+        let kept = fullRow(2, kind: .file, primary: "kept.txt")
+        let existing = FileManager.default.temporaryDirectory.appendingPathComponent("oc3020-\(UUID().uuidString).txt")
+        try Data("x".utf8).write(to: existing)
+        defer { try? FileManager.default.removeItem(at: existing) }
+        let h = await opened([gone, kept])
+        h.source.content = ItemContent(
+            kind: .file, plainText: nil, representations: [],
+            members: [ItemMember(path: "/nonexistent-oc3020/gone.txt", bookmark: nil, isDirectory: false)])
+        // when: the Library presents its rows (the member of every row resolves to the path above in this fake)
+        h.model.select(id: gone.id)
+        await h.model.awaitPreview()
+        let labels = Dictionary(uniqueKeysWithValues: h.model.rowPresentations().map { ($0.id, $0.accessibilityLabel) })
+        // then: the deleted-file row says so
+        #expect(labels[gone.id]?.contains("Original file missing") == true, "got '\(labels[gone.id] ?? "nil")'")
+        // and the control: the same fake with an existing path must not be marked (guards a badge on every file row)
+        h.source.content = ItemContent(
+            kind: .file, plainText: nil, representations: [],
+            members: [ItemMember(path: existing.path, bookmark: nil, isDirectory: false)])
+        h.model.select(id: kept.id)
+        await h.model.awaitPreview()
+        let after = Dictionary(uniqueKeysWithValues: h.model.rowPresentations().map { ($0.id, $0.accessibilityLabel) })
+        #expect(after[kept.id]?.contains("Original file missing") == false)
+    }
+
+    // MARK: Preview member limit (FR-003-14)
+
+    // OC-3017-adjacent, FR-003-14: up to 20 members shown, then "and {n} more". Defect D6: the product caps at 10.
+    // Mutation: any other limit than 20 turns the 20/21/25 cases red.
+    @Test("FR-003-14 a preview lists up to 20 members then counts the rest", arguments: [
+        (0, 0, 0), (1, 1, 0), (20, 20, 0), (21, 20, 1), (25, 20, 5),
+    ])
+    func fr00314_memberLimit(total: Int, shown: Int, hidden: Int) {
+        // given: a bundle of `total` members
+        let members = (0..<total).map { ItemMember(path: "/tmp/oc/m\($0).txt", bookmark: nil, isDirectory: false) }
+        let content = ItemContent(kind: .bundle, plainText: nil, representations: [], members: members)
+        // when
+        let preview = LibraryPreview(row: fullRow(1, kind: .bundle), content: content, imageData: nil)
+        // then: the first `shown` members in order, and the remainder counted
+        #expect(preview.memberPaths.count == shown)
+        #expect(preview.hiddenMemberCount == hidden)
+        #expect(preview.memberPaths == (0..<shown).map { "/tmp/oc/m\($0).txt" })
+    }
+
+    // FR-003-14: text up to 20,000 characters, then Show more.
+    @Test("FR-003-14 text is cut at 20,000 characters and Show more reveals it all", arguments: [
+        (19_999, false), (20_000, false), (20_001, true),
+    ])
+    func fr00314_textLimit(length: Int, truncated: Bool) {
+        // given: a text item of `length` characters
+        let text = String(repeating: "a", count: length)
+        let preview = LibraryPreview(
+            row: fullRow(1), content: ItemContent(kind: .text, plainText: text, representations: [], members: []), imageData: nil)
+        // then
+        #expect(preview.isTruncated == truncated)
+        #expect(preview.text(showingAll: false)?.count == min(length, 20_000))
+        #expect(preview.text(showingAll: true)?.count == length)
     }
 
     // MARK: View mode (FR-003-07)
