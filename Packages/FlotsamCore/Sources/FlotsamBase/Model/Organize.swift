@@ -72,7 +72,7 @@ public enum DeleteConfirmation {
     /// The confirmation question for `count` items (catalogue keys `ui.organize.confirmDelete*`).
     public static func message(count: Int) -> String {
         if count == 1 { return FlotsamStrings.text(forKey: "ui.organize.confirmDeleteOne") ?? "" }
-        return String(format: FlotsamStrings.text(forKey: "ui.organize.confirmDelete") ?? "", count)
+        return FlotsamStrings.formatted(forKey: "ui.organize.confirmDelete", [count]) ?? ""
     }
 
     /// The row to select once `ids` are deleted: the first remaining row after the last deleted one in list order, else
