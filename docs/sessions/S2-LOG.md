@@ -447,3 +447,5 @@ Clipboard: restored after the run.
 - C2b owes: the NSDraggingDestination and hover highlight, reading the drag pasteboard, HUD display, and the 6020, 6096 and 6114 checks.
 
 **Drift / observations (surfaced, not fixed):** the classifier's file `contentKey` depends on member order, so the same files dropped in a different order store a different item (dedupe miss). Left as is; S1 to decide whether it should sort.
+
+**S1 ruling (2026-11-17) on the contentKey order:** keep pasteboard-order keys for MVP, no change on s2/frd006. FR-001-15 specifies "standardised paths in pasteboard order", and FR-006-13 says a drop dedupes exactly like capture, so sorting is a cross-FRD change. Post-MVP: TASK-406 (sort the paths for the key only, keep the stored member order, and edit FR-001-15 and FR-006-13 in the same commit). The four assumptions above stand.
