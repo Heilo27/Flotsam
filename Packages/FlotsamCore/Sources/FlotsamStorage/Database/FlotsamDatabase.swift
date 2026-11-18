@@ -254,7 +254,15 @@ public final class FlotsamDatabase: Sendable {
         if case .failure = fileSystem.createDirectory(at: backupFolder, permissions: DataFolder.folderPermissions) {
             return .failure(FlotsamError(.stoDb003, "Pre-migration folder could not be created"))
         }
-        let name = DataFolder.preMigrationCopyName(fromVersion: fromVersion)
+        // A regular file on the name is a stale copy: replaced. Anything else (a folder, a link) is the user's: never
+        // deleted, never an error; the copy goes under the next free `flotsam-v<from>-<n>.sqlite` instead, a name the
+        // prune and the purge still recognise.
+        var name = DataFolder.preMigrationCopyName(fromVersion: fromVersion)
+        var alternate = 0
+        while let occupant = fileSystem.fileInfo(at: backupFolder.appendingPathComponent(name)), occupant.kind != .regular {
+            alternate += 1
+            name = DataFolder.preMigrationCopyName(fromVersion: fromVersion, alternate: alternate)
+        }
         let destination = backupFolder.appendingPathComponent(name)
         if fileSystem.fileExists(at: destination) { _ = fileSystem.removeItem(at: destination) }
         guard case .success = fileSystem.copyItem(at: layout.databaseURL, to: destination) else {

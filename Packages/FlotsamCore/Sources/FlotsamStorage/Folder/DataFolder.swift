@@ -22,11 +22,16 @@ public struct DataFolder: Sendable {
         ["", "-wal", "-shm"].map { root.appendingPathComponent("flotsam.sqlite" + $0) }
     }
 
-    /// Name of the pre-migration copy of a version-`fromVersion` database (FR-007-17).
-    static func preMigrationCopyName(fromVersion: Int) -> String { "flotsam-v\(fromVersion).sqlite" }
+    /// Name of the pre-migration copy of a version-`fromVersion` database (FR-007-17). `alternate` 0 is the plain name;
+    /// a higher number is the same copy under `flotsam-v<from>-<n>.sqlite`, used only when something that is not a
+    /// regular file already occupies the plain name (the migration never deletes that entry and never fails on it).
+    static func preMigrationCopyName(fromVersion: Int, alternate: Int = 0) -> String {
+        alternate == 0 ? "flotsam-v\(fromVersion).sqlite" : "flotsam-v\(fromVersion)-\(alternate).sqlite"
+    }
 
-    /// True only for a file Flotsam itself writes into `pre-migration/`: exactly `flotsam-v<int>.sqlite`, or that name
-    /// plus `-wal` / `-shm`. Pruning deletes through this test alone, so anything else a user or another tool put in
+    /// True only for a name Flotsam itself gives a file in `pre-migration/`: exactly `flotsam-v<int>.sqlite` or
+    /// `flotsam-v<int>-<int>.sqlite`, or either plus `-wal` / `-shm`. Pruning and purging delete through this test
+    /// (and the regular-file check in `preMigrationCopyInfo`) alone, so anything else a user or another tool put in
     /// the folder is never touched (FR-007-17, decision 6). Digits are ASCII-only and must parse as an `Int`, so
     /// `flotsam-v1.sqlite.bak` or `flotsam-vx.sqlite` do not match.
     static func isPreMigrationCopyFile(named name: String) -> Bool {
@@ -36,8 +41,10 @@ public struct DataFolder: Sendable {
             break
         }
         guard stem.hasPrefix("flotsam-v"), stem.hasSuffix(".sqlite") else { return false }
-        let digits = stem.dropFirst("flotsam-v".count).dropLast(".sqlite".count)
-        return digits.allSatisfy { ("0"..."9").contains($0) } && Int(digits) != nil
+        let middle = stem.dropFirst("flotsam-v".count).dropLast(".sqlite".count)
+        let parts = middle.split(separator: "-", maxSplits: 2, omittingEmptySubsequences: false)
+        return (1...2).contains(parts.count)
+            && parts.allSatisfy { !$0.isEmpty && $0.allSatisfy { ("0"..."9").contains($0) } && Int($0) != nil }
     }
 
     /// The one test for "an entry Flotsam may delete from `pre-migration/`": a name Flotsam gives its copies AND a

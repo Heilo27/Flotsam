@@ -446,6 +446,54 @@ private let tenMinMs: Int64 = 10 * 60_000
         #expect(FileManager.default.fileExists(atPath: outside.path))
     }
 
+    /// TASK-422 D1 (occupied name, folder). Given a folder named exactly like the new copy (with a file inside), when a
+    /// migration copy is taken, then the folder and its file survive, the open succeeds and the copy lands as
+    /// flotsam-v1-1.sqlite, a name the shared rule recognises (so a later prune or purge covers it).
+    @Test func anOccupyingFolderIsKeptAndTheCopyLandsUnderAnotherName() async throws {
+        let root = tempRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try await makeVersionOne(root)
+        let folder = root.appendingPathComponent("pre-migration")
+        let occupant = folder.appendingPathComponent("flotsam-v1.sqlite")
+        try FileManager.default.createDirectory(at: occupant, withIntermediateDirectories: true)
+        let inner = occupant.appendingPathComponent("user-notes.txt")
+        try Data("keep".utf8).write(to: inner)
+
+        _ = try await FlotsamDatabase.open(
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+
+        #expect(try String(contentsOf: inner, encoding: .utf8) == "keep")
+        let copy = folder.appendingPathComponent("flotsam-v1-1.sqlite")
+        var isDirectory: ObjCBool = true
+        #expect(FileManager.default.fileExists(atPath: copy.path, isDirectory: &isDirectory) && !isDirectory.boolValue)
+        #expect(DataFolder.isPreMigrationCopyFile(named: "flotsam-v1-1.sqlite"))
+        #expect(DataFolder.isPreMigrationCopyFile(named: "flotsam-v1-1.sqlite-wal"))
+        #expect(!DataFolder.isPreMigrationCopyFile(named: "flotsam-v1-.sqlite"))
+        #expect(!DataFolder.isPreMigrationCopyFile(named: "flotsam-v1-1-1.sqlite"))
+    }
+
+    /// TASK-422 D1 (occupied name, link). Given a link named exactly like the new copy, pointing at a file outside, when
+    /// a migration copy is taken, then the link and its target are untouched (nothing is written through the link)
+    /// and the copy lands as flotsam-v1-1.sqlite.
+    @Test func anOccupyingLinkIsKeptAndItsTargetUntouched() async throws {
+        let root = tempRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try await makeVersionOne(root)
+        let folder = root.appendingPathComponent("pre-migration")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let target = root.appendingPathComponent("outside.txt")
+        try Data("outside".utf8).write(to: target)
+        let link = folder.appendingPathComponent("flotsam-v1.sqlite")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+
+        _ = try await FlotsamDatabase.open(
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == target.path)
+        #expect(try String(contentsOf: target, encoding: .utf8) == "outside")
+        #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent("flotsam-v1-1.sqlite").path))
+    }
+
     /// OC-7138. Given a current-version database with items, when it reopens with nothing pending, then no copy is taken
     /// and the items are unchanged.
     @Test func oc7138_reopenWithNothingPendingTakesNoCopy() async throws {
