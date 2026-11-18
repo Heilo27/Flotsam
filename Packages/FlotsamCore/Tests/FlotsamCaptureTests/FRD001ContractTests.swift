@@ -11,21 +11,6 @@ import FlotsamPayload
 // system screenshot, panel/hotkey/paste UI) cannot be driven from this package; see `Unreachable` at the end.
 
 @MainActor
-private func withRig(
-    frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true,
-    _ body: (ContractRig) async throws -> Void
-) async throws {
-    let rig = try await ContractRig.make(frontmost: frontmost, startCapture: startCapture)
-    do { try await body(rig) } catch {
-        await rig.finish()
-        throw error
-    }
-    await rig.finish()
-}
-
-private func uid(_ prefix: String) -> String { "\(prefix)-\(UUID().uuidString)" }
-
-@MainActor
 @Suite("FRD-001 contract: gates and write path")
 struct FRD001GateContractTests {
 
@@ -273,8 +258,6 @@ struct FRD001GateContractTests {
         }
     }
 }
-
-private func fileName(_ path: String) -> String { URL(fileURLWithPath: path).lastPathComponent }
 
 @MainActor
 @Suite("FRD-001 contract: kinds, images, files")

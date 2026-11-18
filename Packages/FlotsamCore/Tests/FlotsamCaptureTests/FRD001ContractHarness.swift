@@ -70,7 +70,14 @@ final class ContractPasteboard: PasteboardPort {
             typeIdentifiers: currentTypeIdentifiers(), representations: selected))
     }
 
+    /// Number of times anything wrote through the port's `write` (Flotsam's own pasteboard writes, FR-001-19).
+    private(set) var writes = 0
+
+    /// Makes `representations` readable WITHOUT bumping `changeCount`: the system policy changed, not the clipboard.
+    func reveal(_ representations: [PasteboardRepresentation]) { reps = representations }
+
     func write(_ representations: [PasteboardRepresentation]) -> FlotsamResult<Int> {
+        writes += 1
         copy(representations)
         return .success(changeCount)
     }
@@ -79,9 +86,11 @@ final class ContractPasteboard: PasteboardPort {
 @MainActor
 final class ContractSourceApps: SourceAppPort {
     var frontmost: SourceApp?
+    /// Localized names the fake workspace knows, by bundle identifier.
+    var names: [String: String] = [:]
     init(frontmost: SourceApp?) { self.frontmost = frontmost }
     func frontmostApp() -> SourceApp? { frontmost }
-    func localizedName(forBundleId: String) -> String? { nil }
+    func localizedName(forBundleId bundleId: String) -> String? { names[bundleId] }
 }
 
 final class ContractKV: KeyValueStore, @unchecked Sendable {
@@ -389,3 +398,23 @@ enum TestImage {
         return drawn ? (width, height, buffer) : nil
     }
 }
+
+
+// MARK: Shared test helpers (parts 1 and 2)
+
+@MainActor
+func withRig(
+    frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true,
+    _ body: (ContractRig) async throws -> Void
+) async throws {
+    let rig = try await ContractRig.make(frontmost: frontmost, startCapture: startCapture)
+    do { try await body(rig) } catch {
+        await rig.finish()
+        throw error
+    }
+    await rig.finish()
+}
+
+func uid(_ prefix: String) -> String { "\(prefix)-\(UUID().uuidString)" }
+
+func fileName(_ path: String) -> String { URL(fileURLWithPath: path).lastPathComponent }
