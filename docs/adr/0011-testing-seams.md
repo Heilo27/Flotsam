@@ -22,6 +22,8 @@ Declared when the owning FRD is built, not before: `FrontmostAppProvider`, `KeyE
 
 Log sink seam (TASK-432, FRD-000 FR-000-11): the classes that now log `LogEvent`s take `sink: any LogSink = OSLogSink()` as a trailing initializer parameter, the same seam `TriggerExpander` and `FlotsamDatabase` already had, so a test can capture the lines instead of reading the system log. Added to `PasteService`, `ShortcutRegistry` and `TriggerEngine`; `FlotsamDatabase` passes its existing `logSink` into the open attempt. `PermissionTransitionLogger` (FlotsamBase) wraps `PermissionProbe` and the sink and is called by the App target at launch and on activation. `BudgetOutcome.evictedBytes` and an internal `deleteItemsWhileEligible` return the byte counts the retention line needs; the existing `deleteWhileEligible` is unchanged for callers.
 
+Migration check seam (TASK-491, FRD-007 FR-007-13): the internal `FlotsamDatabase.open` takes `postMigrationCheck: ((Database) throws -> Bool)? = nil` (`Packages/FlotsamCore/Sources/FlotsamStorage/Database/FlotsamDatabase.swift`). nil runs the real `PRAGMA quick_check`, so production behaviour is unchanged; a test passes a closure to fail the check on a migrated file that is otherwise healthy. It replaces only the post-migration check, never the pre-open probe. Internal, not public API.
+
 Tooling and targets:
 - Swift Testing (`import Testing`), run with `swift test` in `Packages/FlotsamCore`; one test target per library target.
 - Storage tests use real SQLite files in a temp directory (never mocks for the database).
