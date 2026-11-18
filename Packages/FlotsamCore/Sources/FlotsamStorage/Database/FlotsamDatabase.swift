@@ -116,6 +116,13 @@ public final class FlotsamDatabase: Sendable {
         layout: DataFolder, fileSystem: any FileSystemPort, migrations: [Migration], sink: any LogSink
     ) -> Attempt {
         let existed = (fileSystem.fileInfo(at: layout.databaseURL)?.byteSize ?? 0) > 0
+        // WHY: SQLite deletes the `-wal` of a zero-byte main file when it opens one (an empty database cannot have a
+        // WAL, so it discards it). Committed frames would then exist nowhere, so the pair is damage and is set aside
+        // before any open (FR-007-13). No integrity check ran on it; the failed entry is how the log records damage.
+        if !existed, (fileSystem.fileInfo(at: layout.walURL)?.byteSize ?? 0) > 0 {
+            FlotsamLog.log(.database(.integrityCheck, outcome: .failed), sink: sink)
+            return .damaged
+        }
         do {
             if existed {
                 // A read-only probe comes first and runs the integrity check (FR-007-13), so a newer-version or damaged
@@ -198,7 +205,7 @@ public final class FlotsamDatabase: Sendable {
         }
         defer { _ = fileSystem.removeItem(at: scratch) }
         let copy = scratch.appendingPathComponent(FlotsamDatabase.fileName)
-        let sources = [layout.databaseURL, URL(fileURLWithPath: layout.databaseURL.path + "-wal")]
+        let sources = [layout.databaseURL, layout.walURL]
         for source in sources where fileSystem.fileExists(at: source) {
             let target = scratch.appendingPathComponent(source.lastPathComponent)
             guard case .success = fileSystem.copyItem(at: source, to: target) else { throw original }
