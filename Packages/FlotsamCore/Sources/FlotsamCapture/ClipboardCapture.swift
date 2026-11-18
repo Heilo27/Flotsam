@@ -125,6 +125,7 @@ public final class ClipboardCapture {
     /// One firing of the shared timer: the pasteboard poll (skipped while Paused, FR-001-19), then the slower periodic
     /// work (S5, ADR-0004). The poll goes first.
     func timerFired() {
+        guard isStarted else { return }  // a firing delivered after stop() does no work (TASK-430 OC-430-05)
         if !isPollPaused { poll() }
         pollTick.fire()
     }

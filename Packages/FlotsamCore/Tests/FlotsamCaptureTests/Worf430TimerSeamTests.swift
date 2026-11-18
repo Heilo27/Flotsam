@@ -155,14 +155,9 @@ struct Worf430TimerSeamTests {
         #expect(ran.value == 1, "control: a fire while started ran the job once")
 
         await rig.capture.stop()
-        // DEFECT (Minor, latent): `timerFired()` has no `isStarted` guard, so a firing delivered after stop() still runs
-        // the registered jobs. The real `Timer` cannot deliver after `invalidate()`, so nothing user-visible today.
-        // Wrapped so the suite stays green; when `timerFired()` is guarded this becomes "known issue not recorded" and
-        // fails, telling whoever fixes it to drop the wrapper.
-        withKnownIssue("TASK-430 finding: timerFired() runs jobs after stop()") {
-            source.rawFire()
-            source.rawFire()
-            #expect(ran.value == 1, "jobs run after stop: \(ran.value - 1)")
-        }
+        // then: a firing delivered after stop() runs no job
+        source.rawFire()
+        source.rawFire()
+        #expect(ran.value == 1, "jobs run after stop: \(ran.value - 1)")
     }
 }
