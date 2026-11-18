@@ -198,6 +198,8 @@ struct LibraryFooterView: View {
                     .font(.caption)
             }
             Spacer()
+            // The active sort, then the count (FR-004-12, FR-003-18); both come from `LibraryFooter`.
+            Text(verbatim: footer.sortName).font(.caption).foregroundStyle(.secondary)
             Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)

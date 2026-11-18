@@ -38,15 +38,16 @@ public final class PasteService {
     /// Runs the sequence for one item. Failure codes: `LIB-IO-001` (data missing; the item is deleted), `LIB-DAT-001`
     /// (all files gone; panel stays open), `LIB-OS-001` (target changed or ⌘V not posted; item stays on the pasteboard).
     public func paste(itemId: UUID, mode: PasteMode, target: FrontmostApp?, host: any PasteHost) async -> FlotsamResult<PasteOutcome> {
-        FlotsamLog.log(.pasteBack(outcome: .started), sink: sink)
+        FlotsamLog.log(Self.logEvent(mode: mode, outcome: .started), sink: sink)
         let result = await runPaste(itemId: itemId, mode: mode, target: target, host: host)
-        logOutcome(of: result)
+        logOutcome(of: result, mode: mode)
         return result
     }
 
     private func runPaste(itemId: UUID, mode: PasteMode, target: FrontmostApp?, host: any PasteHost) async -> FlotsamResult<PasteOutcome> {
-        let span = Signposts.begin(.pasteBack)
-        defer { span.end() }
+        // `paste.back` measures Return to ⌘V posted (FR-003-19); a copy-only run never posts ⌘V, so it is not timed.
+        let span = mode == .copyOnly ? nil : Signposts.begin(.pasteBack)
+        defer { span?.end() }
 
         // Steps 1 and 2: read, resolve, write.
         let content: ItemContent
@@ -84,7 +85,7 @@ public final class PasteService {
     public func pasteExpanded(itemId: UUID, target: FrontmostApp?, expansion: PasteExpansion) async -> FlotsamResult<PasteOutcome> {
         FlotsamLog.log(.pasteBack(outcome: .started), sink: sink)
         let result = await runPasteExpanded(itemId: itemId, target: target, expansion: expansion)
-        logOutcome(of: result)
+        logOutcome(of: result, mode: .paste)
         return result
     }
 
@@ -111,16 +112,25 @@ public final class PasteService {
         return .success(.pasted)
     }
 
-    /// The closing `paste.back` line (FR-000-11): the outcome only, never the item or its content. Pasted and copied are
+    /// The log event a mode reports under (FR-000-11): copy-only copies and never pastes, so it is `paste.copy`; every
+    /// attempt to paste, including one that falls back to a copy because Accessibility is denied, is `paste.back`.
+    private static func logEvent(mode: PasteMode, outcome: LogOutcome) -> LogEvent {
+        switch mode {
+        case .copyOnly: .pasteCopy(outcome: outcome)
+        case .paste, .plainText: .pasteBack(outcome: outcome)
+        }
+    }
+
+    /// The closing line (FR-000-11): the outcome only, never the item or its content. Pasted and copied are
     /// `succeeded`; copied because Accessibility is denied is `denied`; any error is `failed`.
-    private func logOutcome(of result: FlotsamResult<PasteOutcome>) {
+    private func logOutcome(of result: FlotsamResult<PasteOutcome>, mode: PasteMode) {
         let outcome: LogOutcome
         switch result {
         case .success(.pasted), .success(.copied): outcome = .succeeded
         case .success(.copiedAccessibilityDenied): outcome = .denied
         case .failure: outcome = .failed
         }
-        FlotsamLog.log(.pasteBack(outcome: outcome), sink: sink)
+        FlotsamLog.log(Self.logEvent(mode: mode, outcome: outcome), sink: sink)
     }
 
     /// The denied branch of the `PasteGate` check: the item stays copied (`SET-PRM-001` copy-only outcome). The first denial
