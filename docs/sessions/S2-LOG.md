@@ -688,3 +688,33 @@ Known flakes (OC-7132, `optionArrowsStepThroughSidebarFilters`) did not fail, so
 **Observations (not defects):** the Library chord toggles (open/close) with ctrl+cmd+V; System Events `keystroke` went to TextEdit (frontmost) while the Carbon hotkeys still fired system-wide.
 
 **Data isolation.** Real DB opened read-only before and after: 17 items both times, not written. Pasteboard saved and restored (was an empty string; 0 bytes after). No TCC prompts. TextEdit not touched. DISCLOSURE: one `defaults write` with `CFFIXED_USER_HOME` set landed in the REAL prefs domain `io.github.heilo27.Flotsam` (key `shortcuts.toggleShelf`); noticed at once and removed with `defaults delete`. Real prefs now again hold only `onboarding.completed` and `settings.lastPane`. The prefs plist mtime changed; the DB did not. Scratch clone deleted; logs and screenshots kept in the session scratchpad.
+
+## 2026-11-17: B FRD-001 8T, part 2 (completion of the handoff above): mutation pass, flake hardening, isolation reruns, full run
+
+Branch `s2/frd001-8t` @ 2d580ef (pushed; tests only, no product code touched). **Verdict: batch 3b mutation-checked; 2 fake tests found and fixed; the 3 Major defects from the entry above are still open and still pinned red.**
+
+**Mutation results (product edited, mapped test red, product reverted with `git checkout`, tree clean after each):**
+- OC-1088 (poll 1.0 s, poll 0.65 s), OC-1087 (poll 1.0 s): red. OC-1087 stays green at 0.65 s (one sample, 0.1 s after resume; the timer phase can land inside the bound); OC-1088 (50 samples) catches 0.65 s.
+- OC-1091 (CAP-OS-001 failure path invalidates the timer): was SURVIVING, now red (see fixes).
+- OC-1092/1110 (CAP-IO-001 severity to error): red.
+- OC-1093 (a leak of classified text into the log through `FlotsamLog.trace`), OC-1094, OC-1095, OC-1097, OC-1100..1103, OC-1105: red under their mutations (logs for each: round 1 and 2 of the pass; mutations M1..M25 across ClipboardCapture, IngestWorker, ErrorCode, LogEvent, OwnWriteLedger, CaptureClassifier).
+- OC-1104 (delete the ledger guard; delete the marker guard): were SURVIVING, now red.
+- OC-1106 (CAP-DAT-001 severity to error): red.
+
+**Fake tests found and fixed (P1 per doctrine, test-only fixes):**
+1. OC-1091: the "the timer kept running after a failed read" claim called `rig.process()`, which stops and restarts the timer, so a failure path that killed the timer survived (M11b). Removed the `process()`; the real timer now has to hit the failure and then pick up the next copy by itself. M11b rerun: red.
+2. OC-1104: each own-write guard (ledger, marker) was only tested together via `ledger.write`, so deleting either alone stayed green (M23a, M23b). New test `oc1104EachGuard`: marker-only (marker type present, not in ledger) and ledger-only (recorded count, marker types swapped out with `reveal`). Both mutations rerun: red.
+
+**OC-1087 / OC-1088 hardening.** They timed write -> stored on the real 0.5 s timer and flaked once under full load. Now they measure write -> first type-list read by the capture (a timestamp in the `ContractPasteboard` fake), which is the detection latency the oracle bounds at 0.6 s, so ingest and the test's own DB polling are out of the margin. Samples taken while the main actor was starved (a 20 ms sleep overrunning by more than 0.1 s) are excluded and retaken; OC-1088 needs at least 35 of 50 clean samples and OC-1087 fails if 5 attempts are all starved, so neither can pass on nothing. Bound stays 0.6 s; item count 50 and one item per text are still asserted. Not weakened: a 1.0 s poll still turns both red.
+
+**Isolation reruns at this HEAD (note: `swift test --filter "OC-xxxx"` matches nothing, display names are not matched, and exits 0 with zero tests; I used suite and function names and checked the test counts):**
+- OC-7002: `oc7002_leftoverTmpIsEmptiedAtLaunch` 1 test pass; `StorageConcurrencyTests` (the four other OC-7002 tests) 5 tests pass.
+- OC-408-W12 (`emptySnapshotNeverResets`): pass in isolation.
+- GapPollingTests (OC-115-02): 4 tests pass.
+- None failed in isolation, so no clean-main-1c87093 checkout was needed.
+
+**Full `swift test` at 2d580ef (one run, counted by grep on the log):** 956 swift-testing tests passed, 4 failed (distinct names). The 4: the three intentional defect pins (OC-1081, OC-1083, OC-1092/1110 CAP-IO half) and OC-408-W12 (`rig.board.snapshotReads == 3` at ClipboardEmptyReadWorf408Tests.swift:320, 1.1 s under full load). OC-7132, optionArrowsStepThroughSidebarFilters and OC-4102 did not fail in this run. Known issues reported by Swift Testing: 1 and 8 (expected-failure annotations).
+
+**OC-408-W12 triage (cause NOT confirmed).** The test file and `Sources/FlotsamCapture` are byte-identical between main 1c87093 and this branch (`git diff 1c87093 HEAD` on both is empty), so this branch did not cause it. It passes in isolation and passed 6 of 6 under a 2x-core CPU burn, so I could not reproduce it. Hypothesis, unproven: the test starts the real 0.5 s timer and awaits `drain()` between ticks, and its file header says no suspension point lets the timer interleave; under heavy full-suite load an extra timer read would make `snapshotReads` 4. Treat as a pre-existing load flake of TASK-408's test; fix is for its owner (replace `capture.start()` with a timer-free rig, or assert `>= 3`).
+
+**Not done:** no run on a clean main checkout (not needed per the brief's rule); OC-1089/1090/1079/1084 still unreachable from the package; the three Major defects above are product bugs for S1 and are untouched.
