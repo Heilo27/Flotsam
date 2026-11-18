@@ -36,7 +36,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
   |---|---|
   | Any printable key | type into search (filters live) |
   | ↑ / ↓ | move selection (list); ← → ↑ ↓ move in grid |
-  | ⌘↑ / ⌘↓ | first / last visible item |
+  | ⌘↑ / ⌘↓ | first / last item of the results; ⌘↓ pages in every remaining page, so it reaches the true last item |
   | ⇧↑ / ⇧↓ | extend selection (multi-select) |
   | Return | paste selected item into the target app and close |
   | ⌥Return | paste as plain text (drops rich and image-only representations) and close |
