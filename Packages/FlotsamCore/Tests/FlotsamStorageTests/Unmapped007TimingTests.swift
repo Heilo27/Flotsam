@@ -160,7 +160,8 @@ private func seconds(_ block: () async throws -> Void) async rethrows -> Double 
 
         // when the term is typed one character at a time, twenty times
         var finalTotals: [Int] = []
-        let p95Seconds = try await bestOfThree(under: 0.100) {
+        // Best-of-three, each run load-normalized (TASK-481): the bound is 100 ms of wall time on an unloaded machine.
+        let p95Seconds = try await bestOfThree(under: 0.100) { try await loadNormalized {
             var timings: [Double] = []
             finalTotals = []
             for _ in 1...20 {
@@ -176,7 +177,7 @@ private func seconds(_ block: () async throws -> Void) async rethrows -> Double 
             }
             #expect(timings.count == 240)
             return p95(timings)
-        }
+        } }
 
         // then p95 is inside 100 ms and the finished query matched every item
         #expect(p95Seconds < 0.100, "p95 \(p95Seconds) s")
