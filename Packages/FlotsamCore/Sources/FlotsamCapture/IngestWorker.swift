@@ -27,9 +27,6 @@ struct IngestWorker: Sendable {
             },
             source: payload.source, origin: payload.origin, occurredAt: payload.capturedAt)
 
-        // Classifier warnings (a trimmed bundle) are reported whether or not ingest succeeds.
-        for warning in classification.warnings { await reporter.report(warning, origin: .background) }
-
         switch await ingest.ingest(candidate) {
         case .failure(let error):
             // FR-001-22: this item is lost, the pipeline carries on with the next.

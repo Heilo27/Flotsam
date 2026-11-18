@@ -84,7 +84,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 This FRD defines the mechanism; its own failure modes: catalogue key missing at runtime → show `error.SYS-INT-001` text and log `SYS-INT-001` (unit test FR-000-07 prevents this shipping).
 
 ## 7. Error Catalogue (all codes, grouped by module)
-Columns: code · severity · user message (catalogue text) · recovery. `{n}` = count, `{limit}` = size. Info and retired rows have no user message.
+Columns: code · severity · user message (catalogue text) · recovery. `{n}` = count, `{limit}` = size. A raise supplies them as safe context: `count` for `{n}`, `limitBytes` for `{limit}` (the one key for a ceiling; `byteSize` is a different quantity, such as free space, and is log-only). Context a row's text has no placeholder for is log-only and never changes the message. Info and retired rows have no user message.
 
 **SYS**
 | Code | Sev | User message | Recovery |
