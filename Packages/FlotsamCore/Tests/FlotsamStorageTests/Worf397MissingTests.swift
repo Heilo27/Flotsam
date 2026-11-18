@@ -202,8 +202,8 @@ private final class OutcomeBox: @unchecked Sendable {
         #expect(try await isMissing(rig, id) == false)
     }
 
-    // CHARACTERISATION: the FRD is silent on a dangling link. Current behaviour (FileManager.fileExists follows the
-    // link) reads it as missing, which agrees with paste (the same locator). Red if that changes.
+    // FR-003-07 (ruled): a dangling symlink reads as Missing, the same as paste. FileManager.fileExists follows the
+    // link. Red if that changes.
     @Test("OC-397-S2 characterisation: a symlink whose target was deleted reads as missing")
     func danglingSymlink() async throws {
         let rig = try await Rig.make(); defer { rig.cleanUp(); try? FileManager.default.removeItem(at: dir) }
@@ -275,11 +275,9 @@ private final class OutcomeBox: @unchecked Sendable {
 
     // MARK: (5) empty bundle
 
-    // The FRD does not say whether a bundle with zero members is missing (FR-003-07 "none of its members exist" is
-    // vacuously true; FR-003-15 step 1 "none left" is also vacuously true, so paste fails with LIB-DAT-001).
-    // This test does NOT pick an answer. It asserts the one thing any answer needs: the state of an item must not
-    // depend on what else is on the page. Known issue until fixed: the `guard !fileMembers.isEmpty` shortcut.
-    @Test("OC-397-E1 an empty bundle has the same missing state alone as beside other file rows")
+    // FR-003-07 (ruled): an empty bundle reads as Missing, the same as paste (FR-003-15 step 1 fails it with LIB-DAT-001),
+    // and the state does not depend on what else is on the page.
+    @Test("OC-397-E1 an empty bundle reads as Missing, alone and beside other file rows")
     func emptyBundleStateIndependentOfPage() async throws {
         let alone = try await Rig.make(); defer { alone.cleanUp() }
         let beside = try await Rig.make(); defer { beside.cleanUp(); try? FileManager.default.removeItem(at: dir) }
@@ -293,9 +291,8 @@ private final class OutcomeBox: @unchecked Sendable {
         let aloneState = try await rows(alone).first { $0.id == Store.id(1) }?.isMissing
         let besideState = try await rows(beside).first { $0.id == Store.id(1) }?.isMissing
 
-        withKnownIssue("TASK-397: empty-bundle state flips with page contents (LibraryQueries.markingMissing early return)") {
-            #expect(aloneState == besideState, "alone=\(String(describing: aloneState)) beside=\(String(describing: besideState))")
-        }
+        #expect(aloneState == true, "alone=\(String(describing: aloneState))")
+        #expect(besideState == true, "beside=\(String(describing: besideState))")
     }
 
     // MARK: restore

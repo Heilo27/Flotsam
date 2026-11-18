@@ -18,18 +18,15 @@ public struct Classification: Sendable, Equatable {
     public let plainText: String?
     /// Everything that becomes a blob: rich text for text-like kinds, the chosen image for `image`.
     public let representations: [PasteboardRepresentation]
+    /// Every member in pasteboard order, never trimmed here: the bundle ceiling and its `CAP-LIM-003` belong to
+    /// `IngestLimits` alone (FR-007-06), which is the only layer that sees the true count.
     public let members: [ClassifiedMember]
-    /// Conditions to surface although the capture succeeded (`CAP-LIM-003`).
-    public let warnings: [FlotsamError]
 }
 
 /// Turns the representations read from the pasteboard into one classified candidate (FR-001-08 to FR-001-12,
 /// FR-001-15). Pure apart from reading file metadata, so it runs on the ingest side of the hand-off and never on the
 /// main thread (FR-001-17).
 public enum CaptureClassifier {
-    /// FR-001-12: a bundle keeps its first 500 members.
-    public static let maxBundleMembers = 500
-
     /// `representations` may hold several `public.file-url` entries (one per pasteboard item, in order); every other
     /// type appears at most once.
     public static func classify(_ representations: [PasteboardRepresentation]) -> FlotsamResult<Classification> {
@@ -46,7 +43,7 @@ public enum CaptureClassifier {
         }).first {
             return .success(Classification(
                 kind: .image, contentKey: ContentKey.image(image.data), plainText: nil,
-                representations: [image], members: [], warnings: []))
+                representations: [image], members: []))
         }
         return .failure(FlotsamError(.capVal001, "pasteboard holds nothing storable"))
     }
@@ -75,7 +72,7 @@ public enum CaptureClassifier {
             ?? (rich.isEmpty ? .text : .richText)
         return .success(Classification(
             kind: kind, contentKey: ContentKey.text(bytes), plainText: text,
-            representations: rich, members: [], warnings: []))
+            representations: rich, members: []))
     }
 
     private static func derivedPlainText(from rich: [PasteboardRepresentation]) -> String? {
@@ -97,7 +94,6 @@ public enum CaptureClassifier {
     private static func classifyFiles(_ entries: [PasteboardRepresentation]) -> FlotsamResult<Classification> {
         var members: [ClassifiedMember] = []
         var seenAny = false
-        var trimmed = false
         for entry in entries {
             guard let url = fileURL(from: entry.data) else { continue }
             let standardized = url.standardizedFileURL
@@ -105,16 +101,12 @@ public enum CaptureClassifier {
             // Filtered to what exists at capture time (FR-001-12).
             guard FileManager.default.fileExists(atPath: standardized.path, isDirectory: &isDirectory) else { continue }
             seenAny = true
-            if members.count == maxBundleMembers { trimmed = true; continue }
             members.append(ClassifiedMember(
                 path: standardized.path, bookmark: try? standardized.bookmarkData(), isDirectory: isDirectory.boolValue))
         }
         guard seenAny else { return .failure(FlotsamError(.capDat001, "copied files no longer exist")) }
 
         let paths = members.map(\.path)
-        let warnings = trimmed
-            ? [FlotsamError(.capLim003, "bundle trimmed to the member limit", context: [.count: .int(maxBundleMembers)])]
-            : []
         let kind: ItemKind
         if members.count > 1 {
             kind = .bundle
@@ -125,7 +117,7 @@ public enum CaptureClassifier {
         }
         return .success(Classification(
             kind: kind, contentKey: ContentKey.files(paths: paths), plainText: nil,
-            representations: [], members: members, warnings: warnings))
+            representations: [], members: members))
     }
 
     /// `public.file-url` data is the URL string as UTF-8, `file:///...`.

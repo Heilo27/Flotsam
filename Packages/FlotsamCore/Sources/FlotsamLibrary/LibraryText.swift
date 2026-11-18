@@ -51,7 +51,7 @@ public enum LibraryText {
     }
 
     public static func confirmDelete(count: Int) -> String {
-        count == 1 ? string("ui.organize.confirmDeleteOne") : format("ui.organize.confirmDelete", count)
+        DeleteConfirmation.message(count: count)
     }
 
     public static let confirmUngroup = "ui.organize.confirmUngroup"

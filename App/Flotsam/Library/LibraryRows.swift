@@ -81,7 +81,7 @@ private struct RowInteraction: ViewModifier {
                 Button(LibraryText.string(LibraryText.menuCopy)) { act { model.perform(.paste(.copyOnly)) } }
                 Divider()
                 Button(LibraryText.string(LibraryText.menuPreview)) { act { model.perform(.togglePreview) } }
-                if row.kind == .file || row.kind == .folder || row.kind == .bundle {
+                if row.kind.referencesFiles {
                     Button(LibraryText.string(LibraryText.menuReveal)) { act { model.perform(.revealInFinder) } }
                 }
                 Divider()

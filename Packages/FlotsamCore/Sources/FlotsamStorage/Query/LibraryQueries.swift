@@ -35,7 +35,6 @@ extension FlotsamDatabase {
     /// state is read from the disk each time a page is read and never stored, so a file deleted or restored outside
     /// the app is reflected on the next read without any bookkeeping that could go stale.
     private func markingMissing(_ page: ItemPage, fileMembers: [UUID: [FileMemberRef]]) -> ItemPage {
-        guard !fileMembers.isEmpty else { return page }
         let rows = page.rows.map { row -> ItemRow in
             guard row.kind.referencesFiles else { return row }
             let anyLeft = (fileMembers[row.id] ?? []).contains {

@@ -135,7 +135,7 @@ public struct DiagnosticsCopier {
 
     /// Returns the resulting `changeCount` so the caller can record it as an own write (FR-001-03).
     public func copy(_ report: String) -> FlotsamResult<Int> {
-        let text = PasteboardRepresentation(uti: "public.utf8-plain-text", data: Data(report.utf8))
+        let text = PasteboardRepresentation(uti: PasteboardUTI.plainText, data: Data(report.utf8))
         let markers = ownWriteTypes.map { PasteboardRepresentation(uti: $0, data: Data()) }
         return pasteboard.write([text] + markers)
     }

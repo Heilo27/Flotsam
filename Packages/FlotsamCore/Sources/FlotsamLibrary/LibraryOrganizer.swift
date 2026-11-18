@@ -55,7 +55,7 @@ public final class LibraryOrganizer {
 
     /// Delete asks first only for more than one item, or any pinned item or one with a trigger or hotkey.
     public nonisolated static func deleteNeedsConfirmation(_ rows: [ItemRow]) -> Bool {
-        rows.count > 1 || rows.contains { $0.isPinned || $0.hasTrigger || $0.hasShortcut }
+        DeleteConfirmation.isRequired(for: rows)
     }
 
     /// Ungroup asks first when the bundle has something that is not carried over: a note, pin, trigger or hotkey.
