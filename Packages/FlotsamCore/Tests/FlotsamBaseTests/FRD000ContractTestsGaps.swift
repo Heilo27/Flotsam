@@ -18,7 +18,7 @@ import Testing
 //   OC-0006: ErrorTaxonomyTests.swift
 //   OC-0007: ErrorTaxonomyTests.swift
 //   OC-0011: ErrorReporterTests.swift
-//   OC-0012: ErrorReporterTests.swift
+//   OC-0012: ErrorReporterTests.swift, FlotsamLibraryTests/Oc0012RefusedPasteEndToEndTests.swift
 //   OC-0013: ErrorReporterTests.swift
 //   OC-0014: ErrorReporterTests.swift
 //   OC-0015: StringsSurvivorTests.swift
@@ -42,7 +42,7 @@ import Testing
 //   OC-0036: LogLevelAndPrivacyTests.swift, LoggingMutationTests.swift
 //   OC-0037: Frd000PasteboardCallsiteTests.swift, LogLevelAndPrivacyTests.swift
 //   OC-0038: Frd000CallsiteChecklistTests.swift, LogLevelAndPrivacyTests.swift
-//   OC-0039: Frd000CallsiteChecklistTests.swift, LogLevelAndPrivacyTests.swift
+//   OC-0039: Frd000CallsiteChecklistTests.swift (shape), FlotsamStorageTests/Oc0039ScriptedSessionTests.swift, FlotsamStorageTests/Worf432bTests.swift, Worf432bPermissionTests.swift, LogLevelAndPrivacyTests.swift
 //   OC-0040: ErrorReporterTests.swift
 //   OC-0041: LoggingMutationTests.swift
 //   OC-0042: LoggingMutationTests.swift

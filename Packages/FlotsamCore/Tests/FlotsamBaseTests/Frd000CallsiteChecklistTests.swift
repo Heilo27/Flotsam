@@ -2,8 +2,8 @@ import Foundation
 import Testing
 @testable import FlotsamBase
 
-// FRD-000 FR-000-11 callsite checklist, OC-0038 (screenshot, paste-back, hotkey, Shelf, trigger) and OC-0039 (database,
-// retention sweep, permission transitions). The callsite is what the checklist in FRD-000 tracks, so these tests scan the
+// FRD-000 FR-000-11 callsite checklist, OC-0038 (screenshot, paste-back, hotkey, Shelf, trigger) and the OC-0039 event
+// shapes. The callsite is what the checklist in FRD-000 tracks, so the OC-0038 tests scan the
 // shipped sources (the package modules and the App target) for the `LogEvent` call that owns each row, and render the
 // event to prove it carries outcome or count only. The scripted-session `log show` half of the oracle needs the running
 // app; what a unit test can hold is "the owning module calls it, and the call cannot carry content".
@@ -134,35 +134,9 @@ struct Frd000CallsiteChecklistTests {
         #expect(!files.isEmpty)
     }
 
-    // MARK: OC-0039, callsites no module makes yet
-
-    @Test("OC-0039 database open, migrate and integrity-check results are logged")
-    func databaseStepCallsites() {
-        // given the shipped sources, when each step's call is collected
-        let open = Callsites.files(matching: #"\.database\(\.open"#)
-        let migrate = Callsites.files(matching: #"\.database\(\.migrate"#)
-        let integrity = Callsites.files(matching: #"\.database\(\.integrityCheck"#)
-        // then each step is logged from the Storage module
-        #expect(Callsites.allIn(open, Self.sources + "FlotsamStorage/"))
-        #expect(Callsites.allIn(migrate, Self.sources + "FlotsamStorage/"))
-        #expect(Callsites.allIn(integrity, Self.sources + "FlotsamStorage/"))
-    }
-
-    @Test("OC-0039 the retention sweep logs rows and bytes removed")
-    func retentionSweepCallsite() {
-        // given the shipped sources, when the retentionSwept calls are collected
-        let files = Callsites.files(matching: #"\.retentionSwept\("#)
-        // then the Storage module makes one
-        #expect(Callsites.allIn(files, Self.sources + "FlotsamStorage/"))
-    }
-
-    @Test("OC-0039 a permission state transition is logged")
-    func permissionTransitionCallsite() {
-        // given the shipped sources, when the permissionChanged calls are collected
-        let files = Callsites.files(matching: #"\.permissionChanged\("#)
-        // then a module makes one
-        #expect(!files.isEmpty)
-    }
+    // OC-0039's database, retention-sweep and permission-transition emissions are NOT grep-checked here: a source scan
+    // stays green if the call is dead or unreachable. They run the real path in FlotsamStorageTests
+    // (Oc0039ScriptedSessionTests, Worf432bTests) and FlotsamBaseTests (Worf432bPermissionTests.oc43221).
 
     // MARK: OC-0039, shape of the events (these exist today)
 
