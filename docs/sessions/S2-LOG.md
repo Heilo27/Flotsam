@@ -773,3 +773,80 @@ Method:
 1. A4 RSS 89.7 MB against the 60 MB line (see above); decide the definition, and re-measure on a Release build.
 2. Four unused-result warnings in test targets (list above).
 3. The `S2-LOG.md` header toolchain line is stale.
+
+---
+
+## 2026-11-17: A1, A2, hotkey re-test (TASK-416) and 10k A4 on `main` @ 7632f6f
+
+Contains 614f9fe and 4cf4a91 (checked with `git merge-base --is-ancestor`). Toolchain: macOS 27.3, Xcode 27.0, Apple Swift 6.4, M1 Max. Clean clone in the session scratchpad. **Verdict: A1 PASS, A2 PASS, hotkey re-test PASS, A4 CPU and wake-ups PASS (Release and Debug, 10k items). Memory lines are numbers only, per S1's scope change.**
+
+**A1**
+
+| Step | Result |
+|---|---|
+| `bin/bootstrap.sh` | exit 0, 5 s |
+| `swift test` (Packages/FlotsamCore) | exit 0, 111 s incl. build (load was 2.13 at start, about 25 at the end of the run) |
+| `bin/check-architecture.sh` | exit 0, 2 s, "architecture checks passed" |
+| `bin/build.sh` (Debug) | exit 0, 25 s, BUILD SUCCEEDED |
+| Release build for A4 (`xcodebuild`, own derived-data path) | exit 0, 64 s, BUILD SUCCEEDED |
+| Swift Testing, sum of every "Test run with N tests" line | 1736 tests in 11 runs, all passed |
+| XCTest "Executed" (FlotsamCaptureTests) | 18, 0 failures |
+| Failures (`✘` lines) | 0 |
+| Known issues | 9 (1 + 8) |
+
+- Counting method as in the previous A1 entry (ANSI stripped, `grep "Test run with"`, sum of the test count field; `grep -c "^✘"`; `grep -c "recorded a known issue"`).
+- The known flakes (OC-7132, optionArrowsStepThroughSidebarFilters, OC-4102, OC-408-W12) did not fail, so no single re-run was needed.
+
+**A2 launch smoke (Debug build, scratch `CFFIXED_USER_HOME`, no TCC grants)**
+
+| Check | Result |
+|---|---|
+| Build and launch | PASS |
+| Menu bar item (read through AX, process menu bar 1) | PASS: Open Library, Save Clipboard, Toggle Shelf, Pause Capture, Notices, Settings..., Show Setup Guide..., Quit Flotsam |
+| Quit via the menu item | PASS, process gone within 2 s |
+| `~/Library/Logs/DiagnosticReports/Flotsam*` | none |
+| `log show` faults for process Flotsam (10 min window) | none |
+| Scratch DB after the run | `integrity_check` ok, 0 items |
+
+**Hotkey re-test (TASK-416 fix 4cf4a91)**
+
+The Shelf hotkey was bound only through the launch argument `-shortcuts.toggleShelf 11:3` (ctrl+cmd+B; NSArgumentDomain, nothing persisted). No `defaults write`. The Library hotkey was the default ctrl+cmd+V. A separate helper process (own Carbon hotkey ctrl+opt+cmd+K, signature `FLTS`, id 1, the same signature and id the app's registrars use) stood in for a non-Flotsam global shortcut. Keys were sent with System Events `key code`. Two passes over the whole sequence; the log came from `log stream` plus `log show` for process Flotsam (a first stream attempt in pass 1 captured nothing because of a shell mistake; `log show` recovered pass 1's `shelf.reveal` line).
+
+| Press | Expected | Observed (both passes) | Result |
+|---|---|---|---|
+| ctrl+cmd+B | only the Shelf | one window, 280x160 (Shelf size); `shelf.reveal outcome=revealed trigger=hotkey` logged at 23:22:45 and 23:23:09; no 760x480 window | PASS |
+| ctrl+cmd+B again | Shelf hides | no window | PASS |
+| ctrl+cmd+V | only the Library | one window, 760x480 (Library size); no `shelf.reveal` line at 23:22:49 or 23:23:14 | PASS |
+| ctrl+cmd+V again | Library hides | no window | PASS |
+| ctrl+opt+cmd+K | foreign shortcut fires in its own process | `FOREIGN_HOTKEY_FIRED id=1` after each press (2 of 2), with both Flotsam hotkeys bound | PASS |
+
+Limits: the Library action writes no log line, so "Library fired" rests on the window appearing at the Library's size, not on a log entry. The window sizes are identifying only by size; I did not read the panel titles. The foreign check proves a hotkey in another process is not swallowed while Flotsam holds two; it does not test another process that reuses the id 1 / `FLTS` pair with a different key beyond the helper itself (the helper did use that pair).
+
+**A4 idle profile, seeded 10k library (S1 scope change)**
+
+Seed: a throwaway database in a scratch `CFFIXED_USER_HOME`, 10,000 items, FRD-007 mix (5200 text, 1200 link, 2000 image, 600 file, 300 color, 300 email, 200 phone, 200 richText) within the 30-day retention window, schema v1, 2,000 generated synthetic JPEG blobs (1280x800, 20 variants). `integrity_check` ok. The app (Release) showed "All 10,000" and "10000 items". The thumbnail cache stayed empty (the library was not scrolled), so a full thumbnail cache is not covered.
+
+Method: 55 s settle after launch, then 10 min hands-off, sampling every 10 s. CPU is the delta of `ri_user_time + ri_system_time` and wake-ups the delta of `ri_interrupt_wkups`, both from `proc_pid_rusage` (RUSAGE_INFO_V4, mach_timebase converted). RSS is `ri_resident_size`; footprint is `ri_phys_footprint` (exact bytes below; `footprint` prints whole MB only).
+
+| Build | Load at start | CPU, mean over 10 min (budget 0.2 %) | Wake-ups (budget 2.5 /s) | RSS at settle | Footprint at settle | RSS / footprint at end |
+|---|---|---|---|---|---|---|
+| Release | 1.987 (end 1.729) | 0.0806 % PASS | 2.139 /s PASS | 102,252,544 B (97.5 MiB) | 23,708,512 B (22.6 MiB) | 102,219,776 / 23,675,744 B |
+| Debug | 1.934 (end 2.826) | 0.0836 % PASS | 2.117 /s PASS | 104,120,320 B (99.3 MiB) | 24,183,672 B (23.1 MiB) | 104,087,552 / 24,167,264 B |
+
+- The Debug window ended at load 2.826, above the load-under-2 rule (another session started work on the machine); the start was under 2.
+- Memory against the 60 MB line: no verdict given, as instructed. By RSS both builds are about 98-99 MiB; by footprint both are about 23 MiB.
+
+**10k, Library panel open (budget 150 MB, numbers only)**: panel opened with the default Library hotkey (ctrl+cmd+V), read 30 s and 60 s later.
+
+| Build | RSS +30 s | Footprint +30 s | RSS +60 s | Footprint +60 s |
+|---|---|---|---|---|
+| Release | 117,129,216 B (111.7 MiB) | 33,571,704 B (32.0 MiB) | 117,096,448 B | 33,538,936 B |
+| Debug | 118,784,000 B (113.3 MiB) | 33,915,768 B (32.3 MiB) | 118,800,384 B | 33,932,152 B |
+
+**Capture latency and 50k-item search latency: no harness.** No benchmark or Instruments harness exists in the repo for these (FRD-007 FR-007-16 names the 10k / 2,000-image release case; AC-003-09 sets the p95 at most 100 ms search at 10k). I did not build an ad-hoc one. The Debug in-suite tests OC-7131 and OC-7140 ran and passed in A1 (10k items, not 50k). Capture persist latency in a running app was not measured.
+
+**Data isolation.** Real DB, read-only before and after: 17 items both times; `flotsam.sqlite` sha1 03fc64cf... and `-wal` sha1 c1189741... identical before and after; real prefs plist sha1 c190d732... identical before and after. No `defaults write`; no plist appeared in any scratch home's Library/Preferences. All launches used a scratch `CFFIXED_USER_HOME`. Pasteboard: I never wrote to it. `clipboard info` before and after is identical (utf8 and utf16 text, 2 bytes); I compared the type listing only, not a content hash, and the app only reads the pasteboard in these homes. No restore was needed. Nothing was added to TCC. The measurement apps were stopped by SIGTERM and the A2 app by its menu Quit.
+
+**Not done / unknown:** capture latency, 50k search, a full thumbnail cache, a scrolled Library, a Release-build smoke beyond the idle and panel runs, panel titles for the hotkey check, and attribution of the roughly 75 MiB gap between RSS and footprint (not traced).
+
+**Defects / follow-ups for S1:** none found at 7632f6f. Observation: the Library open/close action emits no log line, which limits log-based hotkey verification to the Shelf.
