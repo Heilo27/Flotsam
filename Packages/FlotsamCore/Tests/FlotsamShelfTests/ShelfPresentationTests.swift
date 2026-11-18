@@ -90,7 +90,7 @@ import FlotsamStorage
         #expect(!card.accessibilityActions.map(card.title(of:)).contains("Drag"))
 
         let pinned = ShelfCardPresentation(row: makeShelfRow(1, primary: "hello", source: "Notes", pinned: true, copiedAt: now), now: now)
-        #expect(pinned.accessibilityLabel == "Text, hello, from Notes, now, Pinned")
+        #expect(pinned.accessibilityLabel == "Text, hello, from Notes, now, pinned")
         #expect(pinned.title(of: .togglePin) == "Unpin")
 
         let long = ShelfCardPresentation(row: makeShelfRow(2, primary: String(repeating: "x", count: 300)), now: now)

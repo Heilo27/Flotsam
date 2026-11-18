@@ -42,15 +42,18 @@ import Testing
         #expect(offenders.map(\.lastPathComponent) == [])
     }
 
-    // Red if LibraryRows regrows its own list of file kinds or stops asking the kind (ruling c).
-    @Test("OC-397b-R3 LibraryRows decides file-ness with row.kind.referencesFiles and repeats no kind list")
+    // Red if the Library's row menu regrows its own list of file kinds or stops asking the kind (ruling c). The Reveal in
+    // Finder decision moved from LibraryRows to LibraryContextMenu (TASK-433), so the menu model is checked as well.
+    @Test("OC-397b-R3 the row menu decides file-ness with kind.referencesFiles and LibraryRows/LibraryContextMenu repeat no kind list")
     func libraryRowsUsesReferencesFiles() throws {
-        let source = try read("App/Flotsam/Library/LibraryRows.swift")
-
-        #expect(source.contains("row.kind.referencesFiles"))
-        #expect(!source.contains("[.file, .folder, .bundle]"))
-        #expect(!source.contains(".file, .folder"))
-        #expect(!source.contains("case .file, .bundle") && !source.contains("case .file, .folder"))
+        let menu = try read("Packages/FlotsamCore/Sources/FlotsamLibrary/LibraryContextMenu.swift")
+        #expect(menu.contains("kind.referencesFiles"))
+        for path in ["App/Flotsam/Library/LibraryRows.swift", "Packages/FlotsamCore/Sources/FlotsamLibrary/LibraryContextMenu.swift"] {
+            let source = try read(path)
+            #expect(!source.contains("[.file, .folder, .bundle]"), "\(path)")
+            #expect(!source.contains(".file, .folder"), "\(path)")
+            #expect(!source.contains("case .file, .bundle") && !source.contains("case .file, .folder"), "\(path)")
+        }
     }
 
     // Red if a former caller drops back to its own gate.

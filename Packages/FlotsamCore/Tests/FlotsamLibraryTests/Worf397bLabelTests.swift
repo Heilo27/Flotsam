@@ -12,7 +12,7 @@ import Testing
     private func label(_ row: ItemRow) -> String { LibraryRowPresentation(row: row, position: 0, now: now).accessibilityLabel }
 
     // Red if Missing moves before the pinned word, replaces ItemSpeech, or the pinned word is dropped for missing rows.
-    @Test("OC-397b-L1 pinned + missing label ends with 'Pinned, Missing' in that order after the item's own text")
+    @Test("OC-397b-L1 pinned + missing label ends with 'pinned, Missing' in that order after the item's own text")
     func pinnedThenMissing() {
         let plain = makeRow(1, kind: .file, primary: "report.pdf", pinned: true)
         let missing = plain.withMissing(true)
@@ -20,9 +20,9 @@ import Testing
         let spokenPlain = label(plain)
         let spokenMissing = label(missing)
 
-        #expect(spokenPlain.hasSuffix(", Pinned"))
+        #expect(spokenPlain.hasSuffix(", pinned"))
         #expect(spokenMissing == spokenPlain + ", Missing")
-        #expect(spokenMissing.hasSuffix(", Pinned, Missing"))
+        #expect(spokenMissing.hasSuffix(", pinned, Missing"))
         #expect(spokenMissing.contains("report.pdf"))
         #expect(spokenMissing.components(separatedBy: "Missing").count == 2)
     }
@@ -35,11 +35,11 @@ import Testing
         let pinnedOnly = label(makeRow(4, kind: .folder, primary: "Docs", pinned: true))
 
         #expect(missingOnly.hasSuffix(", Missing"))
-        #expect(!missingOnly.contains("Pinned"))
+        #expect(!missingOnly.contains("pinned"))
         #expect(!neither.contains("Missing"))
         #expect(!neither.hasSuffix(","))
         #expect(!pinnedOnly.contains("Missing"))
-        #expect(pinnedOnly.hasSuffix(", Pinned"))
+        #expect(pinnedOnly.hasSuffix(", pinned"))
     }
 
     // Red if the presentation starts deciding Missing by kind (the kind gate lives in storage): flagged rows of every
