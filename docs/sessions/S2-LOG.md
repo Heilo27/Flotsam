@@ -404,3 +404,15 @@ Clipboard: restored after the run.
 - C2b owes: loading content, the copy-only operation, NSImage conversion, lazy provision, accounting on an accepted drop, hiding a transient Shelf, HUDs and the `shelf.dragOut` log line.
 
 **Drift:** none new. The duplicated `public.utf8-plain-text` and `public.file-url` literals (Payload, Paste, diagnostics) are consolidated by the above.
+
+## 2026-11-17: FRD-006 S1 rulings recorded, doc-only, on `s2/frd006` @ 635981f (on top of 7b497ac)
+
+**Verdict: pushed, docs only; `bin/check-architecture.sh` passes. No docs lint exists under `bin/`.**
+
+**Written into FRD-006:** Slice 3 rulings 1, 3, 4 into FR-006-08 (single-card gate for Return, ⌥Return, ⇧Return, ⌘C; arrows clamp; ⌘C and ⇧Return both copy-only); ruling 2 into FR-006-09 (Paste, Plain, Copy act on the clicked card; Pin, Delete, drag on the selection if it holds the clicked card, else the clicked card alone). Slice 4: ruling 1 into FR-006-10, rulings 2 to 5 into FR-006-11 (skip empty cards, `LIB-DAT-001` only if all are empty, an image with no usable data is empty, empty list is `SHF-OS-001`, `pasteCount` counts cards). The §6 error rows and AC-006-12 follow; new AC-006-22 (keyboard), -23 (menu scope), -24 (drag-out). Drop-in FRs and OCs untouched.
+
+**DESIGN.md:** Shelf table keys now match the catalogue: `ui.shelf.empty` (one combined string, replacing `shelf.empty.title` and `.body`), `ui.shelf.drop`, `ui.shelf.sectionRecent`. `shelf.section.pinned` removed: the code reuses `ui.library.pinned`, noted under the table. No other stale `shelf.` keys in the file.
+
+**Left alone:** `.claude/oracle/frd-006-contract.json` is a blind-generated oracle (`generated_blind`), so it was not synced. It still says `shelf.empty` in one assertion (line 400), which S1 may want fixed in a separate pass.
+
+**Open point:** FR-006-18 says `shelf.dragOut` carries the "item count"; the code counts cards (bundle once). Not edited, since it was not in the rulings.
