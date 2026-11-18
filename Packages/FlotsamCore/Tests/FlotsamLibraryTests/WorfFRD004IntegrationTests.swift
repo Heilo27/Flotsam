@@ -20,7 +20,7 @@ private func n(_ value: Int) -> UUID { UUID(uuidString: String(format: "00000000
 private func number(_ id: UUID) -> Int { Int(String(id.uuidString.suffix(12)))! }
 
 @MainActor
-private final class Rig {
+final class Rig {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("worf-lib-\(UUID().uuidString)")
     let database: FlotsamDatabase
     let model: LibraryViewModel
