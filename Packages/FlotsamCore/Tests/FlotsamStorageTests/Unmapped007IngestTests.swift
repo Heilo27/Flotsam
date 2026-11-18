@@ -138,6 +138,7 @@ private let png16 = TestImage.make(width: 16, height: 16, format: .png)
         // load average 700 does not turn a 2 s clear into a 13 s failure, while a clear that really does more work or
         // stalls (the share stays near 1) still reads its full wall time against 5 s.
         let probe = CPUShareProbe()
+        defer { _ = probe.stop() }  // a throwing clear must still end the spin thread; stop() is idempotent
         let started = DispatchTime.now().uptimeNanoseconds
         let outcome = try await s.database.clearHistory(range: .allTime, includeExempt: false) { done, total in
             progress.mutate { $0.append([done, total]) }
@@ -263,10 +264,12 @@ final class CPUShareProbe: @unchecked Sendable {
         running.wait()
     }
 
-    /// Ends the window and returns the share, in (0, 1].
+    /// Ends the window and returns the share, in (0, 1]. Safe to call more than once (a `defer` guards the throw
+    /// path while the happy path reads the value): the first call ends the window, later calls return the same share.
     func stop() -> Double {
         lock.withLock { stopRequested = true }
         finished.wait()
+        finished.signal()
         return lock.withLock { share }
     }
 
