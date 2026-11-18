@@ -125,6 +125,7 @@ final class AppContainer {
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             hud: { message in presenter.showHUD(message: message) },
             showSetupGuide: showSetupGuide,
+            importRecentScreenshots: { [weak self] in self?.actions.importRecentScreenshots?() },
             copyDiagnostics: {
                 await SettingsDiagnostics.copy(settings: settings, probe: permissions, storage: storage, reporter: reporter)
             })
@@ -220,8 +221,11 @@ final class AppContainer {
                 Task { await watcher.didBecomeActive() }
             },
         ]
-        // FR-002-12: onboarding's checkbox and Settings' button both call this. The count is not shown here.
-        actions.importRecentScreenshots = { Task { _ = await watcher.importRecent() } }
+        // FR-002-12: onboarding's checkbox and Settings' button both call this one action, which shows "Imported {n}".
+        let presenter = presenter
+        actions.importRecentScreenshots = {
+            Task { await watcher.importRecentAnnouncing { presenter.showHUD(message: $0) } }
+        }
         Task { await watcher.start() }
     }
 
@@ -504,6 +508,7 @@ struct AppActions {
     var toggleShelf: (@MainActor () -> Void)?
     /// FR-008-03 Settings window; assigned by `installSettings`. The menu row and the Library both call this one closure.
     var openSettings: (@MainActor () -> Void)?
-    /// FRD-002 FR-002-12 "import screenshots from the last 30 days"; called from onboarding when the box is checked.
+    /// FRD-002 FR-002-12 "Import recent screenshots": onboarding's checkbox and the Settings button both call this
+    /// one closure, and it shows the "Imported {n}" HUD.
     var importRecentScreenshots: (@MainActor () -> Void)?
 }

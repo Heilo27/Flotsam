@@ -146,6 +146,14 @@ public actor ScreenshotWatcher {
         await evaluate(reconcile: true)
     }
 
+    /// The one action behind "Import recent screenshots" (FR-002-12), for onboarding's checkbox and Settings' button:
+    /// runs `importRecent()` and tells `hud` "Imported {n}" with the real count, including 0 (the user asked, so a
+    /// silent result would look like nothing happened).
+    public func importRecentAnnouncing(hud: @MainActor @Sendable (String) -> Void) async {
+        let created = await importRecent()
+        await hud(ScreenshotImportHUD.message(count: created))
+    }
+
     /// "Import recent screenshots" (FR-002-12): the qualifying files of the resolved folder regardless of the
     /// watermark, bounded by the retention window and 500 files, oldest first. Returns how many items were created.
     ///

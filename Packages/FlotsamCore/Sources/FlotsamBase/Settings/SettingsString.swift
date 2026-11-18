@@ -11,6 +11,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     // General
     case launchAtLogin, loginApprovalCaption, openLoginItems
     case pickUpScreenshots, screenshotFolder, folderSystemDefault, chooseFolder, useSystemDefault
+    /// The always-available backfill button (FR-002-12).
+    case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar
     case revealAtEdge, showSetupGuide, historyHelp
 
