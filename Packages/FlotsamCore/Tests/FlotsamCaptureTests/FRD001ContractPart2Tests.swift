@@ -632,14 +632,21 @@ struct FRD001SuspensionContractTests {
 
     @Test("OC-1081: after suspension a readable copy is stored within one tick AND the warning dot clears")
     func oc1081() async throws {
-        // given suspended capture; when access returns and V is copied (the 0.5 s timer, no manual poll); then V is
-        // stored and the CAP-PRM-001 Notice is gone. Fails today if nothing clears the Notice on resume.
-        try await withRig { rig in
+        // given suspended capture; when access returns and V is copied and the poll timer fires ONCE (no manual poll);
+        // then V is stored and the CAP-PRM-001 Notice is gone. Fails today if nothing clears the Notice on resume.
+        // Runs on the timer seam (ADR-0011, TASK-451): one hand-fired tick is the "one tick" of the FRD, so the old real
+        // 2 s wait on the 0.5 s timer (which lost the race under full-suite load) is gone; the bound is tighter, not looser.
+        let timers = FakeTimers()
+        try await withRig(scheduleTimer: timers.schedule) { rig in
+            let source = try #require(timers.live.first, "capture schedules its poll source")
             await suspendCapture(rig)
             #expect(!noticeMessages(rig, code: .capPrm001).isEmpty)
+            #expect(timers.live.count == 1 && timers.live.first === source, "suspension leaves the one poll timer running")
             let v = uid("V")
             rig.pasteboard.copyText(v)
-            #expect(await rig.until(seconds: 2) { try await rig.item(withText: v).count == 1 })
+            source.fire()
+            // The firing only queues the payload; ingest is asynchronous, so wait on the stored row (10 s is a hang guard).
+            #expect(await rig.until(seconds: 10) { try await rig.item(withText: v).count == 1 })
             await rig.flush()
             #expect(noticeMessages(rig, code: .capPrm001).isEmpty, "CAP-PRM-001 must clear when capture resumes")
             #expect(rig.presenter.latestNotices.isEmpty, "the warning dot must clear when capture resumes")

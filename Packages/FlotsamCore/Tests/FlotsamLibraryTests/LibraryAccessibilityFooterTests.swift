@@ -91,11 +91,42 @@ import Testing
             effects: LibraryEffects(isAccessibilityTrusted: { reads.tick(); return false }))
     }
 
+    private final class Flag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var raised = false
+        func raise() { lock.withLock { raised = true } }
+        var isRaised: Bool { lock.withLock { raised } }
+    }
+
+    /// Waits for `watch` to return and reports whether it did so on its own, without a cancel. A watch that ignores
+    /// `isShown` never returns (the probe stays untrusted), which used to hang the test instead of failing it: the
+    /// watchdog cancels it after `guardSeconds` (a hang guard, not a bound any FRD sets) and the answer is `false`.
+    private func returnsOnItsOwn(_ watch: Task<Void, Never>, guardSeconds: Double = 10) async -> Bool {
+        let timedOut = Flag()
+        let watchdog = Task {
+            try? await Task.sleep(for: .seconds(guardSeconds))
+            guard !Task.isCancelled else { return }
+            timedOut.raise()
+            watch.cancel()
+        }
+        await watch.value
+        watchdog.cancel()
+        return !timedOut.isRaised
+    }
+
+    /// Waits for `condition` on the event (the probe being read); `guardSeconds` is only a hang guard.
+    private func waitFor(guardSeconds: Double = 30, _ condition: () -> Bool) async -> Bool {
+        let deadline = Date().addingTimeInterval(guardSeconds)
+        while !condition(), Date() < deadline { try? await Task.sleep(for: .milliseconds(2)) }
+        return condition()
+    }
+
     @Test func watchDoesNotPollBeforeOpenOrAfterHide() async {
         let reads = Counter()
         let model = make(reads: reads)
         #expect(!model.isShown)
-        await model.watchAccessibility(interval: .milliseconds(1))
+        #expect(await returnsOnItsOwn(Task { await model.watchAccessibility(interval: .milliseconds(1)) }),
+                "a watch on a panel that was never shown returns at once")
         #expect(reads.count == 0)
 
         await model.open(target: nil)
@@ -103,21 +134,25 @@ import Testing
         let afterOpen = reads.count
         model.panelDidHide()
         #expect(!model.isShown)
-        await model.watchAccessibility(interval: .milliseconds(1))
+        #expect(await returnsOnItsOwn(Task { await model.watchAccessibility(interval: .milliseconds(1)) }),
+                "a watch on a hidden panel returns at once")
         #expect(reads.count == afterOpen)
     }
 
-    @Test func watchPollsWhileShownAndStopsWhenThePanelHides() async throws {
+    @Test func watchPollsWhileShownAndStopsWhenThePanelHides() async {
         let reads = Counter()
         let model = make(reads: reads)
         await model.open(target: nil)
         let task = Task { await model.watchAccessibility(interval: .milliseconds(5)) }
-        try await Task.sleep(for: .milliseconds(80))
-        #expect(reads.count > 2)
+        // Polls while shown: more than two probe reads (bound unchanged), waited for on the event, not an 80 ms sleep.
+        #expect(await waitFor { reads.count > 2 }, "the watch polls while the panel is shown")
         model.panelDidHide()
-        await task.value  // returns on its own: no cancel needed once hidden
+        // Returns on its own once hidden: no cancel needed. A watch that kept polling is cancelled by the watchdog
+        // and fails here instead of hanging the run.
+        #expect(await returnsOnItsOwn(task), "the watch stops by itself once the panel hides")
         let settled = reads.count
-        try await Task.sleep(for: .milliseconds(40))
+        // The watch has returned, so nothing may read again; a few turns of the main actor would show a straggler.
+        for _ in 0..<20 { await Task.yield() }
         #expect(reads.count == settled)
     }
 

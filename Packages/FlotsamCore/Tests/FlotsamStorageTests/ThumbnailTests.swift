@@ -19,8 +19,8 @@ import FlotsamBase
     /// Ingests a 1200x800 PNG and waits for the post-commit warm-up to put both thumbnails on disk.
     private func ingestWarmed(_ rig: Rig, key: String = "img", width: Int = 1200, height: Int = 800) async throws -> UUID {
         let id = try await rig.create(rig.image(key, TestImage.make(width: width, height: height, format: .png)))
-        let warmed = await waitUntil { rig.store.exists(thumbPath(rig, id, 256)) && rig.store.exists(thumbPath(rig, id, 512)) }
-        try #require(warmed, "warm-up never wrote both thumbnails")
+        // `awaitThumbnails` waits on the event (both files written) with a 60 s hang guard, the one home of this wait.
+        try #require(await rig.awaitThumbnails(id), "warm-up never wrote both thumbnails")
         return id
     }
 

@@ -79,6 +79,7 @@ final class ClipboardCaptureTests: XCTestCase {
     private var settings: SettingsStore!
     private var capture: ClipboardCapture!
     private var presenter: RecordingPresenter!
+    private var reporter: ErrorReporter!
     private var ignored: Set<String> = []
     /// Time is a port: the watch on an empty change (FR-001-01) is a duration, so tests move it by hand.
     private var clock: ManualClock!
@@ -93,10 +94,13 @@ final class ClipboardCaptureTests: XCTestCase {
         ignored = []
         presenter = RecordingPresenter()
         clock = ManualClock()
+        reporter = ErrorReporter(presenter: presenter)
+        // Inert timer (ADR-0011 seam): every test drives `captureNow()` by hand, so a real 0.5 s tick cannot add a read
+        // of its own under full-suite load (TASK-451).
         capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: FakeSourceApps(frontmost: SourceApp(bundleId: "com.example.writer", name: "Writer")),
             ownWrites: ledger, ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: presenter), ignoredApps: { [unowned self] in ignored }, clock: clock)
+            reporter: reporter, ignoredApps: { [unowned self] in ignored }, clock: clock, scheduleTimer: inertTimer)
     }
 
     /// Reads the change being watched once, then lets its watch run out (FR-001-01) and ticks so it ends: the change
@@ -119,6 +123,19 @@ final class ClipboardCaptureTests: XCTestCase {
     override func tearDown() async throws {
         await capture.stop()
         try? FileManager.default.removeItem(at: folder)
+    }
+
+    /// Reports are raised from unstructured tasks: wait for them to reach the presenter without a wall-clock sleep.
+    private func drainReports() async { await quiesceReporter(reporter) }
+
+    /// Waits for the CAP-PRM-001 notice on the event. The 60 s is only a hang guard (a suspension that never raises
+    /// fails instead of hanging); the assertion that follows is unchanged.
+    private func waitForSuspensionNotice() async {
+        let deadline = Date().addingTimeInterval(60)
+        while !presenter.noticeCodes.contains(.capPrm001), Date() < deadline {
+            await drainReports()
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
     }
 
     /// Runs one poll and waits until everything handed off has been ingested, then counts stored items.
@@ -218,7 +235,7 @@ final class ClipboardCaptureTests: XCTestCase {
             capture.captureNow()
         }
         let count = try await settle()
-        try await Task.sleep(nanoseconds: 200_000_000)  // reports are raised from unstructured tasks
+        await drainReports()
 
         XCTAssertEqual(count, 3)
         XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "a copy caught mid-write is not blocked access")
@@ -231,7 +248,7 @@ final class ClipboardCaptureTests: XCTestCase {
             pasteboard.beginCopy()
             readThenLetEmptyWatchEnd()
         }
-        for _ in 0..<100 where !presenter.noticeCodes.contains(.capPrm001) { try await Task.sleep(nanoseconds: 20_000_000) }
+        await waitForSuspensionNotice()
 
         XCTAssertTrue(presenter.noticeCodes.contains(.capPrm001))
     }
@@ -245,11 +262,11 @@ final class ClipboardCaptureTests: XCTestCase {
             pasteboard.copy([textType: Data("gated \(n)".utf8)])
             readThenLetEmptyWatchEnd()
             if n < ClipboardCapture.emptyReadsBeforeSuspension {
-                try await Task.sleep(nanoseconds: 200_000_000)  // reports are raised from unstructured tasks
+                await drainReports()
                 XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "\(n) empty changes are below the threshold")
             }
         }
-        for _ in 0..<100 where !presenter.noticeCodes.contains(.capPrm001) { try await Task.sleep(nanoseconds: 20_000_000) }
+        await waitForSuspensionNotice()
 
         XCTAssertEqual(presenter.noticeCodes.filter { $0 == .capPrm001 }.count, 1)
     }
@@ -272,7 +289,7 @@ final class ClipboardCaptureTests: XCTestCase {
             readThenLetEmptyWatchEnd()
         }
         let count = try await settle()
-        try await Task.sleep(nanoseconds: 200_000_000)
+        await drainReports()
 
         XCTAssertEqual(count, 1)
         XCTAssertFalse(presenter.noticeCodes.contains(.capPrm001), "four empty changes in all, never three in a row")

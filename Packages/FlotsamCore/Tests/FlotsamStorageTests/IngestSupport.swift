@@ -243,7 +243,10 @@ struct Rig {
     /// or thumbs/ after storing an image must wait first (TASK-404).
     func awaitThumbnails(_ id: UUID) async -> Bool {
         let urls = ThumbnailSize.allCases.map { store.thumbsDir.appendingPathComponent("\(id.uuidString)-\($0.rawValue).jpg") }
-        return await waitUntil(seconds: 30) { urls.allSatisfy { FileManager.default.fileExists(atPath: $0.path) } }
+        // The warm-up is a `.utility` detached task by design (IngestActor.warmThumbnails), so under full-suite CPU load it
+        // can wait several seconds for a core. The wait is on the event; 60 s is only a hang guard so a warm-up that truly
+        // never runs fails instead of hanging (TASK-447, TASK-451).
+        return await waitUntil(seconds: 60) { urls.allSatisfy { FileManager.default.fileExists(atPath: $0.path) } }
     }
 
     // MARK: Reading back through a separate connection
