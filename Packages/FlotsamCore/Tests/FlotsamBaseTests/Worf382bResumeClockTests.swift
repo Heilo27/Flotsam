@@ -111,9 +111,6 @@ import Testing
     /// AC-001-19, given the same pause but a delay shorter than the 0.5 s tick before resume, then the watchdog is
     /// still no later than 5 s after its previous run (FR-001-19 "keep their 5 s and 30 s bounds across every pause
     /// and resume").
-    /// DEFECT: `creditsLostInterval` treats any resume within 0.5 s of a pause alignment as "same instant" and credits
-    /// nothing, but up to 0.5 s of the slow interval has elapsed, so the next run is late by exactly the delay
-    /// (delay 0.25 -> gap 5.25 s; 0.4 -> 5.4 s; the 30 s re-resolve is late the same way).
     @Test(arguments: [0.25, 0.4])
     func watchdogKeepsFiveSecondBoundWhenResumedUnderOneTick(delay: Double) {
         // given
@@ -130,7 +127,6 @@ import Testing
     }
 
     /// AC-001-19, as above for the 30 s re-resolve paused at 12 s and resumed under one tick later.
-    /// DEFECT: same cause as the watchdog case (delay 0.25 -> gap 30.25 s).
     @Test(arguments: [0.25, 0.4])
     func reResolveKeepsThirtySecondBoundWhenResumedUnderOneTick(delay: Double) {
         // given
@@ -204,6 +200,97 @@ import Testing
         let runs = watchdog.all
         #expect(longestGap(runs, end: 40) <= 5.0 + eps, "runs at \(runs)")
         #expect(runs.count >= 8 && runs.count <= 9, "expected 8 or 9 runs in 40 s, got \(runs)")
+    }
+
+    // MARK: Same-instant window boundary (PollTick.sameInstantWindow = 0.01 s)
+
+    /// AC-001-19, given work paused (watchdog at 1.5 s, re-resolve at 12 s) and resumed 0.011 s later (just past the
+    /// window), then the resume is credited and no run is later than its period after the previous one (strict).
+    /// Red if the window is widened back toward a tick, or the credit is skipped just past the boundary.
+    @Test(arguments: [(5.0, 1.5, 40.0), (30.0, 12.0, 200.0)])
+    func resumeJustPastSameInstantWindowKeepsStrictBound(period: Double, pauseAt: Double, end: Double) {
+        // given
+        let sim = Sim()
+        let work = sim.register(period).runs
+        sim.advance(to: pauseAt)
+        // when
+        sim.pause()
+        sim.advance(by: 0.011)
+        sim.resume()
+        sim.advance(to: end)
+        // then
+        let runs = work.all
+        #expect(longestGap(runs, end: end) <= period + eps, "period \(period): runs at \(runs)")
+        #expect(runs.count >= Int(end / period) - 1, "period \(period): runs \(runs)")
+    }
+
+    /// AC-001-19, given work paused and resumed exactly 0.01 s later (the window itself: whether it counts as the same
+    /// instant depends on float rounding of the clock reads), then the lateness is at most the window (10 ms, inside
+    /// the 100 ms tolerance of FR-001-01) and the work still runs every period.
+    /// Red if the window grows beyond 10 ms or the boundary loses more than the window.
+    @Test(arguments: [(5.0, 1.5, 40.0), (30.0, 12.0, 200.0)])
+    func resumeAtSameInstantWindowLosesAtMostTheWindow(period: Double, pauseAt: Double, end: Double) {
+        // given
+        let sim = Sim()
+        let work = sim.register(period).runs
+        sim.advance(to: pauseAt)
+        // when
+        sim.pause()
+        sim.advance(by: 0.01)
+        sim.resume()
+        sim.advance(to: end)
+        // then
+        let runs = work.all
+        #expect(longestGap(runs, end: end) <= period + 0.01 + eps, "period \(period): runs at \(runs)")
+        #expect(runs.count >= Int(end / period) - 1, "period \(period): runs \(runs)")
+    }
+
+    /// AC-001-19, given the watchdog registered at 0 s (original alignment: due at 5 s) and capture paused at 1.5 s,
+    /// when it resumes 4.9 s later (6.4 s), then the first run is at or before 5 s and later runs never more than 5 s
+    /// apart; the watchdog is never pushed later by the pause.
+    /// Red if resume re-bases the watchdog from the resume time (first run would land after 5 s).
+    @Test func watchdogResumedAfterFourPointNineSecondsStillFiresByOriginalDeadline() {
+        // given
+        let sim = Sim()
+        let watchdog = sim.register(5).runs
+        sim.advance(to: 1.5)
+        // when
+        sim.pause()
+        sim.advance(by: 4.9)
+        sim.resume()
+        sim.advance(to: 40)
+        // then
+        let runs = watchdog.all
+        #expect(runs.first.map { $0 <= 5.0 + eps } == true, "first run must be by 5 s, runs \(runs)")
+        #expect(longestGap(runs, end: 40) <= 5.0 + eps, "runs at \(runs)")
+        #expect(runs.count >= 8, "runs \(runs)")
+    }
+
+    /// AC-001-19, given the watchdog and re-resolve registered and capture cycling Paused/Active with phases just
+    /// around the same-instant window (0.005 s inside, 0.011 and 0.02 s outside), when run for 120 s, then neither
+    /// bound is exceeded (inside the window: by no more than the window per run) and neither starves.
+    /// Red if repeated sub-tick cycles each lose time that is never credited (watchdog starves or drifts late).
+    @Test(arguments: [0.005, 0.011, 0.02])
+    func rapidSubTickCyclesDoNotStarveWatchdog(step: Double) {
+        // given
+        let sim = Sim()
+        let watchdog = sim.register(5).runs
+        let reResolve = sim.register(30).runs
+        // when
+        var paused = false
+        while sim.now < 120 {
+            if paused { sim.resume() } else { sim.pause() }
+            paused.toggle()
+            sim.advance(by: step)
+        }
+        if paused { sim.resume() }
+        let end = sim.now
+        // then
+        let slack = step < 0.01 ? 0.01 : eps
+        #expect(longestGap(watchdog.all, end: end) <= 5.0 + slack, "step \(step): watchdog at \(watchdog.all)")
+        #expect(longestGap(reResolve.all, end: end) <= 30.0 + slack, "step \(step): re-resolve at \(reResolve.all)")
+        #expect(watchdog.all.count >= 24, "step \(step): watchdog starved: \(watchdog.all.count) runs")
+        #expect(reResolve.all.count >= 4, "step \(step): re-resolve starved: \(reResolve.all.count) runs")
     }
 
     // MARK: Rapid cycling
