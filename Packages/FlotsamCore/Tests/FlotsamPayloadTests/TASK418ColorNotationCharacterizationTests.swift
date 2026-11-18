@@ -73,4 +73,22 @@ import Testing
             #expect(ColorChannels(text: text) == nil, "\(text)")
         }
     }
+
+    // FR-003-14 (decided, TASK-418): a number too large for a Double (309+ ASCII digits) is infinite, and a non-finite
+    // number is not a colour. The pre-refactor regex took any digit run and called these colours; that changed on purpose.
+    @Test("FR-003-14 an argument of 309 or more digits is plain text, not a colour, in every function notation")
+    func overflowingNumberIsNotColour() {
+        let huge = String(repeating: "9", count: 400)
+        let justOver = String(repeating: "9", count: 309)
+        let justUnder = String(repeating: "9", count: 308)
+        for text in ["rgb(\(huge),2,3)", "rgba(1,2,3,\(huge))", "hsl(1,2,\(huge)%)", "rgb(\(justOver) 2 3)"] {
+            #expect(!ColorChannels.isNotation(text), "\(text.prefix(24))")
+            #expect(TypedTextDetector.detect(text) != .color, "\(text.prefix(24))")
+            #expect(ColorChannels(text: text) == nil, "\(text.prefix(24))")
+        }
+        // 308 digits still fits a Double: still a colour, clamped to 255.
+        #expect(ColorChannels.isNotation("rgb(\(justUnder),2,3)"))
+        #expect(TypedTextDetector.detect("rgb(\(justUnder),2,3)") == .color)
+        #expect(ColorChannels(text: "rgb(\(justUnder),2,3)") == ColorChannels(red: 255, green: 2, blue: 3))
+    }
 }
