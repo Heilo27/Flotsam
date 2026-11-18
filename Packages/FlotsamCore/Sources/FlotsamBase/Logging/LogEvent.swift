@@ -36,6 +36,8 @@ public enum LogEvent: Sendable, Equatable {
     /// A screenshot reconcile scan finished (FRD-002 FR-002-08): its outcome and how many files it queued, never a name.
     case screenshotScanned(outcome: LogOutcome, count: Int)
     case pasteBack(outcome: LogOutcome)
+    /// A copy-only paste (⇧Return, Copy): the item reaches the pasteboard and nothing is pasted (FR-003-15, ADR-0005).
+    case pasteCopy(outcome: LogOutcome)
     case hotkeyRegistered(outcome: LogOutcome)
     /// The detail defaults to `.none` so callers that only know the outcome keep compiling (FRD-006 FR-006-18).
     case shelf(ShelfAction, outcome: LogOutcome, detail: ShelfLogDetail = .none)
@@ -52,6 +54,7 @@ public enum LogEvent: Sendable, Equatable {
         case .screenshotImported: "screenshot.imported"
         case .screenshotScanned: "screenshot.scan"
         case .pasteBack: "paste.back"
+        case .pasteCopy: "paste.copy"
         case .hotkeyRegistered: "hotkey.registered"
         case .shelf(let action, _, _): "shelf.\(action.rawValue)"
         case .triggerMatched: "trigger.matched"
@@ -65,7 +68,7 @@ public enum LogEvent: Sendable, Equatable {
         switch self {
         case .pasteboardProcessed: .capture
         case .screenshotImported, .screenshotScanned: .screenshots
-        case .pasteBack: .library
+        case .pasteBack, .pasteCopy: .library
         case .hotkeyRegistered, .triggerMatched: .triggers
         case .shelf: .shelf
         case .permissionChanged: .settings
@@ -84,7 +87,7 @@ public enum LogEvent: Sendable, Equatable {
             return [.outcome: .outcome(outcome), .byteSize: .bytes(byteSize)]
         case let .screenshotScanned(outcome, count):
             return [.outcome: .outcome(outcome), .count: .int(count)]
-        case .pasteBack(let outcome), .hotkeyRegistered(let outcome), .database(_, let outcome):
+        case .pasteBack(let outcome), .pasteCopy(let outcome), .hotkeyRegistered(let outcome), .database(_, let outcome):
             return [.outcome: .outcome(outcome)]
         case let .shelf(_, outcome, detail):
             var fields: [LogKey: LogSafeValue] = [.outcome: .outcome(outcome)]

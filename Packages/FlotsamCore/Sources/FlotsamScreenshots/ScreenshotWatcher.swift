@@ -158,10 +158,11 @@ public actor ScreenshotWatcher {
 
     /// The one action behind "Import recent screenshots" (FR-002-12), for onboarding's checkbox and Settings' button:
     /// runs `importRecent()` and tells `hud` "Imported {n}" with the real count, including 0 (the user asked, so a
-    /// silent result would look like nothing happened).
+    /// silent result would look like nothing happened). A run that could not happen (folder paused or refused, every
+    /// file failed to store) tells `hud` the failure's message instead: "Imported 0" would say the folder was empty.
     ///
     /// A call that arrives while another run is in flight joins it instead of starting a second scan: it waits for
-    /// that run and shows nothing itself, so exactly one HUD reports the run's real count and "Imported 0" never
+    /// that run and shows nothing itself, so exactly one HUD reports the run's real result and "Imported 0" never
     /// appears for a call that merely overlapped.
     public func importRecentAnnouncing(hud: @escaping @MainActor @Sendable (String) -> Void) async {
         if let running = announcing {
@@ -169,8 +170,10 @@ public actor ScreenshotWatcher {
             return
         }
         let run = Task {
-            let created = await self.importRecent()
-            await hud(ScreenshotImportHUD.message(count: created))
+            switch await self.importRecent() {
+            case .success(let created): await hud(ScreenshotImportHUD.message(count: created))
+            case .failure(let error): await hud(FlotsamStrings.message(for: error))
+            }
             self.announcementFinished()
         }
         announcing = run
@@ -180,27 +183,34 @@ public actor ScreenshotWatcher {
     private func announcementFinished() { announcing = nil }
 
     /// "Import recent screenshots" (FR-002-12): the qualifying files of the resolved folder regardless of the
-    /// watermark, bounded by the retention window and 500 files, oldest first. Returns how many items were created.
+    /// watermark, bounded by the retention window and 500 files, oldest first. Succeeds with how many items were
+    /// created (0 for an empty folder or files already in the library); fails when the run could not happen: the
+    /// override folder is gone (`SSP-IO-003`), the folder cannot be listed (`SSP-PRM-001` when refused for
+    /// permission), or every file failed to store (the first storage error). A run where some files stored and some
+    /// failed succeeds with the stored count; each failure is reported on its own.
     ///
     /// Available whether or not pickup is on and in every capture mode, because the user asked for it explicitly.
     /// Files go in with `countsAsCopy: false`: an existing item is left exactly as it was (FRD-001 FR-001-15).
-    public func importRecent() async -> Int {
+    public func importRecent() async -> FlotsamResult<Int> {
         let location = await Self.resolve(resolver, override: settings.value(SettingKeys.screenshotsFolderOverride))
-        guard let folder = location.folder else { return 0 }
+        guard let folder = location.folder else {
+            return .failure(Self.pausedError)
+        }
         let files: [ScreenshotFile]
         switch await Self.scan(scanner, folder: folder) {
         case .success(let listed): files = listed
         case .failure(let error):
-            if ScreenshotFolderAccess.isPermissionDenied(error) { await report(Self.accessDeniedError) }
-            return 0
+            guard ScreenshotFolderAccess.isPermissionDenied(error) else { return .failure(error) }
+            await report(Self.accessDeniedError)
+            return .failure(Self.accessDeniedError)
         }
         let chosen = ScreenshotSelection.backfill(
             files, now: clock.now(), retention: settings.value(SettingKeys.storageRetention))
         let jobs = chosen.filter { !pending.contains($0.url.path) }
-        guard !jobs.isEmpty else { return 0 }
+        guard !jobs.isEmpty else { return .success(0) }
         return await withCheckedContinuation { continuation in
             let id = UUID()
-            batches[id] = Batch(remaining: jobs.count, created: 0, continuation: continuation)
+            batches[id] = Batch(total: jobs.count, remaining: jobs.count, continuation: continuation)
             enqueue(jobs, batch: id, bypassSeen: true)
         }
     }
@@ -289,7 +299,7 @@ public actor ScreenshotWatcher {
         if let previous { await clear(previous) }
         switch wanted {
         case .sspIo001?: await report(FlotsamError(.sspIo001, "System screenshot location unusable, watching Desktop"))
-        case .sspIo003?: await report(FlotsamError(.sspIo003, "Chosen screenshot folder unusable, pickup paused"))
+        case .sspIo003?: await report(Self.pausedError)
         default: break
         }
     }
@@ -446,6 +456,10 @@ public actor ScreenshotWatcher {
         }
     }
 
+    private static var pausedError: FlotsamError {
+        FlotsamError(.sspIo003, "Chosen screenshot folder unusable, pickup paused")
+    }
+
     private static var accessDeniedError: FlotsamError {
         FlotsamError(.sspPrm001, "Screenshot folder access was refused")
     }
@@ -528,6 +542,7 @@ public actor ScreenshotWatcher {
         inFlight -= 1
         pending.remove(job.file.url.path)
         var created = false
+        var failure: FlotsamError?
         switch attempt {
         case .imported(let result, let byteSize):
             seen.insert(job.file)
@@ -546,10 +561,11 @@ public actor ScreenshotWatcher {
             FlotsamLog.log(.screenshotImported(outcome: .skipped, byteSize: byteSize), sink: sink)
             await report(error)
         case .failed(let error, let byteSize):
+            failure = error
             FlotsamLog.log(.screenshotImported(outcome: .failed, byteSize: byteSize), sink: sink)
             await report(error)
         }
-        complete(job, created: created)
+        complete(job, created: created, failure: failure)
         pump()
     }
 
@@ -564,13 +580,17 @@ public actor ScreenshotWatcher {
         await advanceWatermark(to: heldWatermark(proposed), scan: false)
     }
 
-    private func complete(_ job: ImportJob, created: Bool) {
+    private func complete(_ job: ImportJob, created: Bool, failure: FlotsamError?) {
         guard let id = job.batch, var batch = batches[id] else { return }
         batch.remaining -= 1
         if created { batch.created += 1 }
+        if let failure {
+            batch.failed += 1
+            batch.firstFailure = batch.firstFailure ?? failure
+        }
         if batch.remaining == 0 {
             batches[id] = nil
-            batch.continuation.resume(returning: batch.created)
+            batch.continuation.resume(returning: batch.result)
         } else {
             batches[id] = batch
         }
@@ -584,7 +604,7 @@ public actor ScreenshotWatcher {
         for job in dropped {
             pending.remove(job.file.url.path)
             unfinished[job.file.url.path] = nil
-            complete(job, created: false)
+            complete(job, created: false, failure: nil)
         }
     }
 
@@ -685,9 +705,19 @@ private struct RetryEntry: Sendable {
 }
 
 private struct Batch {
+    let total: Int
     var remaining: Int
-    var created: Int
-    let continuation: CheckedContinuation<Int, Never>
+    var created = 0
+    var failed = 0
+    var firstFailure: FlotsamError?
+    let continuation: CheckedContinuation<FlotsamResult<Int>, Never>
+
+    /// Every file failing to store is a failed run; any file that stored (or was already in the library) makes it a
+    /// run with a count.
+    var result: FlotsamResult<Int> {
+        if failed == total, let firstFailure { return .failure(firstFailure) }
+        return .success(created)
+    }
 }
 
 /// Remembers which files were imported (or can never be) so the same file is not imported twice by repeated events,

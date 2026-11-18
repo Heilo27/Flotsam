@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboarding: OnboardingWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Text fields get ⌘A ⌘C ⌘V ⌘X ⌘Z only through a main menu's key equivalents (FR-008-19).
+        NSApp.mainMenu = MainMenuBuilder.make()
         let container = AppContainer()
         self.container = container
         let onboarding = OnboardingWindowController(container: container)

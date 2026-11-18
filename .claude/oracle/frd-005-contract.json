@@ -987,7 +987,7 @@
       "requirement": "FR-005-14",
       "given": "Trigger ';sig'; a delay is injected before the re-check; user switches to Notes during it",
       "when": "user types ';sig' Space in TextEdit",
-      "then": "the item text is not inserted into Notes or TextEdit; TextEdit keeps ';sig' and the boundary key; TRG-OS-002 HUD",
+      "then": "the item text is not inserted into Notes or TextEdit; nothing is posted to either app (FR-005-15(c)): TextEdit keeps ';sig' and the swallowed boundary key is not re-posted; TRG-OS-002 HUD",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -1367,7 +1367,7 @@
       "requirement": "FR-005-22",
       "given": "Unpinned item with trigger ';old' older than the retention window",
       "when": "the retention sweep runs; user then clears the trigger and the sweep runs again",
-      "then": "after the first sweep the item remains; after the second it is gone",
+      "then": "after the first sweep the item remains; a sweep less than 24 h after the trigger is cleared keeps it (FR-007-10 grace); a sweep 24 h or more after the clear removes it",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true

@@ -608,7 +608,7 @@ struct FRD002PipelineSessionTests {
         _ = try await rig.database.setNote(note, for: id).get()
         let older = try rig.shot(born: rig.clock.now().addingTimeInterval(-7_200))
         // When: Import recent screenshots is run.
-        let created = await rig.watcher.importRecent()
+        let created = await rig.watcher.importRecentCount()
         // Then: only the older file created an item (count 1 -> 2); the tagged item is still single, tag and note intact.
         #expect(created == 1)
         let rows = try await rig.freshRows()
@@ -647,7 +647,7 @@ struct FRD002PipelineSessionTests {
         let old = try (0..<2).map { try rig.shot(born: rig.clock.now().addingTimeInterval(-7_200 - Double($0))) }
         for shot in old { expected[shot.name] = pipelineSnapshot(shot.url) }
         shots += old
-        #expect(await rig.watcher.importRecent() == 2)
+        #expect(await rig.watcher.importRecentCount() == 2)
         let rows = try await rig.freshRows()
         #expect(rows.count == 12)
         let removed = try await rig.database.delete(ids: rows.prefix(3).map(\.id)).get()
@@ -832,7 +832,7 @@ struct FRD002PipelineSessionTests {
         defer { rig.cleanUp() }
         #expect(try await rig.freshCount() == 0)
         // When: onboarding completes with the box left checked, which calls "Import recent screenshots".
-        let created = await rig.watcher.importRecent()
+        let created = await rig.watcher.importRecentCount()
         // Then: count +2, both files by identity, read through a fresh instance; the files are untouched.
         #expect(created == 2)
         let rows = try await rig.freshRows()

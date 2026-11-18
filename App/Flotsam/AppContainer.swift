@@ -40,10 +40,9 @@ final class AppContainer {
     private var unsubscribeScreenshots: (@Sendable () -> Void)?
     /// Retained for the life of the app (FRD-002).
     private(set) var screenshots: ScreenshotWatcher?
-    /// An "Import recent screenshots" click that arrived before the watcher was wired; runs once it is (FR-002-12).
-    private var importRequestedBeforeReady = false
-    /// The database failed to open, so the watcher never will exist.
-    private var screenshotsUnavailable = false
+    /// The "Import recent screenshots" entry: holds a click that arrives before the watcher is wired and reports a
+    /// database that failed to open (FR-002-12).
+    private let importRecent: ImportRecentCoordinator
     /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
     /// it; the bindings are applied once the Library exists (`startLibrary`).
     let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
@@ -82,6 +81,7 @@ final class AppContainer {
         let reporter = ErrorReporter(presenter: presenter)
         self.presenter = presenter
         self.reporter = reporter
+        importRecent = ImportRecentCoordinator(hud: { message in presenter.showHUD(message: message) })
         settings = SettingsStore(store: .standard) { _ in
             let error = FlotsamError(.setDat001, "A stored setting was invalid and was reset to its default")
             Task { await reporter.report(error, origin: .background) }
@@ -89,7 +89,7 @@ final class AppContainer {
         permissions = SystemPermissionProbe()
         loginItem = LoginItemController(service: SMLoginItemService())
         // FR-002-12 / FR-008-04: the action exists from construction, so a click before pickup is wired is never a no-op.
-        actions.importRecentScreenshots = { [weak self] in self?.importRecentScreenshots() }
+        actions.importRecentScreenshots = { [weak self] in self?.importRecent.request() }
         Task { await openDatabase() }
         startPermissionLogging()
     }
@@ -164,25 +164,8 @@ final class AppContainer {
             startScreenshots(database: opened)
         case .failure(let error):
             await reporter.report(error, origin: .background)
-            // No library means nothing can be imported: a click that was waiting gets the real count (0), same HUD.
-            screenshotsUnavailable = true
-            if importRequestedBeforeReady {
-                importRequestedBeforeReady = false
-                presenter.showHUD(message: ScreenshotImportHUD.message(count: 0))
-            }
-        }
-    }
-
-    /// FR-002-12: the one entry for "Import recent screenshots", for onboarding and Settings. Runs the watcher's import
-    /// and shows "Imported {n}"; before the watcher exists the request is held and runs when it is ready.
-    private func importRecentScreenshots() {
-        if let watcher = screenshots {
-            let presenter = presenter
-            Task { await watcher.importRecentAnnouncing { presenter.showHUD(message: $0) } }
-        } else if screenshotsUnavailable {
-            presenter.showHUD(message: ScreenshotImportHUD.message(count: 0))
-        } else {
-            importRequestedBeforeReady = true
+            // No library means nothing can be imported: a click that was waiting, and every later one, shows why.
+            importRecent.unavailable(error)
         }
     }
 
@@ -247,10 +230,7 @@ final class AppContainer {
                 Task { await watcher.didBecomeActive() }
             },
         ]
-        if importRequestedBeforeReady {
-            importRequestedBeforeReady = false
-            importRecentScreenshots()
-        }
+        importRecent.ready { hud in await watcher.importRecentAnnouncing(hud: hud) }
         Task { await watcher.start() }
     }
 
