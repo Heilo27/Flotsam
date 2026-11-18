@@ -253,7 +253,7 @@ import Testing
         let probe = Recording()
         _ = PermissionRow.current(probe: probe)
         _ = TriggerPermissionNotice.missing(triggersEnabled: true, probe: probe)
-        _ = PasteGate.outcome(probe: probe)
+        _ = PasteGate.isAllowed(probe: probe)
         #expect(probe.requested.isEmpty, "reading status never asks macOS for a permission")
     }
 

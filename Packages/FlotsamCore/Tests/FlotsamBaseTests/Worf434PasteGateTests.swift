@@ -23,15 +23,12 @@ struct Worf434PasteGateTests {
     private static let pane = "Accessibility is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security."
     private static let inputMonitoring = "Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security."
 
-    /// FR-003-17. given a probe that denies Accessibility, then the gate is copy-only with SET-PRM-001. Red if the gate
-    /// ignores the probe, or inverts the branch.
+    /// FR-003-17. given a probe that denies Accessibility, then the gate is closed (copy-only) and its error is
+    /// SET-PRM-001. Red if the gate ignores the probe, or inverts the branch.
     @Test("untrusted probe gives copy-only SET-PRM-001")
     func untrustedProbe() {
-        let outcome = PasteGate.outcome(probe: W434GateProbe(accessibility: false))
-        guard case .copyOnly(let error) = outcome else {
-            Issue.record("expected copyOnly, got \(outcome)")
-            return
-        }
+        #expect(!PasteGate.isAllowed(probe: W434GateProbe(accessibility: false)))
+        let error = PasteGate.copyOnlyError()
         #expect(error.code == .setPrm001)
         #expect(error.context.isEmpty)
     }
@@ -39,23 +36,15 @@ struct Worf434PasteGateTests {
     /// FR-003-15 inverse. given a trusted probe, then the gate is `.paste`. Red if the gate always copies.
     @Test("trusted probe gives paste")
     func trustedProbe() {
-        #expect(PasteGate.outcome(probe: W434GateProbe(accessibility: true)) == .paste)
+        #expect(PasteGate.isAllowed(probe: W434GateProbe(accessibility: true)))
     }
 
     /// Boundary: Input Monitoring is NOT the paste gate. given Accessibility granted and Input Monitoring denied, the
     /// gate still pastes. Red if the gate reads the wrong permission kind.
     @Test("negative: Input Monitoring denied does not block a paste")
     func inputMonitoringIsNotTheGate() {
-        #expect(PasteGate.outcome(probe: W434GateProbe(accessibility: true, inputMonitoring: false)) == .paste)
-        let denied = PasteGate.outcome(probe: W434GateProbe(accessibility: false, inputMonitoring: true))
-        #expect(denied != .paste)
-    }
-
-    /// The Bool and probe entry points agree for both inputs. Red if they ever drift (Rule 9).
-    @Test("Bool and probe entry points agree")
-    func entryPointsAgree() {
-        #expect(PasteGate.outcome(accessibilityGranted: true) == PasteGate.outcome(probe: W434GateProbe(accessibility: true)))
-        #expect(PasteGate.outcome(accessibilityGranted: false) == PasteGate.outcome(probe: W434GateProbe(accessibility: false)))
+        #expect(PasteGate.isAllowed(probe: W434GateProbe(accessibility: true, inputMonitoring: false)))
+        #expect(!PasteGate.isAllowed(probe: W434GateProbe(accessibility: false, inputMonitoring: true)))
     }
 
     /// FR-003-17 / OC-8119. given an item id, then the error carries it as context so the HUD and log can name the item;
