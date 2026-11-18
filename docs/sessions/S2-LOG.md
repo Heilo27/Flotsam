@@ -1745,3 +1745,36 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
   - `launchctl print gui/$UID | grep -i flotsam` is empty. Re-checked by S2 after the agent finished.
   - FlotsamWalk prefs domain and plist deleted. Scratch home deleted.
   - No sfltool left running. `sfltool dumpbtm` hung, so BTM was not checked directly.
+
+## 2026-11-18: Lane C, TASK-457 items 2 and 3 on `s2/task457` (base 5ad05df)
+
+Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
+
+| SHA | Change |
+|---|---|
+| a052762 | `ClipboardCapture.swift:118` now reads `MainActor.assumeIsolated { _ = self?.applyMode() }`. `applyMode()` returns a `Bool?` result, so behavior is unchanged. The other `assumeIsolated` sites give no warning and were left as they are. |
+| 36a7318 | TASK-229 gap. `PerfInterval.screenshotImport = "screenshot.import"` added to `Signposts.swift`, the one home for the interval names. It wraps `ScreenshotImporter.run` with a begin and a `defer` end, so every outcome is timed (skipped, unstable, rejected, failed). |
+
+**36a7318 also changes the FRDs in the same commit:**
+- FRD-000 FR-000-12 lists the 9th interval.
+- FRD-000 AC-000-07 now says "nine".
+- FRD-000 change log updated.
+- FRD-002 FR-002-14 names its signpost.
+
+**Test (36a7318):** `ScreenshotImportSignpostTests` reads the real signpost stream for 3 cases: an imported file, a vanished file and a symlink.
+- `SignpostProbe` was moved into a shared file and symlinked into the Screenshots tests, the repo's existing pattern for sharing test files.
+- The probe only counts intervals begun inside its own time window.
+- It now reads only the newly added log bytes. Re-parsing the whole log hung the target-wide run past 60 s.
+
+**Mutation:**
+- Remove the begin and the `defer`: the test fails on the begun count.
+- End the interval only on success: the test fails on begin/end pairing.
+- Both were restored afterwards.
+
+**Gates:**
+- arch: PASS.
+- `swift test`: 2881 tests (+1 vs 2880), 12 runs, 16 known issues (unchanged).
+- 1 failure in the full run: `OC-7098 Clear History … inside 5 s` (Unmapped007IngestTests). It is a timing flake under load and passes when run alone.
+- `bin/build.sh Debug`: 0 compiler warnings. The only "warning:" line is the AppIntents metadata note.
+
+**Found, not fixed:** the header comment in `FRD002AuditBTests.swift` still says signposts have no test seam. `SignpostProbe` now provides one.
