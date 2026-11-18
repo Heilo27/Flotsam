@@ -39,4 +39,26 @@ struct PostGuardTests {
     func bothWrong() {
         #expect(!PostGuard.allowsPost(to: Self.target, frontmost: Self.other, targetIsRunning: false))
     }
+
+    // Worf (TASK-444, blind). Red if the comparison narrows to the pid alone (a recycled pid under another bundle).
+    @Test("OC-444-W1 same pid, different bundle id is not the target: refuse")
+    func samePidDifferentBundle() {
+        let impostor = FrontmostApp(bundleId: "com.example.mail", processId: Self.target.processId)
+        #expect(!PostGuard.allowsPost(to: Self.target, frontmost: impostor, targetIsRunning: true))
+    }
+
+    // Red if a nil bundle id stops being comparable (target without a bundle id, same pid): boundary of the equality.
+    @Test("OC-444-W2 target without a bundle id, same process frontmost and running: post; terminated: refuse")
+    func nilBundleIdTarget() {
+        let bare = FrontmostApp(bundleId: nil, processId: 300)
+        #expect(PostGuard.allowsPost(to: bare, frontmost: FrontmostApp(bundleId: nil, processId: 300), targetIsRunning: true))
+        #expect(!PostGuard.allowsPost(to: bare, frontmost: FrontmostApp(bundleId: nil, processId: 300), targetIsRunning: false))
+        #expect(!PostGuard.allowsPost(to: bare, frontmost: FrontmostApp(bundleId: nil, processId: 301), targetIsRunning: true))
+    }
+
+    // Red if the guard answers true for nil frontmost when the target is also gone.
+    @Test("OC-444-W3 nothing frontmost and target not running: refuse")
+    func nilFrontmostAndNotRunning() {
+        #expect(!PostGuard.allowsPost(to: Self.target, frontmost: nil, targetIsRunning: false))
+    }
 }
