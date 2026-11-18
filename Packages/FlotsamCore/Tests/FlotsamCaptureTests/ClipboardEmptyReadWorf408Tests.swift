@@ -135,13 +135,13 @@ struct ClipboardEmptyReadWorf408Tests {
         try await rig.drain()
         // then below threshold: no permission notice, one data notice each
         #expect(rig.prm == 0)
-        #expect(rig.val == 2)
+        await expectSettled(rig.reporter, rig.val, 2)
         // when the third arrives
         rig.listedEmptyChange()
         try await rig.drain()
         // then CAP-PRM-001 once, and no third CAP-VAL-001 (the suspension replaces it)
-        #expect(rig.prm == 1)
-        #expect(rig.val == 2)
+        await expectSettled(rig.reporter, rig.prm, 1)
+        await expectSettled(rig.reporter, rig.val, 2)
         #expect(try await rig.texts() == [])
     }
 
@@ -157,7 +157,7 @@ struct ClipboardEmptyReadWorf408Tests {
         rig.emptyTypesChange()
         try await rig.drain()
         // then the three count together
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     @Test("OC-408-W3 mixed across changes, other order: listed-empty, empty-types, listed-empty suspends at three")
@@ -169,7 +169,7 @@ struct ClipboardEmptyReadWorf408Tests {
         #expect(rig.prm == 0)
         rig.listedEmptyChange()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     @Test("OC-408-W4 one change whose reads alternate between empty types and listed-empty is one empty change, not three")
@@ -186,7 +186,7 @@ struct ClipboardEmptyReadWorf408Tests {
         try await rig.drain()
         // then it counted once when its watch ended (1 types-empty read + 2 snapshot reads), one CAP-VAL-001
         #expect(rig.board.snapshotReads == 2)
-        #expect(rig.val == 1)
+        await expectSettled(rig.reporter, rig.val, 1)
         #expect(rig.prm == 0)
         // and two more empty changes (not one) are needed to suspend
         rig.listedEmptyChange()
@@ -194,7 +194,7 @@ struct ClipboardEmptyReadWorf408Tests {
         #expect(rig.prm == 0)
         rig.emptyTypesChange()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     @Test("OC-408-W5 boundary: a listed-empty change whose watch has not ended is not yet counted")
@@ -209,11 +209,11 @@ struct ClipboardEmptyReadWorf408Tests {
         try await rig.drain()
         // then no suspension, no more than two data notices
         #expect(rig.prm == 0)
-        #expect(rig.val == 2)
+        await expectSettled(rig.reporter, rig.val, 2)
         // when its watch ends
         rig.expire()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     // MARK: reset
@@ -242,7 +242,7 @@ struct ClipboardEmptyReadWorf408Tests {
         #expect(rig.prm == 0)
         rig.listedEmptyChange()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     @Test("OC-408-W8 a bytes-yielding change whose bytes arrive on the third read still resets the count")
@@ -271,14 +271,14 @@ struct ClipboardEmptyReadWorf408Tests {
         rig.start()
         for _ in 1...3 { rig.listedEmptyChange() }
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
         // when many more empty changes of both kinds arrive (each captureNow while suspended is a retry)
         for _ in 1...5 { rig.listedEmptyChange(); rig.emptyTypesChange() }
         rig.tick(20)
         try await rig.drain()
         // then still one notice, and no data notices either (suspended is not a stream of CAP-VAL-001)
-        #expect(rig.prm == 1)
-        #expect(rig.val == 2)
+        await expectSettled(rig.reporter, rig.prm, 1)
+        await expectSettled(rig.reporter, rig.val, 2)
     }
 
     // MARK: recovery
@@ -289,7 +289,7 @@ struct ClipboardEmptyReadWorf408Tests {
         rig.start()
         for _ in 1...3 { rig.listedEmptyChange() }
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
         // when access returns
         rig.readableChange("back")
         // then the copy is stored (capture resumed within one tick)
@@ -298,10 +298,10 @@ struct ClipboardEmptyReadWorf408Tests {
         // and two new empties do not suspend (the counter restarted), the third does (the latch was cleared)
         rig.listedEmptyChange(); rig.emptyTypesChange()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
         rig.listedEmptyChange()
         try await rig.drain()
-        #expect(rig.prm == 2)
+        await expectSettled(rig.reporter, rig.prm, 2)
     }
 
     @Test("OC-408-W11 suspended on listed-empty, a still-gated probe does not resume; first bytes do")
@@ -313,7 +313,7 @@ struct ClipboardEmptyReadWorf408Tests {
         rig.tick(30)
         try await rig.drain()
         // then nothing stored and still one notice
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
         // and when the bytes land on the same change, the retry picks them up
         rig.board.emptyBytes = false
         rig.tick()
@@ -337,7 +337,7 @@ struct ClipboardEmptyReadWorf408Tests {
         // then the end of its watch is what counts (and reads nothing more)
         rig.expire()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
         #expect(rig.board.snapshotReads == 2)
     }
 
@@ -349,7 +349,7 @@ struct ClipboardEmptyReadWorf408Tests {
         rig.listedEmptyChange()
         rig.emptyTypesChange()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     @Test("OC-408-W14 gates that read nothing (capture paused) leave the empty count untouched")
@@ -366,7 +366,7 @@ struct ClipboardEmptyReadWorf408Tests {
         // then the next empty change is the third and suspends
         rig.listedEmptyChange()
         try await rig.drain()
-        #expect(rig.prm == 1)
+        await expectSettled(rig.reporter, rig.prm, 1)
     }
 
     @Test("OC-408-W15 characterisation: listed types that a policy rejects are readable type data and reset the count")

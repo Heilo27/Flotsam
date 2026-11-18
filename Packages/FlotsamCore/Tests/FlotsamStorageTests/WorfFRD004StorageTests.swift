@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import SQLite3
 import Testing
 import FlotsamBase
 @testable import FlotsamStorage
@@ -404,36 +405,76 @@ private extension Store {
     private func p95(_ samples: [Double]) -> Double { samples.sorted()[Int((Double(samples.count) * 0.95).rounded(.up)) - 1] }
 
     // OC-4102, OC-4103. Red if an organise command scans the library per item, or tagging 500 loops with a read each.
-    @Test("OC-4102 given 10,000 items, when pin, tag and delete repeat, then p95 is under 100 ms and tagging 500 is under 1 s")
+    // The requirement is a latency (p95 under 100 ms; tagging 500 under 1 s), and a wall-clock gate on a debug build
+    // lost to scheduler stalls at full-suite load (TASK-447 best-of-three still failed at load 250; TASK-425). The
+    // causes the requirement guards against are work, so the gate counts SQLite VM steps, which do not depend on the
+    // machine: a command that scans the 10,000-row table per item costs thousands of steps per item, an indexed
+    // command a few dozen. Wall time is logged for the record and is not asserted.
+    @Test("OC-4102 given 10,000 items, when pin, tag and delete repeat, then each command's work stays indexed and tagging 500 stays bounded")
     func organisePerformance() async throws {
-        // Every run asserts the work done; only the timing is best-of-three (TASK-447: wall-clock figures of a debug
-        // build lost to scheduler stalls under a full-suite run). The bounds are unchanged: the metric is the worst
-        // figure as a fraction of its own bound, so < 1 means p95 < 100 ms for each command and the bulk < 1000 ms.
-        var figures = ""
-        let worstFraction = try await bestOfThree(under: 1.0) {
-            let store = try await Store.make()
-            defer { store.cleanUp() }
-            try await store.insert((1...10_000).map { Spec(n: $0, ageMs: Int64($0) * 1000) })
-            #expect(try store.count("item") == 10_000)
-            let tag = try await store.database.createTag(name: "perf").get()
-            let clock = ContinuousClock()
-            func millis(_ d: Duration) -> Double { Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15 }
+        let store = try await Store.make()
+        defer { store.cleanUp() }
+        try await store.insert((1...10_000).map { Spec(n: $0, ageMs: Int64($0) * 1000) })
+        #expect(try store.count("item") == 10_000)
+        let tag = try await store.database.createTag(name: "perf").get()
+        let meter = VMStepMeter()
+        try await meter.attach(to: store.database.pool)
 
-            var pin: [Double] = [], toggle: [Double] = [], delete: [Double] = []
-            for n in 1...20 {
-                pin.append(millis(await clock.measure { _ = await store.database.togglePinned(ids: [Store.id(n * 10)]) }))
-                toggle.append(millis(await clock.measure { _ = await store.database.toggleTag(id: tag, on: [Store.id(n * 10 + 1)]) }))
-                delete.append(millis(await clock.measure { _ = await store.database.delete(ids: [Store.id(n * 10 + 2)]) }))
-            }
-            let bulk = millis(await clock.measure { _ = await store.database.toggleTag(id: tag, on: (5_001...5_500).map(Store.id)) })
-
-            // the work happened (a test of a no-op would pass any time budget)
-            #expect(try store.scalar("SELECT COUNT(*) FROM item WHERE pinned = 1") == 20)
-            #expect(try store.count("item") == 9_980)
-            #expect(try store.scalar("SELECT COUNT(*) FROM itemTag") == 520)
-            figures = "p95 pin \(p95(pin)) toggle \(p95(toggle)) delete \(p95(delete)) ms, bulk \(bulk) ms"
-            return max(p95(pin) / 100, p95(toggle) / 100, p95(delete) / 100, bulk / 1000)
+        // Ids spread over the whole table (the bulk takes its last 500), so a command that scans for its item pays for
+        // the rows it passes, not a lucky early hit.
+        var pin: [Int] = [], toggle: [Int] = [], delete: [Int] = []
+        for n in 1...20 {
+            pin.append(await meter.steps { _ = await store.database.togglePinned(ids: [Store.id(n * 450)]) })
+            toggle.append(await meter.steps { _ = await store.database.toggleTag(id: tag, on: [Store.id(n * 450 + 1)]) })
+            delete.append(await meter.steps { _ = await store.database.delete(ids: [Store.id(n * 450 + 2)]) })
         }
-        #expect(worstFraction < 1, "over budget on all 3 runs; last run: \(figures)")
+        let bulk = await meter.steps { _ = await store.database.toggleTag(id: tag, on: (9_501...10_000).map(Store.id)) }
+
+        // the work happened (a test of a no-op would pass any step budget)
+        #expect(try store.scalar("SELECT COUNT(*) FROM item WHERE pinned = 1") == 20)
+        #expect(try store.count("item") == 9_980)
+        #expect(try store.scalar("SELECT COUNT(*) FROM itemTag") == 520)
+        let figures = "p95 steps pin \(p95(pin.map(Double.init))) toggle \(p95(toggle.map(Double.init))) delete \(p95(delete.map(Double.init))), bulk \(bulk)"
+        print("OC-4102 \(figures)")
+        #expect(p95(pin.map(Double.init)) < Double(Self.stepsPerCommand), "pin \(figures)")
+        #expect(p95(toggle.map(Double.init)) < Double(Self.stepsPerCommand), "toggle \(figures)")
+        #expect(p95(delete.map(Double.init)) < Double(Self.stepsPerCommand), "delete \(figures)")
+        #expect(bulk < Self.stepsForBulk, "bulk \(figures)")
+    }
+
+    /// Measured on the indexed code: one command about 100 to 300 instructions, 500 tagged items about 125,000. The
+    /// bounds sit about eight times above that and well below what a per-item scan of the 10,000-row table costs (pin
+    /// 34,000, toggle 69,000, bulk 39 million, checked by mutation in TASK-425), so a plan change is caught and nothing else is.
+    static let stepsPerCommand = 2_000
+    static let stepsForBulk = 1_000_000
+}
+
+/// Counts the SQLite virtual-machine instructions the writer connection spends, so a test can bound how much work a
+/// command does without a wall clock (a wall-clock bound flakes under full-suite load, TASK-425). Instructions are a
+/// property of the statement and the data, not of the machine: an indexed lookup costs a few dozen, a scan of 10,000
+/// rows tens of thousands. SQLite calls the progress handler every `granularity` instructions.
+private final class VMStepMeter: @unchecked Sendable {
+    static let granularity: Int32 = 10
+    private let ticks = UnsafeMutablePointer<Int>.allocate(capacity: 1)
+
+    init() { ticks.initialize(to: 0) }
+    deinit { ticks.deallocate() }
+
+    /// Counts the writer's instructions from now on (the organise and delete commands write).
+    func attach(to pool: DatabasePool) async throws {
+        nonisolated(unsafe) let counter = ticks
+        try await pool.writeWithoutTransaction { db in
+            sqlite3_progress_handler(db.sqliteConnection, Self.granularity, { context in
+                context!.assumingMemoryBound(to: Int.self).pointee += 1
+                return 0
+            }, counter)
+        }
+    }
+
+    /// Instructions spent by the statements `body` runs, to within one `granularity` per statement.
+    func steps(_ body: () async -> Void) async -> Int {
+        let before = ticks.pointee
+        await body()
+        return (ticks.pointee - before) * Int(Self.granularity)
     }
 }

@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import GRDB
 import ImageIO
+import Testing
 import FlotsamBase
 import FlotsamPayload
 @testable import FlotsamStorage
@@ -429,6 +430,25 @@ func quiesceReporter(_ reporter: ErrorReporter) async {
         _ = await reporter.recentErrors()
     }
     await Task.yield()
+}
+
+/// Asserts a PRESENT count (`n` >= 1) of something a fire-and-forget reporter task writes. `quiesceReporter` alone is a
+/// bounded number of yields, which a starved main actor can outrun (TASK-425: a count asserted straight after it read
+/// 0 under a full-suite run). This waits for the count to REACH `n` (a 60 s hang guard, never a delay: it returns the
+/// moment the count is there), quiesces again so a surplus raise would land, then asserts the exact count. A count
+/// that never arrives fails after the guard; a surplus still fails the exact check.
+@MainActor
+func expectSettled(
+    _ reporter: ErrorReporter, _ count: @autoclosure () -> Int, _ n: Int, _ message: String = "",
+    sourceLocation: SourceLocation = #_sourceLocation
+) async {
+    let deadline = Date().addingTimeInterval(60)
+    while count() < n, Date() < deadline {
+        await quiesceReporter(reporter)
+        if count() < n { try? await Task.sleep(for: .milliseconds(5)) }
+    }
+    await quiesceReporter(reporter)
+    #expect(count() == n, Comment(rawValue: message), sourceLocation: sourceLocation)
 }
 
 /// A timer scheduler that never fires: a test that drives `captureNow()` by hand uses it so a real 0.5 s tick cannot
