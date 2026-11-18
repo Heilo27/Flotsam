@@ -4,8 +4,8 @@ import FlotsamBase
 @testable import FlotsamStorage
 @testable import FlotsamCapture
 
-/// TASK-381: the capture timer is the one clock that drives `PollTick` (ADR-0004). These use the real timer, because
-/// the claim under test is that the timer, not a test, fires the tick.
+/// TASK-381: the capture timer is the one clock that drives `PollTick` (ADR-0004). OC-381-20 and -22 use the real timer, because
+/// the claim under test is that the timer, not a test, fires the tick; OC-381-21 uses the timer seam (ADR-0011).
 @MainActor
 @Suite(.serialized, .timeLimit(.minutes(2)))
 struct Worf381PollTickTimerTests {
@@ -42,12 +42,15 @@ struct Worf381PollTickTimerTests {
         #expect(await rig.itemCount() == 0, "Paused saved nothing")
     }
 
-    /// OC-381-21. given a started capture, when start() is called a second time, then the tick rate does not double
-    /// (a second timer would double the watchdog and re-resolve rate). 1.7 s of real time: at most 4 firings.
+    /// OC-381-21. given a started capture, when start() is called a second time, then no second tick source is
+    /// created (a second timer would double the watchdog and re-resolve rate). Runs on the timer seam (ADR-0011): the
+    /// test counts the sources `ClipboardCapture` schedules and fires them by hand, so no real time passes. Red if a
+    /// second start() schedules (or reschedules) a source: the created count and the live count both catch it.
     @Test("OC-381-21 a second start() adds no second tick source")
     func secondStartDoesNotDoubleTheTick() async throws {
         let tick = PollTick()
-        let rig = try await GapRig(pollTick: tick)
+        let timers = FakeTimers()
+        let rig = try await GapRig(pollTick: tick, scheduleTimer: timers.schedule)
         defer { Task { await rig.cleanUp() } }
         let ran = Count()
         let cancel = tick.every(0.5) { ran.bump() }
@@ -55,11 +58,22 @@ struct Worf381PollTickTimerTests {
 
         rig.capture.start()
         rig.capture.start()
-        try await Task.sleep(for: .milliseconds(1700))
-        let fired = ran.value
-        await rig.settle()
+        // Let the cadence-observer hop (a main-actor Task) land, so a late reschedule would show up as a source.
+        await Task.yield()
+        await Task.yield()
 
-        #expect(fired >= 2 && fired <= 4, "ticks in 1.7 s: \(fired)")
+        #expect(timers.created.count == 1, "sources created: \(timers.created.count)")
+        #expect(timers.live.count == 1, "sources live: \(timers.live.count)")
+        #expect(timers.created.first?.interval == PollTick.interval)
+        #expect(timers.created.first?.tolerance == PollTick.tolerance)
+
+        guard let source = timers.created.first else { return }
+        #expect(ran.value == 0, "control: nothing ran before the source fired")
+        source.fire()
+        #expect(ran.value == 1, "one fire is one tick")
+        source.fire()
+        source.fire()
+        #expect(ran.value == 3, "ticks after 3 fires: \(ran.value)")
     }
 
     /// OC-381-22. given a stopped capture, then the tick stops firing, which is why AppContainer must never stop
@@ -82,5 +96,35 @@ struct Worf381PollTickTimerTests {
 
         #expect(atStop >= 1, "control: it fired while running")
         #expect(ran.value == atStop)
+    }
+}
+
+/// The ADR-0011 timer seam as a test double: records every source `ClipboardCapture` schedules, and lets the test fire
+/// a source by hand. Nothing here waits on a run loop.
+@MainActor
+final class FakeTimers {
+    final class Source {
+        let interval: TimeInterval
+        let tolerance: TimeInterval
+        fileprivate(set) var isCancelled = false
+        private let body: @MainActor () -> Void
+        init(interval: TimeInterval, tolerance: TimeInterval, body: @escaping @MainActor () -> Void) {
+            self.interval = interval
+            self.tolerance = tolerance
+            self.body = body
+        }
+        /// One firing of the source, as the run loop would deliver it. A cancelled source never fires.
+        @MainActor func fire() { if !isCancelled { body() } }
+    }
+
+    private(set) var created: [Source] = []
+    var live: [Source] { created.filter { !$0.isCancelled } }
+
+    var schedule: ClipboardCapture.TimerScheduler {
+        { [self] interval, tolerance, fire in
+            let source = Source(interval: interval, tolerance: tolerance, body: fire)
+            created.append(source)
+            return { source.isCancelled = true }
+        }
     }
 }
