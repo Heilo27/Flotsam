@@ -21,30 +21,34 @@ struct GapPollingTests {
         #expect(ClipboardCapture.pollTolerance == 0.1)
     }
 
-    /// OC-115-02 OC-116-01. given a started capture on an idle board for 2.3 s, when ticks are timed, then they are
-    /// on average at least 0.45 s apart, under 1.0 s apart, and the total
-    /// wake-up rate is at most 2.5/s. Turns red if the interval is shortened (0.1 s gives ~23 reads) or stretched.
-    @Test("OC-115-02 OC-116-01 the real timer ticks about every 0.5 s, at most 2.5 wake-ups per second")
+    /// OC-115-02 OC-116-01. given a started capture on an idle board, when the scheduled source is fired by hand 5
+    /// times (what 2.3 s of 0.5 s ticks delivers), then the source was scheduled at the contract's 0.5 s interval
+    /// and 0.1 s tolerance, one tick reads `changeCount` exactly once, and the implied wake-up rate (1 / interval)
+    /// is at most 2.5/s. Turns red if the interval is shortened (0.1 s is 10 wake-ups/s) or stretched past 1.0 s.
+    /// Runs on the timer seam (ADR-0011) instead of measuring real gaps: a real-time mean-gap bound is a statement
+    /// about the machine's load, not about the product, and flaked under a full-suite run (TASK-447).
+    @Test("OC-115-02 OC-116-01 the timer is scheduled every 0.5 s, at most 2.5 wake-ups per second")
     func realTickRate() async throws {
-        let rig = try await GapRig()
+        let timers = FakeTimers()
+        let rig = try await GapRig(scheduleTimer: timers.schedule)
         defer { Task { await rig.cleanUp() } }
         rig.capture.start()
-        let started = Date()
-        try await Task.sleep(for: .milliseconds(2300))
-        let window = Date().timeIntervalSince(started)
-        let times = rig.pasteboard.changeCountReadTimes
-        let reads = rig.pasteboard.changeCountReads
+        await Task.yield()
+        await Task.yield()
+
+        let source = try #require(timers.live.first, "start() must schedule a source")
+        #expect(timers.live.count == 1, "sources live: \(timers.live.count)")
+        #expect(source.interval == ClipboardCapture.pollInterval, "interval \(source.interval)")
+        #expect(source.tolerance == ClipboardCapture.pollTolerance, "tolerance \(source.tolerance)")
+        #expect(source.interval >= 0.45 && source.interval <= 1.0, "interval \(source.interval)")
+        #expect(1 / source.interval <= 2.5, "wake-ups/s: \(1 / source.interval)")
+
+        let readsBefore = rig.pasteboard.changeCountReads
+        for _ in 0..<5 { source.fire() }
+        let readsPerFire = Double(rig.pasteboard.changeCountReads - readsBefore) / 5
         await rig.settle()
 
-        let gaps = zip(times.dropFirst(), times).map { $0.timeIntervalSince($1) }.dropFirst()  // drop the launch check's gap
-        #expect(reads >= 4 && reads <= 6, "reads in 2.3 s: \(reads)")
-        #expect(Double(reads) / window <= 2.5, "wake-ups/s: \(Double(reads) / window)")
-        // Mean spacing, not the fastest gap: a tick delayed by load followed by an on-schedule tick
-        // legitimately yields a short gap, so a min-gap bound flakes under a full-suite run.
-        let span = times.count >= 3 ? times.last!.timeIntervalSince(times[1]) : 0
-        let meanGap = times.count >= 3 ? span / Double(times.count - 2) : 0
-        #expect(meanGap >= 0.45, "mean gap \(meanGap)")
-        #expect((gaps.max() ?? 99) <= 1.0, "slowest gap \(gaps.max() ?? 99)")
+        #expect(readsPerFire == 1, "changeCount reads per tick: \(readsPerFire)")
     }
 
     /// OC-116-02. given 2.3 s of ticks with nothing copied, then no tick reads pasteboard bytes. Turns red if an

@@ -66,6 +66,7 @@ private struct Rig408 {
     let sink: Sink408
     let capture: ClipboardCapture
     let settings: SettingsStore
+    let reporter: ErrorReporter
 
     static func make(ignored: Set<String> = []) async throws -> Rig408 {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-worf408-\(UUID().uuidString)")
@@ -73,11 +74,13 @@ private struct Rig408 {
         let settings = SettingsStore(store: KV408())
         let board = Board408()
         let sink = Sink408()
+        let reporter = ErrorReporter(presenter: Presenter408(), sink: sink)
+        // Inert timer: the test ticks by hand, and a real 0.5 s tick would add a read of its own.
         let capture = ClipboardCapture(
             pasteboard: board, sourceApps: App408(), ownWrites: OwnWriteLedger(),
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: Presenter408(), sink: sink), ignoredApps: { ignored }, sink: sink)
-        return Rig408(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings)
+            reporter: reporter, ignoredApps: { ignored }, sink: sink, scheduleTimer: inertTimer)
+        return Rig408(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, reporter: reporter)
     }
 
     func tick(_ times: Int = 1) { for _ in 0..<times { capture.captureNow() } }
@@ -96,7 +99,8 @@ private struct Rig408 {
         await capture.stop()
         return try await database.pool.read { try String.fetchAll($0, sql: "SELECT plainText FROM item ORDER BY plainText") }
     }
-    func drain() async throws { try await Task.sleep(nanoseconds: 300_000_000) }
+    /// Reports are raised from unstructured tasks: wait for them to reach the sink without a wall-clock sleep.
+    func drain() async throws { await quiesceReporter(reporter) }
     func cleanUp() { try? FileManager.default.removeItem(at: folder) }
 }
 

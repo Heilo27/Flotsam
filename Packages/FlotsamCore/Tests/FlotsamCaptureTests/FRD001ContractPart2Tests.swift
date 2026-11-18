@@ -793,21 +793,27 @@ struct FRD001RobustnessContractTests {
 
     @Test("OC-1091 / OC-1099: a failing read creates nothing, logs CAP-OS-001 and shows its Notice; the next copy is stored")
     func oc1091() async throws {
-        try await withRig { rig in
+        // Runs on the timer seam (ADR-0011): the one scheduled source is fired by hand, so no real 0.5 s tick (and no
+        // sleep) decides the outcome (TASK-447: the real-timer waits lost the race under full-suite load).
+        let timers = FakeTimers()
+        try await withRig(scheduleTimer: timers.schedule) { rig in
+            let source = try #require(timers.live.first, "capture schedules its poll source")
             rig.pasteboard.failingTypes = [PB.text]
             rig.pasteboard.copyText(uid("unreadable"))
             // No rig.process(): that stops and restarts the timer, which would hide a failure path that kills it. The
-            // real timer must hit the failure and then keep running on its own.
+            // scheduled source must hit the failure and then still be the live, unchanged source.
+            source.fire()
             #expect(await rig.until { !noticeMessages(rig, code: .capOs001).isEmpty })
             try #expect(await rig.itemCount() == 0)
             #expect(noticeMessages(rig, code: .capOs001) == ["Flotsam couldn't read the clipboard just now. It will keep trying."])
             #expect(rig.sink.logged(.capOs001).map(\.level) == [.default])
 
             rig.pasteboard.failingTypes = []
-            try await Task.sleep(for: .milliseconds(300))
+            #expect(timers.live.count == 1 && timers.live.first === source, "the failure path left the timer running")
             let y = uid("Y")
             rig.pasteboard.copyText(y)
-            #expect(await rig.until(seconds: 2) { try await rig.item(withText: y).count == 1 }, "the timer kept running")
+            source.fire()
+            #expect(await rig.until(seconds: 10) { try await rig.item(withText: y).count == 1 }, "the timer kept running")
             try #expect(await rig.itemCount() == 1)
         }
     }

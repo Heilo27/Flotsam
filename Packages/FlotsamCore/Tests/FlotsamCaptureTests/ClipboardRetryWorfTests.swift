@@ -79,6 +79,7 @@ private struct Rig {
     let capture: ClipboardCapture
     let settings: SettingsStore
     let ownWrites: OwnWriteLedger
+    let reporter: ErrorReporter
 
     static func make(ignored: Set<String> = []) async throws -> Rig {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-worf401-\(UUID().uuidString)")
@@ -87,11 +88,14 @@ private struct Rig {
         let board = ScriptedBoard()
         let sink = Sink()
         let ownWrites = OwnWriteLedger()
+        let reporter = ErrorReporter(presenter: Presenter(), sink: sink)
+        // Inert timer: the test ticks by hand, and a real 0.5 s tick during a wait would add a read of its own
+        // (OC-401-W10 counts reads: a tick between "read twice" and the assertion tips the suspension early).
         let capture = ClipboardCapture(
             pasteboard: board, sourceApps: Writer(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: Presenter(), sink: sink), ignoredApps: { ignored }, sink: sink)
-        return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites)
+            reporter: reporter, ignoredApps: { ignored }, sink: sink, scheduleTimer: inertTimer)
+        return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites, reporter: reporter)
     }
 
     /// Ticks the poll once.
@@ -107,7 +111,7 @@ private struct Rig {
     }
 
     /// Reports are raised from unstructured tasks; give them time to reach the sink.
-    func drain() async throws { try await Task.sleep(nanoseconds: 300_000_000) }
+    func drain() async throws { await quiesceReporter(reporter) }
 
     func cleanUp() { try? FileManager.default.removeItem(at: folder) }
 }
