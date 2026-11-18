@@ -521,9 +521,9 @@ private func failureCode(_ result: ShelfDropResult) -> ErrorCode? {
         await rig.dropText("held", at: 2)
         #expect(rig.completed.count == 2, "a bump is also a completed drop")
 
-        await rig.service.drop(
+        _ = await rig.service.drop(
             types: ["com.adobe.pdf"], representations: [], source: nil, originatesInShelf: false, occurredAt: Date())
-        await rig.service.drop(
+        _ = await rig.service.drop(
             types: Rig.textTypes, representations: [Rig.text("x")], source: nil, originatesInShelf: true, occurredAt: Date())
         #expect(rig.completed.count == 2)
     }
@@ -533,7 +533,7 @@ private func failureCode(_ result: ShelfDropResult) -> ErrorCode? {
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         await rig.dropText("fine")
-        await rig.service.drop(
+        _ = await rig.service.drop(
             types: ["com.adobe.pdf"], representations: [], source: nil, originatesInShelf: false, occurredAt: Date())
 
         #expect(rig.dropLines.map(\.publicContext) == ["outcome=droppedIn", "code=SHF-VAL-001 outcome=failed"])

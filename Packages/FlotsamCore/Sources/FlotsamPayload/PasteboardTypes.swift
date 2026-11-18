@@ -16,7 +16,8 @@ public enum PasteboardTypes {
     public static let fileURL = PasteboardUTI.fileURL
     public static let url = "public.url"
 
-    private static let honoured: Set<String> = [plainText, rtf, html, png, tiff, jpeg, fileURL, url]
+    /// The types worth reading (FR-001-05); the Shelf registers its drop zone for exactly these (FR-006-12).
+    public static let honoured: Set<String> = [plainText, rtf, html, png, tiff, jpeg, fileURL, url]
 
     /// FR-001-04 gate 5: does the pasteboard offer anything worth reading?
     public static func hasHonoured(in types: [String]) -> Bool {

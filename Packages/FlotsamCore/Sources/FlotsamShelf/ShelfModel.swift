@@ -41,6 +41,11 @@ public final class ShelfModel {
     /// A sticky Shelf may become key and takes keys; a transient one does not (FR-006-08).
     public private(set) var isSticky = false
     public private(set) var isOpen = false
+    /// A drag that the Shelf would accept is over the panel: the drop zone is highlighted (FR-006-12).
+    public private(set) var isDropTargeted = false
+    /// The card a successful drop stored or bumped, highlighted for `ShelfLayout.dropHighlightDuration` and scrolled
+    /// into view (FR-006-15). Set by `highlight(_:)`; cleared by `clearHighlight(of:)`.
+    public private(set) var highlightedItemId: UUID?
 
     // MARK: Collaborators
 
@@ -137,6 +142,8 @@ public final class ShelfModel {
     /// in-flight loads. Idempotent, so the platform may call it as well as `hide()`.
     public func didHide() {
         isOpen = false
+        isDropTargeted = false
+        highlightedItemId = nil
         unsubscribe?()
         unsubscribe = nil
         loadTask?.cancel()
@@ -321,6 +328,17 @@ public final class ShelfModel {
             let rows = covered(by: id)
             actionTask = Task { await delete(rows) }
         }
+    }
+
+    public func setDropTargeted(_ targeted: Bool) {
+        if isDropTargeted != targeted { isDropTargeted = targeted }
+    }
+
+    public func highlight(_ id: UUID) { highlightedItemId = id }
+
+    /// Clears the highlight only when it is still `id`, so a second drop within the 600 ms keeps its own.
+    public func clearHighlight(of id: UUID) {
+        if highlightedItemId == id { highlightedItemId = nil }
     }
 
     /// The cards an action on card `id` covers, in on-screen order: the whole selection when the card is in it, else
