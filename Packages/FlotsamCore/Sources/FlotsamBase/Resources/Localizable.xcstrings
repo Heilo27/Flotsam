@@ -681,6 +681,16 @@
         }
       }
     },
+    "ui.library.footerEnable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable"
+          }
+        }
+      }
+    },
     "ui.library.footerItems" : {
       "localizations" : {
         "en" : {

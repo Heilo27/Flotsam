@@ -123,11 +123,14 @@ public struct LibraryFooter: Equatable {
     public let countText: String
     /// "Press ⌘V to paste" when Accessibility is off; "Select one item to paste" while several rows are selected.
     public let notice: String?
+    /// The "Enable" button's label while Accessibility is off (FR-008-14); nil when pasting works.
+    public let enableLabel: String?
     /// The active sort's name, shown beside the count (FR-004-12).
     public let sortName: String
 
     public init(totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool, sort: LibrarySort) {
         sortName = LibraryText.sortName(sort)
+        enableLabel = isAccessibilityTrusted ? nil : LibraryText.string("ui.library.footerEnable")
         let multi = selectionCount >= 2
         if multi {
             hints = [Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClearSelection"))]
