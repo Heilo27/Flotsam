@@ -13,7 +13,17 @@ extension SettingValue where Self: RawRepresentable, RawValue == String {
 }
 
 extension Bool: SettingValue {
-    public init?(persisted: String) { self.init(persisted) }
+    /// The one home of how a stored boolean reads (FR-008-02). We write "true"/"false", but `UserDefaults` also hands
+    /// back its own native boolean spellings as strings: `defaults write -bool` and `.set(true)` read as "1"/"0", and a
+    /// `-key NO` launch argument as "YES"/"NO". Those are a valid boolean, not corrupt data, so they must not raise
+    /// SET-DAT-001 (TASK-454). Exactly those spellings: anything else ("maybe", "2", "yes", "TRUE ", "") is invalid.
+    public init?(persisted: String) {
+        switch persisted {
+        case "true", "YES", "1": self = true
+        case "false", "NO", "0": self = false
+        default: return nil
+        }
+    }
     public var persisted: String { description }
 }
 
