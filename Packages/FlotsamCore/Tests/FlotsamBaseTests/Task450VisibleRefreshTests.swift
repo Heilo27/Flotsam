@@ -126,3 +126,34 @@ private final class StatusProbe {
         refresher.setVisible(false)
     }
 }
+
+// TASK-450 re-work: the window-event -> visible rule, as a pure function (the App modifier only feeds it).
+@Suite struct Task450VisibilityRuleTests {
+    @Test func appearedInAVisibleWindowIsVisible() {
+        #expect(VisibleRefresh.isVisible(onScreen: true, windowIsVisible: true))
+    }
+
+    @Test func closedMinimisedOrCoveredWindowIsNotVisible() {
+        // a closed, a minimised and a fully covered window all report an occlusion state without .visible
+        #expect(!VisibleRefresh.isVisible(onScreen: true, windowIsVisible: false))
+    }
+
+    @Test func noWindowIsNotVisible() {
+        #expect(!VisibleRefresh.isVisible(onScreen: true, windowIsVisible: nil))
+    }
+
+    @Test func disappearedPaneIsNotVisibleEvenInAVisibleWindow() {
+        #expect(!VisibleRefresh.isVisible(onScreen: false, windowIsVisible: true))
+    }
+
+    @Test func offScreenAndNoWindowIsNotVisible() {
+        #expect(!VisibleRefresh.isVisible(onScreen: false, windowIsVisible: nil))
+        #expect(!VisibleRefresh.isVisible(onScreen: false, windowIsVisible: false))
+    }
+
+    // appear -> close -> reopen -> pane switch away, as the sequence of (onScreen, windowIsVisible) the modifier sees
+    @Test func eventSequenceFollowsTheWindow() {
+        let events: [(Bool, Bool?)] = [(true, nil), (true, true), (true, false), (true, true), (false, true)]
+        #expect(events.map { VisibleRefresh.isVisible(onScreen: $0.0, windowIsVisible: $0.1) } == [false, true, false, true, false])
+    }
+}

@@ -20,8 +20,21 @@ public final class VisibleRefresh {
         self.refresh = refresh
     }
 
+    /// The window-event rule (FR-008-13 b): the view's status is read only while it is on screen (`onScreen`: appeared
+    /// and not disappeared, i.e. its pane is selected) AND its host window is visible (`windowIsVisible`: the window's
+    /// occlusion state includes visible; nil when the view has no window). A closed, minimised or covered window is not
+    /// visible, so none of them runs the loop. The App's window observer calls this on every event and feeds the result
+    /// to `setVisible`.
+    public nonisolated static func isVisible(onScreen: Bool, windowIsVisible: Bool?) -> Bool {
+        onScreen && windowIsVisible == true
+    }
+
     /// Whether a refresh loop is currently scheduled.
     public var isRefreshing: Bool { task != nil }
+
+    /// An owner that is dropped while visible stops the loop at once (the loop holds the owner weakly too, so a read
+    /// can never outlive it).
+    deinit { task?.cancel() }
 
     /// Starts the loop on becoming visible (a no-op when already visible) and cancels it on becoming hidden.
     public func setVisible(_ visible: Bool) {
@@ -32,10 +45,11 @@ public final class VisibleRefresh {
         }
         guard task == nil else { return }
         let clock = clock
-        let refresh = refresh
-        task = Task { @MainActor in
+        task = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                refresh()
+                guard let self else { return }
+                self.refresh()
+                // Hold the owner only for the read, never across the sleep.
                 await clock.sleep(for: Self.interval)
             }
         }

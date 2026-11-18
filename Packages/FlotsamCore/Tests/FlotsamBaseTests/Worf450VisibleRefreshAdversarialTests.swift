@@ -267,8 +267,7 @@ private final class Reads {
 
     // OC-450-11. Given a VisibleRefresh dropped while still visible (a window deallocated without a hide signal).
     // When its pending sleep ends. Then the loop must not keep reading for the app's lifetime (leaked task).
-    // Known gap: VisibleRefresh has no deinit cancel and the Task retains the refresh closure, so it keeps reading.
-    // Reported as a Minor in the QA verdict; flips to a failure (remove withKnownIssue) once the gap is closed.
+    // Closed in TASK-450 re-work: deinit cancels the loop and the loop holds the owner weakly.
     @Test func droppedWhileVisibleDoesNotLeakALoop() async {
         let clock = HoldClock(), reads = Reads()
         var refresher: VisibleRefresh? = VisibleRefresh(clock: clock) { reads.read() }
@@ -279,9 +278,7 @@ private final class Reads {
         clock.release()
         await drain()
 
-        withKnownIssue("VisibleRefresh does not cancel on deinit: the orphaned loop keeps reading") {
-            #expect(reads.count == 1, "an owner that is gone must stop the loop")
-        }
+        #expect(reads.count == 1, "an owner that is gone must stop the loop")
         withExtendedLifetime(clock) {}
     }
 }

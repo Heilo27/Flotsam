@@ -37,7 +37,8 @@ private struct RefreshWhileVisible: ViewModifier {
     }
 
     private func sync() {
-        refresher.setVisible(onScreen && window?.occlusionState.contains(.visible) == true)
+        refresher.setVisible(VisibleRefresh.isVisible(
+            onScreen: onScreen, windowIsVisible: window.map { $0.occlusionState.contains(.visible) }))
     }
 }
 

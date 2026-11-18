@@ -23,15 +23,7 @@ struct OnboardingView: View {
         }
         .padding(24)
         .frame(width: 480, height: 380)
-        .task {
-            while !Task.isCancelled {
-                model.refresh()
-                try? await Task.sleep(for: .seconds(2))
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            model.refresh()
-        }
+        .refreshWhileVisible { model.refresh() }
     }
 
     // MARK: Step content
