@@ -2,18 +2,12 @@ import AppKit
 import FlotsamBase
 
 /// The "Paste from Other Apps" state, for onboarding guidance only (FR-008-13: never requested programmatically).
-/// Reading `accessBehavior` does not trigger the system alert.
+/// Reading `accessBehavior` does not trigger the system alert. Every supported macOS (26+) gates pasteboard reads
+/// (FRD-001 FR-001-18), so there is no ungated case.
 enum PasteboardAccess {
-    /// Whether this macOS gates programmatic pasteboard reads (15.4 and later, FRD-001 FR-001-18).
-    static var isGated: Bool {
-        if #available(macOS 15.4, *) { return true }
-        return false
-    }
-
     /// True only when the system reports "Allow". `.default` and `.ask` both mean a read may prompt or be refused.
     static var isAllowed: Bool {
-        if #available(macOS 15.4, *) { return NSPasteboard.general.accessBehavior == .alwaysAllow }
-        return true
+        NSPasteboard.general.accessBehavior == .alwaysAllow
     }
 
     static func openSystemSettings() {

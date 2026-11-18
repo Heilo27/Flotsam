@@ -15,7 +15,7 @@ Free, open-source clipboard and screenshot history for macOS. Local-first: nothi
 ## What it is not
 No sync, no accounts, no telemetry, no license keys. See [`docs/TRUTHS.md`](docs/TRUTHS.md).
 
-Requires macOS 14+. MIT licensed.
+Requires macOS 26+. MIT licensed.
 
 ## Download and install
 Get `Flotsam-<version>.dmg` from [GitHub Releases](https://github.com/Heilo27/Flotsam/releases), open it, drag Flotsam to Applications, launch it. Check the download with `shasum -a 256 -c Flotsam-<version>.dmg.sha256`. Updates are a new DMG; Flotsam never phones home.

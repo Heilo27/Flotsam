@@ -36,9 +36,7 @@ private struct PasteboardAccessRow: View {
         LabeledContent {
             HStack {
                 Text(isAllowed ? .permissionGranted : .permissionNotGranted)
-                if PasteboardAccess.isGated {
-                    Button { PasteboardAccess.openSystemSettings() } label: { Text(.openSystemSettings) }
-                }
+                Button { PasteboardAccess.openSystemSettings() } label: { Text(.openSystemSettings) }
             }
         } label: {
             VStack(alignment: .leading) {

@@ -146,7 +146,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 | HUD | transient label | screen top-centre | FRD-000 FR-000-08 |
 
 ## 9. Assumptions to verify (architecture spikes)
-1. A non-activating `NSPanel` that is key accepts text input while leaving the previous app frontmost, on macOS 14 through 26, including over full-screen apps.
+1. A non-activating `NSPanel` that is key accepts text input while leaving the previous app frontmost, on macOS 26, including over full-screen apps.
 2. The 40 ms settle delay and 250 ms window are sufficient across Terminal, Electron and browser targets; tune from the dogfood matrix.
 3. Search at 10,000 items meets 100 ms with SQLite full-text indexing; the index design is FRD-007's (spike confirms trigram or scan strategy).
 4. The default open-Library hotkey (FRD-005) does not collide with common system or app shortcuts.
