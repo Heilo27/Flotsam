@@ -26,16 +26,42 @@ public struct ScreenshotFile: Sendable, Equatable {
 
 /// FR-002-16: the one test for "this path is a screenshot file that really lives in the watched folder". A symbolic
 /// link is rejected whatever it points at, and so is any file that is not a direct child of the watched folder as
-/// named and as resolved: a `..` component or a file in a subfolder never passes. The folder itself may be a link and
-/// is resolved first. The scanner applies it when listing; the importer applies it again to the settled file, because
-/// the file may have been swapped for a link between the two.
+/// named and as resolved: a `..` component below the folder, a file in a subfolder, or a file reached through a link
+/// to a folder never passes, even when that link leads back to the watched folder. The folder itself may be a link or
+/// be spelled with `..`; it is standardized and resolved first. The scanner applies the test when listing; the
+/// importer applies it again to the settled file and then reads it without following a link (`readFileNoFollow`),
+/// because the file may have been swapped for a link after the kind was last read.
 enum ScreenshotPathGuard {
     static func accepts(_ url: URL, kind: FileKind, in folder: URL) -> Bool {
-        guard kind == .regular, !url.pathComponents.contains("..") else { return false }
-        let root = folder.standardizedFileURL.resolvingSymlinksInPath()
-        // Both the path as named and the path once links are followed must sit directly in the root.
-        return url.standardizedFileURL.deletingLastPathComponent().resolvingSymlinksInPath() == root
+        guard kind == .regular else { return false }
+        let namedFolder = folder.standardizedFileURL
+        // A `..` is fine in the folder's own spelling, never in the file's part below it.
+        let folderParts = folder.pathComponents
+        let urlParts = url.pathComponents
+        if urlParts.starts(with: folderParts) {
+            guard !urlParts.dropFirst(folderParts.count).contains("..") else { return false }
+        } else {
+            guard !urlParts.contains("..") else { return false }
+        }
+        let root = namedFolder.resolvingSymlinksInPath()
+        // As named (links not followed): the parent is the watched folder as given, or another spelling of it (the
+        // folder's link, its real path), but never a folder or link below the watched folder that leads back to it:
+        // when the named parent's own parent resolves to the root, the file was reached through a descendant.
+        let namedParent = url.standardizedFileURL.deletingLastPathComponent()
+        if !sameSpelling(namedParent, namedFolder), namedParent.deletingLastPathComponent().resolvingSymlinksInPath() == root {
+            return false
+        }
+        // As resolved: the parent, and the file's own target, both sit directly in the root.
+        return namedParent.resolvingSymlinksInPath() == root
             && url.resolvingSymlinksInPath().deletingLastPathComponent() == root
+    }
+
+    /// Same path up to letter case and Unicode composition, which a case-insensitive or normalizing volume treats as
+    /// one folder. Only the as-named test uses it; the resolved comparison stays exact.
+    private static func sameSpelling(_ lhs: URL, _ rhs: URL) -> Bool {
+        let left = lhs.path.precomposedStringWithCanonicalMapping
+        let right = rhs.path.precomposedStringWithCanonicalMapping
+        return left.compare(right, options: .caseInsensitive) == .orderedSame
     }
 }
 
@@ -53,7 +79,10 @@ public struct ScreenshotFolderScanner: Sendable {
     /// A failed listing is returned as is; the caller decides between `SSP-PRM-001` and a missing folder.
     public func scan(_ folder: URL) -> FlotsamResult<[ScreenshotFile]> {
         let customPrefix = preferences.name()
-        return fileSystem.contentsOfDirectory(at: folder).map { urls in
+        // The listing fails on a link to a folder ("Not a directory"), so the watched folder is resolved for the
+        // listing only; the files keep the folder's own spelling below. Other callers of the port get no such help:
+        // a link they meet is never listed through (a linked `pre-migration` folder is not purged through).
+        return fileSystem.contentsOfDirectory(at: folder.standardizedFileURL.resolvingSymlinksInPath()).map { urls in
             // Foundation lists /var/... as /private/var/...; a file keeps one path form (the folder's) so the
             // watcher's seen/pending/retry keys agree between a scan and an event for the same file.
             urls.compactMap {

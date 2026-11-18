@@ -40,6 +40,7 @@ final class RecordingFileSystem: FileSystemPort, @unchecked Sendable {
         note(url); return inner.writeFile(data, to: url, permissions: permissions)
     }
     func readFile(at url: URL) -> FlotsamResult<Data> { inner.readFile(at: url) }
+    func readFileNoFollow(at url: URL) -> FlotsamResult<Data> { inner.readFileNoFollow(at: url) }
     func fileInfo(at url: URL) -> FileInfo? { inner.fileInfo(at: url) }
     func availableCapacity(at url: URL) -> Int64? { inner.availableCapacity(at: url) }
 }

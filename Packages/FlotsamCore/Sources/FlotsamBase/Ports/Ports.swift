@@ -88,10 +88,24 @@ public protocol FileSystemPort: Sendable {
     /// following rename publishes a complete file (FR-007-04).
     func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void>
     func readFile(at url: URL) -> FlotsamResult<Data>
+    /// Reads a file the caller does not trust to be what it was a moment ago (a screenshot in a user-writable folder,
+    /// FRD-002 FR-002-16): opens it with `O_NOFOLLOW`, requires the opened descriptor to be a regular file, and reads
+    /// from that descriptor, so a swap for a link after any earlier check cannot be read through. A link or a
+    /// non-regular file fails with `FlotsamError.isLinkOrNotRegularFile`; anything else (vanished, unreadable) is an
+    /// ordinary failure.
+    func readFileNoFollow(at url: URL) -> FlotsamResult<Data>
     /// Size and modification time, nil when the file does not exist. Reconcile uses the age; budget uses neither.
     func fileInfo(at url: URL) -> FileInfo?
     /// Bytes available for important usage on the volume holding `url` (FR-007-14); nil when unknown.
     func availableCapacity(at url: URL) -> Int64?
+}
+
+extension FlotsamError {
+    /// The failure `readFileNoFollow` reports for a symbolic link (`ELOOP`) or a file that is not regular (`EFTYPE`).
+    public var isLinkOrNotRegularFile: Bool {
+        guard let underlying, underlying.domain == NSPOSIXErrorDomain else { return false }
+        return underlying.code == Int(ELOOP) || underlying.code == Int(EFTYPE)
+    }
 }
 
 /// What a directory entry is, read without following a symbolic link.

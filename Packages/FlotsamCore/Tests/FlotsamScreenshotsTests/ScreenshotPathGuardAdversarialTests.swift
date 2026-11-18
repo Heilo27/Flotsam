@@ -32,6 +32,10 @@ private final class SwappingFileSystem: FileSystemPort, @unchecked Sendable {
         beforeRead?()
         return real.readFile(at: url)
     }
+    func readFileNoFollow(at url: URL) -> FlotsamResult<Data> {
+        beforeRead?()
+        return real.readFileNoFollow(at: url)
+    }
     func fileExists(at url: URL) -> Bool { real.fileExists(at: url) }
     func createDirectory(at url: URL, permissions: Int) -> FlotsamResult<Void> { real.createDirectory(at: url, permissions: permissions) }
     func copyItem(at source: URL, to destination: URL) -> FlotsamResult<Void> { real.copyItem(at: source, to: destination) }
@@ -357,7 +361,7 @@ private final class SwappingFileSystem: FileSystemPort, @unchecked Sendable {
 
     // OC-428-W17: a root spelled with a `..` detour ("real/sub/..") that lands on the same folder. The resolver
     // normalises it first, but the scanner is public: red if a `..` in the ROOT makes every file vanish silently.
-    @Test("a root spelled with a .. detour still lists its direct children", .disabled("DEFECT W428-D3 (Minor): ScreenshotPathGuard rejects any url containing \"..\" even when the \"..\" is in the watched folder's own spelling, so scan(\"real/sub/..\") lists nothing. ScreenshotScan.swift:41-42"))
+    @Test("a root spelled with a .. detour still lists its direct children")
     func dotDotInsideRootSpelling() throws {
         let temp = try TempFolder()
         defer { temp.cleanUp() }
@@ -401,7 +405,7 @@ private final class SwappingFileSystem: FileSystemPort, @unchecked Sendable {
 
     // OC-428-W20: a subfolder that is a link back to the root. A file reached as root/loop/x.png is the same file as
     // root/x.png, but the path as named is a descendant. The guard's own doc says "as named and as resolved".
-    @Test("a file named through a subfolder link that points back at the root is not accepted as named", .disabled("DEFECT W428-D4 (Minor): guard resolves the named parent, so root/again/x.png (again -> root) passes though its doc says a descendant as named never passes. ScreenshotScan.swift:41-45"))
+    @Test("a file named through a subfolder link that points back at the root is not accepted as named")
     func descendantViaSelfLinkedSubfolder() throws {
         let temp = try TempFolder()
         defer { temp.cleanUp() }
@@ -455,7 +459,7 @@ private final class SwappingFileSystem: FileSystemPort, @unchecked Sendable {
 
     // OC-428-W23: the swap lands AFTER the stability check's last look but before the guard: the guard is handed a
     // stale `.regular` kind, so only its path check stands between a link to a sibling and a read through the link.
-    @Test("a swap for an in-folder link after the stability check's last look is still rejected", .disabled("DEFECT W428-D1 (Major): guard trusts the stability check's stale FileKind; a swap to a link to a sibling after the last fileInfo is read through the link and imported. ScreenshotImporter.swift:56-68"))
+    @Test("a swap for an in-folder link after the stability check's last look is still rejected")
     func swappedAfterStabilityBeforeGuard() async throws {
         let temp = try TempFolder()
         defer { temp.cleanUp() }
@@ -498,7 +502,7 @@ private final class SwappingFileSystem: FileSystemPort, @unchecked Sendable {
 
     // OC-428-W25: the swap lands between the guard and the read (the guard has already said yes). A link followed by
     // the read leaks the outside file's bytes into ingest.
-    @Test("a swap for an outside link between the guard and the read does not leak the target's bytes", .disabled("DEFECT W428-D2 (Major): guard and read are separate steps and readFile follows links (Data(contentsOf:)); a swap in between leaks the outside file into ingest. ScreenshotImporter.swift:61-68, Adapters.swift readFile"))
+    @Test("a swap for an outside link between the guard and the read does not leak the target's bytes")
     func swappedBetweenGuardAndRead() async throws {
         let temp = try TempFolder()
         defer { temp.cleanUp() }

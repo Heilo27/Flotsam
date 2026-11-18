@@ -74,6 +74,7 @@ final class ProbeFileSystem: FileSystemPort, @unchecked Sendable {
         real.writeFile(data, to: url, permissions: permissions)
     }
     func readFile(at url: URL) -> FlotsamResult<Data> { real.readFile(at: url) }
+    func readFileNoFollow(at url: URL) -> FlotsamResult<Data> { real.readFileNoFollow(at: url) }
     func fileInfo(at url: URL) -> FileInfo? { real.fileInfo(at: url) }
     func availableCapacity(at url: URL) -> Int64? { real.availableCapacity(at: url) }
 

@@ -57,12 +57,15 @@ struct ScreenshotImporter: Sendable {
         case .failure(let error): return .unstable(error)
         case .success(let value): info = value
         }
-        // FR-002-16: never read through a link, and never read a file that resolves outside the watched folder.
+        // FR-002-16: never read through a link, and never read a file that resolves outside the watched folder. `info`
+        // may be stale by now, so the read below refuses a link itself instead of trusting this check alone.
         guard ScreenshotPathGuard.accepts(file.url, kind: info.kind, in: file.folder) else {
             return .rejected(FlotsamError(.sspVal001, "Not a regular file inside the screenshot folder"), byteSize: 0)
         }
         let bytes: Data
-        switch fileSystem.readFile(at: file.url) {
+        switch fileSystem.readFileNoFollow(at: file.url) {
+        case .failure(let error) where error.isLinkOrNotRegularFile:
+            return .rejected(FlotsamError(.sspVal001, "Swapped for a link or a non-regular file before the read"), byteSize: 0)
         case .failure: return .unstable(StabilityCheck.unstable)
         case .success(let data): bytes = data
         }
