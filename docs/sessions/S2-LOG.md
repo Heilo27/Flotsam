@@ -901,3 +901,28 @@ Full `swift test`: one failure, **OC-381-21** (`Worf381PollTickTimerTests.swift:
 - OC-3021 (major): rows use a 22 pt SF Symbol, with no 44 pt rows and no 32 pt thumbnails for image/screenshot/file/folder/bundle. Needs a manual check.
 - OC-3086 (minor): the catalogue says "Pinned" and the contract says "pinned". The test compares case-insensitively.
 - OC-381-21: the flake above.
+
+---
+
+## 2026-11-17: GRDB 7.12.0 security check + perf harness (`s2/perf-harness` @ dd8537d)
+
+**GRDB: no upgrade. 7.12.0 is the latest release** (v7.12.0, 2026-11-01; nothing newer as of 2026-11-17 23:55). Flotsam pins it `exact: "7.12.0"` in `Packages/FlotsamCore/Package.swift`.
+- GitHub advisory DB: no advisory for GRDB.swift. Checked with the `affects=github.com/groue/GRDB.swift` query and a scan of the swift-ecosystem list.
+- GRDB repository advisories (`repos/groue/GRDB.swift/security-advisories`): 0.
+- 7.12.0 release notes list no security fixes. They do include a fix for quadratic statement compilation, a workaround for an SQLite WAL-snapshot ordering bug, and a fix for a SharedValueObservation deadlock.
+- Residual risk is the system SQLite, not GRDB: GRDB links the OS SQLite. GRDB issue #1866 (closed, upstream says "report to Apple") cites an FTS5 tombstone integer overflow, heap overflow, fixed in SQLite 3.50.3. Flotsam uses FTS5 (`Migrations.swift`, `LibraryQueries.swift`) and deploys to macOS 14. This Mac (macOS 27.3) ships SQLite 3.54.0, which is patched. I did not verify which SQLite build macOS 14 and 15 ship. Options if S1 wants it closed: raise the deployment floor, or use a custom SQLite build (GRDB documents that this isn't SPM-compatible). No action recommended for MVP; noting it only.
+
+**Perf harness** (opt-in `FlotsamPerfTests`, `FLOTSAM_PERF=1 bin/perf.sh`, Release, M1 Max, two runs, load avg 34–63):
+
+| Measure | Run 1 | Run 2 |
+|---|---|---|
+| Capture write→stored row, n=200, p50 / p95 | 260 / 485 ms | 269 / 486 ms |
+| … of which poll wait p50 / p95 | 252 / 472 ms | 263 / 481 ms |
+| … persist after detection p50 / p95 | 5.6 / 44.3 ms | 7.2 / 18.6 ms |
+| Search 50k items, n=20, p50 / p95 / max | 25.6 / 54.6 / 57.1 ms | 26.5 / 52.5 / 61.3 ms |
+
+Capture interval: from `SystemPasteboard.write`, on a private NSPasteboard (never `.general`), to the `itemsChanged` event after the ingest commit. Path: the real `ClipboardCapture` 0.5 s timer, `IngestActor` and a temp GRDB DB. Copies use a seeded 0–500 ms jitter, so the poll phase is spread. Search ran with the page cache warm after seeding; the slowest query was multi-term with no hits.
+
+**Capture p95 rerun under load < 10: PENDING a quiet box.** The 1-min load average was 78.5 at 23:54, with other sessions' test runs in progress.
+
+**Defects / follow-ups for S1:** none new. OC-381-21 fake-timer rewrite is on obrien-430, per S1.
