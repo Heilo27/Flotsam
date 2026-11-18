@@ -1807,3 +1807,14 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 - `build.sh Debug`: 1 warning. It is the known ClipboardCapture:118 one, already fixed on `s2/task457`, which is not in this base.
 
 **Report only:** `TriggerEngine.run()` discards `ExpansionOutcome`, so tests have no engine completion signal. They infer the end of an expansion from the pasteboard instead.
+
+## 2026-11-18 — TASK-479 + TASK-480 (tests only) — s2/task479 @ 378506c (base main df2c641)
+- Commits: 29a228c TASK-480, 378506c TASK-479. Diff: 8 files under Tests/FlotsamScreenshotsTests only (+92/-23). No product code changes. Task457WatcherRaceTests.swift and ScreenshotWatcher.swift untouched.
+- TASK-479: importRecentCount() now goes through importRecentWithin(10 s). Task456:73/:77, OC-2020/2041/2055/2059/2060/2071 and OC-448-W7 are bounded, and a nil (timeout) records an issue. Extra unbounded sites found and bounded: Worf446ImportHUDTests, Worf456RaceTests, ScreenshotWatcherTests ~:419-432. New helper: importRecentAnnouncingWithin. Stale header at FRD002AuditBTests:13 corrected (signposts now have a seam: SignpostProbe).
+- Hang mutant (the press never resumes), `swift test --filter FlotsamScreenshotsTests`: FAILS with 95 issues and does not hang. Wall time is 97 s, OVER the ~60 s target, because each press pays the full 10 s bound and some tests press 2-3 times. Lowering the bound would meet the target; that is S1's call. Mutant reverted, tree clean.
+- TASK-480 OC-466-NOPRESS: the async tail is ScreenshotWatcher.finish (~:587-612: ingest, settle, "screenshot.imported" log, complete, pump). The test now waits until 2 candidates and 2 import log lines exist before the snapshot, then asserts 4 distinct names: 2 live copies and 2 press imports. Mutation (no-press path imports) goes red 3/3; reverted.
+- Side changes:
+  - Worf456Race press now starts via Task.immediate (macOS 26 guard), with the scan held deterministically. A plain-Task variant also passed 40/40, so the stated reason for this change is unproven.
+  - ScreenshotImportSignpostTests: added a bounded wait for in-window intervals to end. This fixes a flake that predates this branch (another suite's held import could end after collect's fixed settle).
+- Gates: arch OK. 3 consecutive clean full runs under `yes` ×10 load, each 3038 tests / 0 failures / 19 known issues; 1-minute load at start 44.3 / 88.1 / 95.5. An earlier set was restarted after 2 failures; both were diagnosed and fixed as above. build.sh Debug: 0 warnings. Load killed.
+- Report-only: pre-existing "no async operations" warnings at `await RaceHUDLog()` in the test files.
