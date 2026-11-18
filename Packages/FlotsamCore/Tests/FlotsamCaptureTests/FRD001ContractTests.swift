@@ -526,6 +526,89 @@ struct FRD001KindContractTests {
             await rig.process()
             try #expect(await rig.kinds() == ["richText"])
             try #expect(await rig.searchCount(marker) == 1)
+            // FR-001-10: the RTF itself is stored alongside the derived plain text (drop the rep and this goes red).
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored[0].plainText == marker)
+            try #expect(await rig.representationTypes(of: stored[0].id) == [PB.rtf])
+        }
+    }
+
+    // OC-1046 (FR-001-10, TASK-134). Given plain text and RTF on one copy, when captured, then BOTH are stored: the
+    // plain text in the item and the RTF as a representation whose bytes are the copied bytes, not a re-encoding.
+    @Test("OC-1046b: plain text plus RTF stores the plain text and the exact RTF bytes")
+    func oc1046b() async throws {
+        try await withRig { rig in
+            let plain = uid("PlainPart")
+            let rtf = PB.data("{\\rtf1\\ansi \\b \(plain)\\b0}")
+            await rig.copyText(plain, extra: [(PB.rtf, rtf)])
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored[0].kind == "richText")
+            #expect(stored[0].plainText == plain)
+            try #expect(await rig.representationTypes(of: stored[0].id) == [PB.rtf])
+            let blob = try await rig.database.content(of: UUID(uuidString: stored[0].id)!).get().representations
+                .first { $0.uti == PB.rtf }?.data
+            #expect(blob == rtf)
+        }
+    }
+
+    // OC-1031c (FR-001-07/08, TASK-128). Given ONE change carrying text + RTF + a file URL + a PNG (a Finder/Office
+    // style mixed copy), when captured, then exactly one `file` item is stored: the file URL wins, and the text, the RTF
+    // and the image are all discarded. Red if text outranks files, or if rich/image reps leak onto the file item.
+    @Test("OC-1031c: mixed text + RTF + file + image on one change stores one file item and discards the rest")
+    func oc1031c() async throws {
+        try await withRig { rig in
+            let url = try rig.makeFile("mixed.txt")
+            let marker = uid("MixedText")
+            rig.pasteboard.copy([
+                (PB.text, PB.data(marker)), (PB.rtf, PB.data("{\\rtf1\\ansi \(marker)}")),
+                (PB.fileURL, PB.fileURLData(url)), (PB.png, TestImage.make(.png, width: 16, height: 16)),
+            ])
+            await rig.process()
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored[0].kind == "file")
+            #expect(stored[0].plainText == nil)
+            try #expect(await rig.representationTypes(of: stored[0].id).isEmpty)
+            try #expect(await rig.members(of: stored[0].id).map(fileName) == ["mixed.txt"])
+            try #expect(await rig.searchCount(marker) == 0)
+        }
+    }
+
+    // Same mixed change with two file URLs: still one bundle, members in order, nothing else stored.
+    @Test("OC-1031d: mixed text + RTF + two files + image on one change stores one bundle in order")
+    func oc1031d() async throws {
+        try await withRig { rig in
+            let urls = try ["z.txt", "y.txt"].map { try rig.makeFile($0) }
+            rig.pasteboard.copy(
+                [(PB.text, PB.data("names")), (PB.rtf, PB.data("{\\rtf1\\ansi names}"))]
+                + PB.fileURLReps(urls).map { ($0.uti, $0.data) }
+                + [(PB.png, TestImage.make(.png, width: 16, height: 16))])
+            await rig.process()
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored[0].kind == "bundle")
+            try #expect(await rig.members(of: stored[0].id).map(fileName) == ["z.txt", "y.txt"])
+            try #expect(await rig.representationTypes(of: stored[0].id).isEmpty)
+        }
+    }
+
+    // No file URL on the change: text + RTF + image is a richText item carrying the RTF only; the image is discarded.
+    @Test("OC-1031e: text + RTF + image without a file stores richText with the RTF rep only")
+    func oc1031e() async throws {
+        try await withRig { rig in
+            let marker = uid("Sheet")
+            rig.pasteboard.copy([
+                (PB.text, PB.data(marker)), (PB.rtf, PB.data("{\\rtf1\\ansi \(marker)}")),
+                (PB.png, TestImage.make(.png, width: 16, height: 16)),
+            ])
+            await rig.process()
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored[0].kind == "richText")
+            #expect(stored[0].plainText == marker)
+            try #expect(await rig.representationTypes(of: stored[0].id) == [PB.rtf])
         }
     }
 
