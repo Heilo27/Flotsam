@@ -1625,3 +1625,28 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
 ### S1 ruling: TASK-458 / SET-DAT-001 (2026-11-18)
 - The SET-DAT-001 from the folder-bookmark launch argument is a harness artifact, not an app defect. A bookmark made outside the app, or made without `.withSecurityScope`, cannot resolve with scope (NSCocoaError 259). The app's own `choosing()` round trip resolves as usable (OC-8065). No scope-less fallback will be added.
 - From now on, smoke runs set the screenshot folder override through the app (the Settings UI or onboarding), never with a hand-made launch-argument bookmark. That SET-DAT-001 is no longer logged as a defect.
+
+## 2026-11-18: FRD-004 8T on `s2/frd004-8t` @ 5e1ec4e (cut from main 35f59ff)
+- **Slices:**
+  - S1 Tags: a6cd32d, 17 tests.
+  - S2 NoteEdit: 37ee5f1, 16 tests.
+  - S3 DeleteUngroupSort: 8a1b38d, 16 tests.
+  - S4 Library: de3b028, 24 tests.
+  - Remainder + OC-4099 + OC-4073 + Gaps: 5e1ec4e.
+- **Mutations, each reverted and the source left clean:**
+  - `Tags.swift` `<` → `<=`: OC-4018 went red.
+  - `Ungroup.swift` `- index` → `+ index`: OC-4074 and 4078 went red.
+  - `LibraryQueries.swift` `pasteCount DESC` → `copyCount DESC`: OC-4091, 4094 and 4098 went red.
+  - `LibraryOrganizer.canUngroup` `== 1` → `!isEmpty`: OC-4072 went red.
+- **Coverage (109 ids, checked mechanically):** 98 tested, 5 cited-only (4002, 4008, 4010, 4079, 4103), 6 untestable-only (4026, 4028, 4041, 4042, 4052, 4054), 0 uncovered. Another 15 tested ids have an App-only half, each listed in the Gaps file as a `.disabled("no seam: …")` test.
+- **Full run on the branch:** exit 0. 2658 tests (sum of the "Test run with" lines only), 17 known issues, 0 failures, 0 "recorded an issue". Arch passed.
+- **Merge check:** the branch is 41 commits behind main and merges cleanly (merge-tree check).
+- **[Spec Drift], nothing edited:**
+  - OC-4073: the contract key `organize.confirm.ungroup` against the FRD key `ui.organize.confirmUngroup`.
+  - OC-4053: `organize.edit.formattingRemoved` against `ui.organize.editFormattingRemoved`.
+  - In both, the FRD key is asserted and the contract key is wrapped in `withKnownIssue`.
+- **Copy note, not a defect:** the delete-tag confirmation reads "1 items" at n = 1. FR-004-04 gives the wording literally as "… from {n} items?", so a singular form would need an FRD change.
+- **Missing seam:** the OC-4031 0-item no-confirm decision sits inline in `OrganizeCoordinator.deleteTag`. Suggested seam: `LibraryOrganizer.deleteTagNeedsConfirmation(itemCount:)`. The App target has no test target, which blocks the OrganizeCoordinator overlays and the hotkey halves.
+- **Defects:** none found in production code.
+- **Process note:** the commits' Co-Authored-By trailer says Sonnet 5.5, which is the model that wrote them, rather than the Opus 5.5 line in the brief. They are left as they are, because no force-push is allowed.
+- **Next:** FRD-000 8T on a new `s2/frd000-8t` from current origin/main.
