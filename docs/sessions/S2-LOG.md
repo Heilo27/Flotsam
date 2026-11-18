@@ -610,3 +610,26 @@ Known flakes (OC-7132, `optionArrowsStepThroughSidebarFilters`) did not fail, so
 - Single click on a card selects, double-click pastes (matches `ShelfView`: `onTapGesture(count: 2)`).
 
 **Data isolation.** The app has no data-folder override, so it was launched with `CFFIXED_USER_HOME` pointing at a scratch directory. The isolated database ended with exactly 2 items and `PRAGMA integrity_check` returned ok. The real database was only opened read-only: 17 items before and 17 after; nothing deleted or altered. The pasteboard was empty before the run (nothing to save); the capture strings went to the system pasteboard during the test and it was cleared back to empty afterwards. No TCC or privacy settings were changed. Scratch clone deleted; logs and screenshots kept.
+
+---
+
+## 2026-11-17: B FRD-003 8T, part 3 (paste, copy-only, error paths) on `s2/frd003-8t`
+
+**Branch SHA:** 7baffcd (65a9448 is the paste tests; 8b3bbe9 the preview tests; 7baffcd merges main 1c87093). Main tested: **1c87093**, which already carries the TASK-410 fixes.
+
+**Counts.** Frd003Contract: 77 tests in 6 suites in the last `--filter` run before the merge; this part added 16 (`Frd003ContractPasteTests.swift`) plus the OC-3017 row test and the 6 preview tests earlier. Full `swift test --package-path Packages/FlotsamCore` after the merge: 558 Swift Testing tests in 67 suites by the per-target run lines; the only failures are 3 tests / 6 issues (below). Known flakes OC-7132, `optionArrowsStepThroughSidebarFilters`, OC-4102 all passed this run. 9 known issues, none new.
+
+**PASS (with the real PasteService over a real database; OS edges faked):** OC-3017, 3057, 3062, 3068/3102 (LIB-DAT-001, panel stays open, nothing written), 3069, 3071, 3072, 3073, 3077/3078/3103 (SET-PRM-001, footer "Press ⌘V to paste"), 3079, 3080, 3081 (footer half), 3084/3101 (LIB-IO-001, item removed from count and search), 3085/3104 (STO-DB-004 state, search and Esc work, Retry recovers), 3087 (100 characters), 3095 (no stored change; Times-copied half unreadable), 3096, 3098 (no OCR), 3100 (LIB-OS-001, both ways). OC-3020/D5: PASS, the FRD governs ("Missing"); the oracle text "Original file missing" is stale. After the merge of TASK-410 the earlier defects D3 OC-3015, D4 OC-3019, D6 OC-3060/FR-003-14 and OC-3053 now PASS on main.
+
+**Mutation checks (product edited, tests went red, product restored):** recordPaste skipped (7 tests red: 3069, 3071, 3077, 3079, 3095, 3096, 3100), LIB-IO-001 delete skipped (3084 red), hidePanel skipped (3071, 3077 red), speech limit 100 to 101 (3087 red).
+
+**Defects (still open on main, tests left failing as proof):**
+| ID | Sev | Where | Evidence |
+|---|---|---|---|
+| OC-3058 | Major | `Packages/FlotsamCore/Sources/FlotsamLibrary/LibraryPreview.swift:44` `fields(for:)`; `App/Flotsam/Library/LibraryPreviewView.swift:19` | a colour item previews with no hex and no "26, 43, 60"; rich text renders as plain monospaced `Text`, no bold |
+| OC-3061 | Major | `LibraryPreview.swift:44` | image metadata lacks "First copied" and "Times copied" (expects the 8 fields in order) |
+| OC-3105 | Major | `LibraryPreview.swift:44` | no tag or note rows in the metadata block |
+
+**Unreachable from the package:** OC-3002 to 3007 (Spaces, hotkey, focus), 3014 (signpost p95), 3016 (AX hierarchy), 3021 (pt measurement), 3048/3055/3056 (perf, memory), 3059 and 3097 (network monitor), 3063 to 3067 and 3070 to 3076 (real target apps, real key posting), 3082 (double-length localisation), 3083 (human study), 3086 (VoiceOver order), 3088 to 3090 (Full Keyboard Access, Reduce Motion, appearance), 3091 to 3094 and 3099 (drag: need a real drag session). View-level halves of 3057 (280 pt), 3058 (rendering), 3060 (image fit), 3062 (click focus). HUD placement and 2.5 s timing in 3068, 3075, 3077, 3084, 3100 to 3103. "Times copied" half of OC-3095 (no public read API; copyCount is not exposed). OC-4102 left alone per S1.
+
+**Note:** the oracle writes "120 x 80" in ASCII where the product shows "×"; normalised in the test, not a defect.
