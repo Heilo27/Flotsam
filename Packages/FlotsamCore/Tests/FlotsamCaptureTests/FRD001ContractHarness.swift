@@ -212,7 +212,10 @@ final class ContractRig {
         let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data")).get()
         let rig = ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture)
         if startCapture {
-            // Starting on an empty pasteboard logs one CAP-VAL-001 (an empty change). Settle it, then start clean.
+            // Starting on an empty pasteboard opens the watch of an empty change (FR-001-01), and counting it logs one
+            // CAP-VAL-001. Let the watch run out so that record lands now, settle it, then start clean.
+            rig.clock.advance(by: ClipboardCapture.emptyChangeWatchLimit)
+            rig.capture.captureNow()
             await rig.flush()
             rig.sink.reset()
         }

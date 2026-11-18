@@ -8,6 +8,8 @@ import FlotsamBase
 // Independent verification of TASK-401 (FRD-001 FR-001-01 re-read, FR-001-18 b, FR-001-22, AC-001-15, AC-001-18).
 // Written without reference to the builder's tests. Every sequence is driven by `captureNow()` with no suspension point
 // between calls, so the real 0.5 s timer that `start()` installs cannot interleave. Each `captureNow()` is one tick.
+// The clock is manual: a change that reads empty is watched for `emptyChangeWatchLimit` (FR-001-01) and counts as empty
+// when `expire()` ends that watch, or when a newer change supersedes it.
 // Expected values are literals only.
 
 private final class ScriptedBoard: PasteboardPort {
@@ -79,6 +81,7 @@ private struct Rig {
     let capture: ClipboardCapture
     let settings: SettingsStore
     let ownWrites: OwnWriteLedger
+    let clock: ManualClock
 
     static func make(ignored: Set<String> = []) async throws -> Rig {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-worf401-\(UUID().uuidString)")
@@ -87,15 +90,18 @@ private struct Rig {
         let board = ScriptedBoard()
         let sink = Sink()
         let ownWrites = OwnWriteLedger()
+        let clock = ManualClock()
         let capture = ClipboardCapture(
             pasteboard: board, sourceApps: Writer(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: ErrorReporter(presenter: Presenter(), sink: sink), ignoredApps: { ignored }, sink: sink)
-        return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites)
+            reporter: ErrorReporter(presenter: Presenter(), sink: sink), ignoredApps: { ignored }, clock: clock, sink: sink)
+        return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites, clock: clock)
     }
 
     /// Ticks the poll once.
     func tick(_ times: Int = 1) { for _ in 0..<times { capture.captureNow() } }
+    /// Lets the watch of the change in hand run out and ticks once, which is when an empty change counts.
+    func expire() { clock.advance(by: ClipboardCapture.emptyChangeWatchLimit); tick() }
 
     func texts() async throws -> [String] {
         await capture.stop()
@@ -279,37 +285,37 @@ struct ClipboardRetrySuspensionWorfTests {
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         rig.capture.start()
-        for _ in 1...2 { rig.board.clear(); rig.tick(3) }
+        for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
         try await rig.drain()
         // then not yet suspended
         #expect(rig.sink.count(containing: "CAP-PRM-001") == 0)
 
         // when a third persistently empty change arrives
-        rig.board.clear(); rig.tick(3)
+        rig.board.clear(); rig.tick(); rig.expire()
         try await rig.drain()
         // then CAP-PRM-001 is raised exactly once
         #expect(rig.sink.count(containing: "CAP-PRM-001") == 1)
 
         // and a fourth does not raise it again
-        rig.board.clear(); rig.tick(3)
+        rig.board.clear(); rig.tick(); rig.expire()
         try await rig.drain()
         #expect(rig.sink.count(containing: "CAP-PRM-001") == 1)
     }
 
-    @Test("OC-401-W10 the third empty change is not counted until its third read")
+    @Test("OC-401-W10 the third empty change is not counted until its watch ends")
     func thirdChangeCountsOnItsThirdRead() async throws {
         // given two persistent empties
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         rig.capture.start()
-        for _ in 1...2 { rig.board.clear(); rig.tick(3) }
-        // when the third is read twice only
+        for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
+        // when the third is read twice, still inside its watch
         rig.board.clear(); rig.tick(2)
         try await rig.drain()
         // then no suspension yet
         #expect(rig.sink.count(containing: "CAP-PRM-001") == 0)
-        // and the third read tips it
-        rig.tick()
+        // and the end of its watch tips it
+        rig.expire()
         try await rig.drain()
         #expect(rig.sink.count(containing: "CAP-PRM-001") == 1)
     }
@@ -321,7 +327,7 @@ struct ClipboardRetrySuspensionWorfTests {
         defer { rig.cleanUp() }
         rig.capture.start()
         for n in 1...5 {
-            rig.board.clear(); rig.tick(3)
+            rig.board.clear(); rig.tick(); rig.expire()
             rig.board.copy(data("real \(n)")); rig.tick()
         }
         try await rig.drain()
@@ -336,9 +342,9 @@ struct ClipboardRetrySuspensionWorfTests {
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         rig.capture.start()
-        for _ in 1...2 { rig.board.clear(); rig.tick(3) }
+        for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
         rig.board.copy(data("real")); rig.tick()
-        for _ in 1...2 { rig.board.clear(); rig.tick(3) }
+        for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
         try await rig.drain()
         // then no suspension: four empties in all, but never three in a row
         #expect(rig.sink.count(containing: "CAP-PRM-001") == 0)
@@ -350,7 +356,7 @@ struct ClipboardRetrySuspensionWorfTests {
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         rig.capture.start()
-        for _ in 1...3 { rig.board.clear(); rig.tick(3) }
+        for _ in 1...3 { rig.board.clear(); rig.tick(); rig.expire() }
         // when access returns and the user copies
         rig.board.copy(data("back"))
         rig.tick(2)
