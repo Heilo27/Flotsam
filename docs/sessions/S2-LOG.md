@@ -1230,3 +1230,35 @@ Tests only: 5 new files plus display-name fixes in ScreenshotWatcherTests.swift.
 - **[Spec Drift]** OC-1080's `CAP-PRM-001` now fires when the third watch ends, up to 10 s later or sooner if the change is superseded. The oracle file is not edited.
 - A superseded empty change now counts toward FR-001-18(b).
 - TASK-442 has no Ticketmaster record in `flotsam`.
+
+## FRD-002 gap tests: TASK-218/219/220/231/232, `s2/frd002-gaps` @ 1195b01, base 3227b40 (2026-11-18)
+
+These are tests only. `swift test --filter FlotsamScreenshotsTests` gives 118 tests in 16 suites, all passed with 0 failures and 0 known issues. Each agent ran the suite twice, and I re-ran the combined branch once. The ticket texts are not in this Mac's Ticketmaster, so I tested against FRD-002 and `.claude/oracle/frd-002-contract.json`. The new tests use a real database, IngestActor and watermark store; the shared rig is in `FRD002GapTestsSupport.swift`.
+
+| Ticket | IDs | Verdict | Tests |
+|---|---|---|---|
+| TASK-218 | OC-2037, 2038, 2040, FR-002-08 | PASS (4 tests) | FRD002GapTests218_219.swift: threeNewShotsImportedOnLaunch, deletedShotStaysDeletedAfterRelaunch, twentyImportedRelaunchAddsNothing, firstLaunchSeedsWatermarkOnly |
+| TASK-219 | FR-002-09, AC-002-08 | PASS (3 tests) | FRD002GapTests218_219.swift: rowFacts, blobIsSeparateCopy, blobSurvivesOriginalChange |
+| TASK-220 | OC-2043, 2044, 2052, 2053 | PASS (5 tests) | FRD002GapTests220.swift: deletingOriginalKeepsItemAndPreview, previewRebuiltFromBlobNotOriginal, deletingItemsLeavesOriginalsAlone, deletingItemAfterOriginalGone, deletingUnknownIdChangesNothing |
+| TASK-231/232 | OC-2069, FR-002-15, FR-000-10, AC-002-12 | PASS (3 tests + detector control) | FRD002GapTests231_232.swift: unusableSystemFolderLeaksNothing, oversizeScreenshotLeaksNothing, diagnosticsReportLeaksNothing |
+
+**Mutations.** Each was a temporary edit, reverted, and confirmed with a clean `git diff -- Sources`. Every one turned the named tests red:
+- watermark rewind after relaunch: OC-2038 and OC-2040 went red.
+- `performDelete` also removing originalPath, skipping `discardThumbnails`, `content(of:)` needing the original, and thumbnail regeneration needing the original: the TASK-220 tests went red.
+- filename in the SSP-LIM-001 context and folder path in the SSP-IO-001 context: the TASK-231/232 log and report tests went red.
+
+The notice and report absence checks have no production mutation, because Notice carries only catalogue text and RaisedError carries only code, severity and timestamp. Liveness assertions guard them instead.
+
+**UNTESTABLE-AT-PACKAGE:**
+- ⌘⌫ UI: covered at the `FlotsamDatabase.delete(ids:)` seam.
+- Process quit: covered by `RealIngestRig.relaunch()`.
+- Trash-and-empty: covered by `removeItem`.
+- Real OSLog `log show`: covered at the `LogSink` seam.
+
+**Product bugs found:** none.
+
+**Notes:**
+- The OC-2038 delete-then-relaunch case passes when the shot came in through the launch reconcile scan. The TASK-445 divergence is specific to shots imported LIVE, because the live path does not advance the watermark, so it still stands.
+- The contract says "thumbnail rows", but thumbnails are files at `thumbs/<id>-<edge>.jpg`. This is a contract wording gap.
+- `FlotsamError.message` is a StaticString, which is a compile-time guard against paths in messages.
+- 4560b64's trailer says Sonnet 5.5. It is left as is, because rewriting it would need a force-push.
