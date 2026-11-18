@@ -20,13 +20,15 @@ struct Worf461MidScanTests {
         for i in 0..<4 { try rig.shot(in: rig.desktop, "Screenshot mid-\(i).png") }
         rig.fileSystem.holdNextListing()
         let watcher = rig.watcher!
-        let press = Task { await watcher.importRecent() }
+        let pressed = Handoff<FlotsamResult<Int>>()
+        Task { pressed.set(await watcher.importRecent()) }
         #expect(await eventually { rig.fileSystem.listingIsHeld }, "the press's scan is held")
         await watcher.didBecomeActive()
         #expect(await eventually { rig.ingest.candidates.count == 4 }, "the reconcile imported all four")
         await letItSettle()
         rig.fileSystem.releaseListing()
-        let result = await press.value
+        #expect(await eventually(timeout: .seconds(10)) { pressed.value != nil }, "the press must resolve")
+        let result = pressed.value
         await letItSettle()
         #expect(rig.ingest.candidates.count == 4, "each file ingested once")
         #expect(result == .success(4), "the press ran while 4 files arrived; it must not say Imported 0")
