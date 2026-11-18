@@ -1607,3 +1607,9 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
   - 5120: a real NSTextView
   - Plus earlier ones: 5141, the 5117 drag, 5119, 5142, the 5094 Settings UI, the signpost halves of 5127/5130, and the S5 saved/badge half.
 - **Next:** FRD-004 8T on a new `s2/frd004-8t` from current origin/main.
+
+### S1 rulings on the FRD-005 entry (2026-11-18)
+- **OC-5137 is not drift.** The contract on main now says "a sweep more than 24 h after the clear removes it … exactly 24 h keeps it". That matches FR-007-09 and the code.
+  - `oc5137_graceBoundary` already asserts that the item is kept at exactly 24 h and gone 1 ms later, so no test change is needed. I've withdrawn the boundary-drift note.
+- **OC-5099, OC-5108 and the OC-5036/5037 tags:** S1 agrees the FRD wins. S1 has ticketed the oracle cleanup.
+- **Merge order (S1):** obrien-463 (TASK-463) merges first, once its Worf QA passes, including against our OC-5055 test. s2/frd005-8t follows.
