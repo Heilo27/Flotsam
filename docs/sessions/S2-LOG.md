@@ -1710,3 +1710,38 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
   - Cross-target Shelf/Capture: 7102, 7103, 7104, 7127.
   - Running app: 7011, 7115.
   - A reveal port: 7152.
+
+## 2026-11-18: Lane A, A1 + A2 on `main` @ 5ad05df
+
+- Fresh clone, fetched at start; 5ad05df was still the tip after a final fetch.
+- No code fixed, nothing committed.
+
+**A1**
+- bootstrap: exit 0.
+- `swift test`: 2880 tests in 12 runs. 0 failures (no "recorded an issue" lines). 16 known issues (5 in one run, 11 in another).
+- Delta vs 10596ad: +530 tests (2350 → 2880). Runs unchanged at 12. Known issues up by 7 (9 → 16), from the 8T merges that landed since.
+- No timing flake, even at load average 105–185.
+- `bin/check-architecture.sh`: pass.
+- `bin/build.sh Debug`: BUILD SUCCEEDED with 1 warning, the same one as before. It moved to `ClipboardCapture.swift:118:27` ("result of call to 'assumeIsolated' is unused").
+
+**A2** (bundle id `io.github.heilo27.FlotsamWalk`, scratch CFFIXED_USER_HOME, empty prefs domain)
+
+| Check | Result |
+|---|---|
+| Launch, menu bar | PASS. 8 actions: Open Library, Save Clipboard, Toggle Shelf, Pause Capture, Notices, Settings…, Show Setup Guide…, Quit Flotsam. |
+| Onboarding | 8 steps. Launch at Login is pre-checked on step 7 (left alone; Ryan's call). The agent passed step 7 with it still checked, then went Back and unchecked it. No Flotsam login item at any point. |
+| text | PASS, `text`, copyCount 1 |
+| URL | PASS, `link`, copyCount 1 |
+| image | PASS, `image`, 64×64 PNG stored at 8382 B (15638 B on the pasteboard) |
+| concealed | PASS, CAP-POL-001 skip; nothing stored; 0 hits for the secret in the scratch data folder |
+| file ×5 | PASS. 1 item: stored once, deduped ×4, copyCount 5, 1 bundleMember row |
+| first reads | One CAP-VAL-001 at launch; no CAP-PRM-001 |
+| Quit | PASS, no process left |
+| crash reports | 28 → 37. All 9 new reports are AccessibilityControlsExtension / UsageTrackingAgent; none from Flotsam |
+
+- New observation, not called a defect: `screenshot.scan count=0 outcome=failed` at launch. The scratch home has no Desktop folder, which is a likely harness artifact. 10596ad's entry did not record this line.
+- Real files, before and after, unchanged: DB 03fc64cf…, -wal c1189741…, prefs f20f539d….
+- Cleanup:
+  - `launchctl print gui/$UID | grep -i flotsam` is empty. Re-checked by S2 after the agent finished.
+  - FlotsamWalk prefs domain and plist deleted. Scratch home deleted.
+  - No sfltool left running. `sfltool dumpbtm` hung, so BTM was not checked directly.
