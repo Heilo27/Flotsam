@@ -111,6 +111,10 @@ private func l9Press(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
     if let event { NSApplication.shared.sendEvent(event) }
 }
 
+// Nested under WorfEditorRecorderTests (a .serialized suite) on purpose: a recorder's local NSEvent monitor sees every
+// key-down in the process and the earliest-registered live one consumes it, so these recording tests must not interleave
+// with that suite's. Run in parallel they failed 2 runs in 3 (the press reached another test's recorder).
+extension WorfEditorRecorderTests {
 @MainActor
 @Suite struct FRD005ContractTestsLifecycleEditor {
     // Red if the editor or the registry keep rejecting ';del' or the chord after the holder was deleted and the registry
@@ -183,4 +187,5 @@ private func l9Press(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
         #expect(stored.hotkeys == [l9Id(1): l9CtrlOpt1])
         #expect(try await rig.presentIds() == [l9Id(1), l9Id(2)])
     }
+}
 }
