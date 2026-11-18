@@ -21,6 +21,18 @@ public struct ScreenshotFile: Sendable, Equatable {
     }
 }
 
+/// FR-002-16: the one test for "this path is a screenshot file that really lives in the watched folder". A symbolic
+/// link is rejected whatever it points at, and so is any file whose resolved location is not a direct child of the
+/// folder it was found in. The scanner applies it when listing; the importer applies it again to the settled file,
+/// because the file may have been swapped for a link between the two.
+enum ScreenshotPathGuard {
+    static func accepts(_ url: URL, kind: FileKind) -> Bool {
+        guard kind == .regular else { return false }
+        let folder = url.deletingLastPathComponent().resolvingSymlinksInPath()
+        return url.resolvingSymlinksInPath().deletingLastPathComponent() == folder
+    }
+}
+
 /// Lists the qualifying screenshots among the direct children of a folder (FR-002-04, FR-002-06). Subfolders,
 /// symbolic links and anything that fails recognition are dropped silently, with no log entry.
 public struct ScreenshotFolderScanner: Sendable {
@@ -50,7 +62,7 @@ public struct ScreenshotFolderScanner: Sendable {
     private func candidate(_ url: URL, customPrefix: String?) -> ScreenshotFile? {
         let name = url.lastPathComponent
         guard ScreenshotRecognizer.hasCandidateName(name) else { return nil }
-        guard let info = fileSystem.fileInfo(at: url), info.kind == .regular else { return nil }
+        guard let info = fileSystem.fileInfo(at: url), ScreenshotPathGuard.accepts(url, kind: info.kind) else { return nil }
         let attribute = fileSystem.extendedAttribute(named: ScreenshotRecognizer.screenCaptureAttribute, at: url)
         guard ScreenshotRecognizer.qualifies(fileName: name, attribute: attribute, customPrefix: customPrefix) else {
             return nil
