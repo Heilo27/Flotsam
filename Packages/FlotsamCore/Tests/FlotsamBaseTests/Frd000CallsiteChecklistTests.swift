@@ -108,8 +108,7 @@ struct Frd000CallsiteChecklistTests {
 
     // MARK: OC-0038, callsites no module makes yet
 
-    @Test("OC-0038 trigger match = no is logged by the Triggers module",
-          .disabled("DEFECT FRD-000 FR-000-11 checklist: nothing calls .triggerMatched(false) (only (true) at TriggerExpander.swift:83); owner TASK-323"))
+    @Test("OC-0038 trigger match = no is logged by the Triggers module")
     func triggerMatchNoCallsite() {
         // given the shipped sources, when the triggerMatched(false) calls are collected
         let files = Callsites.files(matching: #"\.triggerMatched\(false\)"#)
@@ -117,8 +116,7 @@ struct Frd000CallsiteChecklistTests {
         #expect(Callsites.allIn(files, Self.sources + "FlotsamTriggers/"))
     }
 
-    @Test("OC-0038 paste-back start and outcome are logged",
-          .disabled("DEFECT FRD-000 FR-000-11 checklist: no .pasteBack callsite in Sources or App (PasteService.swift:53,86 log only a failure from recordPaste); owner TASK-187"))
+    @Test("OC-0038 paste-back start and outcome are logged")
     func pasteBackCallsites() {
         // given the shipped sources, when the paste-back calls are collected
         let started = Callsites.files(matching: #"\.pasteBack\(outcome: \.started"#)
@@ -128,8 +126,7 @@ struct Frd000CallsiteChecklistTests {
         #expect(!any.isEmpty)
     }
 
-    @Test("OC-0038 a global hotkey registration result is logged",
-          .disabled("DEFECT FRD-000 FR-000-11 checklist: no .hotkeyRegistered callsite in Sources or App; owner TASK-305"))
+    @Test("OC-0038 a global hotkey registration result is logged")
     func hotkeyRegistrationCallsite() {
         // given the shipped sources, when the hotkeyRegistered calls are collected
         let files = Callsites.files(matching: #"\.hotkeyRegistered\("#)
@@ -139,8 +136,7 @@ struct Frd000CallsiteChecklistTests {
 
     // MARK: OC-0039, callsites no module makes yet
 
-    @Test("OC-0039 database open, migrate and integrity-check results are logged",
-          .disabled("DEFECT FRD-000 FR-000-11 checklist: no .database(.open|.migrate|.integrityCheck) callsite in Sources (FlotsamDatabase.swift logs only errors); owners TASK-045, TASK-075, TASK-067"))
+    @Test("OC-0039 database open, migrate and integrity-check results are logged")
     func databaseStepCallsites() {
         // given the shipped sources, when each step's call is collected
         let open = Callsites.files(matching: #"\.database\(\.open"#)
@@ -152,8 +148,7 @@ struct Frd000CallsiteChecklistTests {
         #expect(Callsites.allIn(integrity, Self.sources + "FlotsamStorage/"))
     }
 
-    @Test("OC-0039 the retention sweep logs rows and bytes removed",
-          .disabled("DEFECT FRD-000 FR-000-11 checklist: no .retentionSwept callsite in Sources or App; owner TASK-059"))
+    @Test("OC-0039 the retention sweep logs rows and bytes removed")
     func retentionSweepCallsite() {
         // given the shipped sources, when the retentionSwept calls are collected
         let files = Callsites.files(matching: #"\.retentionSwept\("#)
@@ -161,8 +156,7 @@ struct Frd000CallsiteChecklistTests {
         #expect(Callsites.allIn(files, Self.sources + "FlotsamStorage/"))
     }
 
-    @Test("OC-0039 a permission state transition is logged",
-          .disabled("DEFECT FRD-000 FR-000-11 checklist: no .permissionChanged callsite in Sources or App; owner TASK-105"))
+    @Test("OC-0039 a permission state transition is logged")
     func permissionTransitionCallsite() {
         // given the shipped sources, when the permissionChanged calls are collected
         let files = Callsites.files(matching: #"\.permissionChanged\("#)

@@ -54,16 +54,24 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
 | Pasteboard change processed: skipped + `POL` code | `pasteboardProcessed` | FR-001-04 | TASK-121 | [ ] |
 | Pasteboard change processed: stored / deduped | `pasteboardProcessed` | FR-007-05 | TASK-051 | [ ] |
 | Screenshot import outcome | `screenshotImported` | FR-002-09 | TASK-219 | [ ] |
-| Paste-back start and outcome | `pasteBack` (`started`, then outcome) | FR-003-15 | TASK-187 | [ ] |
-| Hotkey registration result | `hotkeyRegistered` | FR-005-03 | TASK-305 | [ ] |
+| Paste-back start and outcome | `pasteBack` (`started`, then outcome) | FR-003-15 | TASK-187 | [x] |
+| Hotkey registration result | `hotkeyRegistered` | FR-005-03 | TASK-305 | [x] |
 | Shelf reveal, drag-out, drop-in outcome | `shelf` | FR-006-18 | TASK-295 | [ ] |
-| Trigger buffer match result (yes/no only) | `triggerMatched` | FR-005-12 | TASK-323 | [ ] |
-| Permission state transitions | `permissionChanged` | FR-008-13 | TASK-105 | [ ] |
-| Retention sweep result (rows, bytes) | `retentionSwept` | FR-007-09 | TASK-059 | [ ] |
-| Database open | `database(.open)` | FR-007-02 | TASK-045 | [ ] |
-| Database migrate | `database(.migrate)` | FR-007-17 | TASK-075 | [ ] |
-| Database integrity check | `database(.integrityCheck)` | FR-007-13 | TASK-067 | [ ] |
+| Trigger buffer match result (yes/no only) | `triggerMatched` | FR-005-12 | TASK-323 | [x] |
+| Permission state transitions | `permissionChanged` | FR-008-13 | TASK-105 | [x] |
+| Retention sweep result (rows, bytes) | `retentionSwept` | FR-007-09 | TASK-059 | [x] |
+| Database open | `database(.open)` | FR-007-02 | TASK-045 | [x] |
+| Database migrate | `database(.migrate)` | FR-007-17 | TASK-075 | [x] |
+| Database integrity check | `database(.integrityCheck)` | FR-007-13 | TASK-067 | [x] |
 | Every Warning / Error / Fatal raised | `FlotsamLog.log(error)` via `ErrorReporter` | FR-000-08 | TASK-027 | [x] |
+
+What each ticked row logs (outcome or count only, never an item, a path, a typed word or a trigger):
+- **Paste-back:** `paste.back started` when a paste begins (Library choice, Shelf paste, item hotkey); then one closing line, `succeeded` (pasted, or copied by request), `denied` (copied only because Accessibility is not granted) or `failed` (any error).
+- **Hotkey registration:** one line per attempt, `registered` or `failed`.
+- **Trigger match:** `matched` when a word expands. `noMatch` is logged when a typed word equals a trigger but expansion is suppressed (Secure Event Input, excluded app, input method, unknown app). A word that equals no trigger is decided on the key-event thread, which does no I/O (FRD-005 FR-005-21), and is not logged.
+- **Permission change:** one line per permission whose granted state differs from the last time the app looked (at launch, then each time the app becomes active). The launch reading is a baseline and logs nothing.
+- **Retention sweep:** one line per sweep with the rows and bytes removed by the time pass and the image-budget pass together; a sweep that removes nothing logs 0 and 0.
+- **Database:** `database.integrityCheck` `passed` or `failed` (before opening an existing file, and again after migration), `database.migrate` `migrated` when a migration ran or `failed`, and `database.open` `opened` or `failed`.
 
 **Diagnostics**
 - **FR-000-13** An in-memory ring buffer holds the last 100 raised Warning, Error and Fatal errors (code, severity, timestamp). Info codes are logged but never recorded, so a high-frequency Info skip cannot evict real failures. Throttled occurrences are still recorded: the FR-000-08 throttle limits surfacing only. It is never written to disk and is cleared on quit.
@@ -208,6 +216,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
 
 ## 11. Change Log
+- 2026-11-18: FR-000-11: eight more callsites ticked (paste-back, hotkey registration, trigger no-match, permission transition, retention sweep, database open, migrate and integrity check); the lines each one writes are listed under the checklist. A trigger no-match is logged only for a typed word that equals a trigger but is suppressed; ordinary words are not logged.
 - 2026-11-18: FR-000-08: clearing a code's Notices on recovery also clears that code's 60 s throttle, so a condition that returns within 60 s (suspend, resume, suspend again) shows its Notice again.
 - 2026-11-17: FR-000-05/06 and FR-000-08 (8A rulings): argument kinds must match message specifiers (checked); a wrong kind shows the SYS-INT-001 text instead of crashing; long app names are cut with "…" to fit 140 characters; negative values show as 0 and zero shows in digits; a surfacing time later than now (clock set back) counts as expired in the throttle.
 - 2026-11-16: FR-000-08 states the throttle boundary: a surfacing exactly 60 s old has expired, so the same code may surface again at T+60.

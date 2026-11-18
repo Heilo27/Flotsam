@@ -14,11 +14,13 @@ public final class PasteService {
     private let keys: any KeyEventPoster
     private let clock: any WallClock
     private let ownWrites: OwnWriteLedger
+    private let sink: any LogSink
 
     public init(
         store: any PasteItemStore, pasteboard: any PasteboardPort, files: any FileSystemPort,
         frontmost: any FrontmostAppProvider, accessibility: any PermissionProbe, keys: any KeyEventPoster,
-        clock: any WallClock, ownWrites: OwnWriteLedger
+        clock: any WallClock, ownWrites: OwnWriteLedger,
+        sink: any LogSink = OSLogSink()
     ) {
         self.store = store
         self.pasteboard = pasteboard
@@ -28,11 +30,19 @@ public final class PasteService {
         self.keys = keys
         self.clock = clock
         self.ownWrites = ownWrites
+        self.sink = sink
     }
 
     /// Runs the sequence for one item. Failure codes: `LIB-IO-001` (data missing; the item is deleted), `LIB-DAT-001`
     /// (all files gone; panel stays open), `LIB-OS-001` (target changed or ⌘V not posted; item stays on the pasteboard).
     public func paste(itemId: UUID, mode: PasteMode, target: FrontmostApp?, host: any PasteHost) async -> FlotsamResult<PasteOutcome> {
+        FlotsamLog.log(.pasteBack(outcome: .started), sink: sink)
+        let result = await runPaste(itemId: itemId, mode: mode, target: target, host: host)
+        logOutcome(of: result)
+        return result
+    }
+
+    private func runPaste(itemId: UUID, mode: PasteMode, target: FrontmostApp?, host: any PasteHost) async -> FlotsamResult<PasteOutcome> {
         let span = Signposts.begin(.pasteBack)
         defer { span.end() }
 
@@ -70,6 +80,13 @@ public final class PasteService {
     /// user's previous clipboard put back after ⌘V (FR-005-16). The clipboard is not restored when the item was only
     /// copied or ⌘V failed: the item is then the thing the user must paste, so it stays on the pasteboard.
     public func pasteExpanded(itemId: UUID, target: FrontmostApp?, expansion: PasteExpansion) async -> FlotsamResult<PasteOutcome> {
+        FlotsamLog.log(.pasteBack(outcome: .started), sink: sink)
+        let result = await runPasteExpanded(itemId: itemId, target: target, expansion: expansion)
+        logOutcome(of: result)
+        return result
+    }
+
+    private func runPasteExpanded(itemId: UUID, target: FrontmostApp?, expansion: PasteExpansion) async -> FlotsamResult<PasteOutcome> {
         let span = Signposts.begin(.pasteBack)
         defer { span.end() }
 
@@ -90,6 +107,18 @@ public final class PasteService {
         if case .failure(let error) = await postPaste(target: target) { return .failure(error) }
         await expansion.finish(staged)
         return .success(.pasted)
+    }
+
+    /// The closing `paste.back` line (FR-000-11): the outcome only, never the item or its content. Pasted and copied are
+    /// `succeeded`; copied because Accessibility is denied is `denied`; any error is `failed`.
+    private func logOutcome(of result: FlotsamResult<PasteOutcome>) {
+        let outcome: LogOutcome
+        switch result {
+        case .success(.pasted), .success(.copied): outcome = .succeeded
+        case .success(.copiedAccessibilityDenied): outcome = .denied
+        case .failure: outcome = .failed
+        }
+        FlotsamLog.log(.pasteBack(outcome: outcome), sink: sink)
     }
 
     /// Step 1 of both sequences. Data missing (`LIB-IO-001`) deletes the item.
