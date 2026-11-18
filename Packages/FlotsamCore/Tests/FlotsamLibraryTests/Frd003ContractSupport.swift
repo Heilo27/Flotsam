@@ -105,3 +105,12 @@ func fullRow(
         isPinned: pinned, hasTrigger: trigger, hasShortcut: false, pixelWidth: nil, pixelHeight: nil, memberCount: 0,
         byteSize: 0)
 }
+
+extension IngestResult {
+    /// The id of the item the ingest created or touched.
+    var itemId: UUID {
+        switch outcome {
+        case .created(let id), .bumped(let id), .unchanged(let id): id
+        }
+    }
+}

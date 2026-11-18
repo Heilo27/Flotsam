@@ -151,7 +151,7 @@ import Testing
         h.model.handle(key(.down, .command))
         await h.model.settled()
         // then: the selection is the oldest item and the count is the full 10,000
-        #expect(selectedIndex(h, in: rows) == 9_999)
+        #expect(selectedIndex(h, in: rows) == 9_999, "selected index \(selectedIndex(h, in: rows).map(String.init) ?? "nil"), loaded rows \(h.model.rowPresentations().count)")
         #expect(h.model.footer().countText == "10000 items")
     }
 
@@ -191,7 +191,7 @@ import Testing
         // when
         let line = LibraryRowPresentation(row: row, position: 0, now: Self.now).secondaryText
         // then
-        #expect(line == "Safari · Yesterday")
+        #expect(line == "Safari · Yesterday", "got '\(line)'")
     }
 
     // OC-3019. Expected to expose defect D4: after 7 days the contract wants a date, not a relative phrase.
@@ -251,35 +251,45 @@ import Testing
         #expect(!plain.accessibilityLabel.contains("Pinned"))
     }
 
-    // OC-3020 (third row). Defect D5: FR-003-07 and the OC want a 'Missing' badge ('Original file missing' for
-    // VoiceOver) on a file row whose file was deleted. Nothing in ItemRow, LibraryRowPresentation or the model
-    // carries that state, so this is red today. Mutation: none needed, it fails for the missing behaviour itself.
-    @Test("OC-3020 a file row whose file was deleted is marked Original file missing; one whose file exists is not")
+    // OC-3020 (third row). Goes through the shipping query layer: whether a file is missing is read from the disk
+    // when a page is read (FR-003-07). Mutation: never set the flag, set it on every file row, or stop reading the disk
+    // on the next read (restore must clear it).
+    @Test("OC-3020 a file row whose file was deleted shows the Missing badge; an existing one, and a restored one, do not")
     func oc3020_missingBadge() async throws {
-        // given: two file rows; the first one's member path does not exist, the second's does
-        let gone = fullRow(1, kind: .file, primary: "gone.txt")
-        let kept = fullRow(2, kind: .file, primary: "kept.txt")
-        let existing = FileManager.default.temporaryDirectory.appendingPathComponent("oc3020-\(UUID().uuidString).txt")
-        try Data("x".utf8).write(to: existing)
-        defer { try? FileManager.default.removeItem(at: existing) }
-        let h = await opened([gone, kept])
-        h.source.content = ItemContent(
-            kind: .file, plainText: nil, representations: [],
-            members: [ItemMember(path: "/nonexistent-oc3020/gone.txt", bookmark: nil, isDirectory: false)])
-        // when: the Library presents its rows (the member of every row resolves to the path above in this fake)
-        h.model.select(id: gone.id)
-        await h.model.awaitPreview()
-        let labels = Dictionary(uniqueKeysWithValues: h.model.rowPresentations().map { ($0.id, $0.accessibilityLabel) })
-        // then: the deleted-file row says so
-        #expect(labels[gone.id]?.contains("Original file missing") == true, "got '\(labels[gone.id] ?? "nil")'")
-        // and the control: the same fake with an existing path must not be marked (guards a badge on every file row)
-        h.source.content = ItemContent(
-            kind: .file, plainText: nil, representations: [],
-            members: [ItemMember(path: existing.path, bookmark: nil, isDirectory: false)])
-        h.model.select(id: kept.id)
-        await h.model.awaitPreview()
-        let after = Dictionary(uniqueKeysWithValues: h.model.rowPresentations().map { ($0.id, $0.accessibilityLabel) })
-        #expect(after[kept.id]?.contains("Original file missing") == false)
+        // given: two file items backed by real files; one of them is then deleted
+        let lib = try await RealLibrary.make()
+        defer { lib.cleanUp() }
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("oc3020-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let goneURL = dir.appendingPathComponent("gone.txt")
+        let keptURL = dir.appendingPathComponent("kept.txt")
+        try Data("g".utf8).write(to: goneURL)
+        try Data("k".utf8).write(to: keptURL)
+        let goneID = try await lib.add(.file, key: "oc3020-gone", text: "gone.txt", secondsAgo: 20,
+            members: [IngestMember(path: goneURL.path, bookmark: nil, isDirectory: false)]).itemId
+        let keptID = try await lib.add(.file, key: "oc3020-kept", text: "kept.txt", secondsAgo: 10,
+            members: [IngestMember(path: keptURL.path, bookmark: nil, isDirectory: false)]).itemId
+        let textID = try await lib.add(.text, key: "oc3020-text", text: "plain words", secondsAgo: 5).itemId
+        let backup = dir.appendingPathComponent("backup.txt")
+        try FileManager.default.moveItem(at: goneURL, to: backup)
+        // when: the Library opens
+        await lib.model.open(target: target)
+        var byID = Dictionary(uniqueKeysWithValues: lib.model.rowPresentations().map { ($0.id, $0) })
+        // then: the deleted-file row has the badge "Missing" and VoiceOver says so; the other two have neither
+        #expect(byID.count == 3)
+        #expect(byID[goneID]?.isMissing == true)
+        #expect(byID[goneID]?.missingBadge == "Missing")
+        #expect(byID[goneID]?.accessibilityLabel.lowercased().contains("missing") == true, "got '\(byID[goneID]?.accessibilityLabel ?? "nil")'")
+        #expect(byID[keptID]?.isMissing == false)
+        #expect(byID[keptID]?.missingBadge == nil)
+        #expect(byID[textID]?.isMissing == false)
+        #expect(byID[keptID]?.accessibilityLabel.lowercased().contains("missing") == false)
+        // and when the file is restored and the rows are read again, the mark clears
+        try FileManager.default.moveItem(at: backup, to: goneURL)
+        await lib.model.refresh()
+        byID = Dictionary(uniqueKeysWithValues: lib.model.rowPresentations().map { ($0.id, $0) })
+        #expect(byID[goneID]?.isMissing == false)
     }
 
     // MARK: Preview member limit (FR-003-14)
