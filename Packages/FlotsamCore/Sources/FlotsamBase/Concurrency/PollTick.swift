@@ -20,6 +20,9 @@ public final class PollTick: Sendable {
     public static let interval: TimeInterval = 0.5
     /// FR-001-01.
     public static let tolerance: TimeInterval = 0.1
+    /// The longest period `every` accepts, in seconds; a longer or infinite one is clamped to it (a day is far past any
+    /// real periodic job here, and keeps tick arithmetic nowhere near `Int.max`).
+    public static let maxPeriod: TimeInterval = 86_400
     /// Two cadence changes closer than this count as one instant: the same main-actor turn (a pause and resume made
     /// together, a toggle burst), which differ only by scheduling jitter. Far below `tolerance`, so a resume that
     /// really was this late still keeps every bound within it; far above a clock read or a context switch, so a burst
@@ -102,10 +105,13 @@ public final class PollTick: Sendable {
         state.withLock { $0.observer = observer }
     }
 
-    /// Runs `work` on every `seconds / interval`-th tick (rounded to a whole tick, at least one). Returns the cancel
+    /// Runs `work` on every `seconds / interval`-th tick (rounded to a whole tick, at least one). `seconds` is clamped
+    /// into `interval ... maxPeriod`: NaN and anything under one tick run every tick, infinity and anything over
+    /// `maxPeriod` run every `maxPeriod`, so no input reaches an `Int` conversion that traps. Returns the cancel
     /// closure; call it when the work no longer applies.
     public func every(_ seconds: TimeInterval, _ work: @escaping @Sendable () -> Void) -> @Sendable () -> Void {
-        let ticks = max(1, Int((seconds / Self.interval).rounded()))
+        let clamped = seconds.isNaN ? Self.interval : min(max(seconds, Self.interval), Self.maxPeriod)
+        let ticks = max(1, Int((clamped / Self.interval).rounded()))
         let id = state.withLock { state -> Int in
             state.nextId += 1
             return state.nextId
