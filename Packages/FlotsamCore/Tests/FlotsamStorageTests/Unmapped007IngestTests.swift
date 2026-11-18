@@ -298,6 +298,19 @@ final class CPUShareProbe: @unchecked Sendable {
     }
 }
 
+/// A wall-clock figure scaled to the time the work would have taken with the CPU to itself (TASK-481). `run` returns a
+/// wall-time figure (a p95, a longest stall); it is multiplied by the CPU share a spinning probe thread was given while
+/// `run` executed (`CPUShareProbe`, the OC-7098 mechanism). On a quiet machine the share is 1.0 and the figure is read
+/// unchanged; at a load average of 250 on 18 cores the share is a few percent and a 15x-slow-but-correct run reads as the
+/// 1x it is. Work that really is slower (an added sleep, a full scan, an I/O stall) does not lower the share, so it still
+/// reads its full wall time against the bound. The 0.02 floor matches OC-7098 and caps the allowance at 50x.
+func loadNormalized(_ run: () async throws -> Double) async rethrows -> Double {
+    let probe = CPUShareProbe()
+    defer { _ = probe.stop() }  // a throwing run must still end the spin thread; stop() is idempotent
+    let wall = try await run()
+    return wall * max(probe.stop(), 0.02)
+}
+
 /// A value two threads touch, for callbacks that run off the test's task.
 final class Locked<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()

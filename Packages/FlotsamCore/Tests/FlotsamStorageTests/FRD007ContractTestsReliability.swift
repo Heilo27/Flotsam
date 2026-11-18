@@ -121,10 +121,17 @@ struct FRD007ContractReliabilityTests {
         #expect(listedBefore == orphanCount + 2, "precondition: every planted file is on disk")
 
         // when reconcile runs with the main actor heartbeat going
+        // The stall is load-normalized (TASK-481): a main thread the scheduler did not run for 300 ms at load average 250 is
+        // not a main actor held by reconcile. Reconcile on the main actor holds it for the whole run, and a run that
+        // holds the thread keeps the CPU it is given, so the share stays near 1 and the stall still reads in full.
         let heartbeat = MainActorHeartbeat()
+        let probe = CPUShareProbe()
+        defer { _ = probe.stop() }
         heartbeat.start()
         let outcome = try await s.database.reconcile().get()
         heartbeat.stop()
+        let share = probe.stop()
+        let stallMs = heartbeat.longestStallMs * max(share, 0.02)
 
         // then all old orphans removed, the young orphan and the referenced blob stay
         #expect(outcome.orphanBlobsRemoved == orphanCount)
@@ -134,7 +141,7 @@ struct FRD007ContractReliabilityTests {
         #expect(try s.presentIds() == [1])
         // and the main actor kept ticking and was never held for more than 250 ms
         #expect(heartbeat.ticks >= 5, "the heartbeat must have run for the check to mean anything: \(heartbeat.ticks)")
-        #expect(heartbeat.longestStallMs < 250, "main actor stalled \(heartbeat.longestStallMs) ms during reconcile")
+        #expect(stallMs < 250, "main actor stalled \(heartbeat.longestStallMs) ms (CPU share \(share), load-normalized \(stallMs) ms) during reconcile")
     }
 
     /// OC-7115 (boundary). Given exactly one old orphan and nothing else, reconcile removes exactly that one and the
