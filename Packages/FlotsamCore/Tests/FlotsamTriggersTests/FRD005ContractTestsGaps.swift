@@ -26,8 +26,8 @@ import Testing
 //            `aCopyOfIdenticalTextStillBlocksTheRestore`.
 //   OC-5106  TriggerExpanderAdversarialTests `aClipboardOneByteOverThirtyTwoMiBIsNotHeldAndNotRestored`.
 //   OC-5108  TriggerPrivacyTests `aConcealedOrTransientClipboardIsNeverReadAndNeverRestored`.
-//            [Spec Drift] the oracle's `then` for OC-5108 predates FR-005-16 (a concealed clipboard is neither read nor
-//            restored); the test follows the FRD. Surfaced to Ryan, not edited.
+//            The oracle's `then` for OC-5108 was aligned to FR-005-16 (a concealed clipboard is neither read nor
+//            restored) in 702c5fa; the test and the oracle both follow the FRD.
 //
 // UNTESTABLE-AT-PACKAGE OC-5100: external listen-only CGEventTap inter-event timing (<= 10 ms) needs a real second
 //   process observing the event stream; the logic half (no inserted sleeps beyond settle and restoreDelay) is asserted
