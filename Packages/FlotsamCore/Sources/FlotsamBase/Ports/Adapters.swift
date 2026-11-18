@@ -66,6 +66,28 @@ public struct LocalFileSystem: FileSystemPort {
         do { return .success(try Data(contentsOf: url)) } catch { return .failure(Self.mapped(error)) }
     }
 
+    public func readFileNoFollow(at url: URL) -> FlotsamResult<Data> {
+        // O_NOFOLLOW makes a link in the last component fail with ELOOP; O_NONBLOCK keeps a swapped-in FIFO from
+        // blocking the open. The kind is then read from the descriptor itself, so nothing can change under the check.
+        let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+        guard descriptor >= 0 else { return .failure(Self.posixFailure(errno, "File read failed")) }
+        defer { close(descriptor) }
+        var status = stat()
+        guard fstat(descriptor, &status) == 0 else { return .failure(Self.posixFailure(errno, "File read failed")) }
+        guard (status.st_mode & S_IFMT) == S_IFREG else { return .failure(Self.posixFailure(EFTYPE, "Not a regular file")) }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 64 * 1024)
+        while true {
+            let count = buffer.withUnsafeMutableBytes { read(descriptor, $0.baseAddress, $0.count) }
+            if count < 0 {
+                if errno == EINTR { continue }
+                return .failure(Self.posixFailure(errno, "File read failed"))
+            }
+            if count == 0 { return .success(data) }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+    }
+
     public func fileInfo(at url: URL) -> FileInfo? {
         // `attributesOfItem` does not follow a symbolic link, so a link reports `.symbolicLink`, not its target.
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
@@ -87,9 +109,9 @@ public struct LocalFileSystem: FileSystemPort {
         return values?.volumeAvailableCapacityForImportantUsage
     }
 
-    private static func posixFailure(_ code: Int32) -> FlotsamError {
+    private static func posixFailure(_ code: Int32, _ message: StaticString = "File write failed") -> FlotsamError {
         FlotsamError(
-            .sysInt001, "File write failed", underlying: UnderlyingErrorInfo(domain: NSPOSIXErrorDomain, code: Int(code)))
+            .sysInt001, message, underlying: UnderlyingErrorInfo(domain: NSPOSIXErrorDomain, code: Int(code)))
     }
 
     private func attempt(_ operation: () throws -> Void) -> FlotsamResult<Void> {

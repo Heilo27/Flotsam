@@ -17,6 +17,7 @@ private struct ShelfFakeFiles: FileSystemPort {
     func extendedAttribute(named name: String, at url: URL) -> Data? { nil }
     func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { unused() }
     func readFile(at url: URL) -> FlotsamResult<Data> { .failure(FlotsamError(.sysInt001, "unused in drag planner tests")) }
+    func readFileNoFollow(at url: URL) -> FlotsamResult<Data> { .failure(FlotsamError(.sysInt001, "unused in drag planner tests")) }
     func fileInfo(at url: URL) -> FileInfo? { nil }
     func availableCapacity(at url: URL) -> Int64? { nil }
 }

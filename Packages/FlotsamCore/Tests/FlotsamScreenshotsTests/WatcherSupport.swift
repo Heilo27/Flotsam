@@ -217,6 +217,7 @@ final class ProbedFileSystem: FileSystemPort, @unchecked Sendable {
     func extendedAttribute(named name: String, at url: URL) -> Data? { real.extendedAttribute(named: name, at: url) }
     func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { real.writeFile(data, to: url, permissions: permissions) }
     func readFile(at url: URL) -> FlotsamResult<Data> { real.readFile(at: url) }
+    func readFileNoFollow(at url: URL) -> FlotsamResult<Data> { real.readFileNoFollow(at: url) }
     func availableCapacity(at url: URL) -> Int64? { real.availableCapacity(at: url) }
 }
 
