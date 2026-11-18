@@ -9,9 +9,8 @@ import Testing
 /// against FRD-005 and `.claude/oracle/frd-005-contract.json`. Every expected value is a literal. Fakes on every port:
 /// no event tap, no real pasteboard, no keystroke.
 ///
-/// Oracle note: OC-5108 says a Concealed clipboard is "back on the clipboard after the restore". FRD-005 FR-005-16 and
-/// section 6 item 6 say the opposite (never read, held or restored; Ryan's privacy-first brief). These tests follow the
-/// FRD; the oracle line is stale and is reported as a spec drift, not tested.
+/// Oracle note: FRD-005 FR-005-16 and section 6 item 6 say a Concealed or Transient clipboard is never read, held or
+/// restored (Ryan's privacy-first brief); OC-5108 now says the same (aligned in 702c5fa). These tests follow the FRD.
 @MainActor
 @Suite struct TriggerExpanderAdversarialTests {
     private static let space = TriggerKeys.space
@@ -246,7 +245,7 @@ import Testing
         #expect(ledger.contains(changeCount: 1))
     }
 
-    // MARK: Concealed and Transient never read, held, stored or restored (FR-005-16, OC-5036, OC-5037)
+    // MARK: Concealed and Transient never read, held, stored or restored (FR-005-16, OC-5108; OC-5036 and OC-5037 are the Save Clipboard cases)
 
     @Test(arguments: [PasteboardMarkers.concealed, PasteboardMarkers.transient])
     func aMarkedPasteboardIsClassifiedBeforeAnyByteIsRead(marker: String) async {
