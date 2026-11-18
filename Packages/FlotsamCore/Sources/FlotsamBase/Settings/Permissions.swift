@@ -18,24 +18,18 @@ public protocol PermissionProbe: Sendable {
 
 extension PermissionProbe {
     /// The Accessibility question the Library footer asks; answered by `PasteGate`, the one owner of the decision.
-    public var isAccessibilityTrusted: Bool { PasteGate.outcome(probe: self) == .paste }
-}
-
-/// What choosing a Library item does, given Accessibility (FR-008-14). `FlotsamPaste.PasteOutcome` is the full
-/// result of a paste attempt; this is only the Accessibility gate's decision.
-public enum PasteGateOutcome: Equatable, Sendable {
-    /// Write to the pasteboard, then synthesise the paste keystroke.
-    case paste
-    /// Write to the pasteboard only and tell the user (HUD from `SET-PRM-001`); no keystroke.
-    case copyOnly(FlotsamError)
+    public var isAccessibilityTrusted: Bool { PasteGate.isAllowed(probe: self) }
 }
 
 /// The one owner of the Accessibility decision and of its `SET-PRM-001` error (FR-008-14, ADR-0005, Rule 9). Every
 /// path that needs Accessibility (paste, Shelf, Library, item hotkey, trigger expansion, the Triggers pane notice) asks
-/// here; none tests the permission or builds the error itself.
+/// here; none tests the permission or builds the error itself. The gate only decides; the result of a paste attempt is
+/// `FlotsamPaste.PasteOutcome` (a denied attempt is its `.copiedAccessibilityDenied`).
 public enum PasteGate {
-    public static func outcome(accessibilityGranted: Bool) -> PasteGateOutcome {
-        accessibilityGranted ? .paste : .copyOnly(copyOnlyError())
+    /// True when Accessibility is granted, so a paste may post the keystroke; false means copy only. Read fresh from
+    /// the probe on every call, never cached (FR-008-13 rule b).
+    public static func isAllowed(probe: any PermissionProbe) -> Bool {
+        probe.isGranted(.accessibility)
     }
 
     /// The `SET-PRM-001` error for an attempt that could only copy. `itemId` is log context when the attempt has an item.
@@ -44,10 +38,6 @@ public enum PasteGate {
             .setPrm001, "Accessibility not granted; pasting by copy only",
             context: itemId.map { [.itemId: .id($0)] } ?? [:])
     }
-
-    public static func outcome(probe: any PermissionProbe) -> PasteGateOutcome {
-        outcome(accessibilityGranted: probe.isGranted(.accessibility))
-    }
 }
 
 /// The inline message a Triggers pane shows while triggers are on but a permission is missing (FR-008-06).
@@ -55,7 +45,7 @@ public enum TriggerPermissionNotice {
     public static func missing(triggersEnabled: Bool, probe: any PermissionProbe) -> [ErrorCode] {
         guard triggersEnabled else { return [] }
         var codes: [ErrorCode] = []
-        if case .copyOnly(let error) = PasteGate.outcome(probe: probe) { codes.append(error.code) }
+        if !PasteGate.isAllowed(probe: probe) { codes.append(PasteGate.copyOnlyError().code) }
         if !probe.isGranted(.inputMonitoring) { codes.append(.setPrm002) }
         return codes
     }

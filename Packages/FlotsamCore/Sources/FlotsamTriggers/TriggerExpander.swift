@@ -127,8 +127,8 @@ public final class TriggerExpander {
 
     /// Step 2: the world may have changed between the boundary key and now. `nil` means carry on.
     private func recheck(_ match: TriggerMatch) async -> ExpansionOutcome? {
-        if case .copyOnly(let error) = PasteGate.outcome(probe: permissions) {
-            return await abortBeforeDelete(match, report: error)
+        if !PasteGate.isAllowed(probe: permissions) {
+            return await abortBeforeDelete(match, report: PasteGate.copyOnlyError())
         }
         // The key was meant for the app the user was in; if that is no longer frontmost, nothing is re-posted.
         guard keyboard.frontmostApp() == match.app else { return await abortBeforeDelete(match, cause: nil) }
