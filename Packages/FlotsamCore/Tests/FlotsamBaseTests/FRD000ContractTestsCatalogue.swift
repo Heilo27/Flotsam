@@ -55,10 +55,10 @@ private func hits(of needle: String, in files: [SourceFile]) -> [String] {
     // OC-0017. [Product defect, reported not fixed] FR-000-05 requires plural and count variations to come from catalogue
     // variations; the catalogue holds one "%lld items deleted" and SettingsString.text(_:) has no variation lookup, so
     // 1 renders "1 items deleted". The expectation below is the contract's: when the defect is fixed this test records no
-    // issue, withKnownIssue then fails, and the wrapper is to be removed. Red-to-green if clearDone gains a singular form.
+    // issue, withKnownIssue then fails, and the wrapper is to be removed (TASK-469 flips this to a plain assertion and adds the sibling count-string tests). Red-to-green if clearDone gains a singular form.
     @Test("OC-0017 given exactly 1 item deleted, then the completion HUD reads '1 item deleted' and never '1 items'")
     func clearDoneSingular() {
-        withKnownIssue("OC-0017 product defect: Localizable.xcstrings has no plural variation for ui.settings.clearDone, so 1 reads '1 items deleted'") {
+        withKnownIssue("OC-0017 product defect (TASK-469): Localizable.xcstrings has no plural variation for ui.settings.clearDone, so 1 reads '1 items deleted'") {
             let hud = SettingsString.clearDone.text([.count(1)])
             #expect(hud == "1 item deleted")
             #expect(!hud.contains("1 items"))
