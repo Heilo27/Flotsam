@@ -591,6 +591,122 @@ struct WatcherEnvironmentTests {
         #expect(rig.notices.cleared(.sspOs001) == 1)
     }
 
+    @Test("FR-002-03 (TASK-420): leaving paused for a folder that is still refused raises SSP-PRM-001 again, once")
+    func pausedThenStillDenied() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        let chosen = try rig.temp.folder("Pictures/Chosen")
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: rig.desktop.path)
+            rig.cleanUp()
+        }
+        // given: Desktop refused, then an override that cannot be used pauses pickup
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: rig.desktop.path)
+        await rig.watcher.start()
+        rig.settings.set(try FolderOverride.choosing(chosen).get(), for: SettingKeys.screenshotsFolderOverride)
+        rig.fileSystem.hide(chosen)
+        await rig.tick()
+        #expect(await rig.watcher.status == .paused)
+        await rig.tick()
+        await rig.watcher.didBecomeActive()
+        #expect(rig.notices.raised(.sspPrm001) == 1)
+        #expect(rig.notices.cleared(.sspPrm001) == 1, "cleared once on entering paused, not on every tick while paused")
+        #expect(rig.notices.raised(.sspIo003) == 1)
+        #expect(rig.notices.cleared(.sspIo003) == 0, "SSP-IO-003 is the notice that stands while paused")
+
+        // when: the override goes away and Desktop, still refused, is the folder again
+        rig.settings.set(FolderOverride.none, for: SettingKeys.screenshotsFolderOverride)
+        await rig.watcher.settingsDidChange()
+
+        // then: the refusal is a new one, so it is raised a second time and stands; IO-003 clears
+        #expect(await rig.watcher.status == .needsAccess)
+        #expect(rig.notices.raised(.sspPrm001) == 2)
+        #expect(rig.notices.standing(.sspPrm001))
+        #expect(rig.notices.cleared(.sspIo003) == 1)
+        #expect(!rig.notices.standing(.sspIo003))
+        #expect(rig.source.running.isEmpty)
+    }
+
+    @Test("FR-002-04 (TASK-420): leaving paused for a folder whose stream still fails re-enters the fallback and raises SSP-OS-001 again")
+    func pausedThenFallbackAgain() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        defer { rig.cleanUp() }
+        let chosen = try rig.temp.folder("Pictures/Chosen")
+        // given: polling fallback standing, then paused by an invalid override
+        rig.source.setFailing(true)
+        await rig.watcher.start()
+        #expect(await eventually { rig.notices.raised(.sspOs001) == 1 })
+        rig.settings.set(try FolderOverride.choosing(chosen).get(), for: SettingKeys.screenshotsFolderOverride)
+        rig.fileSystem.hide(chosen)
+        await rig.tick()
+        #expect(await eventually { rig.notices.cleared(.sspOs001) == 1 })
+        await rig.tick()
+        #expect(rig.notices.cleared(.sspOs001) == 1, "no further clears while paused")
+
+        // when: the override goes away; the stream still cannot be created
+        rig.settings.set(FolderOverride.none, for: SettingKeys.screenshotsFolderOverride)
+        await rig.watcher.settingsDidChange()
+
+        // then: a new fallback is a new notice, and polling imports a screenshot
+        #expect(await eventually { rig.notices.raised(.sspOs001) == 2 })
+        #expect(rig.notices.standing(.sspOs001))
+        #expect(await rig.watcher.status == .watching)
+        let shot = try rig.shot(in: rig.desktop)
+        await rig.poll()
+        #expect(await eventually { rig.ingest.names == [shot.lastPathComponent] })
+    }
+
+    @Test("FR-002-03/04 (TASK-420): paused with no refusal and no fallback clears nothing but SSP-IO-001/003 bookkeeping")
+    func pausedClearsNothingElse() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        defer { rig.cleanUp() }
+        let chosen = try rig.temp.folder("Pictures/Chosen")
+        // given: a healthy watch, then an invalid override
+        await rig.watcher.start()
+        rig.settings.set(try FolderOverride.choosing(chosen).get(), for: SettingKeys.screenshotsFolderOverride)
+        rig.fileSystem.hide(chosen)
+        await rig.tick()
+
+        // then: only the paused notice was raised; nothing was cleared that was never raised
+        #expect(await rig.watcher.status == .paused)
+        #expect(rig.notices.entries == [.raised(.sspIo003)])
+        // and a stream that works again after paused neither raises a fallback nor refusal
+        rig.fileSystem.unhide(chosen)
+        await rig.tick()
+        #expect(await rig.watcher.status == .watching)
+        #expect(rig.notices.entries == [.raised(.sspIo003), .cleared(.sspIo003)])
+        #expect(rig.source.running.count == 1)
+    }
+
+    @Test("FR-002-03/04 (TASK-420): a refusal and a fallback cleared by disabling are not cleared a second time when re-enabled onto a paused folder")
+    func disabledThenPaused() async throws {
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        let chosen = try rig.temp.folder("Pictures/Chosen")
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: rig.desktop.path)
+            rig.cleanUp()
+        }
+        // given: a standing PRM-001, switched off (cleared by FR-002-05)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: rig.desktop.path)
+        await rig.watcher.start()
+        rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
+        await rig.watcher.settingsDidChange()
+        #expect(rig.notices.cleared(.sspPrm001) == 1)
+
+        // when: an invalid override is set while off, then pickup is switched on
+        rig.settings.set(try FolderOverride.choosing(chosen).get(), for: SettingKeys.screenshotsFolderOverride)
+        rig.fileSystem.hide(chosen)
+        rig.settings.set(true, for: SettingKeys.screenshotsEnabled)
+        await rig.watcher.settingsDidChange()
+
+        // then: paused with IO-003 only; the earlier refusal is neither re-raised nor cleared again
+        #expect(await rig.watcher.status == .paused)
+        #expect(rig.notices.standing(.sspIo003))
+        #expect(rig.notices.raised(.sspPrm001) == 1)
+        #expect(rig.notices.cleared(.sspPrm001) == 1)
+        #expect(rig.notices.cleared(.sspOs001) == 0)
+        #expect(rig.source.running.isEmpty)
+    }
+
     @Test("FR-002-04: a stream that goes invalid falls back to polling")
     func invalidatedStream() async throws {
         let rig = try WatcherRig(watermark: earlierLaunch())
