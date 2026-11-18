@@ -12,6 +12,7 @@ struct ShelfView: View {
     let model: ShelfModel
     let placement: ShelfPlacement
     let thumbnail: @Sendable (UUID) async -> Data?
+    let dragOut: ShelfDragOut
     let close: @MainActor () -> Void
 
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
@@ -19,11 +20,39 @@ struct ShelfView: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             content
+            if model.isDropTargeted { dropZone }
             Button(action: close) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
                 .buttonStyle(.plain)
                 .padding(6)
                 .accessibilityLabel(Text(verbatim: ShelfText.string(ShelfText.close)))
         }
+    }
+
+    /// The drop zone while an acceptable drag is over the panel (FR-006-12). It never takes clicks.
+    private var dropZone: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+            .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            .overlay { Text(verbatim: ShelfText.string(ShelfText.dropZone)).font(.callout.bold()).foregroundStyle(Color.accentColor) }
+            .padding(4)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// Scrolls the highlighted card into view (FR-006-15). Keyed on the card ids as well as the highlight, because the
+    /// card appears once the new row is loaded, which may be after the highlight is set.
+    private struct ScrollKey: Equatable {
+        let highlighted: UUID?
+        let cardIds: [UUID]
+    }
+
+    private func scrollKey(_ sections: [ShelfSection]) -> ScrollKey {
+        ScrollKey(highlighted: model.highlightedItemId, cardIds: sections.flatMap(\.cards).map(\.id))
+    }
+
+    private func reveal(_ key: ScrollKey, in proxy: ScrollViewProxy, anchor: UnitPoint) {
+        guard let id = key.highlighted, key.cardIds.contains(id) else { return }
+        withAnimation { proxy.scrollTo(id, anchor: anchor) }
     }
 
     @ViewBuilder private var content: some View {
@@ -33,21 +62,27 @@ struct ShelfView: View {
                 .foregroundStyle(.secondary).multilineTextAlignment(.center).padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if horizontal {
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: ShelfLayout.cardSpacing) {
-                    ForEach(sections.flatMap(\.cards)) { card in cardView(card) }
-                }.padding(ShelfLayout.contentPadding)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: ShelfLayout.cardSpacing) {
+                        ForEach(sections.flatMap(\.cards)) { card in cardView(card) }
+                    }.padding(ShelfLayout.contentPadding)
+                }
+                .onChange(of: scrollKey(sections)) { _, key in reveal(key, in: proxy, anchor: .leading) }
             }
         } else {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: ShelfLayout.cardSpacing) {
-                    ForEach(sections) { section in
-                        Text(verbatim: ShelfText.string(section.titleKey))
-                            .font(.caption).foregroundStyle(.secondary)
-                            .frame(height: ShelfLayout.sectionHeaderHeight, alignment: .bottomLeading)
-                        ForEach(section.cards) { card in cardView(card) }
-                    }
-                }.padding(ShelfLayout.contentPadding)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: ShelfLayout.cardSpacing) {
+                        ForEach(sections) { section in
+                            Text(verbatim: ShelfText.string(section.titleKey))
+                                .font(.caption).foregroundStyle(.secondary)
+                                .frame(height: ShelfLayout.sectionHeaderHeight, alignment: .bottomLeading)
+                            ForEach(section.cards) { card in cardView(card) }
+                        }
+                    }.padding(ShelfLayout.contentPadding)
+                }
+                .onChange(of: scrollKey(sections)) { _, key in reveal(key, in: proxy, anchor: .top) }
             }
         }
     }
@@ -55,7 +90,7 @@ struct ShelfView: View {
     private func cardView(_ card: ShelfCardPresentation) -> some View {
         ShelfCardView(
             card: card, model: model, size: ShelfLayout.cardSize(for: placement), horizontal: horizontal,
-            thumbnail: thumbnail)
+            thumbnail: thumbnail, dragOut: dragOut)
     }
 }
 
@@ -65,6 +100,7 @@ private struct ShelfCardView: View {
     let size: CGSize
     let horizontal: Bool
     let thumbnail: @Sendable (UUID) async -> Data?
+    let dragOut: ShelfDragOut
     @State private var image: NSImage?
 
     private var selected: Bool { model.selection.contains(card.id) }
@@ -87,12 +123,23 @@ private struct ShelfCardView: View {
         .padding(6)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.accentColor.opacity(0.28) : Color.primary.opacity(0.06)))
+        .overlay {
+            // A dropped card flashes for `ShelfLayout.dropHighlightDuration` (FR-006-15).
+            if model.highlightedItemId == card.id {
+                RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor, lineWidth: 2)
+            }
+        }
         .overlay(alignment: .topTrailing) {
             if card.isPinned { Image(systemName: "pin.fill").font(.caption2).padding(4).accessibilityHidden(true) }
         }
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) { model.doubleClick(card.id) }
-        .onTapGesture { model.click(card.id, modifiers: LibraryKeyTranslator.chordModifiers(NSEvent.modifierFlags)) }
+        .overlay {
+            ShelfCardInteraction(
+                onClick: { model.click(card.id, modifiers: $0) },
+                onDoubleClick: { model.doubleClick(card.id) },
+                prepareDrag: { dragOut.prepare(cardId: card.id) },
+                beginDrag: { await dragOut.begin(from: $0, event: $1) })
+        }
         .contextMenu { menu }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: card.accessibilityLabel))
