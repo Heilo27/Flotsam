@@ -37,9 +37,9 @@ struct Worf461SecondPassTests {
         return (press, done)
     }
 
-    // Red when `complete()` stops crediting `joined` presses for a job that dropQueuedJobs() removes (press hangs), or
-    // credits a dropped job as created (count != 2).
-    @Test("OC-461-DROP: capture paused drops the queued live jobs a press joined: the press still resolves, Imported 2")
+    // Red when `complete()` stops crediting `joined` presses for a job that dropQueuedJobs() hands over (press hangs),
+    // or when dropQueuedJobs() resolves a joined job without importing the file (TASK-466: count 2, 2 ingests).
+    @Test("OC-461-DROP: capture paused drops the queued live jobs a press joined: the press imports them itself, Imported 4")
     func queuedJobsDroppedUnderAJoinedPress() async throws {
         // given: 4 new files, reconcile has 2 in flight + 2 queued, the press joined all 4
         let rig = try WatcherRig(watermark: Date().addingTimeInterval(-60))
@@ -51,11 +51,12 @@ struct Worf461SecondPassTests {
         rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         await rig.watcher.settingsDidChange()
         rig.ingest.releaseIngests()
-        // then: no hang; only the 2 files that were really imported count
+        // then: no hang; the press is the user's explicit request (FR-002-12), so the pause does not stop it importing
+        // the 2 files live pickup dropped, and the count matches the 4 files imported
         #expect(await eventually { done.value != nil }, "the press must resolve")
-        #expect(done.value == .success(2))
+        #expect(done.value == .success(4))
         await letItSettle()
-        #expect(rig.ingest.candidates.count == 2, "the dropped jobs ingest nothing")
+        #expect(rig.ingest.candidates.count == 4, "the two dropped files are ingested by the press, once each")
     }
 
     // Red when a failure of a live job the press joined is not carried to the press (it would say Imported 0).
@@ -150,7 +151,7 @@ struct Worf461SecondPassTests {
         #expect(await eventually { first.value != nil })
         #expect(first.value == .success(4))
         // when
-        let second = await watcher.importRecent()
+        let second = await watcher.importRecentWithin()
         // then
         #expect(second == .success(0))
         #expect(rig.ingest.candidates.count == 4)
@@ -193,4 +194,61 @@ struct Worf461SecondPassTests {
         #expect(await eventually { done.value != nil }, "the press must resolve")
         #expect(done.value == .success(2))
     }
+
+    // MARK: TASK-466
+
+    // Red when dropQueuedJobs() resolves a joined live job without importing its file (Imported 2, 2 ingests), and
+    // when the pickup-off path (deactivate) is left on the old behaviour.
+    @Test("TASK-466: pickup turned off drops the queued live jobs a press joined: the press imports them, Imported 4")
+    func queuedJobsDroppedByPickupOff() async throws {
+        let rig = try WatcherRig(watermark: Date().addingTimeInterval(-60))
+        defer { rig.cleanUp() }
+        await rig.watcher.start()
+        try files(rig, 4, prefix: "off")
+        let (_, done) = await pressJoiningHeldJobs(rig, files: 4)
+        rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
+        await rig.watcher.settingsDidChange()
+        rig.ingest.releaseIngests()
+        #expect(await eventually { done.value != nil }, "the press must resolve")
+        #expect(done.value == .success(4))
+        await letItSettle()
+        #expect(rig.ingest.candidates.count == 4, "each file ingested once")
+        #expect(rig.ingest.candidates.filter { !$0.countsAsCopy }.count == 2, "the 2 handed-over files go in as backfill, not copy events")
+    }
+
+    // Red when the pending join wins over the live imports the press has already seen for the path (Imported 1: the
+    // first import of the path is lost), or when a second live import of the path overwrites the first one's record.
+    @Test("TASK-466: one path live-imported twice inside the press's scan window: both imports count, Imported 2")
+    func samePathLiveImportedTwiceInOneScan() async throws {
+        // given: the press's scan is held; the reconcile imports P (first import ends during the scan)
+        let rig = try WatcherRig(watermark: Date().addingTimeInterval(-60))
+        defer { rig.cleanUp() }
+        await rig.watcher.start()
+        let name = "Screenshot twice.png"
+        let path = try rig.shot(in: rig.desktop, name)
+        rig.fileSystem.holdNextListing()
+        let watcher = rig.watcher!
+        let done = PressOutcome()
+        Task { done.set(await watcher.importRecent()) }
+        #expect(await eventually { rig.fileSystem.listingIsHeld }, "the press's scan is held")
+        await watcher.didBecomeActive()
+        #expect(await eventually { rig.ingest.candidates.count == 1 }, "the first import of P ended")
+        await letItSettle()
+        // when: a new file lands at P and its live import is in flight when the press's scan returns
+        rig.ingest.holdIngest(named: name)
+        rig.clock.advance(by: 5)
+        try FileManager.default.removeItem(at: path)
+        try rig.shot(in: rig.desktop, name)
+        rig.event(path)
+        #expect(await eventually { rig.ingest.heldIngests == 1 }, "the second import of P is in flight")
+        rig.fileSystem.releaseListing()
+        await letItSettle()
+        rig.ingest.releaseIngest(named: name)
+        // then: the press counts the first import (recorded) and joins the second: two items created
+        #expect(await eventually { done.value != nil }, "the press must resolve")
+        #expect(done.value == .success(2))
+        await letItSettle()
+        #expect(rig.ingest.candidates.count == 2, "each import ran once; the press ingested nothing itself")
+    }
+
 }

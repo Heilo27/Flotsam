@@ -26,7 +26,7 @@ struct Task461ExactlyOnceTests {
         #expect(await eventually { rig.ingest.candidates.count == 4 })
         // The last import ends (and leaves `pending`) a moment after its ingest returns.
         await letItSettle()
-        #expect(await rig.watcher.importRecent() == .success(0))
+        #expect(await rig.watcher.importRecentWithin() == .success(0))
         await letItSettle()
         #expect(rig.ingest.candidates.count == 4, "the press must not ingest what the reconcile already did")
     }
@@ -39,7 +39,8 @@ struct Task461ExactlyOnceTests {
         try makeFiles(rig, count: 4)
         await rig.watcher.didBecomeActive()
         let log = await OnceHUDLog()
-        await rig.watcher.importRecentAnnouncing { m in log.messages.append(m) }
+        let watcher = rig.watcher!
+        #expect(await finishes { await watcher.importRecentAnnouncing { m in log.messages.append(m) } }, "the press must resolve")
         await letItSettle()
         #expect(await log.messages == ["Imported 4"])
         #expect(rig.ingest.candidates.count == 4)
@@ -52,8 +53,8 @@ struct Task461ExactlyOnceTests {
         await rig.watcher.start()
         try makeFiles(rig, count: 4)
         await rig.watcher.didBecomeActive()
-        #expect(await rig.watcher.importRecent() == .success(4))
-        #expect(await rig.watcher.importRecent() == .success(0))
+        #expect(await rig.watcher.importRecentWithin() == .success(4))
+        #expect(await rig.watcher.importRecentWithin() == .success(0))
         await letItSettle()
         #expect(rig.ingest.candidates.count == 4)
     }

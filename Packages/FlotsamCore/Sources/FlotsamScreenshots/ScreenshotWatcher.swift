@@ -203,6 +203,7 @@ public actor ScreenshotWatcher {
     /// its own scan finds new to the library: a file live pickup has queued or has in flight joins the press, and one
     /// live pickup imported after the press began counts too; a file live pickup imported before the press began is
     /// already in the library. None is ingested a second time, so each file is ingested once.
+    /// A joined live job that capture mode or pickup-off drops from the queue is imported by the press itself.
     public func importRecent() async -> FlotsamResult<Int> {
         // Registered before the first suspension, so a live import that ends while the press scans is noted for it.
         let id = UUID()
@@ -227,14 +228,19 @@ public actor ScreenshotWatcher {
         var own: [ScreenshotFile] = []
         for file in chosen {
             let path = file.url.path
+            // A live import that ended during the scan is counted whether or not the path is pending again: the same
+            // path can be imported live twice inside one scan window, and each import counts.
+            var counted = false
+            if let outcomes = batches[id]?.liveImports[path] {
+                counted = true
+                batches[id]?.total += outcomes.count
+                batches[id]?.created += outcomes.filter { $0 }.count
+            }
             if pending.contains(path) {
                 joiners[path, default: []].append(id)
                 batches[id]?.total += 1
                 batches[id]?.remaining += 1
-            } else if let created = batches[id]?.liveImports[path] {
-                batches[id]?.total += 1
-                if created { batches[id]?.created += 1 }
-            } else if !ingestedLive.contains(file) {
+            } else if !counted && !ingestedLive.contains(file) {
                 own.append(file)
             }
         }
@@ -593,7 +599,7 @@ public actor ScreenshotWatcher {
             seen.insert(job.file)
             if job.batch == nil {
                 ingestedLive.insert(job.file)
-                noteLiveImport(path, created: created, excluding: joined)
+                noteLiveImport(path, created: created)
             }
             retry[job.file.url.path] = nil
             await settle(job)
@@ -618,11 +624,12 @@ public actor ScreenshotWatcher {
     }
 
     /// A live import that ends while a press is still scanning is the press's to count when its scan lists the file:
-    /// by then the file is neither pending nor new to the library. A press that joined the job counts it through
-    /// `complete` instead, so it is left out here.
-    private func noteLiveImport(_ path: String, created: Bool, excluding joined: [UUID]) {
-        for (id, batch) in batches where batch.continuation == nil && !joined.contains(id) {
-            batches[id]?.liveImports[path] = created
+    /// by then the file is neither pending nor new to the library. Only presses still scanning (no continuation yet)
+    /// are noted; a press that joined this job is already waiting, so it counts the job through `complete` instead.
+    /// Every import of a path is kept, so the same path imported twice during one scan counts twice.
+    private func noteLiveImport(_ path: String, created: Bool) {
+        for (id, batch) in batches where batch.continuation == nil {
+            batches[id]?.liveImports[path, default: []].append(created)
         }
     }
 
@@ -662,15 +669,24 @@ public actor ScreenshotWatcher {
     }
 
     /// The queue is emptied when the capture mode stops importing or pickup is turned off (FR-002-05).
-    /// Backfill jobs are the user's explicit request and stay.
+    /// Backfill jobs are the user's explicit request and stay. A live job a press joined is the press's request too
+    /// (FR-002-12: neither gate applies to it), so it is not dropped but handed to the first press that joined it as
+    /// its own backfill job; any other press that joined it keeps waiting on that job.
     private func dropQueuedJobs() {
         let dropped = queue.filter { $0.batch == nil }
         queue.removeAll { $0.batch == nil }
         for job in dropped {
-            pending.remove(job.file.url.path)
-            unfinished[job.file.url.path] = nil
-            complete(job, joined: joiners.removeValue(forKey: job.file.url.path) ?? [], created: false, failure: nil)
+            let path = job.file.url.path
+            unfinished[path] = nil
+            let presses = (joiners.removeValue(forKey: path) ?? []).filter { batches[$0] != nil }
+            guard let owner = presses.first else {
+                pending.remove(path)
+                continue
+            }
+            if presses.count > 1 { joiners[path] = Array(presses.dropFirst()) }
+            queue.append(ImportJob(file: job.file, batch: owner))
         }
+        pump()
     }
 
     // MARK: Retry list (FR-002-07)
@@ -775,8 +791,8 @@ private struct Batch {
     var created = 0
     var failed = 0
     var firstFailure: FlotsamError?
-    /// Live imports that ended while the press scanned (path to whether the file was new to the library).
-    var liveImports: [String: Bool] = [:]
+    /// Live imports that ended while the press scanned: per path, one entry per import, true when it created an item.
+    var liveImports: [String: [Bool]] = [:]
     /// Set once the press has chosen its files and waits for the last one.
     var continuation: CheckedContinuation<FlotsamResult<Int>, Never>?
 
