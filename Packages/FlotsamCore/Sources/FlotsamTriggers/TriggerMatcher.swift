@@ -63,6 +63,10 @@ public final class TriggerMatcher {
     /// application clears the word). Compared at the boundary key; the engine's `frontmostApplicationDidChange()`
     /// signal clears the word sooner. Set once per word, so it survives Backspace to an empty buffer.
     private var wordApp: FrontmostApp??
+    /// True when the current word began in an excluded application (FR-005-13 b), decided once with `wordApp`. Such a
+    /// word is kept only while it is still the start of some trigger (FR-005-20, security F-04): the buffer exists
+    /// there only so a whole trigger can be logged as `TRG-POL-002`, so ordinary typing holds nothing.
+    private var keepsOnlyTriggerPrefixes = false
     /// Boundary keys whose key-down was swallowed and whose key-up has not arrived yet.
     private var heldBoundaryKeys: Set<UInt16> = []
 
@@ -126,10 +130,21 @@ public final class TriggerMatcher {
 
     private func append(_ characters: String) {
         guard !isDead else { return }
-        if wordApp == nil { wordApp = .some(environment.frontmostApp()) }
+        if wordApp == nil {
+            let app = environment.frontmostApp()
+            wordApp = .some(app)
+            if let bundleId = app?.bundleId {
+                keepsOnlyTriggerPrefixes = store.policy.excludes(bundleId: bundleId, ownBundleId: ownBundleId)
+            }
+        }
         var grown = buffer
         grown += characters
-        guard grown.count <= TriggerGrammar.maximumLength else {
+        // Past 24 characters, or (in an excluded application) no longer the start of any trigger: the word cannot
+        // match, so nothing of it is kept. It is dead until the next boundary, like any other word that cannot match.
+        guard grown.count <= TriggerGrammar.maximumLength,
+            !keepsOnlyTriggerPrefixes
+                || store.policy.triggers.isPrefixOfSomeKey(TriggerGrammar.canonicalKey(grown))
+        else {
             clearWord()
             isDead = true
             return
@@ -180,6 +195,7 @@ public final class TriggerMatcher {
         buffer = ""
         isDead = false
         wordApp = nil
+        keepsOnlyTriggerPrefixes = false
     }
 }
 
