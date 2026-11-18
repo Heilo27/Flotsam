@@ -850,3 +850,28 @@ Method: 55 s settle after launch, then 10 min hands-off, sampling every 10 s. CP
 **Not done / unknown:** capture latency, 50k search, a full thumbnail cache, a scrolled Library, a Release-build smoke beyond the idle and panel runs, panel titles for the hotkey check, and attribution of the roughly 75 MiB gap between RSS and footprint (not traced).
 
 **Defects / follow-ups for S1:** none found at 7632f6f. Observation: the Library open/close action emits no log line, which limits log-based hotkey verification to the Shelf.
+
+---
+
+## 2026-11-17: A4 idle wake-up measurement on `obrien-381` @ e623370 (Debug, 10k library)
+
+Numbers only, no verdict, as requested. The branch tip had moved on to fa91379 when I cloned it, so I checked out e623370 explicitly (a fresh clone, `bin/bootstrap.sh` exit 0, `bin/build.sh Debug` exit 0, 21 s, BUILD SUCCEEDED). The same seeded 10,000-item scratch home as the 7632f6f entry (`integrity_check` ok, 10,000 items before and after). No arguments, capture on (default).
+
+| Measure | Value |
+|---|---|
+| Load (1-min) at start | 1.966 (23:27:55); at the end of the window 8.01 (other sessions started work) |
+| Settle | 55 s |
+| Window | 600.4 s hands-off, sampled every 10 s |
+| Wake-ups, `ri_interrupt_wkups` delta (`proc_pid_rusage` RUSAGE_INFO_V4) | 1210 in 600.4 s = **2.015 /s**; every 10 s bucket between 19 and 21 |
+| Package-idle wake-ups, same window (undercounts) | 150 = 0.25 /s |
+| CPU, `ri_user_time + ri_system_time` delta | 0.440 s in 600.4 s = **0.0733 %** of one core |
+| RSS at settle and at end | 103,956,480 B (99.1 MiB), unchanged |
+| Footprint (`ri_phys_footprint`) at settle and at end | 24,036,192 B (22.9 MiB), unchanged |
+
+Reference figure from S1: 2.71 to 2.90 /s before, target about 2.0 /s. Measured on this Mac and library, not comparable with S1's machine beyond what the method gives. The elevated load at the end of the window is disclosed; the wake-up count in every bucket stayed 19 to 21, so I saw no sign it moved the result, but I did not test that.
+
+Not done: no Release build of this branch, no panel-open case, no attribution of the wake-ups by source (not traced).
+
+**Data isolation.** Real DB (read-only) before and after: 17 items; `flotsam.sqlite` sha1 03fc64cf... and `-wal` sha1 c1189741... identical; real prefs plist sha1 c190d732... identical. No `defaults write`. No plist in the scratch home's Library/Preferences. The app ran only with a scratch `CFFIXED_USER_HOME`. `clipboard info` identical before and after (utf8 and utf16 text, 2 bytes; type listing compared, not a content hash); I never wrote to the pasteboard, so no restore was needed. No TCC grants. No DiagnosticReports entry for Flotsam. The app was stopped by SIGTERM and no Flotsam process remains. The clones, builds and scratch homes were deleted afterwards.
+
+**Defects / follow-ups for S1:** none from this run.
