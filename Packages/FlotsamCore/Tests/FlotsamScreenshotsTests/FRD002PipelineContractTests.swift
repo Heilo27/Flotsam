@@ -414,12 +414,8 @@ struct FRD002PipelineDeletionTests {
         _ = await pipelineEventually(seconds: 2) { await rig.count() != 2 }
         // Then: the deleted one stays absent (count after relaunch = count after delete).
         let reopened = try await rig.freshRows()
-        withKnownIssue(
-            "FRD-002 OC-2038: the seen set is memory-only and the persisted watermark advances only on reconcile scans (launch, wake, activation, rebuild), not on a live import or the 30 s tick, so a live-imported screenshot that is deleted and then relaunched before any reconcile scan is re-imported by the launch scan"
-        ) {
-            #expect(reopened.count == 2)
-            #expect(!reopened.map(\.id).contains(doomed.id))
-        }
+        #expect(reopened.count == 2)
+        #expect(!reopened.map(\.id).contains(doomed.id))
     }
 }
 
@@ -724,12 +720,8 @@ struct FRD002PipelineSessionTests {
         await letItSettle()
         _ = await pipelineEventually(seconds: 1.5) { await rig.count() != 1 }
         let reopened = try await rig.freshRows()
-        withKnownIssue(
-            "FRD-002 OC-2074: a live-imported screenshot that is deleted and then relaunched is re-imported: the seen set is memory-only and the persisted watermark advances only on reconcile scans, so the launch scan finds the file newer than the watermark"
-        ) {
-            #expect(reopened.count == 1)
-            #expect(!reopened.map(\.id).contains(doomed.id))
-        }
+        #expect(reopened.count == 1)
+        #expect(!reopened.map(\.id).contains(doomed.id))
     }
 
     private func expectAbsent(_ rig: PipelineRig, _ doomed: UUID, _ survivor: UUID, after event: String) async throws {

@@ -126,24 +126,19 @@ struct FRD002AuditBTests {
         defer { rig.cleanUp() }
         await rig.watcher.start()
 
-        // when/then: wake. LogEvent (FlotsamBase/Logging/LogEvent.swift) has one screenshot case, `screenshotImported`,
-        // written per file; a reconcile scan that imports nothing writes no record at all.
+        // when/then: wake
         let beforeWake = rig.sink.records.count
         await rig.watcher.didWake()
-        await withKnownIssue("FRD-002 OC-2041: LogEvent has no reconcile-scan outcome case, so a wake scan logs nothing") {
-            #expect(await eventually(timeout: .seconds(1)) {
-                auditBScanOutcomeCount(Array(rig.sink.records.dropFirst(beforeWake))) >= 1
-            })
-        }
+        #expect(await eventually(timeout: .seconds(1)) {
+            auditBScanOutcomeCount(Array(rig.sink.records.dropFirst(beforeWake))) >= 1
+        })
 
         // when/then: activation
         let beforeActive = rig.sink.records.count
         await rig.watcher.didBecomeActive()
-        await withKnownIssue("FRD-002 OC-2041: LogEvent has no reconcile-scan outcome case, so an activation scan logs nothing") {
-            #expect(await eventually(timeout: .seconds(1)) {
-                auditBScanOutcomeCount(Array(rig.sink.records.dropFirst(beforeActive))) >= 1
-            })
-        }
+        #expect(await eventually(timeout: .seconds(1)) {
+            auditBScanOutcomeCount(Array(rig.sink.records.dropFirst(beforeActive))) >= 1
+        })
     }
 
     // MARK: Import recent screenshots
