@@ -416,3 +416,5 @@ Clipboard: restored after the run.
 **Left alone:** `.claude/oracle/frd-006-contract.json` is a blind-generated oracle (`generated_blind`), so it was not synced. It still says `shelf.empty` in one assertion (line 400), which S1 may want fixed in a separate pass.
 
 **Open point:** FR-006-18 says `shelf.dragOut` carries the "item count"; the code counts cards (bundle once). Not edited, since it was not in the rulings.
+
+**Resolved (fe35d9a, s2/frd006):** per S1's rulings, FR-006-18 now says `shelf.dragOut` carries the card count (a bundle counts once), and contract OC-6040 says `ui.shelf.empty`, marked `"amended": "S1 ruling 2026-11-17"`. The architecture check passes and the JSON is valid.
