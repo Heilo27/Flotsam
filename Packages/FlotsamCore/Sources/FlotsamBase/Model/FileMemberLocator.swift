@@ -1,8 +1,9 @@
 import Foundation
 
 /// Where a file item's member is now, and whether any of an item's files are left. The one home for "does this
-/// referenced file still exist" (FRD-003 FR-003-07, FR-003-15): paste, the Library's Missing badge and the Shelf all
-/// ask here, so they cannot disagree about which items are gone.
+/// referenced file still exist" (FRD-003 FR-003-07, FR-003-15). Callers: the Library query (the Missing badge, via
+/// `LibraryQueries`) and `ItemContent.existingMemberURLs`, which paste (`PastePayload`) and the Shelf drag-out
+/// (`ShelfDragPlanner`) both use.
 public enum FileMemberLocator {
     /// The member's current location: where its bookmark says (it follows a move or rename), else the stored path.
     /// Nil when nothing exists there any more.
