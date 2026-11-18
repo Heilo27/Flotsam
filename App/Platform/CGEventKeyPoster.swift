@@ -62,8 +62,8 @@ struct CGEventKeyPoster: TriggerKeyPoster {
     /// server routes the event, so a focus change after the caller's check would send the keys to the wrong app.
     /// Nothing is posted unless `target` is still frontmost and still running, read again here, immediately before.
     private func post(_ events: [CGEvent], to target: FrontmostApp) -> Bool {
-        guard frontmost.frontmost() == target,
-            NSRunningApplication(processIdentifier: target.processId)?.isTerminated == false
+        let isRunning = NSRunningApplication(processIdentifier: target.processId)?.isTerminated == false
+        guard PostGuard.allowsPost(to: target, frontmost: frontmost.frontmost(), targetIsRunning: isRunning)
         else { return false }
         for event in events { event.postToPid(target.processId) }
         return true

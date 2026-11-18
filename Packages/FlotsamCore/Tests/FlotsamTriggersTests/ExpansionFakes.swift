@@ -123,10 +123,16 @@ final class RecordingKeys: TriggerKeyPoster {
     /// Runs on every recorded action, so a test can change the world between two posts.
     var onAction: (() -> Void)?
 
-    /// Mirrors the adapter: nothing is recorded unless the target is still frontmost.
+    /// Whether the target's process is still running at post time.
+    var targetIsRunning = true
+
+    /// Applies the adapter's own decision (`PostGuard`): nothing is recorded unless the target is still frontmost and
+    /// running. With no `frontmost` set the guard is not consulted (the app is taken to be in front).
     private func record(_ action: Action, to target: FrontmostApp, fail: Bool) -> Bool {
         beforePost?()
-        if let frontmost, frontmost() != target { return false }
+        if let frontmost,
+            !PostGuard.allowsPost(to: target, frontmost: frontmost(), targetIsRunning: targetIsRunning)
+        { return false }
         actions.append(action)
         targets.append(target)
         onAction?()
