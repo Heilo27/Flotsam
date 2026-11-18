@@ -27,25 +27,27 @@ public protocol ShelfIngesting: Sendable {
 extension IngestActor: ShelfIngesting {}
 
 /// What a card needs that `ItemRow` does not carry: the stored text of a text item (the row's primary line is cut to
-/// two lines, the card shows three) and the members of a file, folder or bundle item (for the Missing badge).
+/// two lines, the card shows three). `FlotsamDatabase` conforms below, through one storage query.
 ///
-/// Protocol only. DEFERRED: no storage query serves `cardTexts` or `fileMembers` yet, so `FlotsamDatabase` does not
-/// conform and the app composes `NoShelfCardDetails`, which makes a card fall back to the row's primary line and show
-/// no Missing badge. The Missing rule itself is not the Shelf's: the model asks `ItemMember.anyExists`, the same
-/// test the Library's rows use (FRD-003 FR-003-07, `FileMemberLocator`).
+/// The Missing state is not here: `ItemRow.isMissing` already carries it, read from the disk by the storage query
+/// layer through `Collection<ItemMember>.anyExists(files:)`, the one home of the rule (FRD-003 FR-003-07; S1 ruling
+/// 2026-11-17). The Shelf only reads the flag.
 public protocol ShelfCardDetails: Sendable {
-    /// The stored plain text of each listed item that has some; items without text are left out.
-    func cardTexts(for ids: [UUID]) async -> [UUID: String]
-    /// The members of each listed file, folder or bundle item, with their bookmarks so a moved file is found; other
-    /// items are left out. An item with no members is listed with an empty array (it reads as Missing).
-    func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]]
+    /// The stored plain text of each listed item that has some; items without text are left out. A failed read is the
+    /// storage error; the model reports it and the cards fall back to their primary line.
+    func cardTexts(for ids: [UUID]) async -> FlotsamResult<[UUID: String]>
 }
 
-/// The inert details: no stored texts, no members.
+extension FlotsamDatabase: ShelfCardDetails {
+    public func cardTexts(for ids: [UUID]) async -> FlotsamResult<[UUID: String]> {
+        await plainTexts(of: ids, characterLimit: ShelfLayout.cardTextReadLimit)
+    }
+}
+
+/// The inert details: no stored texts, so every card shows its row's primary line.
 public struct NoShelfCardDetails: ShelfCardDetails {
     public init() {}
-    public func cardTexts(for ids: [UUID]) async -> [UUID: String] { [:] }
-    public func fileMembers(of ids: [UUID]) async -> [UUID: [ItemMember]] { [:] }
+    public func cardTexts(for ids: [UUID]) async -> FlotsamResult<[UUID: String]> { .success([:]) }
 }
 
 // MARK: Paste
@@ -71,8 +73,8 @@ public protocol ShelfPasteHost {
     func hidePanel()
 }
 
-/// The paste sequence as the Shelf calls it. DEFERRED: the app layer adapts `PasteService` to this; until then the
-/// Shelf is exercised only through fakes.
+/// The paste sequence as the Shelf calls it. The app layer adapts `PasteService` to this (`ShelfPasteAdapter`); the
+/// Shelf's own tests use fakes.
 @MainActor
 public protocol ShelfPasting {
     func paste(itemId: UUID, mode: ShelfPasteMode, target: FrontmostApp?, host: any ShelfPasteHost) async -> FlotsamResult<ShelfPasteOutcome>

@@ -354,8 +354,44 @@ public final class LibraryViewModel {
 
     private func jump(toLast: Bool) {
         guard !loadedRows.isEmpty else { return }
-        if toLast { visibleLimit = loadedRows.count }
-        moveCursor(toIndex: toLast ? visibleRows.count - 1 : 0, extending: false)
+        guard toLast else { moveCursor(toIndex: 0, extending: false); return }
+        guard hasMorePages || isFetchingPage else { selectLastLoadedRow(); return }
+        pageInThenSelectLast()
+    }
+
+    private func selectLastLoadedRow() {
+        visibleLimit = loadedRows.count
+        moveCursor(toIndex: visibleRows.count - 1, extending: false)
+    }
+
+    /// ⌘↓ means the last item of the whole result, not the last loaded page (FR-003-08): read the remaining storage
+    /// pages in order, then select the final row. A newer reload, search or filter change supersedes it, as for `loadMore`.
+    private func pageInThenSelectLast() {
+        let inFlight = loadTask
+        let generation = generation
+        loadTask = Task { [weak self] in
+            await inFlight?.value
+            while let self, generation == self.generation, !Task.isCancelled, hasMorePages {
+                isFetchingPage = true
+                let query = LibraryQuery(filter: filter, text: searchText, sort: sort, page: loadedPage + 1)
+                let result = await source.items(matching: query)
+                guard generation == self.generation else { return }
+                isFetchingPage = false
+                guard !Task.isCancelled else { return }
+                switch result {
+                case .failure(let error):
+                    loadState = .failed(error)
+                    return
+                case .success(let page):
+                    loadedRows += page.rows
+                    totalCount = page.totalCount
+                    loadedPage = page.page
+                    hasMorePages = page.hasMore
+                }
+            }
+            guard let self, generation == self.generation, !Task.isCancelled else { return }
+            selectLastLoadedRow()
+        }
     }
 
     // MARK: Keyboard
