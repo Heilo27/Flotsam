@@ -90,6 +90,12 @@ private final class LifecycleRig {
         return source.press(TriggerKeys.space, " ")
     }
 
+    /// True once an expansion has run to its last step: the paste was posted and the user's previous clipboard is back
+    /// on the pasteboard (FR-005-14 step 8, FR-005-16). The restore is the final thing an expansion does, so this is
+    /// the engine's own end of expansion, observed on the pasteboard; a test that counts writes or posted keys after
+    /// an expansion waits for this first, or the expansion's own late writes land in the count.
+    var expansionSettled: Bool { keys.actions.last == .paste && pasteboard.plainText == "previous clipboard" }
+
     /// Plain text of every item write the expander or paste service made, oldest first. The user's own clipboard text
     /// being put back after a paste is not an item write, so it is left out.
     var writtenTexts: [String] {
@@ -116,20 +122,31 @@ struct FRD005ContractTestsLifecycleTriggers {
         #expect(rig.engine.status != .idle)
         // control: before the delete ';del' Space is consumed and pastes 'gone text'
         #expect(rig.typeAndSpace(";del") == .consume)
-        #expect(await eventually { rig.writtenTexts.contains("gone text") })
+        // wait for the first expansion to end, not just for its first write: it goes on to post ⌘V after the write, then
+        // records the paste, and last puts the user's clipboard back (FR-005-16), a second pasteboard write. The
+        // restore is step 8, so once it has landed nothing of this expansion is left to count.
+        #expect(await eventually { rig.writtenTexts.contains("gone text") && rig.expansionSettled })
         let writesBefore = rig.pasteboard.writes.count
         let postedBefore = rig.keys.actions.count
+        #expect(writesBefore == 2, "the expansion write, then the restore of the previous clipboard")
+        #expect(postedBefore == 2, "the backspaces, then the paste")
         // when: the user deletes the item and types ';del' Space again without relaunching
         let deleted = try await rig.database.delete(ids: [LifecycleRig.id(1)]).get()
         let decision = rig.typeAndSpace(";del")
-        // then: the Space passes through (';del ' stays as typed), no write, no key posted
+        // then: the Space passes through (';del ' stays as typed)
         #expect(deleted == [LifecycleRig.id(1)])
         #expect(decision == .pass)
-        #expect(rig.pasteboard.writes.count == writesBefore)
-        #expect(rig.keys.actions.count == postedBefore)
         // and the survivor's trigger still expands its own text
         #expect(rig.typeAndSpace(";keep") == .consume)
-        #expect(await eventually { rig.writtenTexts.contains("kept text") })
+        #expect(await eventually { rig.writtenTexts.contains("kept text") && rig.expansionSettled })
+        // and nothing was written or posted for the deleted ';del'. The engine takes events one at a time, so an
+        // expansion started by that second ';del' would have run to its end before ';keep' began: the only writes in all
+        // are the survivor's own (its text, then the restore) after the first expansion's two, and its two keys.
+        // (Checked here and not right after the Space: an expansion's writes land after the Space returns, so a count
+        // taken straight away would pass whether or not the deleted trigger fired.)
+        #expect(rig.writtenTexts == ["gone text", "kept text"])
+        #expect(rig.pasteboard.writes.count == writesBefore + 2)
+        #expect(rig.keys.actions.count == postedBefore + 2)
         #expect(rig.snapshot.policy.triggers.count == 1)
     }
 
