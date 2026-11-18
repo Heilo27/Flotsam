@@ -22,7 +22,7 @@ copies together, lets you drag them out, and turns favourites into triggers.
 |---|---|---|
 | Fast recall (primary) | Hotkey → pasted, for a clip from yesterday | median ≤ 3 s in timed dogfood tasks |
 | Never leaves the Mac (primary) | Outbound connections carrying clip content | 0 (verified by network audit) |
-| Invisible on the machine (S5) | Idle (no panel) over 10 min, 10k items | ≤ 0.2 % of one core avg, ≤ 2.5 wake-ups/s, ≤ 60 MB resident; panel open ≤ 150 MB |
+| Invisible on the machine (S5) | Idle (no panel) over 10 min, 10k items | ≤ 0.2 % of one core avg, ≤ 2.5 wake-ups/s, ≤ 60 MB physical footprint (`footprint`); panel open ≤ 150 MB |
 | Library opens instantly | Hotkey → panel visible & focused | p95 ≤ 150 ms with 10k items |
 | Recall by what it was (S1) | Searches resolved via type/tag/source filter | tracked in dogfood log |
 | Triggers don't misfire (S4) | False expansions in Terminal/Safari/Xcode/VS Code | 0 in test matrix |
