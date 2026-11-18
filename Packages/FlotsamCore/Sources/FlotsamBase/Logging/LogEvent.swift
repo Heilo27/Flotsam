@@ -33,6 +33,8 @@ public enum LogEvent: Sendable, Equatable {
     /// Pasteboard change processed. `policy` carries the `POL` code when the outcome is `.skipped`.
     case pasteboardProcessed(kind: ItemKind?, byteSize: Int, outcome: LogOutcome, policy: ErrorCode?)
     case screenshotImported(outcome: LogOutcome, byteSize: Int)
+    /// A screenshot reconcile scan finished (FRD-002 FR-002-08): its outcome and how many files it queued, never a name.
+    case screenshotScanned(outcome: LogOutcome, count: Int)
     case pasteBack(outcome: LogOutcome)
     case hotkeyRegistered(outcome: LogOutcome)
     /// The detail defaults to `.none` so callers that only know the outcome keep compiling (FRD-006 FR-006-18).
@@ -48,6 +50,7 @@ public enum LogEvent: Sendable, Equatable {
         switch self {
         case .pasteboardProcessed: "pasteboard.processed"
         case .screenshotImported: "screenshot.imported"
+        case .screenshotScanned: "screenshot.scan"
         case .pasteBack: "paste.back"
         case .hotkeyRegistered: "hotkey.registered"
         case .shelf(let action, _, _): "shelf.\(action.rawValue)"
@@ -61,7 +64,7 @@ public enum LogEvent: Sendable, Equatable {
     public var category: LogCategory {
         switch self {
         case .pasteboardProcessed: .capture
-        case .screenshotImported: .screenshots
+        case .screenshotImported, .screenshotScanned: .screenshots
         case .pasteBack: .library
         case .hotkeyRegistered, .triggerMatched: .triggers
         case .shelf: .shelf
@@ -79,6 +82,8 @@ public enum LogEvent: Sendable, Equatable {
             return fields
         case let .screenshotImported(outcome, byteSize):
             return [.outcome: .outcome(outcome), .byteSize: .bytes(byteSize)]
+        case let .screenshotScanned(outcome, count):
+            return [.outcome: .outcome(outcome), .count: .int(count)]
         case .pasteBack(let outcome), .hotkeyRegistered(let outcome), .database(_, let outcome):
             return [.outcome: .outcome(outcome)]
         case let .shelf(_, outcome, detail):

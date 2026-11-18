@@ -65,6 +65,19 @@ enum ScreenshotPathGuard {
     }
 }
 
+/// What one listing of the watched folder found: the qualifying screenshots, and the birth date of each hidden
+/// regular file by path (FR-002-08: macOS writes a screenshot under a hidden temporary name and renames it when
+/// the save ends).
+public struct ScreenshotListing: Sendable, Equatable {
+    public let files: [ScreenshotFile]
+    public let hiddenFiles: [String: Date]
+
+    public init(files: [ScreenshotFile], hiddenFiles: [String: Date]) {
+        self.files = files
+        self.hiddenFiles = hiddenFiles
+    }
+}
+
 /// Lists the qualifying screenshots among the direct children of a folder (FR-002-04, FR-002-06). Subfolders,
 /// symbolic links and anything that fails recognition are dropped silently, with no log entry.
 public struct ScreenshotFolderScanner: Sendable {
@@ -78,6 +91,11 @@ public struct ScreenshotFolderScanner: Sendable {
 
     /// A failed listing is returned as is; the caller decides between `SSP-PRM-001` and a missing folder.
     public func scan(_ folder: URL) -> FlotsamResult<[ScreenshotFile]> {
+        listing(folder).map(\.files)
+    }
+
+    /// `scan` plus the hidden regular files found on the way (`hiddenBirth`).
+    public func listing(_ folder: URL) -> FlotsamResult<ScreenshotListing> {
         let customPrefix = preferences.name()
         // The listing fails on a link to a folder ("Not a directory"), so the watched folder is resolved for the
         // listing only; the files keep the folder's own spelling below. Other callers of the port get no such help:
@@ -85,10 +103,26 @@ public struct ScreenshotFolderScanner: Sendable {
         return fileSystem.contentsOfDirectory(at: folder.standardizedFileURL.resolvingSymlinksInPath()).map { urls in
             // Foundation lists /var/... as /private/var/...; a file keeps one path form (the folder's) so the
             // watcher's seen/pending/retry keys agree between a scan and an event for the same file.
-            urls.compactMap {
+            let files = urls.compactMap {
                 candidate(folder.appendingPathComponent($0.lastPathComponent), in: folder, customPrefix: customPrefix)
             }
+            var hidden: [String: Date] = [:]
+            for url in urls {
+                let path = folder.appendingPathComponent(url.lastPathComponent)
+                if let birth = hiddenBirth(path) { hidden[path.path] = birth }
+            }
+            return ScreenshotListing(files: files, hiddenFiles: hidden)
         }
+    }
+
+    /// The birth date of a hidden regular file, nil for anything else (a visible name, a folder, a link, gone).
+    /// Hidden files are the ones that may still be renamed into screenshots (`ScreenshotSelection.heldBack`); any
+    /// hidden file counts, since old ones (`.DS_Store`) fall outside the hold window by their birth date.
+    public func hiddenBirth(_ url: URL) -> Date? {
+        guard ScreenshotRecognizer.isHiddenName(url.lastPathComponent),
+            let info = fileSystem.fileInfo(at: url), info.kind == .regular
+        else { return nil }
+        return info.createdAt ?? info.modifiedAt
     }
 
     /// The same test for one path, used when an FSEvents event names a single file of `folder`.
@@ -116,6 +150,27 @@ public enum ScreenshotSelection {
     public static let backfillMaxAge: TimeInterval = 30 * 24 * 60 * 60
     /// FR-002-12: backfill imports at most this many files.
     public static let backfillMaxCount = 500
+
+    /// How long a file that is not finished (hidden temporary, queued, unstable or failed) keeps the watermark from
+    /// passing its birth date. Past this the file is given up on, so one stuck file cannot hold the watermark forever.
+    public static let holdWindow: TimeInterval = 60
+
+    /// Whether a file born at `birth` still holds the watermark back at `now`.
+    public static func isHeld(_ birth: Date, now: Date) -> Bool { birth.addingTimeInterval(holdWindow) > now }
+
+    /// FR-002-08: the watermark may not pass the birth date of a file that is still to arrive (a hidden temporary that
+    /// is renamed later) or still to settle, or the file would fall out of the window it is selected by. `births` are
+    /// those files' birth dates; the ones past `holdWindow` are ignored.
+    public static func heldBack(_ proposed: Date, now: Date, births: [Date]) -> Date {
+        guard let oldest = births.filter({ isHeld($0, now: now) }).min() else { return proposed }
+        return min(proposed, oldest)
+    }
+
+    /// FR-002-08: where the watermark goes when a live import finishes: now, but never inside the slack of the file
+    /// just imported, since the slack would select that file again at the next launch.
+    public static func watermarkAfterImport(of file: ScreenshotFile, now: Date) -> Date {
+        max(now, file.createdAt.addingTimeInterval(watermarkSlack))
+    }
 
     /// Reconcile scan, oldest first. With no watermark yet (first launch) nothing is imported: older screenshots
     /// come in only through "Import recent screenshots", which onboarding offers (FR-002-12).
