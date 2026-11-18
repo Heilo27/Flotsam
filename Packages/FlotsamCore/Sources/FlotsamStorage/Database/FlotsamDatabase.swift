@@ -76,10 +76,14 @@ public final class FlotsamDatabase: Sendable {
         case failed(FlotsamError)
     }
 
-    /// Internal so tests can simulate a later release's migrations against an existing file.
+    /// Internal so tests can simulate a later release's migrations against an existing file. `postMigrationCheck` is the
+    /// ADR-0011 seam for the check on the migrated file (FR-007-13): nil runs the real `quick_check`, so production
+    /// behaviour is unchanged; a test passes a closure to fail that one check on a file that is otherwise healthy.
+    /// It never replaces the pre-open probe.
     static func open(
         folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(),
-        logSink: any LogSink = OSLogSink(), migrations: [Migration]
+        logSink: any LogSink = OSLogSink(), migrations: [Migration],
+        postMigrationCheck: ((Database) throws -> Bool)? = nil
     ) async -> FlotsamResult<FlotsamDatabase> {
         let layout = DataFolder(root: root)
         if case .failure(let error) = layout.prepare(fileSystem: fileSystem) { return .failure(error) }
@@ -88,7 +92,10 @@ public final class FlotsamDatabase: Sendable {
         // Two attempts: the second runs only after a damaged file was moved aside (FR-007-13). A fresh file that is
         // itself reported damaged is a real fault, not something another quarantine can fix.
         for attemptNumber in 0..<2 {
-            switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations, sink: logSink) {
+            switch attempt(
+                layout: layout, fileSystem: fileSystem, migrations: migrations, sink: logSink,
+                postMigrationCheck: postMigrationCheck ?? integrityCheckPasses
+            ) {
             case .opened(let pool, let migratedThisLaunch):
                 // FR-007-17 / FR-007-13: a clean open (integrity check passed) on a launch that did not migrate confirms the
                 // schema an earlier launch migrated to, which ends the pre-migration copy; it also expires old quarantines.
@@ -123,7 +130,8 @@ public final class FlotsamDatabase: Sendable {
     /// Logs the FR-000-11 `database.*` steps as they happen: the integrity check on an existing file, the migration when
     /// one ran, and the post-migration integrity check. Outcomes only; no path and no row content.
     private static func attempt(
-        layout: DataFolder, fileSystem: any FileSystemPort, migrations: [Migration], sink: any LogSink
+        layout: DataFolder, fileSystem: any FileSystemPort, migrations: [Migration], sink: any LogSink,
+        postMigrationCheck: (Database) throws -> Bool
     ) -> Attempt {
         let existed = (fileSystem.fileInfo(at: layout.databaseURL)?.byteSize ?? 0) > 0
         // WHY: SQLite deletes the `-wal` of a zero-byte main file when it opens one (an empty database cannot have a
@@ -170,7 +178,7 @@ public final class FlotsamDatabase: Sendable {
             // been written to by now: that quarantined copy is not the bytes the user had.
             let versionAfter = try pool.read { try MigrationRunner.currentVersion($0) }
             if versionAfter != versionBefore { FlotsamLog.log(.database(.migrate, outcome: .migrated), sink: sink) }
-            let passed = try pool.read { try integrityCheckPasses($0) }
+            let passed = try pool.read { try postMigrationCheck($0) }
             FlotsamLog.log(.database(.integrityCheck, outcome: passed ? .passed : .failed), sink: sink)
             return passed ? .opened(pool, migratedThisLaunch: versionAfter != versionBefore) : .damaged
         } catch {
