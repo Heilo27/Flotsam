@@ -6,14 +6,12 @@ import Testing
 @Suite struct FRD005ContractTestsEditorHelp {
     // Red if the catalogue help line does not name the variable (FRD-005 UI table: "Variable help line ... lists {date},
     // {time}, {clipboard} and format examples").
-    // TASK-463: catalogue string fix pending; red until obrien-463 merges.
-    // Until then ui.settings.editorTriggerHelp reads "Type the trigger anywhere, then Space, Tab or Return, to paste
-    // this item. Leave empty for none." and names none of them. The string is not edited here.
+    // The variables caption is its own catalogue key (TASK-463), shown under the trigger field (FRD-005 §8).
     @Test("OC-5055 the editor help line lists {date}, {time} and {clipboard}",
           arguments: ["{date}", "{time}", "{clipboard}"])
     func oc5055_helpLineListsTheVariables(variable: String) {
         // given: the catalogue text the editor's help caption renders
-        let help = SettingsString.editorTriggerHelp.text
+        let help = SettingsString.editorVariablesHelp.text
         // when / then: it names the variable
         #expect(help.contains(variable), "help line omits \(variable)")
     }
@@ -23,11 +21,11 @@ import Testing
     @Test("OC-5055 the help line is a real catalogue entry, not the fallback key")
     func oc5055_helpLineIsInTheCatalogue() {
         // given: the enum case the editor view uses
-        let key = SettingsString.editorTriggerHelp.key
+        let key = SettingsString.editorVariablesHelp.key
         // when: the text is read
-        let text = SettingsString.editorTriggerHelp.text
+        let text = SettingsString.editorVariablesHelp.text
         // then: it is the catalogue text, not the key itself
-        #expect(key == "ui.settings.editorTriggerHelp")
+        #expect(key == "ui.settings.editorVariablesHelp")
         #expect(text != key)
         #expect(!text.isEmpty)
     }
