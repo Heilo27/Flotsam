@@ -9,6 +9,7 @@ import SwiftUI
 /// composition root decides which database it talks to (FRD-007). Every call is async and returns a `FlotsamResult`.
 struct SettingsStorage: Sendable {
     var usage: @Sendable () async -> FlotsamResult<StorageUsage>
+    var itemCounts: @Sendable () async -> FlotsamResult<[ItemKind: Int]>
     var retentionPreview: @Sendable (RetentionPreset) async -> FlotsamResult<DeletionPreview>
     var budgetPreview: @Sendable (ImageBudget) async -> FlotsamResult<DeletionPreview>
     var clearPreview: @Sendable (ClearRange, Bool) async -> FlotsamResult<DeletionPreview>
@@ -20,6 +21,7 @@ struct SettingsStorage: Sendable {
     init(database: @escaping @MainActor @Sendable () -> FlotsamDatabase?) {
         let missing = FlotsamError(.stoDb004, "Settings storage is not available")
         usage = { guard let db = await database() else { return .failure(missing) }; return await db.storageUsage() }
+        itemCounts = { guard let db = await database() else { return .failure(missing) }; return await db.itemCountsByKind() }
         retentionPreview = { preset in
             guard let db = await database() else { return .failure(missing) }
             return await db.retentionPreview(preset)
