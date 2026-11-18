@@ -15,6 +15,8 @@ public final class PasteService {
     private let clock: any WallClock
     private let ownWrites: OwnWriteLedger
     private let sink: any LogSink
+    /// Set at the first paste attempt made without Accessibility, so the system prompt shows once, not on every choice.
+    private var accessibilityPrompted = false
 
     public init(
         store: any PasteItemStore, pasteboard: any PasteboardPort, files: any FileSystemPort,
@@ -65,7 +67,7 @@ public final class PasteService {
         host.hidePanel()
 
         guard mode != .copyOnly else { return .success(.copied) }
-        guard PasteGate.outcome(probe: accessibility) == .paste else { return .success(.copiedAccessibilityDenied) }
+        guard PasteGate.outcome(probe: accessibility) == .paste else { return accessibilityDenied() }
 
         // Step 6.
         await waitUntilHidden(host)
@@ -102,7 +104,7 @@ public final class PasteService {
         }
         if case .failure(let error) = await store.recordPaste(of: itemId) { FlotsamLog.log(error, category: .library) }
 
-        guard PasteGate.outcome(probe: accessibility) == .paste else { return .success(.copiedAccessibilityDenied) }
+        guard PasteGate.outcome(probe: accessibility) == .paste else { return accessibilityDenied() }
         await clock.sleep(for: PasteTiming.settle)
         if case .failure(let error) = await postPaste(target: target) { return .failure(error) }
         await expansion.finish(staged)
@@ -119,6 +121,17 @@ public final class PasteService {
         case .failure: outcome = .failed
         }
         FlotsamLog.log(.pasteBack(outcome: outcome), sink: sink)
+    }
+
+    /// The denied branch of the `PasteGate` check: the item stays copied (`SET-PRM-001` copy-only outcome). The first denial
+    /// also asks macOS for Accessibility (FR-008-13: "first paste attempt"); later denials do not prompt. This decides
+    /// nothing: whether to paste is `PasteGate`'s call alone (ADR-0005).
+    private func accessibilityDenied() -> FlotsamResult<PasteOutcome> {
+        if !accessibilityPrompted {
+            accessibilityPrompted = true
+            accessibility.request(.accessibility)
+        }
+        return .success(.copiedAccessibilityDenied)
     }
 
     /// Step 1 of both sequences. Data missing (`LIB-IO-001`) deletes the item.

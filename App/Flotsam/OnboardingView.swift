@@ -72,20 +72,17 @@ struct OnboardingView: View {
         }
     }
 
+    /// Read-only (FR-008-17): the pickup switch and the folder choice live in Settings › General, so this step shows the
+    /// folder and offers only the one-time import.
     private var screenshotsContent: some View {
         @Bindable var model = model
         return VStack(alignment: .leading, spacing: 10) {
             Text(verbatim: text("ui.onboarding.screenshotsMissing")).foregroundStyle(.secondary)
-            Toggle(text("ui.onboarding.pickUpScreenshots"), isOn: $model.pickUpScreenshots)
             HStack {
                 Text(verbatim: text("ui.onboarding.screenshotFolder"))
                 Text(verbatim: model.folderName ?? text("ui.onboarding.screenshotFolderDefault")).foregroundStyle(.secondary)
-                Button(text("ui.onboarding.chooseFolder")) { model.chooseFolder() }
             }
-            .accessibilityElement(children: .contain)
-            if let key = model.folderErrorKey {
-                Text(verbatim: text(key)).foregroundStyle(.red).accessibilityLabel(text(key))
-            }
+            .accessibilityElement(children: .combine)
             Toggle(text("ui.onboarding.importRecent"), isOn: $model.importRecent)
         }
     }

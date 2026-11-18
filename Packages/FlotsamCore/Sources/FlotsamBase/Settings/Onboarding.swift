@@ -29,9 +29,12 @@ public struct OnboardingFlow: Equatable, Sendable {
     public let gatesPasteboard: Bool
     public private(set) var current: OnboardingStep
 
-    public init(gatesPasteboard: Bool) {
+    /// `resumingAt` is the step saved by `OnboardingProgress` after a quit mid-flow; nil, or a step this Mac does not
+    /// show (step 2 on a macOS that does not gate pasteboard reads), starts at step 1.
+    public init(gatesPasteboard: Bool, resumingAt saved: OnboardingStep? = nil) {
         self.gatesPasteboard = gatesPasteboard
         current = .welcome
+        if let saved, steps.contains(saved) { current = saved }
     }
 
     /// First launch shows onboarding by itself; afterwards only "Show Setup Guide…" does.
@@ -55,4 +58,24 @@ public struct OnboardingFlow: Equatable, Sendable {
         guard let index = steps.firstIndex(of: current), index > 0 else { return }
         current = steps[index - 1]
     }
+}
+
+/// The resume point of an unfinished onboarding (FR-008-12): quitting with ⌘Q closes no window, so without this a
+/// relaunch would show steps 1 to 3 again. It is progress, not a preference, so it is not a registry row (FR-008-01);
+/// it is cleared when onboarding finishes or the window closes.
+public struct OnboardingProgress: Sendable {
+    static let keyName = "onboarding.resumeStep"
+    private let store: any KeyValueStore
+
+    public init(store: any KeyValueStore) { self.store = store }
+
+    /// The step to resume at, or nil when none is saved or the saved value is not a step.
+    public func savedStep() -> OnboardingStep? {
+        guard let raw = store.string(forKey: Self.keyName), let number = Int(raw) else { return nil }
+        return OnboardingStep(rawValue: number)
+    }
+
+    public func save(_ step: OnboardingStep) { store.setString(String(step.rawValue), forKey: Self.keyName) }
+
+    public func clear() { store.removeValue(forKey: Self.keyName) }
 }

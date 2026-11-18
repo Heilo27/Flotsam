@@ -14,17 +14,17 @@ final class OnboardingModel {
     private(set) var pasteboardAllowed = false
     private(set) var loginStatus: LoginItemStatus = .off
     private(set) var folderName: String?
-    private(set) var folderErrorKey: String?
-    var pickUpScreenshots: Bool
     var importRecent = true
     var launchAtLogin = true
 
     @ObservationIgnored private let container: AppContainer
 
-    init(container: AppContainer) {
+    /// `resuming` is true only for the automatic launch-time show, which picks up where a quit left off; "Show Setup
+    /// Guide…" always starts at step 1 (FR-008-12).
+    init(container: AppContainer, resuming: Bool) {
         self.container = container
-        flow = OnboardingFlow(gatesPasteboard: PasteboardAccess.isGated)
-        pickUpScreenshots = container.settings.value(SettingKeys.screenshotsEnabled)
+        flow = OnboardingFlow(
+            gatesPasteboard: PasteboardAccess.isGated, resumingAt: resuming ? container.onboardingProgress.savedStep() : nil)
         refresh()
     }
 
@@ -38,15 +38,21 @@ final class OnboardingModel {
         inputMonitoringGranted = container.permissions.isGranted(.inputMonitoring)
         pasteboardAllowed = PasteboardAccess.isAllowed
         loginStatus = container.loginItem.status
-        folderName = Pickers.folderName(of: container.settings.value(SettingKeys.screenshotsFolderOverride))
+        folderName = container.screenshotPickup.folderName
     }
 
     // MARK: Navigation
 
-    func back() { flow.back() }
+    func back() {
+        flow.back()
+        saveProgress()
+    }
 
     /// Skip leaves the step's setting alone.
-    func skip() { flow.advance() }
+    func skip() {
+        flow.advance()
+        saveProgress()
+    }
 
     /// Continue applies what this step's controls hold, then moves on.
     func continueFromStep() {
@@ -56,6 +62,7 @@ final class OnboardingModel {
         default: break
         }
         flow.advance()
+        saveProgress()
     }
 
     // MARK: Step actions
@@ -66,26 +73,21 @@ final class OnboardingModel {
     func openPasteboardSettings() { PasteboardAccess.openSystemSettings() }
     func openLoginItemsSettings() { container.loginItem.openLoginItemsSettings() }
 
-    func chooseFolder() {
-        guard let result = Pickers.chooseScreenshotFolder() else { return }
-        switch result {
-        case .success(let override):
-            container.settings.set(override, for: SettingKeys.screenshotsFolderOverride)
-            folderErrorKey = nil
-            refresh()
-        case .failure(let error):
-            folderErrorKey = "error.\(error.code.rawValue)"
-        }
-    }
-
     func openLibrary() { container.actions.openLibrary?() }
 
-    /// Closing the window, by any route, counts as finished (FR-008-12).
-    func markCompleted() { container.settings.set(true, for: SettingKeys.onboardingCompleted) }
+    /// Closing the window, by any route, counts as finished (FR-008-12), so the resume point goes with it.
+    func markCompleted() {
+        container.settings.set(true, for: SettingKeys.onboardingCompleted)
+        container.onboardingProgress.clear()
+    }
 
+    /// Written on every move, because ⌘Q gives no later moment to write it (FR-008-12).
+    private func saveProgress() { container.onboardingProgress.save(flow.current) }
+
+    /// Step 5 changes no setting: pickup and the folder belong to General alone (FR-008-17). The one thing it does is
+    /// the optional import of the last 30 days, and only while pickup is on.
     private func applyScreenshots() {
-        container.settings.set(pickUpScreenshots, for: SettingKeys.screenshotsEnabled)
-        if pickUpScreenshots && importRecent { container.actions.importRecentScreenshots?() }
+        if importRecent && container.screenshotPickup.enabled { container.actions.importRecentScreenshots?() }
     }
 
     /// The only place onboarding registers the login item, and only on Continue (FR-008-15). A failure shows the HUD

@@ -1531,16 +1531,6 @@
         }
       }
     },
-    "ui.onboarding.chooseFolder" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose Folder…"
-          }
-        }
-      }
-    },
     "ui.onboarding.clipboardMissing" : {
       "localizations" : {
         "en" : {
@@ -1811,16 +1801,6 @@
         }
       }
     },
-    "ui.onboarding.pickUpScreenshots" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pick up screenshots"
-          }
-        }
-      }
-    },
     "ui.onboarding.screenshotFolder" : {
       "localizations" : {
         "en" : {
@@ -1856,7 +1836,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Choose the folder Flotsam watches for new screenshots."
+            "value" : "Flotsam adds your screenshots to your history, and you can change that in Settings, General."
           }
         }
       }

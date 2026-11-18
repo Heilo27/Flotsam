@@ -14,13 +14,14 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         self.container = container
     }
 
-    func show() {
+    /// `resuming`: the launch-time show continues an unfinished onboarding; "Show Setup Guide…" starts over.
+    func show(resuming: Bool = false) {
         if let window {
             window.makeKeyAndOrderFront(nil)
             NSApplication.shared.activate()
             return
         }
-        let model = OnboardingModel(container: container)
+        let model = OnboardingModel(container: container, resuming: resuming)
         let finish: () -> Void = { [weak self] in self?.window?.close() }
         let window = NSWindow(
             contentViewController: NSHostingController(rootView: OnboardingView(model: model, finish: finish)))
