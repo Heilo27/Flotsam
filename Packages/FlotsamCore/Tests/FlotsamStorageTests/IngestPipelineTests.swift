@@ -378,7 +378,7 @@ import FlotsamBase
 
         let error = try #require(failure(over))
         #expect(error.code == .capLim001)
-        #expect(error.context[.byteSize] == .bytes(10_485_760))
+        #expect(error.context[.limitBytes] == .bytes(10_485_760))
         #expect(try rig.itemCount() == 0)
 
         let id = try await rig.create(rig.text("k-exact", String(repeating: "a", count: 10_485_760)))
@@ -425,7 +425,7 @@ import FlotsamBase
 
         let error = try #require(failure(over))
         #expect(error.code == .capLim001)
-        #expect(error.context[.byteSize] == .bytes(104_857_600))
+        #expect(error.context[.limitBytes] == .bytes(104_857_600))
         #expect(try rig.itemCount() == 0)
         #expect(rig.blobFiles().isEmpty)
 
@@ -477,10 +477,10 @@ import FlotsamBase
 
         let shotError = try #require(failure(shot))
         #expect(shotError.code == .sspLim001)
-        #expect(shotError.context[.byteSize] == .bytes(104_857_600))
+        #expect(shotError.context[.limitBytes] == .bytes(104_857_600))
         let dropError = try #require(failure(drop))
         #expect(dropError.code == .shfLim001)
-        #expect(dropError.context[.byteSize] == .bytes(10_485_760))
+        #expect(dropError.context[.limitBytes] == .bytes(10_485_760))
         #expect(try rig.itemCount() == 0)
         #expect(rig.blobFiles().isEmpty)
     }

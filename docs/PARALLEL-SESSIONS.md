@@ -94,13 +94,13 @@ The blind pass criteria live in `.claude/oracle/frd-NNN-contract.json`.
 - Write swift-testing tests that exercise each contract through the public API. Put them in the FRD's test target, on `s2/frdNNN-8t`, branched from the builder's `ready` SHA.
 - Run them and report pass/fail per contract ID.
 - A failing contract is a defect report, not a fix.
-- Order: 001 → 003 → 008 → 002 → 006 (as each is `ready`). **[S2: 001 claimed 2026-11-17 on `s2/frd001-8t` from `main` @ d7d11d9]**
+- Order: 001 → 003 → 008 → 002 → 006 (as each is `ready`). **[S2: 001 claimed 2026-11-17 on `s2/frd001-8t`; 003 claimed 2026-11-17 on `s2/frd003-8t`, both from `main` @ d7d11d9]**
 
 ### Lane C: build features while A and B are idle
 
 Builds follow the per-FRD loop in the FRD: implement → unit tests → green → build the app.
 
-- **C1** FRD-002 Screenshot Pickup on `s2/frd002`, from `main`. **[S2: claimed; part 1 done @ b983b9d (recognizer, resolver, selection, stability, watermark); part 2 claimed 2026-11-17: rebasing on `main` @ d7d11d9]** Read `docs/frd/FRD-002-ScreenshotPickup.md` and ADR-0008.
+- **C1** FRD-002 Screenshot Pickup on `s2/frd002`, from `main`. **merged, on main** (`s2/frd002` @ 578c5d0; part 1 b983b9d) Read `docs/frd/FRD-002-ScreenshotPickup.md` and ADR-0008.
   - The `FlotsamScreenshots` target may import only Foundation, FlotsamBase, FlotsamStorage and FlotsamPayload (`bin/check-architecture.sh` enforces this).
   - Do the §9 spikes first.
 - **C2** FRD-006 Shelf on `s2/frd006`, from `main`. Read `docs/frd/FRD-006-Shelf.md`. Same import rule.
@@ -128,7 +128,7 @@ Ryan's order is working first, then efficient, then pretty. Lane D never starts 
 ## S1 queue (for S2's awareness)
 
 - FRD-001, FRD-003 (paste + UI) and FRD-008 are merged to `main`.
-- Build FRD-004 and FRD-005 (S1: building next).
+- FRD-004 merged, on main (`frd004` + `worf-frd004` QA tests). Build FRD-005 (S1: building next).
 - Merge S2's `s2/*` branches after review.
 - The FRD-007 efficiency tickets come after MVP works.
 - Release signing (FRD-009) needs Ryan's go.

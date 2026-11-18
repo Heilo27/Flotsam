@@ -300,7 +300,11 @@ import Testing
         h.model.handle(key(.up, .option)); h.model.handle(key(.up, .option)); h.model.handle(key(.up, .option))
         #expect(h.model.filter == .all)
         await h.model.settled()
-        #expect(h.source.queries.last?.filter == .all)
+        // Each step cancels the load before it, but a cancelled load still reaches the source, and the loads call it from
+        // concurrent child tasks, so the order the source saw them in is not the order they started in. `queries.last`
+        // could be a superseded `.pinned` load (about 1 run in 13). The last step's own `.all` load is what is certain:
+        // `opened` issued one `.all` query and `settled()` returned only after the final one was recorded.
+        #expect(h.source.queries.filter { $0.filter == .all }.count >= 2)
     }
 
     @Test func otherFeatureKeysAreHandedOnWithTheSelection() async {

@@ -32,9 +32,9 @@ public actor IngestActor {
     private func persist(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult> {
         let occurredAt = candidate.occurredAt.epochMillis
 
-        switch await bumpIfKnown(contentKey: candidate.contentKey, occurredAt: occurredAt) {
+        switch await bumpIfKnown(candidate, occurredAt: occurredAt) {
         case .failure(let error): return .failure(error)
-        case .success(let id?): return bumped(id, warnings: [])
+        case .success(let id?): return matched(id, countsAsCopy: candidate.countsAsCopy, warnings: [])
         case .success(nil): break
         }
 
@@ -56,7 +56,7 @@ public actor IngestActor {
             inserted = try await database.pool.write { [candidate, prepared, stored] db in
                 // Re-check: see the type documentation for why step 1 alone is not enough.
                 if let existing = try Self.lookup(db, contentKey: candidate.contentKey) {
-                    try Self.bump(db, id: existing.id, occurredAt: occurredAt)
+                    if candidate.countsAsCopy { try Self.bump(db, id: existing.id, occurredAt: occurredAt) }
                     return .raced(existing.id)
                 }
                 try Self.insert(db, itemId: itemId, candidate: candidate, prepared: prepared, stored: stored)
@@ -70,7 +70,7 @@ public actor IngestActor {
         switch inserted {
         case .raced(let existingId):
             removeBlobs(stored)
-            return bumped(existingId, warnings: prepared.warnings)
+            return matched(existingId, countsAsCopy: candidate.countsAsCopy, warnings: prepared.warnings)
         case .created:
             database.events.publish(.itemsChanged)
             var warnings = prepared.warnings
@@ -84,11 +84,13 @@ public actor IngestActor {
 
     // MARK: Step 1 and the re-check
 
-    private func bumpIfKnown(contentKey: String, occurredAt: Int64) async -> FlotsamResult<String?> {
+    private func bumpIfKnown(_ candidate: IngestCandidate, occurredAt: Int64) async -> FlotsamResult<String?> {
+        let contentKey = candidate.contentKey
+        let countsAsCopy = candidate.countsAsCopy
         do {
             return .success(try await database.pool.write { db in
                 guard let existing = try Self.lookup(db, contentKey: contentKey) else { return nil }
-                try Self.bump(db, id: existing.id, occurredAt: occurredAt)
+                if countsAsCopy { try Self.bump(db, id: existing.id, occurredAt: occurredAt) }
                 return existing.id
             })
         } catch {
@@ -96,10 +98,12 @@ public actor IngestActor {
         }
     }
 
-    private func bumped(_ id: String, warnings: [FlotsamError]) -> FlotsamResult<IngestResult> {
+    /// A `contentKey` match: bumped for a copy event, untouched (and nothing published) for a backfill.
+    private func matched(_ id: String, countsAsCopy: Bool, warnings: [FlotsamError]) -> FlotsamResult<IngestResult> {
         guard let uuid = UUID(uuidString: id) else {
             return .failure(FlotsamError(.stoDb004, "Stored item id is not a UUID"))
         }
+        guard countsAsCopy else { return .success(IngestResult(outcome: .unchanged(uuid), warnings: warnings)) }
         database.events.publish(.itemsChanged)
         return .success(IngestResult(outcome: .bumped(uuid), warnings: warnings))
     }

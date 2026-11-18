@@ -22,7 +22,7 @@ extension FlotsamDatabase {
 
     /// Kinds whose content is a list of file references (`bundleMember` rows), not blobs or text, so having no
     /// representation and no plain text is their normal shape.
-    private static let referenceKinds = [ItemKind.file, .folder, .bundle].map(\.rawValue)
+    private static let referenceKinds = ItemKind.allCases.filter(\.referencesFiles).map(\.rawValue)
 
     /// Brings the database and the folder back into agreement after a crash or an outside deletion (FR-007-13).
     /// Run at launch and weekly by `ReconcileScheduler`; safe to run while ingest, delete and retention are working.

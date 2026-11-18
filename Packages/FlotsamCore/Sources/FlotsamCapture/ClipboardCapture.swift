@@ -18,6 +18,11 @@ public final class ClipboardCapture {
     static let pollTolerance: TimeInterval = 0.1
     /// FR-001-18: consecutive changes that return no type data before capture suspends.
     static let emptyReadsBeforeSuspension = 3
+    /// FR-001-01: reads of one `changeCount` that may come back empty before the change counts as an empty change. A
+    /// copy is not atomic: `clearContents` bumps the count, and `writeObjects` or `setData` fills the board without a
+    /// second bump, so a poll in between sees a new count and nothing to read. Re-reading on the next ticks (about 1 s
+    /// in all) catches the data when it lands instead of dropping the copy until the user copies something else.
+    static let emptyAttemptsPerChange = 3
     /// FR-001-18: how often a suspended capture re-probes the pasteboard.
     static let suspendedProbeInterval: TimeInterval = 60
 
@@ -37,6 +42,9 @@ public final class ClipboardCapture {
 
     private var lastProcessedChangeCount: Int?
     private var consecutiveEmptyReads = 0
+    /// The count whose last read came back empty and is still being re-read, and how many reads it has had.
+    private var rereadingChangeCount: Int?
+    private var emptyAttempts = 0
     private var suspendedSince: Date?
     private var lastProbe = Date.distantPast
 
@@ -103,7 +111,9 @@ public final class ClipboardCapture {
     private func poll(retrySuspended: Bool = false) {
         let changeCount = pasteboard.changeCount
         let probeDue = suspendedSince != nil && (retrySuspended || clock.now().timeIntervalSince(lastProbe) >= Self.suspendedProbeInterval)
-        guard changeCount != lastProcessedChangeCount || probeDue else { return }
+        if rereadingChangeCount != changeCount { rereadingChangeCount = nil }
+        let rereadDue = rereadingChangeCount != nil
+        guard changeCount != lastProcessedChangeCount || probeDue || rereadDue else { return }
         lastProcessedChangeCount = changeCount
         lastProbe = clock.now()
         handleChange(changeCount: changeCount)
@@ -118,7 +128,12 @@ public final class ClipboardCapture {
         if ownWrites.contains(changeCount: changeCount) { return skip(.capPol004) }
 
         let types = pasteboard.currentTypeIdentifiers()
-        guard noteReadability(types.isEmpty ? .empty : .readable) else { return }
+        if types.isEmpty { return noteEmptyRead(changeCount: changeCount) }
+        // Listed types are readable type data, so every exit below marks readable (and resumes a suspension) except
+        // the one where the snapshot then yields no bytes: that is an empty read, counted by `noteEmptyRead` like an
+        // empty type list (FR-001-18 b), and must not reset `consecutiveEmptyReads` on the way.
+        var readable = true
+        defer { if readable { _ = noteReadability(.readable) } }
         if types.contains(PasteboardMarkers.ownWrite) { return skip(.capPol004) }
         if types.contains(where: PasteboardMarkers.neverStore.contains) { return skip(.capPol001) }
 
@@ -139,7 +154,11 @@ public final class ClipboardCapture {
             }
             snapshot = value
         }
-        guard noteReadability(snapshot.representations.isEmpty ? .empty : .readable) else { return }
+        if snapshot.representations.isEmpty {
+            readable = false
+            return noteEmptyRead(changeCount: changeCount)
+        }
+        rereadingChangeCount = nil
 
         continuation?.yield(CapturedPayload(
             representations: snapshot.representations, source: source, capturedAt: clock.now(), origin: .pasteboard))
@@ -169,6 +188,19 @@ public final class ClipboardCapture {
 
     private enum Readability { case readable, empty }
 
+    /// An empty read of `changeCount`. The first `emptyAttemptsPerChange - 1` are silent and the same count is read again
+    /// on the next tick; only the last one counts as an empty change (and can suspend capture, FR-001-18 b).
+    private func noteEmptyRead(changeCount: Int) {
+        if rereadingChangeCount != changeCount {
+            rereadingChangeCount = changeCount
+            emptyAttempts = 0
+        }
+        emptyAttempts += 1
+        if emptyAttempts < Self.emptyAttemptsPerChange { return }
+        rereadingChangeCount = nil
+        _ = noteReadability(.empty)
+    }
+
     /// Counts changes that yield no type data. Returns false when the change should not go further (it was empty).
     /// Three in a row suspend capture with `CAP-PRM-001`; the first readable change afterwards resumes it.
     private func noteReadability(_ readability: Readability) -> Bool {
@@ -194,11 +226,16 @@ public final class ClipboardCapture {
 
     // MARK: Reporting
 
+    /// Every skip and raise is final for the change it handled, so it ends any reread of that change (FR-001-22). A latch
+    /// left set would re-handle the same `changeCount` on every tick. Clearing here, not at the read, keeps the attempt
+    /// budget of a change whose types are listed but whose bytes come back empty (`noteEmptyRead` below the snapshot).
     private func skip(_ policy: ErrorCode) {
+        rereadingChangeCount = nil
         FlotsamLog.log(.pasteboardProcessed(kind: nil, byteSize: 0, outcome: .skipped, policy: policy), sink: sink)
     }
 
     private func raise(_ error: FlotsamError) {
+        rereadingChangeCount = nil
         let reporter = reporter
         Task { await reporter.report(error, origin: .background) }
     }

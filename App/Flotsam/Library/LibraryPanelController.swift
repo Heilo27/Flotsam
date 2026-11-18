@@ -24,6 +24,7 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     }
 
     let model: LibraryViewModel
+    private let organize: OrganizeCoordinator
     private let hostBox: HostBox
     private let panel: Panel
     private let frontmost: any FrontmostAppProvider
@@ -36,11 +37,14 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     /// The model needs its host and the host needs the model, so the controller builds the model with itself as host.
     init(
         source: any LibraryDataSource, paster: any PastePerforming, preferences: any LibraryPreferences,
-        effects: LibraryEffects, frontmost: any FrontmostAppProvider,
-        captureNow: @escaping @MainActor () async -> Void
+        effects: LibraryEffects, organizer: LibraryOrganizer, organize: OrganizeCoordinator,
+        frontmost: any FrontmostAppProvider, captureNow: @escaping @MainActor () async -> Void
     ) {
         let hostBox = HostBox()
-        model = LibraryViewModel(source: source, paster: paster, host: hostBox, preferences: preferences, effects: effects)
+        model = LibraryViewModel(
+            source: source, paster: paster, host: hostBox, preferences: preferences, effects: effects, organizer: organizer)
+        organize.model = model
+        self.organize = organize
         self.hostBox = hostBox
         self.frontmost = frontmost
         self.preferences = preferences
@@ -63,6 +67,7 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     func hidePanel() {
         guard panel.isVisible else { return }
         removeKeyMonitor()
+        organize.close()
         panel.orderOut(nil)
         model.panelDidHide()
     }
@@ -114,7 +119,7 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         effect.material = .hudWindow
         effect.blendingMode = .behindWindow
         effect.state = .active
-        let hosting = NSHostingView(rootView: LibraryView(model: model))
+        let hosting = NSHostingView(rootView: LibraryView(model: model, organize: organize))
         hosting.translatesAutoresizingMaskIntoConstraints = false
         effect.addSubview(hosting)
         NSLayoutConstraint.activate([
@@ -181,6 +186,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         // An input method composing text owns every key until it commits.
         if let editor = panel.firstResponder as? NSTextView, editor.hasMarkedText() { return event }
         guard let stroke = LibraryKeyTranslator.stroke(for: event) else { return event }
+        // An open Organize overlay owns the keyboard: the Library's key map must not see typing meant for its fields.
+        if organize.isOverlayOpen { return organize.handle(stroke) ? nil : event }
         return model.handle(stroke) ? nil : event
     }
 }

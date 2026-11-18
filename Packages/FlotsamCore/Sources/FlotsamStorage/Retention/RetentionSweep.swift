@@ -4,8 +4,9 @@ import GRDB
 
 extension RetentionPreset {
     /// How long an item may go uncopied before the sweep may delete it; nil for Forever. The day counts live here,
-    /// in Storage, because the sweep and its confirmation count are the only users (FR-007-09).
-    var periodMillis: Int64? {
+    /// in Storage, next to the sweep and its confirmation count (FR-007-09). Screenshot backfill (FRD-002 FR-002-12)
+    /// reads it too, so its window can never disagree with what the sweep would delete.
+    public var periodMillis: Int64? {
         let day = TimeSpan.dayMillis
         switch self {
         case .d7: return 7 * day
