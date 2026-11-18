@@ -393,19 +393,19 @@ private func code(of result: ShelfDropResult) -> ErrorCode? {
         #expect(bench.spy.candidates.isEmpty)
     }
 
-    @Test("FR-007-07 a dropped PNG that cannot be decoded stores nothing and signals no completed drop (CAP-VAL-001 by source)")
+    @Test("FR-007-07 a dropped PNG that cannot be decoded stores nothing and signals no completed drop (SHF-VAL-001, TASK-407)")
     func undecodableImageStoresNothing() async throws {
         // given PNG-typed bytes that are not an image
         // when dropped
-        // then the drop fails with CAP-VAL-001, nothing is stored, no completion signal.
-        // (HUD deliberately not asserted: CAP-VAL-001 is Info, so FR-000-04 makes it log-only; see the QA report.)
+        // then the drop fails with SHF-VAL-001 (the Shelf's own code, so the HUD shows: FR-006-14), nothing is stored,
+        // no completion signal. (TASK-407: this used to be CAP-VAL-001, Info and log-only, so the drop was silent.)
         let bench = try await Bench.make()
         defer { bench.cleanUp() }
         let junk = PasteboardRepresentation(uti: PasteboardTypes.png, data: Data([0, 1, 2, 3]))
 
         let result = await bench.drop(types: [PasteboardTypes.png], [junk])
 
-        #expect(code(of: result) == .capVal001)
+        #expect(code(of: result) == .shfVal001)
         #expect(try await bench.rows().isEmpty)
         #expect(bench.signals.count == 0)
         #expect(bench.spy.candidates.isEmpty == false, "the bytes reach ingest: the refusal comes from decoding, not from the classifier")
