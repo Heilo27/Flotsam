@@ -64,6 +64,11 @@ public final class LibraryOrganizer {
         hasNote || row.isPinned || row.hasTrigger || row.hasShortcut
     }
 
+    /// Deleting a tag asks first only when the tag is on at least one item (FR-004-04).
+    public nonisolated static func deleteTagNeedsConfirmation(itemCount: Int) -> Bool {
+        itemCount > 0
+    }
+
     // MARK: Pin
 
     /// The state applied (all pinned, or all unpinned), or nil on failure.

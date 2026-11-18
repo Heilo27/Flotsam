@@ -173,7 +173,7 @@ final class OrganizeCoordinator {
     /// Asks first only when the tag is on at least one item.
     func deleteTag(id: Int64, name: String, itemCount: Int) {
         guard overlay == nil, let model else { return }
-        if itemCount > 0 {
+        if LibraryOrganizer.deleteTagNeedsConfirmation(itemCount: itemCount) {
             confirm(message: LibraryText.confirmDeleteTag(name: name, itemCount: itemCount), button: LibraryText.buttonRemove) {
                 _ = await model.deleteTag(id)
             }

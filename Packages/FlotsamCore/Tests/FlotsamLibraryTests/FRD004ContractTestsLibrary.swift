@@ -12,8 +12,7 @@ import Testing
 // OrganizeCoordinator confirm overlays and the hotkey registry live in the App target, which has no test target) is
 // listed in FRD004ContractTestsGaps.swift. Expected values are literals; state is read back through a fresh query.
 //
-// [Spec Drift] OC-4073: the contract names the string key `organize.confirm.ungroup`; the FRD and the catalogue spell it
-// `ui.organize.confirmUngroup`. The FRD wins and the test uses the shipped key. The contract key is stale.
+// OC-4073: the oracle names the string key as the FRD does, `ui.organize.confirmUngroup` (TASK-467 fixed the stale key).
 
 // MARK: Local doubles (private to this file; Storage's RecordingLogSink is not visible to this test target)
 
@@ -192,7 +191,7 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
     @Test("OC-4031 given a tag on 0 items, when it is deleted, then it is gone, 0 items were carrying it and the item count is unchanged")
     func oc4031EmptyTagDeletesWithoutTouchingItems() async throws {
         // Red if: deleting an empty tag removes an item, fails, or leaves the tag listed.
-        // The no-prompt decision (itemCount == 0) is inline in the App's OrganizeCoordinator: see the Gaps file.
+        // The no-prompt decision is LibraryOrganizer.deleteTagNeedsConfirmation (the App calls it): tested just below.
         let rig = try await OrganizeRig.make()
         defer { rig.cleanUp() }
         for n in 1...3 { try await rig.add(.text, key: "k\(n)", text: "plain \(n)", secondsAgo: Double(n)) }
@@ -207,6 +206,15 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
         #expect(try await rig.tags().isEmpty)
         #expect(try await rig.allRows().count == 3)
         #expect(rig.reported.errors.isEmpty)
+    }
+
+    @Test("OC-4031 given a tag on 0 items, when the delete is asked, then no confirmation is needed; on 1 or more items it is")
+    func oc4031NoConfirmationAtZeroItems() {
+        // Red if: deleteTagNeedsConfirmation asks for an empty tag, or stops asking once the tag is on an item.
+        // The App's OrganizeCoordinator.deleteTag calls this one function, so this is the decision the user sees.
+        #expect(LibraryOrganizer.deleteTagNeedsConfirmation(itemCount: 0) == false)
+        #expect(LibraryOrganizer.deleteTagNeedsConfirmation(itemCount: 1) == true)
+        #expect(LibraryOrganizer.deleteTagNeedsConfirmation(itemCount: 5) == true)
     }
 
     // MARK: OC-4062 delete of a plain item
@@ -290,16 +298,9 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
             == "Ungroup this bundle? Its note, pin, trigger and hotkey are not carried over to the new items.")
     }
 
-    @Test("OC-4073 given the contract's string key, when the catalogue is asked for it, then it is the stale name and the FRD key is the live one")
-    func oc4073ContractKeyIsStale() {
-        // [Spec Drift] The contract (and docs/DESIGN.md) call the confirmation `organize.confirm.ungroup`; FR-004-11 and the
-        // shipped catalogue call it `ui.organize.confirmUngroup`. The FRD wins, so the contract's own assertion (the key
-        // resolves to copy) is a known issue, while the FRD key must resolve to the ungroup warning.
-        // Red if: the FRD key loses its copy (second expect), or the catalogue gains the contract key and the known issue
-        // stops recording (withKnownIssue then fails, telling us the drift is resolved and the wrapper can go).
-        withKnownIssue("contract key organize.confirm.ungroup is not in the catalogue; FR-004-11 names ui.organize.confirmUngroup") {
-            #expect(!LibraryText.string("organize.confirm.ungroup").isEmpty)
-        }
+    @Test("OC-4073 given the FRD's string key, when the catalogue is asked for it, then it resolves to the ungroup warning")
+    func oc4073ConfirmationKeyIsTheFRDKey() {
+        // Red if: the FRD key (FR-004-11, ui.organize.confirmUngroup) loses its copy or LibraryText stops naming it.
         #expect(LibraryText.string(LibraryText.confirmUngroup).hasPrefix("Ungroup this bundle?"))
         #expect(LibraryText.confirmUngroup == "ui.organize.confirmUngroup")
     }
