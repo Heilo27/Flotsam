@@ -1,6 +1,7 @@
 import FlotsamBase
 import FlotsamStorage
 import Foundation
+import Observation
 import Testing
 @testable import FlotsamLibrary
 
@@ -91,6 +92,21 @@ final class FakeOrganizeStore: LibraryOrganizeStore, @unchecked Sendable {
         #expect(r.model.footer().sortName == "Most Used")
         r.model.cycleSort()
         #expect(r.model.footer().sortName == "A to Z")
+    }
+
+    /// FR-004-12 / TASK-452: the footer view re-renders on every ⌘S. SwiftUI only re-reads `footer()` when something
+    /// it read changes, so the sort itself must be observable, not just the reload that follows it. Red if `sort` is
+    /// observation-ignored: the only change before the load lands is `scrollResetToken`, which `footer()` never reads.
+    @Test func cyclingTheSortInvalidatesAnObserverOfTheFooter() async {
+        let r = await rig(3)
+        for expected in ["Oldest", "Most Used", "A to Z", "Recent"] {
+            let invalidated = Invalidation()
+            _ = withObservationTracking { r.model.footer() } onChange: { invalidated.fire() }
+            r.model.cycleSort()
+            #expect(invalidated.fired, "cycling to \(expected) must invalidate the footer before the reload lands")
+            #expect(r.model.footer().sortName == expected)
+            await r.model.settled()
+        }
     }
 
     @Test func openingUsesTheRememberedSortAndCyclingScrollsToTheTop() async {
@@ -321,4 +337,12 @@ final class FakeOrganizeStore: LibraryOrganizeStore, @unchecked Sendable {
         #expect(!LibraryText.string(LibraryText.confirmUngroup).isEmpty)
         #expect(!LibraryText.string(LibraryText.editFormattingRemoved).isEmpty)
     }
+}
+
+/// Records that an observation-tracking `onChange` ran (it can run on any thread, once).
+private final class Invalidation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    var fired: Bool { lock.withLock { value } }
+    func fire() { lock.withLock { value = true } }
 }

@@ -64,6 +64,18 @@ import Testing
         #expect(LibraryFooter(totalCount: 1, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent).countText == "1 item")
     }
 
+    /// FR-004-12: the footer names the active sort, for every sort, in every footer state.
+    @Test(arguments: [(LibrarySort.recent, "Recent"), (.oldest, "Oldest"), (.mostUsed, "Most Used"), (.alphabetical, "A to Z")])
+    func footerNamesTheActiveSort(sort: LibrarySort, name: String) {
+        #expect(LibrarySort.allCases.count == 4)
+        for trusted in [true, false] {
+            for selection in [1, 3] {
+                let footer = LibraryFooter(totalCount: 5, selectionCount: selection, isPreviewOpen: false, isAccessibilityTrusted: trusted, sort: sort)
+                #expect(footer.sortName == name)
+            }
+        }
+    }
+
     @Test func footerShowsTheCopyOnlyNoticeWithoutAccessibility() {
         let footer = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: true, isAccessibilityTrusted: false, sort: .recent)
         #expect(footer.notice == "Press ⌘V to paste")

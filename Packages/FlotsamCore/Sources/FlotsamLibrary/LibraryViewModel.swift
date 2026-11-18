@@ -55,7 +55,8 @@ public final class LibraryViewModel {
 
     // MARK: Private state
 
-    @ObservationIgnored private var sort: LibrarySort
+    /// Observed on purpose: `footer()` reads it, so the footer view re-renders on every ⌘S (FR-004-12).
+    private var sort: LibrarySort
     @ObservationIgnored private var lastAccessibilityTrusted: Bool?
     @ObservationIgnored private var cursor: UUID?
     @ObservationIgnored private var anchor: UUID?

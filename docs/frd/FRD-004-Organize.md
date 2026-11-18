@@ -86,7 +86,7 @@ An input rejection shown inline (ORG-VAL-001 to -003, ORG-LIM-001 to -003) is st
 - **AC-004-09** (FR-004-09) Given one unpinned item, ⌘⌫ deletes at once with no dialog; given a pinned item or 3 selected items, a confirmation shows first; given a bundle, the files on disk remain; the record and its blobs are gone afterward.
 - **AC-004-10** (FR-004-11) Given a bundle of 4 files with tag "x", a note and a pin, then Ungroup asks for confirmation, creates 4 items in the original order in Recent, each tagged "x", each without note or pin, and the bundle is gone; an injected failure on the 3rd insert leaves the bundle untouched.
 - **AC-004-11** (FR-004-10) Given any sidebar row is selected, then exactly one filter applies; typing a query narrows within it; selecting All clears the filter but not the query.
-- **AC-004-12** (FR-004-12) Given 6 items with distinct text, pasteCounts and dates, then each sort yields the specified order, ties are stable across repeated loads, and ⌘S cycles Recent, Oldest, Most Used, A to Z.
+- **AC-004-12** (FR-004-12) Given 6 items with distinct text, pasteCounts and dates, then each sort yields the specified order, ties are stable across repeated loads, and ⌘S cycles Recent, Oldest, Most Used, A to Z, with the footer naming the active sort after every press.
 - **AC-004-13** (FR-004-13,14) Given 10,000 items, then single-item pin, tag and delete each complete in ≤ 100 ms p95, and tagging 500 selected items in ≤ 1 s.
 - **AC-004-14** (FR-004-05) Given a tagged but unpinned item older than the retention window, then it is removed by the sweep.
 
