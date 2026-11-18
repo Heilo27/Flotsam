@@ -208,9 +208,7 @@ struct Frd008ContractPermissionsTests {
             if url.lastPathComponent == "Permissions.swift" { continue }
             if let text = try? String(contentsOf: url, encoding: .utf8), text.contains("PasteGate.") { uses += 1 }
         }
-        withKnownIssue("DEFECT (Rule 9): PasteGate has no production call site; four paths re-implement the SET-PRM-001 decision") {
-            #expect(uses >= 1)
-        }
+        #expect(uses >= 1)
     }
 
     // OC-8120, OC-8125. Red if register is called without setEnabled, or setEnabled(true) fails to register.

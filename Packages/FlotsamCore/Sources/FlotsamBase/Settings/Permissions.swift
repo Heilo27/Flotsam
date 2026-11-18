@@ -17,9 +17,8 @@ public protocol PermissionProbe: Sendable {
 }
 
 extension PermissionProbe {
-    /// The Accessibility question FRD-003 (paste) asks. One protocol serves both FRDs (Rule 9): FRD-003's own
-    /// two-line `PermissionProbe` declaration is replaced by this one when the branches merge.
-    public var isAccessibilityTrusted: Bool { isGranted(.accessibility) }
+    /// The Accessibility question the Library footer asks; answered by `PasteGate`, the one owner of the decision.
+    public var isAccessibilityTrusted: Bool { PasteGate.outcome(probe: self) == .paste }
 }
 
 /// What choosing a Library item does, given Accessibility (FR-008-14). `FlotsamPaste.PasteOutcome` is the full
@@ -31,10 +30,19 @@ public enum PasteGateOutcome: Equatable, Sendable {
     case copyOnly(FlotsamError)
 }
 
+/// The one owner of the Accessibility decision and of its `SET-PRM-001` error (FR-008-14, ADR-0005, Rule 9). Every
+/// path that needs Accessibility (paste, Shelf, Library, item hotkey, trigger expansion, the Triggers pane notice) asks
+/// here; none tests the permission or builds the error itself.
 public enum PasteGate {
     public static func outcome(accessibilityGranted: Bool) -> PasteGateOutcome {
-        accessibilityGranted
-            ? .paste : .copyOnly(FlotsamError(.setPrm001, "Accessibility not granted; pasting by copy only"))
+        accessibilityGranted ? .paste : .copyOnly(copyOnlyError())
+    }
+
+    /// The `SET-PRM-001` error for an attempt that could only copy. `itemId` is log context when the attempt has an item.
+    public static func copyOnlyError(itemId: UUID? = nil) -> FlotsamError {
+        FlotsamError(
+            .setPrm001, "Accessibility not granted; pasting by copy only",
+            context: itemId.map { [.itemId: .id($0)] } ?? [:])
     }
 
     public static func outcome(probe: any PermissionProbe) -> PasteGateOutcome {
@@ -47,7 +55,7 @@ public enum TriggerPermissionNotice {
     public static func missing(triggersEnabled: Bool, probe: any PermissionProbe) -> [ErrorCode] {
         guard triggersEnabled else { return [] }
         var codes: [ErrorCode] = []
-        if !probe.isGranted(.accessibility) { codes.append(.setPrm001) }
+        if case .copyOnly(let error) = PasteGate.outcome(probe: probe) { codes.append(error.code) }
         if !probe.isGranted(.inputMonitoring) { codes.append(.setPrm002) }
         return codes
     }

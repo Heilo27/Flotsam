@@ -41,7 +41,7 @@ public final class ItemHotkeyAction {
         switch result {
         case .success(.pasted), .success(.copied): nil
         case .success(.copiedAccessibilityDenied):
-            FlotsamError(.setPrm001, "item hotkey copied only: Accessibility not granted", context: [.itemId: .id(itemId)])
+            PasteGate.copyOnlyError(itemId: itemId)
         case .failure(let error): error
         }
     }

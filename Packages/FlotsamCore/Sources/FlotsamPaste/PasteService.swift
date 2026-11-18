@@ -55,7 +55,7 @@ public final class PasteService {
         host.hidePanel()
 
         guard mode != .copyOnly else { return .success(.copied) }
-        guard accessibility.isAccessibilityTrusted else { return .success(.copiedAccessibilityDenied) }
+        guard PasteGate.outcome(probe: accessibility) == .paste else { return .success(.copiedAccessibilityDenied) }
 
         // Step 6.
         await waitUntilHidden(host)
@@ -85,7 +85,7 @@ public final class PasteService {
         }
         if case .failure(let error) = await store.recordPaste(of: itemId) { FlotsamLog.log(error, category: .library) }
 
-        guard accessibility.isAccessibilityTrusted else { return .success(.copiedAccessibilityDenied) }
+        guard PasteGate.outcome(probe: accessibility) == .paste else { return .success(.copiedAccessibilityDenied) }
         await clock.sleep(for: PasteTiming.settle)
         if case .failure(let error) = await postPaste(target: target) { return .failure(error) }
         await expansion.finish(staged)
