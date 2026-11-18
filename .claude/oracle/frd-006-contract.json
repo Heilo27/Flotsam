@@ -397,8 +397,9 @@
       "requirement": "AC-006-06",
       "given": "No items",
       "when": "the Shelf is revealed",
-      "then": "no section headers; only the empty-state text (shelf.empty) is shown",
+      "then": "no section headers; only the empty-state text (ui.shelf.empty) is shown",
       "class": "empty",
+      "amended": "S1 ruling 2026-11-17",
       "source_verdict": "CONFIRMED",
       "must_verify": true
     },

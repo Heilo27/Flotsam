@@ -7,13 +7,13 @@ import Foundation
 /// `com.adobe.pdf`, `public.url-name`, `com.apple.finder.node`, `com.apple.icns`, `dyn.*` and app-private types.
 /// There is deliberately no list of ignored types, so a new unknown type is ignored by default.
 public enum PasteboardTypes {
-    public static let plainText = "public.utf8-plain-text"
+    public static let plainText = PasteboardUTI.plainText
     public static let rtf = "public.rtf"
     public static let html = "public.html"
     public static let png = "public.png"
     public static let tiff = "public.tiff"
     public static let jpeg = "public.jpeg"
-    public static let fileURL = "public.file-url"
+    public static let fileURL = PasteboardUTI.fileURL
     public static let url = "public.url"
 
     private static let honoured: Set<String> = [plainText, rtf, html, png, tiff, jpeg, fileURL, url]
@@ -34,5 +34,5 @@ public enum PasteboardTypes {
     }
 
     /// Accepted image representations, best first (FR-001-11).
-    static let imagePriority = [png, tiff, jpeg]
+    public static let imagePriority = [png, tiff, jpeg]
 }

@@ -9,7 +9,7 @@ public enum LogCategory: String, CaseIterable, Sendable {
 /// Keys allowed in an error or log context. Free text is not a key.
 public enum LogKey: String, Sendable {
     case itemId, count, byteSize, durationMs, bundleId, kind, step, limitBytes
-    case uti, outcome, code, permission, rows
+    case uti, outcome, code, permission, rows, trigger
 }
 
 /// What happened at an instrumented callsite (FR-000-11). A closed list so an outcome is an enum raw value, which
@@ -78,6 +78,8 @@ public enum LogSafeValue: Sendable, Equatable {
     case outcome(LogOutcome)
     case code(ErrorCode)
     case permission(PermissionName)
+    /// A Shelf reveal trigger: an enum raw value, public (FR-000-10).
+    case trigger(ShelfTrigger)
 
     var rendered: String {
         switch self {
@@ -92,6 +94,7 @@ public enum LogSafeValue: Sendable, Equatable {
         case .outcome(let value): value.rawValue
         case .code(let value): value.rawValue
         case .permission(let value): value.rawValue
+        case .trigger(let value): value.rawValue
         }
     }
 
@@ -102,7 +105,7 @@ public enum LogSafeValue: Sendable, Equatable {
     /// deciding its privacy.
     var isPublic: Bool {
         switch self {
-        case .int, .bool, .bytes, .milliseconds, .kind, .outcome, .code, .permission: true
+        case .int, .bool, .bytes, .milliseconds, .kind, .outcome, .code, .permission, .trigger: true
         case .uti(let type): type.isSystemDeclared
         case .id, .bundleId: false
         }

@@ -53,3 +53,33 @@ public struct ItemClassifiers: Sendable {
         self.fileMember = fileMember
     }
 }
+
+/// FR-004-01: whether a pin action on items in these states pins them (true) or unpins them (false). With any unpinned
+/// item among them the action pins all; only when every one is pinned does it unpin all. The one home of the rule:
+/// Storage decides inside its transaction with it, and the Library and the Shelf use it to label and aim the action.
+public enum PinRule {
+    public static func pinsAll(states: [Bool]) -> Bool { !states.allSatisfy { $0 } }
+}
+
+/// FR-004-09, FR-004-10: what Delete asks and where the selection goes afterwards, shared by the Library and the Shelf
+/// so the two surfaces cannot disagree.
+public enum DeleteConfirmation {
+    /// Delete asks first only for more than one item, or any pinned item or one with a trigger or hotkey.
+    public static func isRequired(for rows: [ItemRow]) -> Bool {
+        rows.count > 1 || rows.contains { $0.isPinned || $0.hasTrigger || $0.hasShortcut }
+    }
+
+    /// The confirmation question for `count` items (catalogue keys `ui.organize.confirmDelete*`).
+    public static func message(count: Int) -> String {
+        if count == 1 { return FlotsamStrings.text(forKey: "ui.organize.confirmDeleteOne") ?? "" }
+        return String(format: FlotsamStrings.text(forKey: "ui.organize.confirmDelete") ?? "", count)
+    }
+
+    /// The row to select once `ids` are deleted: the first remaining row after the last deleted one in list order, else
+    /// the last remaining row before it, else nil (FR-004-09).
+    public static func selectionAfter(deleting ids: Set<UUID>, in rows: [ItemRow]) -> UUID? {
+        guard let lastDeleted = rows.lastIndex(where: { ids.contains($0.id) }) else { return nil }
+        if let after = rows[(lastDeleted + 1)...].first(where: { !ids.contains($0.id) }) { return after.id }
+        return rows[..<lastDeleted].last(where: { !ids.contains($0.id) })?.id
+    }
+}
