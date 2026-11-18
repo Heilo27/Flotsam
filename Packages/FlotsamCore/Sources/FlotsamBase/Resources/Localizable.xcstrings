@@ -691,6 +691,16 @@
         }
       }
     },
+    "ui.library.footerEnable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable"
+          }
+        }
+      }
+    },
     "ui.library.footerItems" : {
       "localizations" : {
         "en" : {
@@ -3107,16 +3117,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Not granted"
-          }
-        }
-      }
-    },
-    "ui.settings.permissionUnknown" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unknown"
           }
         }
       }

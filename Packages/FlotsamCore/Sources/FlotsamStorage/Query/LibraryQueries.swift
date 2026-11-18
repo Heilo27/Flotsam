@@ -56,6 +56,27 @@ extension FlotsamDatabase {
         }
     }
 
+    /// Live item count per kind, kinds with no items left out. Numbers only: the one count-by-kind query, shared by the
+    /// sidebar's Type rows and Copy Diagnostics (FR-000-10), so the two cannot disagree and the diagnostics read no
+    /// content. Failure is `STO-DB-004`, as for every read (FR-007-18).
+    public func itemCountsByKind() async -> FlotsamResult<[ItemKind: Int]> {
+        do {
+            return .success(try await pool.read { db in try Self.kindCounts(db) })
+        } catch {
+            return .failure(Self.readFailure(error))
+        }
+    }
+
+    private static func kindCounts(_ db: Database) throws -> [ItemKind: Int] {
+        var counts: [ItemKind: Int] = [:]
+        for row in try Row.fetchAll(db, sql: "SELECT kind, COUNT(*) AS n FROM item GROUP BY kind") {
+            let raw: String = row["kind"]
+            let n: Int = row["n"]
+            if let kind = ItemKind(rawValue: raw), n > 0 { counts[kind] = n }
+        }
+        return counts
+    }
+
     // MARK: Selection (the one definition of filter + search)
 
     /// A WHERE clause over `item` plus its arguments.
@@ -297,11 +318,7 @@ extension FlotsamDatabase {
         func counted(_ filter: LibraryFilter) throws -> Int {
             try count(db, selection: Selection(filter: filter, text: ""))
         }
-        var kinds: [ItemKind: Int] = [:]
-        for kind in ItemKind.allCases {
-            let n = try counted(.kind(kind))
-            if n > 0 { kinds[kind] = n }
-        }
+        let kinds = try kindCounts(db)
         var tags: [SidebarCounts.TagCount] = []
         for tag in try Row.fetchAll(db, sql: "SELECT id, name, color FROM tag ORDER BY name COLLATE NOCASE") {
             let id: Int64 = tag["id"]

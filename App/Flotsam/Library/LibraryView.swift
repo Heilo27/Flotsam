@@ -192,10 +192,22 @@ struct LibraryFooterView: View {
             if let notice = footer.notice {
                 Text(verbatim: notice).font(.caption).foregroundStyle(.orange)
             }
+            if let enableLabel = footer.enableLabel {
+                Button(enableLabel) { model.enableAccessibility() }
+                    .buttonStyle(.link)
+                    .font(.caption)
+            }
             Spacer()
             Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
+        // Picks up a grant made in System Settings without a relaunch (FR-008-14). The hosting view outlives every
+        // hide, so the id includes `isShown`: the poll runs only while the copy-only footer shows on a shown panel,
+        // and restarts on the next open.
+        .task(id: footer.enableLabel != nil && model.isShown) {
+            guard footer.enableLabel != nil else { return }
+            await model.watchAccessibility()
+        }
     }
 }
