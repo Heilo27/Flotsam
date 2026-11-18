@@ -18,6 +18,14 @@ public protocol ShelfDataSource: Sendable {
 
 extension FlotsamDatabase: ShelfDataSource {}
 
+/// How a drop reaches storage (FR-006-13): the same ingest pipeline clipboard capture uses (FRD-007 FR-007-05).
+/// `IngestActor` conforms below; tests use it over a real database, or a fake to inject a failure.
+public protocol ShelfIngesting: Sendable {
+    func ingest(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult>
+}
+
+extension IngestActor: ShelfIngesting {}
+
 /// What a card needs that `ItemRow` does not carry: the stored text of a text item (the row's primary line is cut to
 /// two lines, the card shows three) and the file paths of a file, folder or bundle item (for the Missing badge).
 ///

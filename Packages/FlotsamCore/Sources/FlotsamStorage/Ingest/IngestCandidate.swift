@@ -55,6 +55,18 @@ public struct IngestCandidate: Sendable, Equatable {
         self.originalPath = originalPath
         self.countsAsCopy = countsAsCopy
     }
+
+    /// The one mapping from a classified pasteboard to an ingest candidate, shared by clipboard capture and the Shelf
+    /// drop so the two cannot drift (FR-006-12). Screenshot fields keep their defaults.
+    public init(classification: Classification, source: SourceApp?, origin: CaptureOrigin, occurredAt: Date) {
+        self.init(
+            kind: classification.kind, contentKey: classification.contentKey, plainText: classification.plainText,
+            representations: classification.representations,
+            members: classification.members.map {
+                IngestMember(path: $0.path, bookmark: $0.bookmark, isDirectory: $0.isDirectory)
+            },
+            source: source, origin: origin, occurredAt: occurredAt)
+    }
 }
 
 public enum IngestOutcome: Sendable, Equatable {
