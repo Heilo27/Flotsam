@@ -1069,3 +1069,17 @@ Contract tests for all 123 oracle IDs (OC-6001..6123), base df9bf09, with s2/frd
 **PASS:** every other ID, by a new Frd006 test or by an existing library test confirmed in the part 3 audit (ShelfRevealMachine, ShelfLayout, ShelfModel, ShelfPresentation, ShelfKeyMap, ShelfDragPlanner, ShelfDrop*, ShelfLogEvent tests). Part 3 closed 11 gaps among pre-cited IDs: 6020, 6040, 6078, 6079, 6080, 6088, 6090, 6091, 6093, 6094, 6105.
 
 **Follow-up suggestion:** the app-side halves above need app-level (UI or integration) coverage.
+
+## AC-001-18 live race test (clear, then a late write) on main @ 18a306f (2026-11-18)
+
+Fresh clone of main, Debug via `bin/build.sh`, each launch with its own scratch `CFFIXED_USER_HOME`, no TCC grants, no `defaults write`. Writer (built `-Onone`): `clearContents()`, sleep for the delay, `writeObjects([NSURL])`, wait 0.5 s before exit. Three back-to-back race copies per launch, distinct scratch files, 4-5 s apart. Poll interval is 0.5 s (`FlotsamBase/Concurrency/PollTick.swift:20`).
+
+| Delay between clear and write | Launches | Race copies stored | Codes | Capture after the third copy |
+|---|---|---|---|---|
+| 0.75 s | 2 | 6 of 6 | `outcome=stored` each, no `CAP-PRM-001` | live |
+| 1.0 s | 1 | 3 of 3 | `outcome=stored` each | live |
+| 1.5 s | 2 | **0 of 6** | `CAP-VAL-001`, `CAP-VAL-001`, then `CAP-PRM-001 warning permission=pasteboard` | suspended; resumed on the next text copy (per FR-001-18) |
+
+**Verdict: PASS up to 1.0 s, FAIL at 1.5 s.** The 1.5 s result follows FR-001-01 (three reads of one changeCount, about 1 s, then the change counts as empty) plus FR-001-18(b) (three empty changes suspend capture). But AC-001-18 states no bound on the gap, and the late write never bumps changeCount, so a writer slower than about 1 s loses the copy permanently and three of them suspend capture. **Spec question for S1/Ryan:** bound AC-001-18 and FR-001-01 at about 1 s, or treat the 1.5 s case as a defect. Boundary not narrowed between 1.0 s and 1.5 s. Synthetic writer only; no Finder-style slow copy tried.
+
+**Data isolation:** sha1 of the real `flotsam.sqlite`, its `-wal` and `-shm`, and the real prefs plist identical before and after. Clone, scratch homes and harness deleted; pasteboard cleared; no Flotsam process left running.
