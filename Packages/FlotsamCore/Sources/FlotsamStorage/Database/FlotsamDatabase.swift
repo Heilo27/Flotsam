@@ -20,7 +20,9 @@ public final class FlotsamDatabase: Sendable {
     public static let fileName = "flotsam.sqlite"
     public static let preMigrationFolderName = "pre-migration"
     public static let folderPermissions = DataFolder.folderPermissions
-    private static let busyTimeoutSeconds = 5.0
+    /// FR-007-02: how long any connection waits on a lock before SQLite reports SQLITE_BUSY. One value for the pool, its
+    /// readers' floor and the pre-open probe (TASK-495); tests inject a shorter one through `open(..., busyTimeout:)`.
+    static let busyTimeoutSeconds = 5.0
     private static let sqliteDomain = "GRDB.DatabaseError"
 
     let pool: DatabasePool
@@ -83,7 +85,8 @@ public final class FlotsamDatabase: Sendable {
     static func open(
         folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(),
         logSink: any LogSink = OSLogSink(), migrations: [Migration],
-        postMigrationCheck: ((Database) throws -> Bool)? = nil
+        postMigrationCheck: ((Database) throws -> Bool)? = nil,
+        busyTimeout: TimeInterval = busyTimeoutSeconds
     ) async -> FlotsamResult<FlotsamDatabase> {
         let layout = DataFolder(root: root)
         if case .failure(let error) = layout.prepare(fileSystem: fileSystem) { return .failure(error) }
@@ -94,7 +97,7 @@ public final class FlotsamDatabase: Sendable {
         for attemptNumber in 0..<2 {
             switch attempt(
                 layout: layout, fileSystem: fileSystem, migrations: migrations, sink: logSink,
-                postMigrationCheck: postMigrationCheck ?? integrityCheckPasses
+                postMigrationCheck: postMigrationCheck ?? integrityCheckPasses, busyTimeout: busyTimeout
             ) {
             case .opened(let pool, let migratedThisLaunch):
                 // FR-007-17 / FR-007-13: a clean open (integrity check passed) on a launch that did not migrate confirms the
@@ -131,7 +134,7 @@ public final class FlotsamDatabase: Sendable {
     /// one ran, and the post-migration integrity check. Outcomes only; no path and no row content.
     private static func attempt(
         layout: DataFolder, fileSystem: any FileSystemPort, migrations: [Migration], sink: any LogSink,
-        postMigrationCheck: (Database) throws -> Bool
+        postMigrationCheck: (Database) throws -> Bool, busyTimeout: TimeInterval
     ) -> Attempt {
         let existed = (fileSystem.fileInfo(at: layout.databaseURL)?.byteSize ?? 0) > 0
         // WHY: SQLite deletes the `-wal` of a zero-byte main file when it opens one (an empty database cannot have a
@@ -146,7 +149,7 @@ public final class FlotsamDatabase: Sendable {
                 // A read-only probe comes first and runs the integrity check (FR-007-13), so a newer-version or damaged
                 // database is refused or quarantined while still byte-identical: opening the pool would switch the
                 // journal mode, rewrite the header and VACUUM (AC-007-15).
-                let probed = try probe(layout: layout, fileSystem: fileSystem)
+                let probed = try probe(layout: layout, fileSystem: fileSystem, busyTimeout: busyTimeout)
                 if case .damaged = probed {
                     FlotsamLog.log(.database(.integrityCheck, outcome: .failed), sink: sink)
                 } else {
@@ -160,7 +163,7 @@ public final class FlotsamDatabase: Sendable {
                 }
             }
             if case .failure(let error) = layout.prepareDatabaseFiles(fileSystem: fileSystem) { return .failed(error) }
-            let pool = try DatabasePool(path: layout.databaseURL.path, configuration: configuration())
+            let pool = try DatabasePool(path: layout.databaseURL.path, configuration: configuration(busyTimeout: busyTimeout))
             let versionBefore = try pool.read { try MigrationRunner.currentVersion($0) }
             try ensureIncrementalVacuum(pool)
             let migrated = try MigrationRunner.migrate(pool, migrations: migrations) { fromVersion in
@@ -188,9 +191,11 @@ public final class FlotsamDatabase: Sendable {
 
     private enum Probe { case version(Int), damaged }
 
-    private static func probe(layout: DataFolder, fileSystem: any FileSystemPort) throws -> Probe {
+    private static func probe(
+        layout: DataFolder, fileSystem: any FileSystemPort, busyTimeout: TimeInterval
+    ) throws -> Probe {
         do {
-            return try probeFile(at: layout.databaseURL, readonly: true)
+            return try probeFile(at: layout.databaseURL, readonly: true, busyTimeout: busyTimeout)
         } catch {
             if isDamage(error) { return .damaged }
             // WHY: a read-only connection cannot open a WAL-mode file that has no `-shm` beside it (SQLITE_CANTOPEN),
@@ -198,13 +203,18 @@ public final class FlotsamDatabase: Sendable {
             // must still open, and the damaged one must still be quarantined untouched, so the check moves to a
             // private copy and the user's file is never written to.
             guard isCannotOpen(error) else { throw error }
-            return try probeCopy(of: layout, fileSystem: fileSystem, original: error)
+            return try probeCopy(of: layout, fileSystem: fileSystem, original: error, busyTimeout: busyTimeout)
         }
     }
 
-    private static func probeFile(at url: URL, readonly: Bool) throws -> Probe {
+    private static func probeFile(at url: URL, readonly: Bool, busyTimeout: TimeInterval) throws -> Probe {
         var configuration = Configuration()
         configuration.readonly = readonly
+        // WHY (TASK-495, OC-2038): the probe is a connection of its own, and `Configuration()` defaults to no busy wait.
+        // Opening it while the last connection of a previous instance is closing (SQLite holds an exclusive lock for the
+        // WAL cleanup) or while another connection holds the file made the very first read fail at once with
+        // SQLITE_BUSY, which is not damage and surfaced as STO-DB-003. It waits like every other connection now.
+        configuration.busyMode = .timeout(busyTimeout)
         let queue = try DatabaseQueue(path: url.path, configuration: configuration)
         defer { try? queue.close() }
         return try queue.read { db in
@@ -216,7 +226,9 @@ public final class FlotsamDatabase: Sendable {
     /// Runs the probe on a copy of the main file and its `-wal` (the committed state SQLite would read) in
     /// `tmp/probe-<uuid>/`, inside the data folder (FR-007-01) and removed afterwards. SQLite may create `-shm` and
     /// checkpoint there; the original is only ever read. A copy that cannot be made rethrows the original error.
-    private static func probeCopy(of layout: DataFolder, fileSystem: any FileSystemPort, original: Error) throws -> Probe {
+    private static func probeCopy(
+        of layout: DataFolder, fileSystem: any FileSystemPort, original: Error, busyTimeout: TimeInterval
+    ) throws -> Probe {
         let scratch = layout.tmpURL.appendingPathComponent("probe-\(UUID().uuidString)")
         guard case .success = fileSystem.createDirectory(at: scratch, permissions: DataFolder.folderPermissions) else {
             throw original
@@ -229,7 +241,7 @@ public final class FlotsamDatabase: Sendable {
             guard case .success = fileSystem.copyItem(at: source, to: target) else { throw original }
         }
         do {
-            return try probeFile(at: copy, readonly: false)
+            return try probeFile(at: copy, readonly: false, busyTimeout: busyTimeout)
         } catch {
             if isDamage(error) { return .damaged }
             throw error
@@ -344,10 +356,10 @@ public final class FlotsamDatabase: Sendable {
         }
     }
 
-    private static func configuration() -> Configuration {
+    private static func configuration(busyTimeout: TimeInterval) -> Configuration {
         var configuration = Configuration()
         configuration.foreignKeysEnabled = true
-        configuration.busyMode = .timeout(busyTimeoutSeconds)
+        configuration.busyMode = .timeout(busyTimeout)
         configuration.prepareDatabase { db in
             try db.execute(sql: "PRAGMA secure_delete = ON")
             try db.execute(sql: "PRAGMA synchronous = NORMAL")
