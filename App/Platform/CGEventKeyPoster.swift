@@ -1,3 +1,4 @@
+import AppKit
 import CoreGraphics
 import FlotsamBase
 
@@ -11,9 +12,18 @@ struct CGEventKeyPoster: TriggerKeyPoster {
     /// `CGEventKeyboardSetUnicodeString` is only reliable up to about 20 UTF-16 units per event.
     private static let maxUnitsPerTextEvent = 20
 
-    func postPaste() -> Bool {
-        guard let events = Self.makeKeyEvents(keyCode: Self.vKeyCode, flags: .maskCommand) else { return false }
-        Self.post(events)
+    /// Read again at the post, so the answer is as fresh as `NSWorkspace` can give it.
+    private let frontmost = WorkspaceFrontmostAppProvider()
+
+    /// Posts to the target's process with `postToPid`, not to the session tap: the tap delivers to whichever app has
+    /// focus when the window server routes the event, so a focus change after the caller's check would paste into the
+    /// wrong app (FR-003-16). Nothing is posted unless `target` is still frontmost and still running.
+    func postPaste(to target: FrontmostApp) -> Bool {
+        guard frontmost.frontmost() == target,
+            NSRunningApplication(processIdentifier: target.processId)?.isTerminated == false,
+            let events = Self.makeKeyEvents(keyCode: Self.vKeyCode, flags: .maskCommand)
+        else { return false }
+        for event in events { event.postToPid(target.processId) }
         return true
     }
 

@@ -98,7 +98,7 @@ public protocol KeyboardEnvironment: Sendable {
 }
 
 /// Posts the synthetic keys a trigger expansion needs, on top of ⌘V (FR-005-14, FR-005-15). Every event carries
-/// `FlotsamEventMarker.value`. `KeyEventPoster.postPaste()` carries it too.
+/// `FlotsamEventMarker.value`. `KeyEventPoster.postPaste(to:)` carries it too.
 @MainActor
 public protocol TriggerKeyPoster: KeyEventPoster {
     /// Key down then key up, `count` times, back to back (FR-005-14 step 5 uses key code 51, FR-005-15 re-posts the

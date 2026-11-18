@@ -126,7 +126,7 @@ final class RecordingKeys: TriggerKeyPoster {
         onAction?()
         return !failText
     }
-    func postPaste() -> Bool {
+    func postPaste(to target: FrontmostApp) -> Bool {
         actions.append(.paste)
         onAction?()
         return !failPaste

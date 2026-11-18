@@ -468,12 +468,12 @@ struct Adversarial000PrivacyTests {
     @Test("hostile underlying domain and static message stay in privateText")
     func hostileCauseStaysPrivate() {
         let error = FlotsamError(
-            .libOs001, "msg with /Users/ryan/secret.txt",
-            underlying: UnderlyingErrorInfo(domain: "/Users/ryan/secret.txt", code: -1)
+            .libOs001, "msg with /Users/someone/secret.txt",
+            underlying: UnderlyingErrorInfo(domain: "/Users/someone/secret.txt", code: -1)
         )
         let record = FlotsamLog.record(for: error)
         #expect(record.publicText == "LIB-OS-001 error")
-        #expect(record.privateText.contains("/Users/ryan/secret.txt"))
+        #expect(record.privateText.contains("/Users/someone/secret.txt"))
     }
 }
 

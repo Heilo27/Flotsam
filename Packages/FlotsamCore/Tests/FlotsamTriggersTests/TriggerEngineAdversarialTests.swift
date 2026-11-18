@@ -74,7 +74,7 @@ final class HeldBindingSource: ItemBindingSource, @unchecked Sendable {
                 source: source, snapshot: base.snapshot, bindings: bindings, settings: settings, bus: bus,
                 expander: base.expander, keyboard: base.environment, permissions: base.permissions,
                 reporter: base.reporter, clock: GatedClock(), resetSignal: TriggerResetSignal(),
-                ownBundleId: "com.example.flotsam")
+                ownBundleId: "com.example.flotsam", pollTick: PollTick())
         }
     }
 
