@@ -202,13 +202,12 @@ struct LibraryFooterView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
-        // Picks up a grant made in System Settings without a relaunch (FR-008-14). Runs only while the copy-only
-        // footer shows; the task restarts when the footer changes and ends once Accessibility is granted.
-        .task(id: footer.enableLabel != nil) {
+        // Picks up a grant made in System Settings without a relaunch (FR-008-14). The hosting view outlives every
+        // hide, so the id includes `isShown`: the poll runs only while the copy-only footer shows on a shown panel,
+        // and restarts on the next open.
+        .task(id: footer.enableLabel != nil && model.isShown) {
             guard footer.enableLabel != nil else { return }
-            while !Task.isCancelled, !model.refreshAccessibility() {
-                try? await Task.sleep(for: .seconds(1))
-            }
+            await model.watchAccessibility()
         }
     }
 }

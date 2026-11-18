@@ -146,7 +146,9 @@ import Testing
     @Test func footerViewRendersTheButtonAndPollsOnlyWhileTheFooterOffersIt() throws {
         let text = try squashed("App/Flotsam/Library/LibraryView.swift")
         let button = text.contains("ifletenableLabel=footer.enableLabel{Button(enableLabel){model.enableAccessibility()}")
-        let poll = text.contains(".task(id:footer.enableLabel!=nil){guardfooter.enableLabel!=nilelse{return}while!Task.isCancelled,!model.refreshAccessibility(){")
+        // The poll loop lives in the model (`watchAccessibility`, tested in LibraryAccessibilityWatchTests); the view
+        // only gates its task on the footer offering Enable and on the panel being shown.
+        let poll = text.contains(".task(id:footer.enableLabel!=nil&&model.isShown){guardfooter.enableLabel!=nilelse{return}awaitmodel.watchAccessibility()")
         #expect(button)
         #expect(poll)
     }

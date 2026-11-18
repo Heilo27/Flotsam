@@ -74,3 +74,59 @@ import Testing
         #expect(model.footer().enableLabel != nil)
     }
 }
+
+@MainActor
+@Suite struct LibraryAccessibilityWatchTests {
+    private final class Counter: @unchecked Sendable {
+        private let lock = NSLock()
+        private var n = 0
+        func tick() { lock.withLock { n += 1 } }
+        var count: Int { lock.withLock { n } }
+    }
+
+    private func make(reads: Counter) -> LibraryViewModel {
+        LibraryViewModel(
+            source: FakeSource(rows: Harness.rows(1), counts: nil), paster: FakePaster(), host: FakeHost(),
+            preferences: FakePreferences(),
+            effects: LibraryEffects(isAccessibilityTrusted: { reads.tick(); return false }))
+    }
+
+    @Test func watchDoesNotPollBeforeOpenOrAfterHide() async {
+        let reads = Counter()
+        let model = make(reads: reads)
+        #expect(!model.isShown)
+        await model.watchAccessibility(interval: .milliseconds(1))
+        #expect(reads.count == 0)
+
+        await model.open(target: nil)
+        #expect(model.isShown)
+        let afterOpen = reads.count
+        model.panelDidHide()
+        #expect(!model.isShown)
+        await model.watchAccessibility(interval: .milliseconds(1))
+        #expect(reads.count == afterOpen)
+    }
+
+    @Test func watchPollsWhileShownAndStopsWhenThePanelHides() async throws {
+        let reads = Counter()
+        let model = make(reads: reads)
+        await model.open(target: nil)
+        let task = Task { await model.watchAccessibility(interval: .milliseconds(5)) }
+        try await Task.sleep(for: .milliseconds(80))
+        #expect(reads.count > 2)
+        model.panelDidHide()
+        await task.value  // returns on its own: no cancel needed once hidden
+        let settled = reads.count
+        try await Task.sleep(for: .milliseconds(40))
+        #expect(reads.count == settled)
+    }
+
+    @Test func watchEndsOnceAccessibilityIsGranted() async {
+        let model = LibraryViewModel(
+            source: FakeSource(rows: Harness.rows(1), counts: nil), paster: FakePaster(), host: FakeHost(),
+            preferences: FakePreferences(), effects: LibraryEffects(isAccessibilityTrusted: { true }))
+        await model.open(target: nil)
+        await model.watchAccessibility(interval: .milliseconds(1))
+        #expect(model.footer().enableLabel == nil)
+    }
+}

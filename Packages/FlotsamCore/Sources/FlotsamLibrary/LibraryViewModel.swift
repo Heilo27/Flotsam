@@ -38,6 +38,9 @@ public final class LibraryViewModel {
     /// Incremented when a fresh Accessibility read differs from the last one, so the footer re-renders without a
     /// relaunch (FR-008-14, FR-008-13 rule b). `footer()` reads it to subscribe the view.
     public private(set) var accessibilityRevision = 0
+    /// True from `open` until `panelDidHide`. The panel's hosting view is created once and outlives every hide, so
+    /// the view cannot infer visibility from its own lifetime; `watchAccessibility` and its task id use this.
+    public private(set) var isShown = false
     /// Set by the grid view so ↑/↓ move by a row of cells.
     public var gridColumns = 1
 
@@ -121,6 +124,7 @@ public final class LibraryViewModel {
     /// `target` is the app that was frontmost before the panel, recorded by the caller (FR-003-02).
     public func open(target: FrontmostApp?) async {
         self.target = target
+        isShown = true
         refreshAccessibility()
         searchText = ""
         filter = .all
@@ -136,8 +140,6 @@ public final class LibraryViewModel {
         await loadTask?.value
     }
 
-    /// The panel hid, for any reason: drop in-flight work and let storage free what only a visible panel needs
-    /// (FR-003-13).
     /// Reads Accessibility fresh (never cached, FR-008-13 rule b) and bumps `accessibilityRevision` when it changed
     /// since the last read. The view polls this while the copy-only footer shows; `open` calls it on every show.
     @discardableResult
@@ -150,13 +152,24 @@ public final class LibraryViewModel {
         return trusted
     }
 
+    /// Polls `refreshAccessibility` while the panel is shown and Accessibility is still off. Returns once it is
+    /// granted, the panel hides, or the caller's task is cancelled, so a hidden panel costs no wakeups.
+    public func watchAccessibility(interval: Duration = .seconds(1)) async {
+        while !Task.isCancelled, isShown, !refreshAccessibility() {
+            try? await Task.sleep(for: interval)
+        }
+    }
+
     /// The footer's "Enable" button: open the Accessibility pane (FR-008-14). It does not prompt; the grant is
     /// noticed by `refreshAccessibility`.
     public func enableAccessibility() {
         effects.openAccessibilitySettings()
     }
 
+    /// The panel hid, for any reason: drop in-flight work and let storage free what only a visible panel needs
+    /// (FR-003-13).
     public func panelDidHide() {
+        isShown = false
         loadTask?.cancel()
         previewTask?.cancel()
         generation += 1
