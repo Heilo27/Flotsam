@@ -69,13 +69,13 @@ public enum ChordBinding: SettingValue {
     }
 
     /// Single home of the chord-usability rule: FRD-005's recorder reuses this and must not restate it (Rule 9).
-    /// The structural half of FR-005-02: a stored chord must carry ⌘ or ⌃. The full binding rules (reserved list,
+    /// The structural half of FR-005-02: a stored chord must carry ⌘ or ⌃ and a real, non-modifier key. The full binding rules (reserved list,
     /// system hotkeys) are FRD-005's and run when a chord is recorded; this only rejects stored data that no recorder
     /// could have produced.
     var isUsable: Bool {
         switch self {
         case .none: true
-        case .chord(let chord): chord.hasCommandOrControl
+        case .chord(let chord): chord.hasCommandOrControl && chord.hasUsableKey
         }
     }
 }

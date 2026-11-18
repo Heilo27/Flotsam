@@ -45,11 +45,9 @@ import Testing
         #expect(domain.reported.names.isEmpty, "defaults are not corruption: nothing is reported")
     }
 
-    // OC-8001 (label). The oracle names the row 'Launch at Login'; the catalogue says 'Launch at login'.
+    // OC-8001 (label). The row reads 'Launch at Login'.
     @Test func oc8001_launchAtLoginLabel() {
-        withKnownIssue("DEFECT OC-8001: row reads 'Launch at login', oracle says 'Launch at Login' (spec/catalogue wording drift)") {
-            #expect(SettingsString.launchAtLogin.text == "Launch at Login")
-        }
+        #expect(SettingsString.launchAtLogin.text == "Launch at Login")
     }
 
     // OC-8002. Given a fresh install. Then capture mode is Active, the menu offers Pause Capture, and automatic capture is on.
@@ -224,15 +222,13 @@ import Testing
         #expect(FlotsamError(.setDat001, "x").code == .setDat001)
     }
 
-    // OC-8011 (rewrite). The oracle says `defaults read` shows d30 after recovery; the registry removes the key instead.
+    // OC-8011 (rewrite). `defaults read` shows d30 after recovery: the registry writes the default back.
     @Test func oc8011_diskValueAfterRecoveryIsD30() {
         let domain = Domain(); defer { domain.remove() }
         domain.poke("d45", "storage.retention")
         _ = domain.reopen().value(SettingKeys.storageRetention)
 
-        withKnownIssue("DEFECT OC-8011: after reset `defaults read` shows no value (key removed), oracle says d30") {
-            #expect(domain.onDisk("storage.retention") == "d30")
-        }
+        #expect(domain.onDisk("storage.retention") == "d30")
     }
 
     // OC-8012. Reading the invalid key many times reports once; a relaunch (fresh store) reports nothing more.
@@ -290,14 +286,12 @@ import Testing
         domain.poke("9999:3", "shortcuts.openLibrary")
         let settings = domain.reopen()
 
-        withKnownIssue("DEFECT OC-8016: chord with key code 9999 is accepted as stored; no reset to control-command-V, no SET-DAT-001") {
-            guard case .chord(let chord) = settings.value(SettingKeys.shortcutsOpenLibrary) else {
-                Issue.record("expected a chord"); return
-            }
-            #expect(chord.keyCode == 9)
-            #expect(chord.displayString == "\u{2303}\u{2318}V")
-            #expect(domain.reported.names == ["shortcuts.openLibrary"])
+        guard case .chord(let chord) = settings.value(SettingKeys.shortcutsOpenLibrary) else {
+            Issue.record("expected a chord"); return
         }
+        #expect(chord.keyCode == 9)
+        #expect(chord.displayString == "\u{2303}\u{2318}V")
+        #expect(domain.reported.names == ["shortcuts.openLibrary"])
     }
 
     // OC-8016 (negative control). A chord with no command or control is unusable and does recover, so the reset path

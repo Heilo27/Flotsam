@@ -67,6 +67,24 @@ public struct Chord: Sendable, Hashable {
     /// FR-005-02 (a): a global shortcut must carry ⌘ or ⌃. The one home of that test: `ChordBinding.isUsable` (stored
     /// data) and Shortcuts' `ChordValidator` (recording) both call it (Rule 9).
     public var hasCommandOrControl: Bool { !modifiers.isDisjoint(with: [.command, .control]) }
+
+    /// Modifier keys and fn: key codes that are never a shortcut's key (FR-005-02 b, FR-005-04).
+    static let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+
+    /// Letters, digits, punctuation (US ANSI key codes), Space, Return, Tab, Escape, Delete, arrows, F1 to F20.
+    static let allowedKeyCodes: Set<UInt16> = {
+        var codes: Set<UInt16> = [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, 32, 33, 34, 35, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 50,
+        ]
+        codes.formUnion([36, 48, 49, 51, 53, 123, 124, 125, 126])  // Return Tab Space Delete Escape, arrows
+        codes.formUnion([122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 106, 64, 79, 80, 90])  // F1-F20
+        return codes
+    }()
+
+    /// FR-005-02 (b): the key is a real, non-modifier key. The one home of that test, beside `hasCommandOrControl`:
+    /// `ChordBinding.isUsable` (stored data, FR-008-02) and Shortcuts' `ChordValidator` (recording) both call it (Rule 9).
+    public var hasUsableKey: Bool { !Self.modifierKeyCodes.contains(keyCode) && Self.allowedKeyCodes.contains(keyCode) }
 }
 
 /// The one definition of "matches" for search (FR-003-09): case- and diacritic-insensitive.
