@@ -236,7 +236,7 @@ import Testing
         #expect(LibraryRowPresentation(row: fullRow(2, tags: ["a", "b", "c"]), position: 0, now: Self.now).tagOverflow == nil)
     }
 
-    // OC-3020. Mutation: swap the pinned and trigger flags, or drop the VoiceOver 'Pinned'.
+    // OC-3020. Mutation: swap the pinned and trigger flags, or drop the VoiceOver 'pinned'.
     @Test("OC-3020 pinned and trigger rows carry their badges; the others carry neither")
     func oc3020_badges() {
         // given: a pinned item, an item with a trigger, a plain item
@@ -245,10 +245,10 @@ import Testing
         let plain = LibraryRowPresentation(row: fullRow(3), position: 2, now: Self.now)
         // then
         #expect(pinned.isPinned && !pinned.hasTrigger)
-        #expect(pinned.accessibilityLabel.contains("Pinned"))
+        #expect(pinned.accessibilityLabel.contains("pinned"))
         #expect(triggered.hasTrigger && !triggered.isPinned)
         #expect(!plain.isPinned && !plain.hasTrigger)
-        #expect(!plain.accessibilityLabel.contains("Pinned"))
+        #expect(!plain.accessibilityLabel.contains("pinned"))
     }
 
     // OC-3020 (third row). Goes through the shipping query layer: whether a file is missing is read from the disk

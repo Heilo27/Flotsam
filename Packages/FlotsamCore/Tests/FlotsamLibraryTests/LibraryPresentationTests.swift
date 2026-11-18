@@ -35,7 +35,7 @@ import Testing
         #expect(parts[0] == KindLabel.text(for: .text))
         #expect(parts[1].count == LibraryRowPresentation.accessibilityPrimaryLimit)
         #expect(parts[2] == "from Notes")
-        #expect(parts.last == "Pinned")
+        #expect(parts.last == "pinned")
     }
 
     @Test func aFutureCopyTimeReadsAsNowNotInTheFuture() {
