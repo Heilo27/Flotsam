@@ -38,7 +38,7 @@ final class OnboardingModel {
         accessibilityGranted = container.permissions.isGranted(.accessibility)
         inputMonitoringGranted = container.permissions.isGranted(.inputMonitoring)
         pasteboardAllowed = PasteboardAccess.isAllowed
-        loginStatus = container.loginItem.status
+        if OnboardingFlow.readsLoginStatus(on: step) { loginStatus = container.loginItem.status }
         folderName = container.screenshotPickup.folderName
     }
 
@@ -47,12 +47,14 @@ final class OnboardingModel {
     func back() {
         flow.back()
         saveProgress()
+        refresh()
     }
 
     /// Skip leaves the step's setting alone.
     func skip() {
         flow.advance()
         saveProgress()
+        refresh()
     }
 
     /// Continue applies what this step's controls hold, then moves on.
@@ -64,6 +66,7 @@ final class OnboardingModel {
         }
         flow.advance()
         saveProgress()
+        refresh()
     }
 
     // MARK: Step actions
@@ -96,8 +99,7 @@ final class OnboardingModel {
     /// The only place onboarding registers the login item, and only on Continue (FR-008-15). A failure shows the HUD
     /// (SET-OS-001) and the switch reverts to what macOS reports.
     private func applyLoginItem() {
-        guard launchAtLogin != container.loginItem.isOn else { return }
-        if case .failure(let error) = container.loginItem.setEnabled(launchAtLogin) {
+        if case .failure(let error) = container.loginItem.reconcile(wanted: launchAtLogin) {
             let reporter = container.reporter
             Task { await reporter.report(error, origin: .userInitiated) }
             launchAtLogin = container.loginItem.isOn

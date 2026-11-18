@@ -2781,6 +2781,16 @@
         }
       }
     },
+    "ui.settings.editorVariablesHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Variables: {date}, {time}, {clipboard}. Add a format, like {date:yyyy-MM-dd} or {time:HH:mm}."
+          }
+        }
+      }
+    },
     "ui.settings.editorWindow" : {
       "localizations" : {
         "en" : {

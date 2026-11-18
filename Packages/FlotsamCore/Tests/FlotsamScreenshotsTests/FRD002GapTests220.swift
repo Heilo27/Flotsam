@@ -115,6 +115,11 @@ struct OriginalAndItemIndependenceGapTests {
         let (rig, shots) = try await importShots(1)
         defer { rig.cleanUp() }
         let subject = shots[0]
+        // The import's warm-up is a detached task that writes both thumbnails. Wait for that event (both files on disk,
+        // which is its last write) before wiping, or it can land after the wipe and put the files back (TASK-459). The
+        // 60 s is a hang guard only; the wait ends the moment the files exist.
+        let warmed = thumbFiles(rig, subject.id)
+        try #require(await eventually(timeout: .seconds(60)) { warmed.allSatisfy(exists) }, "warm-up never wrote both thumbnails")
         let before = await thumbnails(rig, subject.id)
         let gridSize = try #require(size(ofJPEG: before.grid))
         let previewSize = try #require(size(ofJPEG: before.preview))

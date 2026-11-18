@@ -279,7 +279,7 @@ import FlotsamBase
         defer { rig.cleanUp() }
         let id = try await rig.create(rig.image("img", TestImage.make(width: 1200, height: 800, format: .png)))
         let url = rig.store.thumbsDir.appendingPathComponent("\(id.uuidString)-256.jpg")
-        let warmed = await waitUntil { rig.store.exists(url) }
+        let warmed = await rig.awaitThumbnails(id)
         try #require(warmed, "warm-up never wrote the thumbnail")
         let valid = try Data(contentsOf: url)
         let broken = valid.prefix(200) + Data([0xFF, 0xD9])

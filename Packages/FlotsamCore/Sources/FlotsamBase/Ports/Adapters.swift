@@ -21,6 +21,11 @@ public struct LocalFileSystem: FileSystemPort {
         attempt { try FileManager.default.moveItem(at: source, to: destination) }
     }
 
+    public func replaceItem(at destination: URL, with source: URL) -> FlotsamResult<Void> {
+        guard rename(source.path, destination.path) == 0 else { return .failure(Self.posixFailure(errno)) }
+        return .success(())
+    }
+
     public func removeItem(at url: URL) -> FlotsamResult<Void> {
         attempt { try FileManager.default.removeItem(at: url) }
     }

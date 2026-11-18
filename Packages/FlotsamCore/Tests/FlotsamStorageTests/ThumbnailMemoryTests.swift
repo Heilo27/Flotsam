@@ -116,8 +116,11 @@ import FlotsamBase
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
         let db = rig.store.database
-        let bad = UUID()
-        let good = UUID()
+        // Both are real items (a thumbnail is only ever written for an item that exists, FR-007-15); their warmed
+        // thumbnails are removed so the call under test starts from nothing on disk.
+        let bad = try await ingestWarmed(rig, key: "bad")
+        let good = try await ingestWarmed(rig, key: "good")
+        for id in [bad, good] { for edge in [256, 512] { try FileManager.default.removeItem(at: thumbPath(rig, id, edge)) } }
 
         await db.writeThumbnails(itemId: bad, source: Data((0..<512).map { _ in UInt8.random(in: 0...255) }))
         await db.writeThumbnails(itemId: UUID(), source: Data())

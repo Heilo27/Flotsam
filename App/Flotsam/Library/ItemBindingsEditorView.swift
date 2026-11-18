@@ -96,6 +96,7 @@ struct ItemBindingsEditorView: View {
             } else {
                 Text(.editorTriggerHelp).font(.caption).foregroundStyle(.secondary)
             }
+            Text(.editorVariablesHelp).font(.caption).foregroundStyle(.secondary)
         }
     }
 }

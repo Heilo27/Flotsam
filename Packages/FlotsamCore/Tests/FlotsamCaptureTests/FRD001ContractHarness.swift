@@ -256,9 +256,10 @@ final class ContractRig {
     /// with a positive `until` on the record that must be present.
     func flush() async { await quiesceReporter(reporter) }
 
-    /// Polls `condition` for up to `seconds`; returns whether it became true.
+    /// Polls `condition` for up to `seconds`; returns whether it became true. Returns the moment it is true, so the long
+    /// default is only a hang guard (TASK-459: a 5 s wall clock failed at machine load 285), never a delay.
     @discardableResult
-    func until(seconds: Double = 5, _ condition: () async throws -> Bool) async -> Bool {
+    func until(seconds: Double = 60, _ condition: () async throws -> Bool) async -> Bool {
         let deadline = Date().addingTimeInterval(seconds)
         while Date() < deadline {
             if (try? await condition()) == true { return true }

@@ -1367,7 +1367,7 @@
       "requirement": "FR-005-22",
       "given": "Unpinned item with trigger ';old' older than the retention window",
       "when": "the retention sweep runs; user then clears the trigger and the sweep runs again",
-      "then": "after the first sweep the item remains; a sweep less than 24 h after the trigger is cleared keeps it (FR-007-10 grace); a sweep 24 h or more after the clear removes it",
+      "then": "after the first sweep the item remains; a sweep less than 24 h after the trigger is cleared keeps it (FR-007-10 grace); a sweep more than 24 h after the clear removes it (FR-007-09 'older than 24 h'; exactly 24 h keeps it)",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true
