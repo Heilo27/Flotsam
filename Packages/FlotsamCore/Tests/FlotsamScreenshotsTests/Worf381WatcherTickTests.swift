@@ -32,3 +32,39 @@ struct Worf381WatcherTickTests {
         #expect(rig.pollTick.registrationCount == 1, "still exactly one registration after a rebuild")
     }
 }
+
+/// TASK-427 D2: the tick registration spawns a `Task` per firing, and `tickFired` suspends (folder listing, the folder
+/// access prompt, the watermark write), so a slow tick used to run alongside the next one.
+@Suite("ScreenshotWatcher tick serialization", .serialized)
+struct Task427WatcherTickOverlapTests {
+    /// OC-427-10. given a tick stuck in its watermark write, when the next 30 s tick fires, then it does not run
+    /// alongside it (a second watermark write would be held too); when the first finishes, the following tick runs.
+    @Test("OC-427-10 a tick that fires while the previous one is unfinished does not overlap it")
+    func ticksDoNotOverlap() async throws {
+        let rig = try WatcherRig(watermark: Date().addingTimeInterval(-10))
+        defer { rig.cleanUp() }
+        let folder = try rig.temp.folder("Pictures/Shots")
+        rig.use(folder)
+        await rig.watcher.start()
+        let baseline = rig.marks.value
+
+        rig.marks.holdWrites()
+        rig.clock.advance(by: ScreenshotWatcher.tickInterval)
+        for _ in 0..<60 { rig.pollTick.fire() }
+        #expect(await eventually { rig.marks.heldWrites == 1 }, "tick 1 is stuck in its watermark write")
+
+        rig.clock.advance(by: ScreenshotWatcher.tickInterval)
+        for _ in 0..<60 { rig.pollTick.fire() }
+        let overlapped = await eventually(timeout: .milliseconds(300)) { rig.marks.heldWrites > 1 }
+        #expect(!overlapped, "tick 2 ran while tick 1 was still unfinished")
+
+        rig.marks.releaseWrites()
+        #expect(await eventually { rig.marks.heldWrites == 0 && (rig.marks.value ?? .distantPast) > (baseline ?? .distantPast) })
+
+        // Not wedged: a later tick runs.
+        let afterFirst = rig.marks.value
+        rig.clock.advance(by: ScreenshotWatcher.tickInterval)
+        for _ in 0..<60 { rig.pollTick.fire() }
+        #expect(await eventually { (rig.marks.value ?? .distantPast) > (afterFirst ?? .distantPast) }, "a later tick still runs")
+    }
+}

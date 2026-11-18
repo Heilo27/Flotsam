@@ -58,6 +58,7 @@ public actor ScreenshotWatcher {
     private var generation = 0
     private var watch: (any FolderWatch)?
     private var cancelTick: (@Sendable () -> Void)?
+    private var tickRunning = false
 
     /// The warnings of ongoing conditions, so each is raised once per change of state and cleared when it ends.
     private var raisedLocationWarning: ErrorCode?
@@ -256,7 +257,7 @@ public actor ScreenshotWatcher {
         active = true
         lastMode = settings.value(SettingKeys.captureMode)
         if freshWatermark { await advanceWatermark(to: clock.now()) }
-        cancelTick = pollTick.every(Self.tickInterval) { Task { await self.tickFired() } }
+        cancelTick = pollTick.every(Self.tickInterval) { [weak self] in Task { await self?.tickFired() } }
         await evaluate(reconcile: true)
     }
 
@@ -280,8 +281,12 @@ public actor ScreenshotWatcher {
     }
 
     /// The 30 s work, run from the shared poll tick (`PollTick`). Internal so tests can run one tick to completion.
+    /// Ticks never overlap: the work suspends (listing, the folder-access prompt, the watermark write), so a tick that
+    /// fires while the previous one is unfinished is dropped; the next tick does the work.
     func tickFired() async {
-        guard active else { return }
+        guard active, !tickRunning else { return }
+        tickRunning = true
+        defer { tickRunning = false }
         await evaluate(reconcile: false)
         if inFallback { await tryLeaveFallback() }
         await retryUnstable()
@@ -529,12 +534,12 @@ public actor ScreenshotWatcher {
 
     /// FR-002-08: `proposed`, but not past the birth of a file that is not finished: still hidden, queued, unstable
     /// or failed. Its birth date has to stay inside the window the next scan selects by.
-    private func heldWatermark(_ proposed: Date) -> Date {
+    private func heldWatermark(_ proposed: Date, importedBirth: Date? = nil) -> Date {
         let now = clock.now()
         unfinished = unfinished.filter { ScreenshotSelection.isHeld($0.value, now: now) }
         hiddenFiles = hiddenFiles.filter { ScreenshotSelection.isHeld($0.value, now: now) }
         return ScreenshotSelection.heldBack(
-            proposed, now: now, births: Array(unfinished.values) + Array(hiddenFiles.values))
+            proposed, now: now, births: Array(unfinished.values) + Array(hiddenFiles.values), importedBirth: importedBirth)
     }
 
     private func seedWatermarkIfNone(at date: Date) async {
@@ -629,7 +634,7 @@ public actor ScreenshotWatcher {
         unfinished[job.file.url.path] = nil
         guard active else { return }
         let proposed = ScreenshotSelection.watermarkAfterImport(of: job.file, now: clock.now())
-        await advanceWatermark(to: heldWatermark(proposed), scan: false)
+        await advanceWatermark(to: heldWatermark(proposed, importedBirth: job.file.createdAt), scan: false)
     }
 
     /// A job's end counts toward its own press (a backfill job) and every press that joined it (a live job).
