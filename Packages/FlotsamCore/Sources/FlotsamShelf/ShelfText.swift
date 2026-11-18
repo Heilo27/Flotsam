@@ -22,4 +22,8 @@ public enum ShelfText {
     public static let menuUnpin = "ui.shelf.menuUnpin"
     public static let menuDelete = "ui.shelf.menuDelete"
     public static let missing = "ui.shelf.missing"
+    /// The delete confirmation reuses FRD-004's catalogue keys (`ui.organize.confirmDelete*`, via
+    /// `DeleteConfirmation.message(count:)`); the button's key is named here for the confirmation dialog.
+    public static let buttonDelete = "ui.organize.buttonDelete"
+    public static let buttonCancel = "ui.organize.buttonCancel"
 }

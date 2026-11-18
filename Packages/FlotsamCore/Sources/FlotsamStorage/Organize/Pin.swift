@@ -7,7 +7,7 @@ extension FlotsamDatabase {
     /// unpinned. Decided inside the transaction so a racing change cannot make the result mixed. Returns the state
     /// the items now have (true = pinned); ids that no longer exist are skipped.
     public func togglePinned(ids: [UUID]) async -> FlotsamResult<Bool> {
-        await writePinned(ids: ids) { states in !states.allSatisfy { $0 } }
+        await writePinned(ids: ids) { states in PinRule.pinsAll(states: states) }
     }
 
     /// Sets every listed item to `pinned`. Returns the state applied.

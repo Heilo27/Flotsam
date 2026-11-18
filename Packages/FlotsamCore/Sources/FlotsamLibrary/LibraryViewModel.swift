@@ -183,9 +183,7 @@ public final class LibraryViewModel {
     /// The row to select once `ids` are deleted: the first remaining row after the last deleted one in list order, else
     /// the last remaining row before it, else nil (FR-004-09).
     public static func selectionAfterDeleting(_ ids: Set<UUID>, in rows: [ItemRow]) -> UUID? {
-        guard let lastDeleted = rows.lastIndex(where: { ids.contains($0.id) }) else { return nil }
-        if let after = rows[(lastDeleted + 1)...].first(where: { !ids.contains($0.id) }) { return after.id }
-        return rows[..<lastDeleted].last(where: { !ids.contains($0.id) })?.id
+        DeleteConfirmation.selectionAfter(deleting: ids, in: rows)
     }
 
     /// ⌘S (FR-004-12): the next sort, remembered, list back at its top.
@@ -471,7 +469,7 @@ public final class LibraryViewModel {
     public func pinActionUnpins(menuRowID id: UUID, isPinned: Bool) -> Bool {
         guard selection.contains(id) else { return isPinned }
         let covered = selectedRows
-        return !covered.isEmpty && covered.allSatisfy(\.isPinned)
+        return !covered.isEmpty && !PinRule.pinsAll(states: covered.map(\.isPinned))
     }
 
     /// Tag or untag the selection with an existing tag (FR-004-02). Returns true when the tag was applied.
