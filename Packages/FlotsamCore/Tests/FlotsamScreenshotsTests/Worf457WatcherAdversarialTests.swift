@@ -11,7 +11,7 @@ import FlotsamBase
 // that test red (mutation map in the comment above each test).
 
 /// Holds a hook the watcher awaits, so a test parks the watcher at exactly that suspension.
-private final class WorfGate: @unchecked Sendable {
+final class WorfGate: @unchecked Sendable {
     private let lock = NSLock()
     private var closed = false
     private var parked = 0
@@ -41,7 +41,7 @@ private final class WorfSlowLoadStore: ScreenshotWatermarkStore, @unchecked Send
 }
 
 /// The rig's file system, except that the import's single read of the bytes blocks while reads are held.
-private final class WorfHeldReadFileSystem: FileSystemPort, @unchecked Sendable {
+final class WorfHeldReadFileSystem: FileSystemPort, @unchecked Sendable {
     private let base: ProbedFileSystem
     private let lock = NSLock()
     private var held = false
