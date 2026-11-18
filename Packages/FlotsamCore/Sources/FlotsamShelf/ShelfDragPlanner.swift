@@ -75,7 +75,7 @@ public enum ShelfDragPlanner {
     }
 
     private static func payloads(of content: ItemContent, files: any FileSystemPort) -> [ShelfDragPayload] {
-        if content.kind.isFileBacked {
+        if content.kind.referencesFiles {
             return content.existingMemberURLs(files: files).map { .representations([ItemContent.fileURLRepresentation(for: $0)]) }
         }
         if content.kind.isImage {

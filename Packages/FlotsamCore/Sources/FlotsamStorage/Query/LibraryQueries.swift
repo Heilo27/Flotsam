@@ -14,11 +14,36 @@ extension FlotsamDatabase {
     /// One page of `query` (200 rows) and the size of the whole result set. Failure is `STO-DB-004` (Library shows an
     /// inline Retry).
     public func items(matching query: LibraryQuery) async -> FlotsamResult<ItemPage> {
+        let read: (page: ItemPage, fileMembers: [UUID: [FileMemberRef]])
         do {
-            return .success(try await pool.read { db in try Self.page(db, query: query) })
+            read = try await pool.read { db in try Self.page(db, query: query) }
         } catch {
             return .failure(Self.readFailure(error))
         }
+        // The file checks run after the read transaction ends, so a slow volume never holds a database snapshot.
+        return .success(markingMissing(read.page, fileMembers: read.fileMembers))
+    }
+
+    /// A file member as stored, enough to ask `FileMemberLocator` where it is now.
+    struct FileMemberRef: Sendable {
+        let path: String
+        let bookmark: Data?
+        let isDirectory: Bool
+    }
+
+    /// Sets `isMissing` on every file, folder or bundle row none of whose members exist now (FRD-003 FR-003-07). The
+    /// state is read from the disk each time a page is read and never stored, so a file deleted or restored outside
+    /// the app is reflected on the next read without any bookkeeping that could go stale.
+    private func markingMissing(_ page: ItemPage, fileMembers: [UUID: [FileMemberRef]]) -> ItemPage {
+        let rows = page.rows.map { row -> ItemRow in
+            guard row.kind.referencesFiles else { return row }
+            let anyLeft = (fileMembers[row.id] ?? []).contains {
+                FileMemberLocator.currentURL(
+                    path: $0.path, bookmark: $0.bookmark, isDirectory: $0.isDirectory, files: fileSystem) != nil
+            }
+            return anyLeft ? row : row.withMissing(true)
+        }
+        return ItemPage(rows: rows, totalCount: page.totalCount, page: page.page)
     }
 
     /// Count of `filter` combined with `text`, by the same predicate the page uses (the "{n} items" footer).
@@ -126,7 +151,7 @@ extension FlotsamDatabase {
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM item WHERE \(selection.sql)", arguments: selection.arguments) ?? 0
     }
 
-    private static func page(_ db: Database, query: LibraryQuery) throws -> ItemPage {
+    private static func page(_ db: Database, query: LibraryQuery) throws -> (page: ItemPage, fileMembers: [UUID: [FileMemberRef]]) {
         let selection = Selection(filter: query.filter, text: query.text)
         let total = try count(db, selection: selection)
         let offset = query.page * LibraryQuery.pageSize
@@ -156,7 +181,25 @@ extension FlotsamDatabase {
         // One query for every tag of the page, not one per row.
         let tags = try tagNames(db, itemIds: ids)
         let rows = cores.compactMap { $0.row(tagNames: tags[$0.id] ?? []) }
-        return ItemPage(rows: rows, totalCount: total, page: query.page)
+        return (ItemPage(rows: rows, totalCount: total, page: query.page), try fileMembers(db, rows: rows))
+    }
+
+    /// Every member of the page's file, folder and bundle rows, in one query (no per-row lookups).
+    private static func fileMembers(_ db: Database, rows: [ItemRow]) throws -> [UUID: [FileMemberRef]] {
+        let ids = rows.filter { $0.kind.referencesFiles }.map { $0.id.uuidString }
+        guard !ids.isEmpty else { return [:] }
+        let placeholders = ids.map { _ in "?" }.joined(separator: ",")
+        let members = try Row.fetchAll(
+            db,
+            sql: "SELECT itemId, path, bookmark, isDirectory FROM bundleMember WHERE itemId IN (\(placeholders)) ORDER BY itemId, ordinal",
+            arguments: StatementArguments(ids))
+        var result: [UUID: [FileMemberRef]] = [:]
+        for member in members {
+            guard let id = UUID(uuidString: member["itemId"]) else { continue }
+            result[id, default: []].append(
+                FileMemberRef(path: member["path"], bookmark: member["bookmark"], isDirectory: member["isDirectory"]))
+        }
+        return result
     }
 
     private static func alphabetical(_ lhs: RowCore, _ rhs: RowCore) -> Bool {

@@ -75,11 +75,14 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
     public let pixelHeight: Int?
     public let memberCount: Int
     public let byteSize: Int64
+    /// A file, folder or bundle item none of whose files exist any more (FRD-003 FR-003-07; `FileMemberLocator`). Always
+    /// false for the other kinds. Set by the query layer when the page is read, so the Library and the Shelf agree.
+    public let isMissing: Bool
 
     public init(
         id: UUID, kind: ItemKind, lastCopiedAt: Date, pasteCount: Int, primaryLine: String, sourceName: String?,
         tagNames: [String], isPinned: Bool, hasTrigger: Bool, hasShortcut: Bool, pixelWidth: Int?, pixelHeight: Int?,
-        memberCount: Int, byteSize: Int64
+        memberCount: Int, byteSize: Int64, isMissing: Bool = false
     ) {
         self.id = id
         self.kind = kind
@@ -95,6 +98,16 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
         self.pixelHeight = pixelHeight
         self.memberCount = memberCount
         self.byteSize = byteSize
+        self.isMissing = isMissing
+    }
+
+    /// The same row with its missing-file state set.
+    public func withMissing(_ missing: Bool) -> ItemRow {
+        ItemRow(
+            id: id, kind: kind, lastCopiedAt: lastCopiedAt, pasteCount: pasteCount, primaryLine: primaryLine,
+            sourceName: sourceName, tagNames: tagNames, isPinned: isPinned, hasTrigger: hasTrigger,
+            hasShortcut: hasShortcut, pixelWidth: pixelWidth, pixelHeight: pixelHeight, memberCount: memberCount,
+            byteSize: byteSize, isMissing: missing)
     }
 }
 
