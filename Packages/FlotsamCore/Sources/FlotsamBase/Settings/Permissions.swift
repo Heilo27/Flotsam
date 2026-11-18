@@ -59,4 +59,14 @@ public enum TriggerPermissionNotice {
         if !probe.isGranted(.inputMonitoring) { codes.append(.setPrm002) }
         return codes
     }
+
+    /// The text the Triggers pane shows inline for a code from `missing` (FR-008-06). The one place that maps code to
+    /// pane text: Accessibility has its own "triggers are paused" string, so `error.SET-PRM-001` stays the copy-only
+    /// HUD text; every other code shows its catalogue message.
+    public static func text(for code: ErrorCode) -> String {
+        switch code {
+        case .setPrm001: SettingsString.triggersAccessibilityPaused.text
+        default: FlotsamStrings.message(for: FlotsamError(code, "Permission missing for triggers"))
+        }
+    }
 }
