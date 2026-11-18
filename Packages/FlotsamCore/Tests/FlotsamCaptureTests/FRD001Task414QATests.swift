@@ -106,8 +106,26 @@ struct Task414CaptureFailureMappingTests {
             let out = IngestWorker.captureFailure(FlotsamError(source, "qa", context: [.byteSize: .bytes(42)], underlying: cause))
             #expect(out.code == .capIo001)
             #expect(out.underlying == cause)
-            #expect(out.context == [.byteSize: .bytes(42)])
+            // The original STO code is kept in the context (TASK-417, FR-001-22) alongside the caller's own fields.
+            #expect(out.context == [.byteSize: .bytes(42), .code: .code(source)])
             #expect(out.severity == .error)
+        }
+    }
+
+    @Test("TASK-417 FR-001-22: with no underlying error (DiskGuard, BlobStore) the CAP-IO-001 record still names the STO code that was refused")
+    func nilUnderlyingKeepsStoCode() async {
+        for source in [ErrorCode.stoDb001, .stoIo001] {
+            let mapped = IngestWorker.captureFailure(FlotsamError(source, "qa refusal", underlying: nil))
+            #expect(mapped.code == .capIo001)
+            #expect(mapped.underlying == nil)
+            #expect(mapped.context[.code] == .code(source))
+
+            let sink = RecordingSink()
+            let reporter = ErrorReporter(presenter: FRD001RecordingPresenter(), sink: sink)
+            await reporter.report(mapped, origin: .background)
+            let records = sink.records.filter { $0.headline.hasPrefix("CAP-IO-001 ") }
+            #expect(records.count == 1)
+            #expect(records.first?.publicContext.contains("code=\(source.rawValue)") == true, "record: \(String(describing: records.first))")
         }
     }
 
@@ -121,7 +139,12 @@ struct Task414CaptureFailureMappingTests {
             #expect(await rig.until { !rig.presenter.latestNotices.isEmpty })
             await rig.settle()
             #expect(rig.codes == [.capIo001])
-            #expect(rig.sink.logged(.stoDb001).isEmpty && rig.sink.logged(.stoIo001).isEmpty, "the STO code must not also surface")
+            // The STO code must not surface as a record of its own. It is named inside the one CAP-IO-001 record's context
+            // (TASK-417), so the check is on the headline, not on `code=` anywhere (which `logged(_:)` also matches).
+            #expect(!rig.sink.records.contains { $0.headline.hasPrefix("STO-DB-001 ") || $0.headline.hasPrefix("STO-IO-001 ") },
+                    "the STO code must not also surface")
+            let capIo = rig.sink.records.filter { $0.headline.hasPrefix("CAP-IO-001 ") }
+            #expect(capIo.count == 1 && capIo[0].publicContext.contains("code=STO-"), "the one CAP-IO-001 record names the STO cause: \(capIo)")
             let stored = try await rig.texts()
             #expect(stored == [])
 
@@ -180,7 +203,7 @@ struct Task414SuspensionTests {
         }
     }
 
-    @Test("FR-001-18: suspend, resume, suspend again: the second CAP-PRM-001 is shown (a late clear must not erase it)")
+    @Test("FR-001-18: suspend, resume, suspend again within 60 s: the second CAP-PRM-001 is shown (a late clear must not erase it)")
     func resumeThenSuspendAgain() async throws {
         try await withQARig(access: SwitchableAccess(false)) { rig in
             await rig.settle()
@@ -188,7 +211,8 @@ struct Task414SuspensionTests {
             rig.pasteboard.copyText(r)
             rig.capture.captureNow()
             #expect(await rig.until { rig.codes.isEmpty && rig.presenter.noticeLists.count >= 2 })
-            rig.clock.advance(by: 60)  // FR-000-08: the same code surfaces once per 60 s, so the second raise is outside the window
+            // No clock advance: the resume cleared the Notice and with it the 60 s throttle (FR-000-08), so a re-suspend
+            // inside the window shows the Notice again (FR-001-18).
             for _ in 0..<3 { await rig.emptyChange() }
             await rig.settle()
             #expect(rig.sink.logged(.capPrm001).count == 2)

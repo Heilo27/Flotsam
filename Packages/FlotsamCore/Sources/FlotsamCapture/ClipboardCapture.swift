@@ -46,6 +46,9 @@ public final class ClipboardCapture {
     /// The count whose last read came back empty and is still being re-read, and how many reads it has had.
     private var rereadingChangeCount: Int?
     private var emptyAttempts = 0
+    /// The last `changeCount` that was counted as an empty change. FR-001-18 b counts changeCount increments, so a
+    /// second read of the same count (Save Clipboard pressed again, a suspended probe) is not another.
+    private var lastCountedEmptyChangeCount: Int?
     private var suspendedSince: Date?
     private var lastProbe = Date.distantPast
 
@@ -238,8 +241,9 @@ public final class ClipboardCapture {
 
     /// An empty read of `changeCount`. When `rereading` (a poll), the first `emptyAttemptsPerChange - 1` are silent and
     /// the same count is read again on the next tick; only the last one counts as an empty change (and can suspend
-    /// capture, FR-001-18 b). Save Clipboard does not reread (nothing will tick again for it): its empty read counts and
-    /// is reported at once.
+    /// capture, FR-001-18 b). Save Clipboard does not reread (nothing will tick again for it): its empty read is
+    /// reported at once. Either way a `changeCount` counts as an empty change once: a repeat read of the same count
+    /// (three Save Clipboard presses on one unchanged empty pasteboard) is rejected as empty but not counted.
     private func noteEmptyRead(changeCount: Int, rereading: Bool) -> Rejection {
         if rereading {
             if rereadingChangeCount != changeCount {
@@ -250,6 +254,8 @@ public final class ClipboardCapture {
             if emptyAttempts < Self.emptyAttemptsPerChange { return .silent(.capVal001) }
             rereadingChangeCount = nil
         }
+        guard changeCount != lastCountedEmptyChangeCount else { return .silent(.capVal001) }
+        lastCountedEmptyChangeCount = changeCount
         // `.empty` always yields a rejection; the fallback only satisfies the optional.
         return noteReadability(.empty) ?? .silent(.capVal001)
     }

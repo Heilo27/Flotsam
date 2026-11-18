@@ -98,7 +98,10 @@ struct GapSentinelTests {
         #expect(rows.filter { $0.plainText == secret }.count == 1, "the secret copy must have been stored exactly once")
         #expect(rows.count == 2, "stored: the secret text and the existing file only, got \(rows.count)")
         #expect(raised.map(\.code) == [.capPrm001], "the ring buffer must hold the one Warning raised, got \(raised)")
-        #expect(shown.contains("capPrm001"), "the notices must show the Warning: \(shown)")
+        // The Warning was shown, and the stored copy after it resumed capture, which cleared it (FR-001-18): so it is in
+        // the history of lists but not in the latest one. `shown` alone could not tell a stale Warning from a live one.
+        #expect(rig.presenter.noticeLists.contains { $0.contains { $0.code == .capPrm001 } }, "the notices must show the Warning: \(shown)")
+        #expect(!rig.presenter.latestNotices.contains { $0.code == .capPrm001 }, "resume must have cleared the Warning: \(rig.presenter.latestNotices)")
         #expect(report.contains("CAP-PRM-001") && report.contains("Items"), "the report must list the Warning:\n\(report)")
         #expect(!rig.sink.records.isEmpty)
 

@@ -305,7 +305,8 @@ struct ClipboardEmptyReadWorf408Tests {
     @Test("OC-408-W12 empty snapshot does not mark readable on any attempt: 2 empty, then a change read-empty on every attempt")
     func emptySnapshotNeverResets() async throws {
         let rig = try await Rig408.make(); defer { rig.cleanUp() }
-        rig.capture.start()
+        // Not started: `snapshotReads == 3` pins the exact read count, so the real poll timer (which adds a read whenever
+        // `drain()` lets it fire under suite load) must not exist. Every read here is one `captureNow()`.
         rig.emptyTypesChange(); rig.emptyTypesChange()
         // when the third change lists types but every snapshot is empty; attempts 1 and 2 are silent
         rig.board.emptyBytes = true

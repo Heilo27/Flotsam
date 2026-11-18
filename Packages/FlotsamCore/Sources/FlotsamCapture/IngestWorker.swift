@@ -47,11 +47,15 @@ struct IngestWorker: Sendable {
 
 extension IngestWorker {
     /// A write the disk or database refused (`STO-DB-001`, `STO-IO-001`) is, for capture, a copy that could not be
-    /// saved: `CAP-IO-001` (FR-001-22), keeping the cause. Every other pipeline failure keeps its own code.
+    /// saved: `CAP-IO-001` (FR-001-22), keeping the cause: the underlying error when there is one, and always the
+    /// original `STO-*` code as the `code` context field (a refusal from DiskGuard or BlobStore has no underlying
+    /// error, so the code is then the only trace of which write failed). Every other pipeline failure keeps its own code.
     static func captureFailure(_ error: FlotsamError) -> FlotsamError {
         switch error.code {
         case .stoDb001, .stoIo001:
-            FlotsamError(.capIo001, "Capture write refused", context: error.context, underlying: error.underlying)
+            FlotsamError(
+                .capIo001, "Capture write refused", context: error.context.merging([.code: .code(error.code)]) { _, new in new },
+                underlying: error.underlying)
         default:
             error
         }

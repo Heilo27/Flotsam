@@ -53,6 +53,9 @@ struct SurfacingThrottle: Sendable {
         return age >= 0 && age < window
     }
 
+    /// Forgets that `code` surfaced, so its next occurrence is a new one (FR-000-08: a cleared Notice restarts the clock).
+    mutating func reset(_ code: ErrorCode) { lastSurfaced[code] = nil }
+
     mutating func admit(_ code: ErrorCode, isHUD: Bool, now: Date) -> Bool {
         if let last = lastSurfaced[code], Self.isLive(last, now: now) { return false }
         if isHUD {
@@ -127,8 +130,11 @@ public actor ErrorReporter {
 
     /// Removes the Notices of `code` once the condition behind them has ended (FRD-002 FR-002-03, FR-002-04: "the warning
     /// clears"). The owner of a long-lived condition calls this; the user's "Dismiss all" is separate. Does nothing
-    /// when there is no such Notice, so the owner may call it on every recovery without checking.
+    /// when there is no such Notice, so the owner may call it on every recovery without checking. It also restarts that
+    /// code's 60 s throttle: the condition ended, so the same condition returning is a new occurrence and shows again
+    /// at once (FR-000-08, FR-001-18).
     public func clearNotices(code: ErrorCode) async {
+        throttle.reset(code)
         guard board.remove(code: code) else { return }
         await presenter.noticesChanged(board.notices)
     }

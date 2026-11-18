@@ -74,6 +74,10 @@ final class GapPresenter: ErrorPresenter, @unchecked Sendable {
     private var noticeHistory: [[Notice]] = []
     func showHUD(message: String) { lock.withLock { huds.append(message) } }
     func noticesChanged(_ notices: [Notice]) { lock.withLock { noticeHistory.append(notices) } }
+    /// Every Notice list shown, oldest first.
+    var noticeLists: [[Notice]] { lock.withLock { noticeHistory } }
+    /// The Notices on screen now (what the list currently holds), as opposed to ever shown.
+    var latestNotices: [Notice] { lock.withLock { noticeHistory.last ?? [] } }
     func presentFatal(_ error: FlotsamError) {}
     /// Everything the user would have been shown, as one string.
     var shown: String { lock.withLock { String(reflecting: huds) + String(reflecting: noticeHistory) } }
