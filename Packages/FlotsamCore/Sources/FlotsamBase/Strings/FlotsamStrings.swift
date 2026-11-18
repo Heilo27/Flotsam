@@ -47,7 +47,7 @@ public enum FlotsamStrings {
 
     /// The entry's base template with each `%#@name@` slot replaced by the `one` form when its count argument is exactly
     /// 1 and the `other` form otherwise, `%arg` becoming a positional `%N$lld`. A slot whose count argument is missing
-    /// or not an integer takes `other`; a slot naming no substitution is dropped. Either way no `%#@` reaches the
+    /// or not an integer (of any width) takes `other`; a slot naming no substitution is dropped. Either way no `%#@` reaches the
     /// reader (the raw-catalogue path has no stringsdict to resolve it).
     static func resolvingPlurals(in entry: FlotsamCatalogue.Entry, arguments: [CVarArg]) -> String {
         var result = ""
@@ -60,11 +60,17 @@ public enum FlotsamStrings {
             rest = afterMarker[afterMarker.index(after: close)...]
             guard let substitution = entry.substitutions[name] else { continue }
             let index = substitution.argNum - 1
-            let count = arguments.indices.contains(index) ? arguments[index] as? Int : nil
-            let form = count == 1 ? substitution.one : substitution.other
+            let form = isOne(arguments.indices.contains(index) ? arguments[index] : nil) ? substitution.one : substitution.other
             result += form.replacingOccurrences(of: "%arg", with: "%\(substitution.argNum)$lld")
         }
         return result + rest
+    }
+
+    /// True when `argument` is an integer of any width or signedness equal to 1; nil, a non-integer, or a value outside
+    /// `Int`'s range is not. The one place a plural count is read, so Int, Int64, Int32 and UInt8 counts all agree.
+    private static func isOne(_ argument: CVarArg?) -> Bool {
+        guard let integer = argument as? any BinaryInteger else { return false }
+        return Int(exactly: integer) == 1
     }
 
     /// User-facing message for an error code, with `arguments` filling the catalogue placeholders in order
