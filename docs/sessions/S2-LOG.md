@@ -875,3 +875,29 @@ Not done: no Release build of this branch, no panel-open case, no attribution of
 **Data isolation.** Real DB (read-only) before and after: 17 items; `flotsam.sqlite` sha1 03fc64cf... and `-wal` sha1 c1189741... identical; real prefs plist sha1 c190d732... identical. No `defaults write`. No plist in the scratch home's Library/Preferences. The app ran only with a scratch `CFFIXED_USER_HOME`. `clipboard info` identical before and after (utf8 and utf16 text, 2 bytes; type listing compared, not a content hash); I never wrote to the pasteboard, so no restore was needed. No TCC grants. No DiagnosticReports entry for Flotsam. The app was stopped by SIGTERM and no Flotsam process remains. The clones, builds and scratch homes were deleted afterwards.
 
 **Defects / follow-ups for S1:** none from this run.
+
+---
+
+## 2026-11-17: FRD-001 and FRD-003 contract re-verification on df9bf09, plus FRD-003 gap tests (`s2/frd003-8t-gap` @ 82bbf7d)
+
+Tests only; no `Sources/` change. One new file: `Tests/FlotsamLibraryTests/Frd003ContractGapTests.swift` (14 tests, all pass on first run).
+
+| FRD | IDs | PASS | FAIL | No runtime test |
+|---|---|---|---|---|
+| 001 | 110 | 99 | 0 | 11: OC-1007 (gap, not written as briefed) + 10 comment-only "no seam" (1001, 1003, 1022, 1023, 1033, 1079, 1086, 1089, 1090, 1096) |
+| 003 before | 105 | 70 | 0 | 35 |
+| 003 after | 105 | 84 | 0 | 21: "no seam: manual" (AppKit/SwiftUI/OS) |
+
+New 003 coverage: OC-3002 (Esc half), 3007, 3059 (URL half), 3064–3067, 3074–3076, 3086, 3092–3094. The manual halves of these stay manual: hotkey toggle, 50 ms timing, zero network connections, HUD placement, VoiceOver, and what the target app receives.
+
+003 "no seam: manual": 3001, 3003–3006, 3014, 3016, 3021, 3048, 3055, 3056, 3063, 3070, 3082, 3083, 3088–3091, 3097, 3099. Caveat: the agent carried the reasons for 18 of these forward from an earlier pass without re-reading the oracle text, so treat that list as provisional.
+
+Mutation check: 6 of 6 mutations went red (OC-3074/3075/3094, 3075/3076, 3064, 3067, 3092, 3086), and all were reverted; `Sources/` is clean.
+
+Full `swift test`: one failure, **OC-381-21** (`Worf381PollTickTimerTests.swift:62`). It also fails on the baseline, passes 3 of 3 when run alone, and was under concurrent load (other test builds running). Likely a load-sensitive timing flake, not proven. It is not on the known-flake list.
+
+**Defects / follow-ups for S1 (from reading source only, not run):**
+- OC-3091 (major): the Library row context-menu order and separators differ from FR-003-22. Needs a manual check.
+- OC-3021 (major): rows use a 22 pt SF Symbol, with no 44 pt rows and no 32 pt thumbnails for image/screenshot/file/folder/bundle. Needs a manual check.
+- OC-3086 (minor): the catalogue says "Pinned" and the contract says "pinned". The test compares case-insensitively.
+- OC-381-21: the flake above.
