@@ -14,6 +14,12 @@ private final class ScriptedBoard: PasteboardPort {
     private(set) var changeCount = 1
     private var contents: [String: Data] = [:]
     var failReads = false
+    /// Types are listed but the bytes read back empty (a gated or still-filling board).
+    var emptyBytes = false
+    /// A write that fills without a second bump: `clearContents` already bumped, `setData` does not.
+    var writeBumps = true
+    /// Makes the snapshot report a different changeCount than the one polled (the board changed during the read).
+    var snapshotCountSkew = 0
     private(set) var snapshotReads = 0
 
     /// `clearContents`: count bumps, board empty.
@@ -27,11 +33,12 @@ private final class ScriptedBoard: PasteboardPort {
     func readSnapshot(types: [String]) -> FlotsamResult<PasteboardSnapshot> {
         snapshotReads += 1
         if failReads { return .failure(FlotsamError(.capOs001, "scripted read failure")) }
-        let reps = types.compactMap { uti in contents[uti].map { PasteboardRepresentation(uti: uti, data: $0) } }
-        return .success(PasteboardSnapshot(changeCount: changeCount, typeIdentifiers: currentTypeIdentifiers(), representations: reps))
+        let reps = emptyBytes ? [] : types.compactMap { uti in contents[uti].map { PasteboardRepresentation(uti: uti, data: $0) } }
+        return .success(PasteboardSnapshot(changeCount: changeCount + snapshotCountSkew, typeIdentifiers: currentTypeIdentifiers(), representations: reps))
     }
     func write(_ representations: [PasteboardRepresentation]) -> FlotsamResult<Int> {
-        copy(Dictionary(representations.map { ($0.uti, $0.data) }, uniquingKeysWith: { $1 }))
+        let new = Dictionary(representations.map { ($0.uti, $0.data) }, uniquingKeysWith: { $1 })
+        if writeBumps { copy(new) } else { fill(new) }
         return .success(changeCount)
     }
 }
@@ -70,6 +77,8 @@ private struct Rig {
     let board: ScriptedBoard
     let sink: Sink
     let capture: ClipboardCapture
+    let settings: SettingsStore
+    let ownWrites: OwnWriteLedger
 
     static func make(ignored: Set<String> = []) async throws -> Rig {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-worf401-\(UUID().uuidString)")
@@ -77,11 +86,12 @@ private struct Rig {
         let settings = SettingsStore(store: KV())
         let board = ScriptedBoard()
         let sink = Sink()
+        let ownWrites = OwnWriteLedger()
         let capture = ClipboardCapture(
-            pasteboard: board, sourceApps: Writer(), ownWrites: OwnWriteLedger(),
+            pasteboard: board, sourceApps: Writer(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
             reporter: ErrorReporter(presenter: Presenter(), sink: sink), ignoredApps: { ignored }, sink: sink)
-        return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture)
+        return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites)
     }
 
     /// Ticks the poll once.
@@ -440,5 +450,152 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick(2)
         // then the next copy is stored
         #expect(try await rig.texts() == ["good"])
+    }
+}
+
+// MARK: (4) every exit ends the reread, and the read budget survives (F1 re-verification)
+
+@MainActor
+@Suite("TASK-401 worf: F1 latch on every exit")
+struct ClipboardRetryLatchWorfTests {
+    @Test("OC-401-W18 capture paused while a change is being re-read: CAP-POL-003 logged once, not every tick (control: atomic)")
+    func pausedMidRereadSkippedOnce() async throws {
+        let control = try await Rig.make()
+        defer { control.cleanUp() }
+        control.capture.start()
+        control.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        control.board.copy(data("x"))
+        control.tick(6)
+        #expect(control.sink.count(containing: "CAP-POL-003") == 1, "control: observation must work")
+
+        // given an empty first read while active
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.clear()
+        rig.tick()
+        // when the user pauses capture and the board fills, and polling continues on the same changeCount
+        rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        rig.board.fill(data("x"))
+        rig.tick(6)
+        // then the change is skipped once and nothing is stored
+        #expect(rig.sink.count(containing: "CAP-POL-003") == 1)
+        #expect(try await rig.texts() == [])
+    }
+
+    @Test("OC-401-W19 own-write marker landing on the retry tick: CAP-POL-004 once, nothing stored, no payload read")
+    func ownWriteMarkerAfterRetrySkippedOnce() async throws {
+        let control = try await Rig.make()
+        defer { control.cleanUp() }
+        control.capture.start()
+        control.board.copy([text: Data("x".utf8), PasteboardMarkers.ownWrite: Data()])
+        control.tick(6)
+        #expect(control.sink.count(containing: "CAP-POL-004") == 1, "control: observation must work")
+
+        // given an empty first read, then Flotsam's own marker and payload
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.clear()
+        rig.tick()
+        rig.board.fill([text: Data("x".utf8), PasteboardMarkers.ownWrite: Data()])
+        // when polling continues
+        rig.tick(6)
+        // then one skip, nothing stored, nothing read
+        #expect(rig.sink.count(containing: "CAP-POL-004") == 1)
+        #expect(rig.board.snapshotReads == 0)
+        #expect(try await rig.texts() == [])
+    }
+
+    @Test("OC-401-W20 own write recorded in the ledger after the poll saw the cleared board: CAP-POL-004 once, nothing stored")
+    func ownWriteLedgerAfterRetrySkippedOnce() async throws {
+        // given the poll caught Flotsam's own copy between clearContents and setData (same changeCount afterwards)
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.writeBumps = false
+        rig.board.clear()
+        rig.tick()
+        // when the ledger records the write and polling continues
+        _ = rig.ownWrites.write([PasteboardRepresentation(uti: text, data: Data("own".utf8))], to: rig.board)
+        rig.tick(6)
+        // then the ledger skip fires once, nothing is stored
+        #expect(rig.sink.count(containing: "CAP-POL-004") == 1)
+        #expect(try await rig.texts() == [])
+    }
+
+    @Test("OC-401-W21 board changed during the read after a retry: CAP-OS-001 raised once, not every tick")
+    func changedDuringReadRaisedOnce() async throws {
+        // given an empty first read
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.clear()
+        rig.tick()
+        // when the board fills but every snapshot reports a different changeCount than the one polled
+        rig.board.fill(data("x"))
+        rig.board.snapshotCountSkew = 1
+        rig.tick(6)
+        try await rig.drain()
+        // then one error for the one change, one read, nothing stored
+        #expect(rig.sink.count(containing: "CAP-OS-001") == 1)
+        #expect(rig.board.snapshotReads == 1)
+        #expect(try await rig.texts() == [])
+    }
+
+    @Test("OC-401-W22 after an exit that ended a reread, the next empty change gets its own full retry budget")
+    func nextChangeKeepsBudgetAfterExit() async throws {
+        // given a change that exits through a skip after a retry
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.clear()
+        rig.tick()
+        rig.board.fill([text: Data("secret".utf8), PasteboardMarkers.concealed: Data()])
+        rig.tick(3)
+        // when the next copy is caught empty and fills on its second retry
+        rig.board.clear()
+        rig.tick(2)
+        rig.board.fill(data("next"))
+        rig.tick(6)
+        // then only the next copy is stored, once
+        #expect(try await rig.texts() == ["next"])
+        #expect(try await rig.copyCounts() == [1])
+    }
+
+    @Test("OC-401-W23 types listed but bytes empty: exactly three reads of one change, then no more, one CAP-VAL-001")
+    func typesListedBytesEmptyUsesThreeReads() async throws {
+        // given a change whose types are listed but whose bytes come back empty
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.emptyBytes = true
+        rig.board.copy(data("x"))
+        // when polling continues far past the budget
+        rig.tick(12)
+        try await rig.drain()
+        // then the budget was three reads (not one: the latch survives a non-empty types list; not unbounded)
+        #expect(rig.board.snapshotReads == 3)
+        #expect(rig.sink.count(containing: "CAP-VAL-001") == 1)
+        #expect(try await rig.texts() == [])
+    }
+
+    @Test("OC-401-W24 types listed, bytes empty twice then filled: stored once on the third read")
+    func typesListedBytesFillOnThirdRead() async throws {
+        // given a change whose bytes come back empty on the first two reads
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        rig.capture.start()
+        rig.board.emptyBytes = true
+        rig.board.copy(data("late"))
+        rig.tick(2)
+        #expect(rig.board.snapshotReads == 2)
+        // when the bytes land and polling continues
+        rig.board.emptyBytes = false
+        rig.tick(8)
+        // then the change is stored exactly once and read exactly three times
+        #expect(rig.board.snapshotReads == 3)
+        #expect(try await rig.texts() == ["late"])
+        #expect(try await rig.copyCounts() == [1])
     }
 }
