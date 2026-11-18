@@ -2469,7 +2469,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
    ]
   },
   {
@@ -2481,7 +2481,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) ce1c446/scratchpad/s1/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s1/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
    ]
   },
   {
@@ -2493,7 +2493,7 @@
    "mutated": "<statement deleted>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
    ]
   },
   {
@@ -2849,7 +2849,7 @@
    "mutated": "public static func != (lhs: FlotsamError, rhs: FlotsamError) -> Bool {",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) ce1c446/scratchpad/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages/FlotsamCore/.build/out/Intermediates.noindex/FlotsamCore.build/Debug/FlotsamBase-t.build/Objects-normal/arm64/FlotsamBase.abi.json error: Build failed error: fatalError "
    ]
   },
   {
@@ -3221,7 +3221,7 @@
    "mutated": "func contentsOfDirectory(at url: URL) -> FlotsamResult<=[URL]>",
    "result": "KILLED",
    "killed_by": [
-    "(crash/suite failure) sers-ryan-Documents-Development/bf0c7fde-84ef-4b4b-a5d6-46cc3ce1c446/scratchpad/s0/Packages -experimental-emit-module-separately -disable-cmo [2\u2009/\u20096] FlotsamBase error: Build failed error: fatalError "
+    "(crash/suite failure) <scratch>/s0/Packages -experimental-emit-module-separately -disable-cmo [2\u2009/\u20096] FlotsamBase error: Build failed error: fatalError "
    ]
   },
   {
