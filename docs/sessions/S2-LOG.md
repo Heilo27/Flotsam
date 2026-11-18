@@ -345,3 +345,32 @@ Clipboard: restored after the run.
 **Defects:** none new.
 
 Clipboard: restored after the run.
+
+---
+
+## 2026-11-17: FRD-006 Shelf slices 1-3 on `s2/frd006` @ 42367be (from `main` 97b5a14)
+
+**Verdict: slices 1-3 pushed, suite green, architecture check passes. Four drift items open, one pre-existing flake surfaced.** The main merge (origin/main 86fc162) into `s2/frd006` was not done in this session; it is the next step.
+
+**Slices**
+- Slice 1, 77a9ffb: ShelfText and catalogue keys (FR-006-06).
+- Slice 2, 142c8bd: ShelfPresentation, shared ItemSpeech and TextExcerpt (FR-006-07, FR-006-19). Merge of origin/main as 437e695.
+- Slice 3, 42367be: ShelfModel, ShelfKeyMap, ShelfPorts (FR-006-06/08/09). 16 files, +1197/-25.
+- Rule 9 extractions into FlotsamBase, with Library and Storage forwarding to them: `PinRule.pinsAll(states:)`, `DeleteConfirmation` (required, message, selection after delete), `KeyInput`/`KeyStroke` (Library keeps typealiases).
+- FRD edits in the same commit: FR-006-08 (first card is selected on reveal, so Down, Down, Return pastes the third card; decided by Friday and confirmed by S1) and FR-006-07 (card text and Missing state come through Shelf ports; until wired a card shows the item's primary line and no Missing badge).
+
+**Tests** (`swift test` in `Packages/FlotsamCore`, last full run before the commit): Shelf 90, Library 94, Core 307 with 1 known issue. OC-7132 did not flake. 42 mutants run over the OC tests; the first-card-selected mutant killed 17 tests. Two benign survivors: removing the `isOpen` guard in `handle` was killed once I added `aShelfThatIsNotOpenTakesNoKeys`; removing `unsubscribe?()` alone is equivalent (`storedItemsChanged` has its own `isOpen` guard), and the double mutant is killed by the OC-6043 "hidden shelf stops listening" test.
+
+**Drift and gaps (surfaced, not fixed)**
+- DESIGN.md:419-423 lists `shelf.*` keys but the catalogue uses `ui.shelf.*`.
+- FR-003-07's Missing badge has no `ItemRow` flag on main. Per S1 this is an FRD-003 gap S1 owns. The Shelf has only the port seam (`details.memberPaths` plus `effects.fileExists`, inert default); no flag, no badge.
+- Deferred storage queries: `cardTexts` and `memberPaths` are ports with inert defaults and no storage implementation yet.
+- Deferred app-layer paste adapter: the Shelf has its own paste types and ports per ADR-0001; the app layer must adapt them.
+
+**Pre-existing flake, not mine:** Library test `optionArrowsStepThroughSidebarFilters` (`LibraryViewModelTests.swift:303`, `h.source.queries.last?.filter == .all`) fails about 5% of runs on `s2/frd006` (4/80) and about 11% on baseline 437e695 (9/80).
+
+**Assumptions, not written into the FRD (not deliberate decisions)**
+- Return, Option-Return, Shift-Return and Cmd-C act only with exactly one card selected (mirrors the Library).
+- Paste, Plain and Copy menu actions apply to the clicked card; Pin and Delete apply to the selection if it contains the clicked card, else to that card alone.
+- Arrow movement clamps at the ends (no wrap). Cmd-C and Shift-Return both map to copyOnly. `fileExists` runs on the main actor.
+- OC-6056 is an extra test beyond the assigned list; the OC-6062 test covers the selection half only.
