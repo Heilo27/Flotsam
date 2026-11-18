@@ -236,3 +236,214 @@ struct FRD001SourceContractTests {
         }
     }
 }
+
+// MARK: Batch 2: OC-1067..OC-1075 (dedupe)
+
+@MainActor
+private func recentRows(_ rig: ContractRig) async throws -> [ItemRow] {
+    try await rig.database.items(matching: LibraryQuery(sort: .recent)).get().rows
+}
+
+@MainActor
+@Suite("FRD-001 contract part 2: dedupe by content")
+struct FRD001DedupeContractTests {
+
+    @Test("OC-1067: copying 'abc' again keeps one item with its tag, copy count 2, first in Recent")
+    func oc1067() async throws {
+        // given 'abc' tagged 'work'; when 'abc' is copied again; then count stays 1, tag kept, copyCount 2.
+        try await withRig { rig in
+            await rig.copyText("abc")
+            let id = try #require(UUID(uuidString: try await rig.items()[0].id))
+            _ = try await rig.database.createTagAndApply(name: "work", to: [id]).get()
+            await rig.copyText("abc")
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored.map(\.copyCount) == [2])
+            let rows = try await recentRows(rig)
+            #expect(rows.map(\.id) == [id])
+            #expect(rows.first?.tagNames == ["work"])
+            // persisted: a fresh database instance sees the same single item.
+            try #expect(await rig.freshItemCount() == 1)
+        }
+    }
+
+    @Test("OC-1068: a trailing space and a different case are each a new item")
+    func oc1068() async throws {
+        // given 'abc'; when 'abc ' then 'ABC' are copied; then three distinct items, each copied once.
+        try await withRig { rig in
+            await rig.copyText("abc")
+            await rig.copyText("abc ")
+            await rig.copyText("ABC")
+            let stored = try await rig.items()
+            #expect(stored.count == 3)
+            #expect(stored.map(\.plainText) == ["abc", "abc ", "ABC"])
+            #expect(stored.map(\.copyCount) == [1, 1, 1])
+        }
+    }
+
+    @Test("OC-1069: re-copying an old pinned item with a note and tag bumps it to the top and changes nothing else")
+    func oc1069() async throws {
+        // given pinned D (note, tag) last copied 20 days ago below 50 newer items; when D is copied again from another app.
+        try await withRig { rig in
+            let text = uid("D")
+            await rig.copyText(text)
+            let d = try await rig.items()[0]
+            let id = try #require(UUID(uuidString: d.id))
+            _ = try await rig.database.setPinned(ids: [id], pinned: true).get()
+            _ = try await rig.database.setNote("keep this", for: id).get()
+            _ = try await rig.database.createTagAndApply(name: "work", to: [id]).get()
+            let twentyDaysAgoMillis = Int64((rig.clock.now().timeIntervalSince1970 - 20 * 86_400) * 1000)
+            try await rig.database.pool.write {
+                try $0.execute(sql: "UPDATE item SET lastCopiedAt = ? WHERE id = ?", arguments: [twentyDaysAgoMillis, d.id])
+            }
+            for n in 0..<50 { await rig.copyText(uid("newer\(n)")) }
+            let before = try await recentRows(rig)
+            #expect(before.count == 51)
+            #expect(before.last?.id == id)  // D sits below all 50 newer items, pinned or not
+            try #expect(await rig.itemCount() == 51)
+
+            rig.clock.advance(by: 60)  // the rig's capture clock is manual: a later copy needs a later time
+            rig.sourceApps.frontmost = SourceApp(bundleId: "com.example.other", name: "Other")
+            await rig.copyText(text)
+
+            try #expect(await rig.itemCount() == 51)
+            let after = try await recentRows(rig)
+            #expect(after.first?.id == id)
+            #expect(after.first?.isPinned == true)
+            #expect(after.first?.tagNames == ["work"])
+            #expect(after.first?.kind == .text)
+            #expect(after.first?.sourceName == "Writer")
+            try #expect(await rig.database.note(of: id).get() == "keep this")
+            let stored = try #require(try await rig.items().first { $0.id == d.id })
+            #expect(stored.copyCount == 2)
+            #expect(stored.kind == "text")
+            #expect(stored.sourceBundleId == "com.example.writer")
+        }
+    }
+
+    @Test("OC-1070: the same text copied with HTML bumps the plain item and its stored representations stay plain (reachable half)")
+    func oc1070() async throws {
+        // given a plain text item; when the same text arrives with public.html; then delta 0 and no html is stored.
+        try await withRig { rig in
+            let text = uid("Hello")
+            await rig.copyText(text)
+            let id = try await rig.items()[0].id
+            let before = try await rig.representationTypes(of: id)
+            await rig.copyText(text, extra: [(PB.html, PB.data("<b>\(text)</b>"))])
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored.map(\.kind) == ["text"])
+            #expect(stored.map(\.copyCount) == [2])
+            let after = try await rig.representationTypes(of: id)
+            #expect(after == before)
+            #expect(!after.contains(PB.html))
+            let content = try await rig.database.content(of: try #require(UUID(uuidString: id))).get()
+            #expect(!content.storedRepresentations.map(\.uti).contains(PB.html))
+        }
+    }
+
+    @Test("OC-1071: identical PNG bytes copied twice give one image with copy count 2; different pixels are a new item")
+    func oc1071() async throws {
+        // given PNG P; when copied twice; then +1 then delta 0, copyCount 2. Negative control: different bytes +1.
+        try await withRig { rig in
+            let png = TestImage.make(.png, width: 20, height: 10, seed: 1)
+            rig.pasteboard.copy(PB.png, png)
+            await rig.process()
+            try #expect(await rig.itemCount() == 1)
+            rig.pasteboard.copy(PB.png, png)
+            await rig.process()
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored.map(\.kind) == ["image"])
+            #expect(stored.map(\.copyCount) == [2])
+            rig.pasteboard.copy(PB.png, TestImage.make(.png, width: 20, height: 10, seed: 2))
+            await rig.process()
+            try #expect(await rig.itemCount() == 2)
+        }
+    }
+
+    @Test("OC-1072: a screenshot's exact bytes copied to the pasteboard bump it and it stays a screenshot")
+    func oc1072() async throws {
+        // given a screenshot item ingested by the screenshot pipeline; when its bytes are copied as public.png.
+        try await withRig { rig in
+            let png = TestImage.make(.png, width: 40, height: 30, seed: 5)
+            let candidate = IngestCandidate(
+                kind: .screenshot, contentKey: ContentKey.image(png),
+                representations: [PasteboardRepresentation(uti: PB.png, data: png)], source: nil, origin: .screenshotFile,
+                occurredAt: Date(), originalPath: rig.files.appendingPathComponent("shot.png").path)
+            let result = await IngestActor(database: rig.database, settings: rig.settings).ingest(candidate)
+            _ = try result.get()
+            let before = try await rig.items()
+            #expect(before.map(\.kind) == ["screenshot"])
+            #expect(before.map(\.copyCount) == [1])
+
+            rig.pasteboard.copy(PB.png, png)
+            await rig.process()
+            let after = try await rig.items()
+            #expect(after.count == 1)
+            #expect(after.map(\.id) == before.map(\.id))
+            #expect(after.map(\.kind) == ["screenshot"])
+            #expect(after.map(\.copyCount) == [2])
+        }
+    }
+
+    @Test("OC-1073: files A,B twice are one bundle with copy count 2; B,A is a new bundle")
+    func oc1073() async throws {
+        // given files A and B; when A,B twice then B,A; then count 1 (copyCount 2) then 2.
+        try await withRig { rig in
+            let a = try rig.makeFile("A.txt")
+            let b = try rig.makeFile("B.txt")
+            rig.pasteboard.copy(PB.fileURLReps([a, b]))
+            await rig.process()
+            rig.pasteboard.copy(PB.fileURLReps([a, b]))
+            await rig.process()
+            var stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored.map(\.kind) == ["bundle"])
+            #expect(stored.map(\.copyCount) == [2])
+            let first = stored[0].id
+            rig.pasteboard.copy(PB.fileURLReps([b, a]))
+            await rig.process()
+            stored = try await rig.items()
+            try #require(stored.count == 2)
+            #expect(stored.map(\.kind) == ["bundle", "bundle"])
+            #expect(stored.map(\.copyCount) == [2, 1])
+            #expect(stored[0].id == first)
+            try #expect(await rig.members(of: stored[1].id).map(fileName) == ["B.txt", "A.txt"])
+        }
+    }
+
+    @Test("OC-1074: after an edit, copying the new text bumps the edited item and copying the old text creates a new one")
+    func oc1074() async throws {
+        // given 'foo' edited to 'bar'; when 'bar' is copied then 'foo'.
+        try await withRig { rig in
+            let foo = uid("foo"), bar = uid("bar")
+            await rig.copyText(foo)
+            let id = try #require(UUID(uuidString: try await rig.items()[0].id))
+            _ = try await rig.database.editText(id: id, to: bar, classifiers: .live).get()
+            await rig.copyText(bar)
+            var stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored.map(\.plainText) == [bar])
+            #expect(stored.map(\.copyCount) == [2])
+            await rig.copyText(foo)
+            stored = try await rig.items()
+            #expect(stored.count == 2)
+            #expect(stored.map(\.plainText) == [bar, foo])
+            #expect(stored.map(\.copyCount) == [2, 1])
+        }
+    }
+
+    @Test("OC-1075: NFC and NFD forms of the same letter are two items: no Unicode normalisation")
+    func oc1075() async throws {
+        // given U+00E9 copied, then U+0065 U+0301; then two items. Compared by scalars: String == would hide the difference.
+        try await withRig { rig in
+            await rig.copyText("\u{00E9}")
+            await rig.copyText("e\u{0301}")
+            let stored = try await rig.items()
+            #expect(stored.count == 2)
+            #expect(stored.map { Array(($0.plainText ?? "").unicodeScalars.map(\.value)) } == [[0xE9], [0x65, 0x301]])
+            #expect(stored.map(\.copyCount) == [1, 1])
+        }
+    }
+}
