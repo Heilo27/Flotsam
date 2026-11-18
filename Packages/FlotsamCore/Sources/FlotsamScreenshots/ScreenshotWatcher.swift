@@ -223,7 +223,7 @@ public actor ScreenshotWatcher {
         case .failure(let error):
             batches[id] = nil
             guard ScreenshotFolderAccess.isPermissionDenied(error) else { return .failure(error) }
-            await report(Self.accessDeniedError)
+            await raiseAccessDenied()
             return .failure(Self.accessDeniedError)
         }
         let chosen = ScreenshotSelection.backfill(
@@ -249,6 +249,9 @@ public actor ScreenshotWatcher {
         }
         batches[id]?.total += own.count
         batches[id]?.remaining += own.count
+        // The press read the folder, so a refusal an earlier press raised while pickup was off has ended. Live pickup
+        // clears its own refusal when its scan next succeeds (`reconcileScan`), and its watch is stopped until then.
+        if !active { await markAccessGranted() }
         guard let batch = batches[id] else { return .success(0) }
         if batch.remaining == 0 {
             batches[id] = nil
@@ -294,7 +297,19 @@ public actor ScreenshotWatcher {
         accessDenied = false
         inFallback = false
         status = .off
-        for code in ended.compactMap({ $0 }) { await clear(code) }
+        // Each clear suspends, so an activation can run between two of them and raise a condition of its own. A clear
+        // of the same code would then wipe the new notice while the flags say it stands (and nothing raises it again).
+        // The reporter applies a clear when the call starts, so the check before each one is what orders them.
+        for code in ended.compactMap({ $0 }) where !isRaised(code) { await clear(code) }
+    }
+
+    /// Whether the watcher currently holds `code` as one of its raised conditions.
+    private func isRaised(_ code: ErrorCode) -> Bool {
+        switch code {
+        case .sspPrm001: accessDenied
+        case .sspOs001: inFallback
+        default: raisedLocationWarning == code
+        }
     }
 
     /// The 30 s work, run from the shared poll tick (`PollTick`). Internal so tests can run one tick to completion.
@@ -336,6 +351,10 @@ public actor ScreenshotWatcher {
     /// overtaker owns the location, the status and the watch.
     private func rebuild(for resolved: ScreenshotLocation) async {
         teardown()
+        // The watch is gone, so the old location is no longer what is installed. Until this rebuild installs
+        // `resolved` (after the suspensions below), a re-resolution that returns to the old location must rebuild too:
+        // `evaluate` would skip it as unchanged, and this stale rebuild would then win over the settings that ended up.
+        location = nil
         let mine = generation
         await updateLocationWarning(for: resolved)
         guard active, generation == mine else { return }
@@ -534,6 +553,12 @@ public actor ScreenshotWatcher {
         // The seed suspends: pickup off (FR-002-05: no condition outlives it) or a rebuild may have overtaken this
         // refusal, and either one owns the status and the notice now.
         guard active, generation == mine else { return }
+        await raiseAccessDenied()
+    }
+
+    /// The one place `SSP-PRM-001` is raised, so the flag and the notice cannot part: `deactivate` and `markAccessGranted`
+    /// clear the notice by the flag. A press (`importRecent`) that finds the folder refused comes through here too.
+    private func raiseAccessDenied() async {
         guard !accessDenied else { return }
         accessDenied = true
         await report(Self.accessDeniedError)
@@ -566,13 +591,14 @@ public actor ScreenshotWatcher {
 
     private func currentWatermark() async -> Date? {
         if !watermarkLoaded {
+            let mine = session
             switch await watermarkStore.lastScanAt() {
             case .success(let date):
                 watermark = date
                 watermarkLoaded = true
                 if eventFloor == nil { eventFloor = date }
             case .failure(let error):
-                await report(error)
+                await reportWhileLive(error, since: mine)
                 return nil
             }
         }
@@ -582,12 +608,20 @@ public actor ScreenshotWatcher {
     /// Never moves backwards, so two scans finishing out of order cannot re-open a window already scanned. A scan
     /// (`scan`, the default) also moves the floor live file events are judged by; an import or the tick does not.
     private func advanceWatermark(to date: Date, scan: Bool = true) async {
+        let mine = session
         let known = await currentWatermark()
         if scan { eventFloor = max(eventFloor ?? date, date) }
         if let known, known >= date { return }
         watermark = date
         watermarkLoaded = true
-        if case .failure(let error) = await watermarkStore.setLastScanAt(date) { await report(error) }
+        if case .failure(let error) = await watermarkStore.setLastScanAt(date) { await reportWhileLive(error, since: mine) }
+    }
+
+    /// FR-002-05: a report that follows a suspension is raised only if the pickup session it began in is still the
+    /// live one. Pickup turned off (or off and on again) while it waited makes it a condition of a session nobody has.
+    private func reportWhileLive(_ error: FlotsamError, since session: Int) async {
+        guard active, self.session == session else { return }
+        await report(error)
     }
 
     /// FR-002-08: `proposed`, but not past the birth of a file that is not finished: still hidden, queued, unstable
@@ -656,28 +690,33 @@ public actor ScreenshotWatcher {
             retry[job.file.url.path] = nil
             await settle(job)
             FlotsamLog.log(.screenshotImported(outcome: created ? .stored : .deduped, byteSize: byteSize), sink: sink)
-            for warning in result.warnings { await report(warning) }
+            for warning in result.warnings where mayReport(for: job) { await report(warning) }
         case .unstable(let error):
             // `deactivate` emptied the retry list (FR-002-05): an import that was already running when pickup went off
             // and ends unstable must not put its file back, or a later reactivation would retry a file from before the
             // off period. A file still unstable in the same session stays on the list.
             if job.batch == nil, job.session == session { noteUnstable(job.file) }
-            // A live job of an ended session reports nothing either: SSP-IO-002 would stand for a file nobody is
-            // watching. A press's job is the user's own request (FR-002-12), so its notice stands in any session.
-            if job.batch != nil || job.session == session { await report(error) }
+            if mayReport(for: job) { await report(error) }
         case .rejected(let error, let byteSize):
             seen.insert(job.file)
             retry[job.file.url.path] = nil
             await settle(job)
             FlotsamLog.log(.screenshotImported(outcome: .skipped, byteSize: byteSize), sink: sink)
-            await report(error)
+            if mayReport(for: job) { await report(error) }
         case .failed(let error, let byteSize):
             failure = error
             FlotsamLog.log(.screenshotImported(outcome: .failed, byteSize: byteSize), sink: sink)
-            await report(error)
+            if mayReport(for: job) { await report(error) }
         }
         complete(job, joined: joined, created: created, failure: failure)
         pump()
+    }
+
+    /// FR-002-05: a live job of a session that has ended reports nothing, whatever its outcome: the notice would stand
+    /// for a file nobody is watching. Checked at the point of each report, after the awaits before it. A press's job
+    /// is the user's own request (FR-002-12), so its notices stand in any session.
+    private func mayReport(for job: ImportJob) -> Bool {
+        job.batch != nil || (active && job.session == session)
     }
 
     /// A live import that ends while a press is still scanning is the press's to count when its scan lists the file:
