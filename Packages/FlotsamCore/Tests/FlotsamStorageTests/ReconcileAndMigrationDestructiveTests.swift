@@ -421,6 +421,31 @@ private let tenMinMs: Int64 = 10 * 60_000
         #expect(foreign.allSatisfy { (try? String(contentsOf: folder.appendingPathComponent($0), encoding: .utf8)) == $0 })
     }
 
+    /// TASK-422 D1 (older prune). Given a DIRECTORY named like an older copy (with a file inside) and a link named like
+    /// a copy's -wal, when a migration copy is taken, then both survive: only regular files Flotsam named are pruned,
+    /// the same rule the Clear History purge uses. Red if the prune goes back to a name-only test.
+    @Test func pruningNeverRemovesADirectoryOrLinkNamedLikeACopy() async throws {
+        let root = tempRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try await makeVersionOne(root)
+        let folder = root.appendingPathComponent("pre-migration")
+        let lookalikeDir = folder.appendingPathComponent("flotsam-v0.sqlite")
+        try FileManager.default.createDirectory(at: lookalikeDir, withIntermediateDirectories: true)
+        let inner = lookalikeDir.appendingPathComponent("user-notes.txt")
+        try Data("keep".utf8).write(to: inner)
+        let outside = root.appendingPathComponent("outside.txt")
+        try Data("outside".utf8).write(to: outside)
+        let link = folder.appendingPathComponent("flotsam-v7.sqlite-wal")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+
+        _ = try await FlotsamDatabase.open(
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+
+        #expect(FileManager.default.fileExists(atPath: inner.path))
+        #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: link.path)) != nil)
+        #expect(FileManager.default.fileExists(atPath: outside.path))
+    }
+
     /// OC-7138. Given a current-version database with items, when it reopens with nothing pending, then no copy is taken
     /// and the items are unchanged.
     @Test func oc7138_reopenWithNothingPendingTakesNoCopy() async throws {

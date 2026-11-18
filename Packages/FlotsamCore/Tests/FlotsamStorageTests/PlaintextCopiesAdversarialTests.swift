@@ -55,8 +55,8 @@ import FlotsamBase
     }
 
     /// OC-422-W2. Given a DIRECTORY named exactly like a copy file (with contents) in pre-migration/, when Clear History
-    /// runs, then it is left alone: only files Flotsam wrote are removed. Known defect (the name test has no kind
-    /// check, so removeItem deletes the directory tree); `withKnownIssue` flips red the day it is fixed.
+    /// runs, then it is left alone: only files Flotsam wrote are removed. Red if the purge drops the regular-file check
+    /// (`DataFolder.preMigrationCopyInfo`) and removeItem deletes the directory tree.
     @Test func aFolderNamedLikeACopyIsNotRemovedByClearHistory() async throws {
         let s = try await Store.make()
         defer { s.cleanUp() }
@@ -66,9 +66,7 @@ import FlotsamBase
 
         _ = try await s.database.clearHistory(range: .allTime, includeExempt: true).get()
 
-        withKnownIssue("TASK-422 defect: pre-migration purge removes a directory named like a copy") {
-            #expect(exists(folder) && exists(inner))
-        }
+        #expect(exists(folder) && exists(inner))
     }
 
     /// OC-422-W3. Same, at launch expiry, for an old directory named like a copy.
@@ -83,9 +81,7 @@ import FlotsamBase
 
         _ = try await Store.make(root: root, clock: clock)
 
-        withKnownIssue("TASK-422 defect: launch expiry removes a directory named like a copy") {
-            #expect(exists(folder) && exists(inner))
-        }
+        #expect(exists(folder) && exists(inner))
     }
 
     /// OC-422-W4. Given a launch that quarantines a damaged database, when it opens the fresh one, then an old

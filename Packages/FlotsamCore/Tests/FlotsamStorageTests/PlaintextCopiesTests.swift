@@ -200,6 +200,24 @@ import FlotsamBase
         for url in files { #expect(mode(url) == 0o600, "\(url.lastPathComponent)") }
     }
 
+    /// TASK-422 M1. Given `pre-migration/` is a link to a folder outside the data folder with loose modes, when the app
+    /// opens, then the target's mode is not changed (`setAttributes` follows links) and the open still succeeds.
+    @Test func openDoesNotChmodThroughALinkedPreMigrationFolder() async throws {
+        let first = try await Store.make()
+        defer { first.cleanUp() }
+        let root = first.root
+        let outside = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-m1-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: outside, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: outside) }
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: outside.path)
+        try FileManager.default.createSymbolicLink(
+            at: root.appendingPathComponent("pre-migration"), withDestinationURL: outside)
+
+        _ = try await Store.make(root: root, clock: first.clock)
+
+        #expect(mode(outside) == 0o755)
+    }
+
     /// Given a fresh folder and a permissive umask, when the app creates the database and writes to it, then the
     /// database, WAL and shared-memory files are 0600 from creation (no window at the umask's mode).
     @Test func newDatabaseFilesAreOwnerOnlyFromCreation() async throws {

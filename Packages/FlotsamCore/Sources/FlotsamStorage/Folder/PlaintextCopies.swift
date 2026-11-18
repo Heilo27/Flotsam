@@ -44,7 +44,7 @@ extension DataFolder {
     /// Clear History: removes every pre-migration copy and every quarantine, whatever the range. A copy made at time T
     /// holds the items as of T, and an item the user clears from "the last hour" may have been in a copy made days ago
     /// (a re-copy only bumps `lastCopiedAt`), so no range can be proven safe to skip. Files in `pre-migration/` that
-    /// Flotsam did not name, and anything else in the data folder, are never touched.
+    /// Flotsam did not name (or that are not regular files), and anything else in the data folder, are never touched.
     func purgePlaintextCopies(fileSystem: any FileSystemPort) -> PlaintextCopyPurge {
         var result = purgePreMigrationCopies(fileSystem: fileSystem) { _ in true }
         for folder in existingQuarantineFolders(fileSystem: fileSystem) {
@@ -77,8 +77,8 @@ extension DataFolder {
     ) -> PlaintextCopyPurge {
         var result = PlaintextCopyPurge()
         guard case .success(let entries) = fileSystem.contentsOfDirectory(at: preMigrationURL) else { return result }
-        for url in entries where Self.isPreMigrationCopyFile(named: url.lastPathComponent) {
-            guard let info = fileSystem.fileInfo(at: url), isExpired(info) else { continue }
+        for url in entries {
+            guard let info = Self.preMigrationCopyInfo(at: url, fileSystem: fileSystem), isExpired(info) else { continue }
             record(fileSystem.removeItem(at: url), into: &result)
         }
         return result

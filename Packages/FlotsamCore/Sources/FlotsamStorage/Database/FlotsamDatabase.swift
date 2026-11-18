@@ -239,7 +239,7 @@ public final class FlotsamDatabase: Sendable {
     // MARK: Migration backup
 
     /// FR-007-17: copy the database aside before migrating an existing one, keeping only the latest copy. Pruning is
-    /// limited to files Flotsam created (`DataFolder.isPreMigrationCopyFile`); the folder is user-visible, so any other
+    /// limited to regular files Flotsam created (`DataFolder.preMigrationCopyInfo`); the folder is user-visible, so any other
     /// file in it is left alone. Stale `-wal`/`-shm` files beside the new copy's name are pruned too, because SQLite
     /// would replay them into the fresh copy when it is opened.
     private static func preMigrationCopy(
@@ -262,7 +262,8 @@ public final class FlotsamDatabase: Sendable {
         }
         if case .success(let others) = fileSystem.contentsOfDirectory(at: backupFolder) {
             for url in others
-            where url.lastPathComponent != name && DataFolder.isPreMigrationCopyFile(named: url.lastPathComponent) {
+            where url.lastPathComponent != name
+                && DataFolder.preMigrationCopyInfo(at: url, fileSystem: fileSystem) != nil {
                 _ = fileSystem.removeItem(at: url)
             }
         }

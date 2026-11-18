@@ -40,6 +40,18 @@ public struct DataFolder: Sendable {
         return digits.allSatisfy { ("0"..."9").contains($0) } && Int(digits) != nil
     }
 
+    /// The one test for "an entry Flotsam may delete from `pre-migration/`": a name Flotsam gives its copies AND a
+    /// regular file, read without following links. A directory, link or device that merely carries such a name is a
+    /// user's, not ours, and is never removed (FR-007-17, FR-007-11). Returns the entry's info so a caller that needs
+    /// the dates does not stat it twice; nil means "not ours, leave it". Both the older-copy prune and the purge go
+    /// through here.
+    static func preMigrationCopyInfo(at url: URL, fileSystem: any FileSystemPort) -> FileInfo? {
+        guard isPreMigrationCopyFile(named: url.lastPathComponent),
+            let info = fileSystem.fileInfo(at: url), info.kind == .regular
+        else { return nil }
+        return info
+    }
+
     /// Creates the folder and its subfolders (0700) and empties `tmp/`, whose contents are in-flight writes from a
     /// previous run that can never complete (FR-007-01). Failure is `STO-IO-002`, a Fatal (the app cannot run).
     func prepare(fileSystem: any FileSystemPort) -> FlotsamResult<Void> {
@@ -72,9 +84,14 @@ public struct DataFolder: Sendable {
         return .success(())
     }
 
-    /// Sets `mode` on an existing path. True when the mode is in force afterwards (including "already was").
+    /// Sets `mode` on an existing path. True when the mode is in force afterwards (including "already was"). A
+    /// symbolic link is skipped (true, nothing done): `setAttributes` follows links, so it would change the mode of
+    /// whatever the link points at, which is not Flotsam's to change.
     @discardableResult
     private static func enforceMode(_ mode: Int, at url: URL) -> Bool {
+        if (try? FileManager.default.attributesOfItem(atPath: url.path)[.type] as? FileAttributeType) == .typeSymbolicLink {
+            return true
+        }
         let current = (try? FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int) ?? nil
         if current == mode { return true }
         do {
