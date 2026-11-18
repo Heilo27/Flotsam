@@ -11,7 +11,7 @@ import GRDB
 ///
 /// Why the second look-up: this actor suspends at every `await`, so two identical payloads can both pass step 1
 /// before either inserts. The in-transaction re-check is what makes "submitted twice concurrently" create one item
-/// with `copyCount` 2 (AC-007-04); the loser deletes its freshly written blobs and reports `bumped`.
+/// with `copyCount` 2 (AC-007-04); the loser deletes its freshly written blobs and reports `bumped` with no warnings, exactly like a step-1 match.
 public actor IngestActor {
     private let database: FlotsamDatabase
     private let settings: SettingsStore
@@ -34,7 +34,7 @@ public actor IngestActor {
 
         switch await bumpIfKnown(candidate, occurredAt: occurredAt) {
         case .failure(let error): return .failure(error)
-        case .success(let id?): return matched(id, countsAsCopy: candidate.countsAsCopy, warnings: [])
+        case .success(let id?): return matched(id, countsAsCopy: candidate.countsAsCopy)
         case .success(nil): break
         }
 
@@ -70,7 +70,7 @@ public actor IngestActor {
         switch inserted {
         case .raced(let existingId):
             removeBlobs(stored)
-            return matched(existingId, countsAsCopy: candidate.countsAsCopy, warnings: prepared.warnings)
+            return matched(existingId, countsAsCopy: candidate.countsAsCopy)
         case .created:
             database.events.publish(.itemsChanged)
             var warnings = prepared.warnings
@@ -98,14 +98,16 @@ public actor IngestActor {
         }
     }
 
-    /// A `contentKey` match: bumped for a copy event, untouched (and nothing published) for a backfill.
-    private func matched(_ id: String, countsAsCopy: Bool, warnings: [FlotsamError]) -> FlotsamResult<IngestResult> {
+    /// A `contentKey` match: bumped for a copy event, untouched (and nothing published) for a backfill. Never carries
+    /// warnings, on either the step-1 path or the in-transaction re-check: the limit notices (`CAP-LIM-*`) belong to
+    /// the copy that created the item, and a re-copy of the same payload raises nothing new (FR-007-05).
+    private func matched(_ id: String, countsAsCopy: Bool) -> FlotsamResult<IngestResult> {
         guard let uuid = UUID(uuidString: id) else {
             return .failure(FlotsamError(.stoDb004, "Stored item id is not a UUID"))
         }
-        guard countsAsCopy else { return .success(IngestResult(outcome: .unchanged(uuid), warnings: warnings)) }
+        guard countsAsCopy else { return .success(IngestResult(outcome: .unchanged(uuid), warnings: [])) }
         database.events.publish(.itemsChanged)
-        return .success(IngestResult(outcome: .bumped(uuid), warnings: warnings))
+        return .success(IngestResult(outcome: .bumped(uuid), warnings: []))
     }
 
     /// The most recently copied item with this key. `contentKey` is not unique (FR-007-03), so a key that already

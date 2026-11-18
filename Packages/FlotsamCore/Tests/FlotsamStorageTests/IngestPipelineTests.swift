@@ -414,6 +414,57 @@ import FlotsamBase
         #expect(rig.blobFiles().count == 1)
     }
 
+    /// TASK-405 / FR-007-05. A re-copy of a payload whose RTF was dropped over the ceiling bumps the existing item
+    /// (step 1) and raises no new CAP-LIM-002; only the copy that created the item carried it.
+    @Test("OC-405-1 re-copying an oversized-RTF payload bumps the item and raises no new notice")
+    func oc405_recopyRaisesNoNotice() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let candidate = rig.rich("k-405-recopy", plain: "fallback", rtf: Data(count: 5_242_881))
+
+        let first = try await rig.ingest.ingest(candidate).get()
+        guard case .created(let id) = first.outcome else { Issue.record("expected created"); return }
+        #expect(first.warnings.map(\.code) == [.capLim002])
+
+        let second = try await rig.ingest.ingest(candidate).get()
+
+        guard case .bumped(let bumpedId) = second.outcome else { Issue.record("expected bumped"); return }
+        #expect(bumpedId == id)
+        #expect(second.warnings.isEmpty)
+        #expect(try rig.row(id).copyCount == 2)
+        #expect(try rig.itemCount() == 1)
+    }
+
+    /// TASK-405 / FR-007-05. Two identical oversized-RTF payloads submitted together: whichever path the loser takes
+    /// (step 1 or the in-transaction re-check) it raises nothing, so each round produces exactly one CAP-LIM-002, the
+    /// creator's. Repeated over ten keys so the re-check path is actually taken.
+    @Test("OC-405-2 concurrent identical oversized-RTF payloads raise one notice in total, never two")
+    func oc405_concurrentRaisesOneNotice() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let ingest = rig.ingest
+
+        for round in 0..<10 {
+            let candidate = rig.rich("k-405-race-\(round)", plain: "fallback", rtf: Data(count: 5_242_881))
+            let results = await withTaskGroup(of: IngestResult?.self) { group in
+                group.addTask { try? await ingest.ingest(candidate).get() }
+                group.addTask { try? await ingest.ingest(candidate).get() }
+                var all: [IngestResult] = []
+                for await result in group { if let result { all.append(result) } }
+                return all
+            }
+            #expect(results.count == 2)
+            for result in results {
+                switch result.outcome {
+                case .created: #expect(result.warnings.map(\.code) == [.capLim002])
+                case .bumped, .unchanged: #expect(result.warnings.isEmpty)
+                }
+            }
+            #expect(results.flatMap(\.warnings).count == 1)
+        }
+        #expect(try rig.itemCount() == 10)
+    }
+
     /// OC-7038. An image whose source is 100 MiB + 1 byte is refused with CAP-LIM-001; one of exactly 100 MiB is
     /// accepted. The exact-size source is a real PNG padded with trailing zero bytes to the ceiling.
     @Test("OC-7038 image source over 100 MiB is refused, exactly 100 MiB is stored")
