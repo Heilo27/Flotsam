@@ -43,16 +43,17 @@ Known test noise (ignore it, but always name it in reports):
 | FRD | Area | Owner | Branch | State |
 |---|---|---|---|---|
 | 000 | Error system | S1 | merged | on `main` |
+| 001 | Capture | S1 | merged | on `main` (8T contract tests merged) |
+| 002 | Screenshot pickup | S2→S1 | merged | on `main` |
+| 003 | Library: paste-back + panel UI | S1 | merged | on `main` (8T contract tests merged) |
+| 004 | Organize (tags, bundles) | S1 | merged | on `main` |
+| 005 | Shortcuts / triggers | S1 | merged | on `main` |
+| 006 | Shelf | S2→S1 | merged | on `main`; edge reveal + drag in/out deferred |
 | 007 | Retention / storage | S1 | merged | on `main` |
+| 008 | Onboarding / settings / menu bar | S1 | merged | on `main` |
 | 009 | Distribution (`bin/release.sh`) | S1 | merged | on `main`; DMG signing waits on Ryan's Developer ID |
-| 001 | Capture | S1 | merged | merged, on `main` (via `integration`) |
-| 003 | Library: paste-back | S1 | merged | merged, on `main` (via `integration`). S2 A3 on 6fe1d6e: pass (see `s2/log`). |
-| 003ui | Library: panel UI | S1 | merged | merged, on `main` (via `integration`) |
-| 008 | Onboarding / settings / menu bar | S1 | merged | merged, on `main` (via `integration`); first working MVP build, launch smoke passed for menu bar, capture, Library and Settings |
-| 002 | Screenshot pickup | **S2** | `s2/frd002` | S2 building: part 1 pushed (b983b9d); `frd001` + `frd008` are now on `main`, so part 2 is unblocked: rebase on `main` (see C1 note below) |
-| 006 | Shelf | **S2** | `s2/frd006` | open: S2 lane C, after 002 |
-| 004 | Organize (tags, bundles) | S1 | `frd004` | S1: building next |
-| 005 | Shortcuts / triggers | S1 | `frd005` | S1: building next |
+
+**Now (2026-11-17, `main` = 614f9fe):** S2 runs A1 + A2 (incl. hotkey re-test) + A4 on `main`. Lane D still waits on S1's go.
 
 "Ready for S2" = S1 has marked a builder branch here as `ready: <sha>`. Before that it's mid-build; don't verify it.
 
