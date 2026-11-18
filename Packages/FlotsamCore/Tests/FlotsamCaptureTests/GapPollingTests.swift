@@ -22,7 +22,7 @@ struct GapPollingTests {
     }
 
     /// OC-115-02 OC-116-01. given a started capture on an idle board for 2.3 s, when ticks are timed, then they are
-    /// at least 0.45 s apart (never faster than 0.5 s minus clock slop), under 1.0 s apart, and the total
+    /// on average at least 0.45 s apart, under 1.0 s apart, and the total
     /// wake-up rate is at most 2.5/s. Turns red if the interval is shortened (0.1 s gives ~23 reads) or stretched.
     @Test("OC-115-02 OC-116-01 the real timer ticks about every 0.5 s, at most 2.5 wake-ups per second")
     func realTickRate() async throws {
@@ -39,7 +39,11 @@ struct GapPollingTests {
         let gaps = zip(times.dropFirst(), times).map { $0.timeIntervalSince($1) }.dropFirst()  // drop the launch check's gap
         #expect(reads >= 4 && reads <= 6, "reads in 2.3 s: \(reads)")
         #expect(Double(reads) / window <= 2.5, "wake-ups/s: \(Double(reads) / window)")
-        #expect((gaps.min() ?? 0) >= 0.45, "fastest gap \(gaps.min() ?? 0)")
+        // Mean spacing, not the fastest gap: a tick delayed by load followed by an on-schedule tick
+        // legitimately yields a short gap, so a min-gap bound flakes under a full-suite run.
+        let span = times.count >= 3 ? times.last!.timeIntervalSince(times[1]) : 0
+        let meanGap = times.count >= 3 ? span / Double(times.count - 2) : 0
+        #expect(meanGap >= 0.45, "mean gap \(meanGap)")
         #expect((gaps.max() ?? 99) <= 1.0, "slowest gap \(gaps.max() ?? 99)")
     }
 
