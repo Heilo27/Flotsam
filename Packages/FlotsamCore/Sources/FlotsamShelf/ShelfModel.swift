@@ -325,8 +325,9 @@ public final class ShelfModel {
         }
     }
 
-    /// The cards a Pin or Delete chosen on card `id` covers.
-    private func covered(by id: UUID) -> [ItemRow] {
+    /// The cards an action on card `id` covers, in on-screen order: the whole selection when the card is in it, else
+    /// the card alone. Pin, Delete and drag-out (FR-006-10) all use this one rule.
+    public func covered(by id: UUID) -> [ItemRow] {
         if selection.contains(id) { return selectedRows }
         return orderedRows.filter { $0.id == id }
     }
