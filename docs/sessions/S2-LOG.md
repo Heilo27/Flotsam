@@ -504,3 +504,22 @@ Clipboard: restored after the run.
 - Timings and constants live in one place each: reveal timings in `ShelfRevealMachine` (dragDwell 0.3, hoverDwell 0.5, hideDelay 0.6, dropHold 1.5), geometry in `ShelfLayout`. Do not copy them into the app layer.
 
 **Drift / observations (surfaced, not fixed):** (1) the blind contract still has one `shelf.empty` assertion at about line 400 where OC-6040 now says `ui.shelf.empty` (S1 may want a pass). (2) There is no app test target, so the AppKit half of C2b (panel, destination, source) will be covered by build and review only unless S1 approves one.
+
+## 2026-11-17: A1 health on main 37e00b8
+
+**Verdict: PASS.** Clean clone of `main` at 37e00b8 (detached). All four steps exit 0, 0 test failures. Both known flakes (OC-7132, `optionArrowsStepThroughSidebarFilters`) passed on the first run, so no re-run was needed. Nothing fixed; this is a health record only.
+
+| Step | Exit | Duration | Result |
+|---|---|---|---|
+| `bin/bootstrap.sh` | 0 | 5 s | Dependencies resolved (GRDB 7.12.0) |
+| `swift test` (in `Packages/FlotsamCore`, lint harness included) | 0 | 73 s | Swift Testing: 9 "Test run with" lines, all passed, 0 failures. Largest run 319 tests in 49 suites, 8 known issues; second run 357 tests in 46 suites, 1 known issue. XCTest bundles: 0 failures. |
+| `bin/check-architecture.sh` | 0 | 1 s | "architecture checks passed" |
+| `bin/build.sh` | 0 | 24 s | BUILD SUCCEEDED, 0 errors. One `warning:` line is the AppIntents metadata processor notice "Metadata extraction skipped, no AppIntents.framework dependency found", not a compiler warning. |
+
+**Failures:** none.
+
+**Known issues (recorded, non-failing, 9 total):** `zeroByteMain_withNonEmptyWal_walBytesSurvivePlaceKnown()` (`Adversarial372ProbeCopyTests.swift:524`), and the TASK-368 / "identifiers that contain a view or network name" lint cases in `Adversarial000Tests.swift` (lines 1003, 1016, 1032). These are the same known-issue records as on the prior A1 runs.
+
+**Flakes:** OC-7132 passed (3.2 s). `optionArrowsStepThroughSidebarFilters` passed (0.06 s). No re-run.
+
+**Verdict:** main @ 37e00b8 is healthy for lane A1. Bootstrap, full tests, architecture check and build all pass.
