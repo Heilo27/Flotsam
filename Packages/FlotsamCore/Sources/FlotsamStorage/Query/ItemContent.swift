@@ -15,19 +15,44 @@ public struct ItemMember: Sendable, Equatable {
     }
 }
 
+/// A tag on an item, as the preview lists it (FR-003-14): name and colour.
+public struct ItemTag: Sendable, Equatable {
+    public let name: String
+    public let color: TagColor
+
+    public init(name: String, color: TagColor) {
+        self.name = name
+        self.color = color
+    }
+}
+
 /// Everything needed to put an item back on the pasteboard (FRD-003 FR-003-15): the plain text, every stored
-/// representation with its bytes, and the file members.
+/// representation with its bytes, and the file members; with the facts the preview's metadata block adds (FR-003-14):
+/// when it was first copied, how often, its note and its tags.
 public struct ItemContent: Sendable, Equatable {
     public let kind: ItemKind
     public let plainText: String?
     public let representations: [PasteboardRepresentation]
     public let members: [ItemMember]
+    /// When the item was first copied; nil when the loader did not read it.
+    public let firstCopiedAt: Date?
+    public let copyCount: Int
+    public let note: String?
+    /// Alphabetical by name, like `ItemRow.tagNames`.
+    public let tags: [ItemTag]
 
-    public init(kind: ItemKind, plainText: String?, representations: [PasteboardRepresentation], members: [ItemMember]) {
+    public init(
+        kind: ItemKind, plainText: String?, representations: [PasteboardRepresentation], members: [ItemMember],
+        firstCopiedAt: Date? = nil, copyCount: Int = 1, note: String? = nil, tags: [ItemTag] = []
+    ) {
         self.kind = kind
         self.plainText = plainText
         self.representations = representations
         self.members = members
+        self.firstCopiedAt = firstCopiedAt
+        self.copyCount = copyCount
+        self.note = note
+        self.tags = tags
     }
 }
 
@@ -35,12 +60,14 @@ extension FlotsamDatabase {
     /// Loads the paste payload of one item. A missing row or an unreadable blob is `LIB-IO-001` (the caller deletes
     /// the item, FR-003-20); a database failure is `STO-DB-004`.
     public func content(of itemId: UUID) async -> FlotsamResult<ItemContent> {
-        struct Stored { let kind: String; let plainText: String?; let blobs: [(uti: String, blobName: String)]; let members: [ItemMember] }
+        struct Stored {
+            let kind: String; let plainText: String?; let createdAt: Int64; let copyCount: Int; let note: String?
+            let tags: [ItemTag]; let blobs: [(uti: String, blobName: String)]; let members: [ItemMember] }
         let stored: Stored?
         do {
             stored = try await pool.read { db in
                 let id = itemId.uuidString
-                guard let item = try Row.fetchOne(db, sql: "SELECT kind, plainText FROM item WHERE id = ?", arguments: [id]) else {
+                guard let item = try Row.fetchOne(db, sql: "SELECT kind, plainText, createdAt, copyCount, note FROM item WHERE id = ?", arguments: [id]) else {
                     return nil
                 }
                 let blobs = try Row.fetchAll(
@@ -49,7 +76,17 @@ extension FlotsamDatabase {
                 let members = try Row.fetchAll(
                     db, sql: "SELECT path, bookmark, isDirectory FROM bundleMember WHERE itemId = ? ORDER BY ordinal", arguments: [id])
                     .map { ItemMember(path: $0["path"], bookmark: $0["bookmark"], isDirectory: $0["isDirectory"]) }
-                return Stored(kind: item["kind"], plainText: item["plainText"], blobs: blobs, members: members)
+                let tags = try Row.fetchAll(
+                    db,
+                    sql: """
+                        SELECT tag.name, tag.color FROM itemTag JOIN tag ON tag.id = itemTag.tagId
+                        WHERE itemTag.itemId = ? ORDER BY tag.name COLLATE NOCASE
+                        """,
+                    arguments: [id])
+                    .map { ItemTag(name: $0["name"], color: TagColor(stored: $0["color"])) }
+                return Stored(
+                    kind: item["kind"], plainText: item["plainText"], createdAt: item["createdAt"],
+                    copyCount: item["copyCount"], note: item["note"], tags: tags, blobs: blobs, members: members)
             }
         } catch {
             return .failure(Self.readFailure(error))
@@ -67,7 +104,9 @@ extension FlotsamDatabase {
         }
         return .success(ItemContent(
             kind: ItemKind(rawValue: stored.kind) ?? .text, plainText: stored.plainText,
-            representations: representations, members: stored.members))
+            representations: representations, members: stored.members,
+            firstCopiedAt: Date(epochMillis: stored.createdAt), copyCount: stored.copyCount, note: stored.note,
+            tags: stored.tags))
     }
 
     /// FR-003-15 step 4: one more paste, and "last used" is now. Never edits the stored content (a paste does not

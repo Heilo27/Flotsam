@@ -951,6 +951,26 @@
         }
       }
     },
+    "ui.library.previewFirstCopied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First copied"
+          }
+        }
+      }
+    },
+    "ui.library.previewHex" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hex"
+          }
+        }
+      }
+    },
     "ui.library.previewKind" : {
       "localizations" : {
         "en" : {
@@ -971,12 +991,32 @@
         }
       }
     },
+    "ui.library.previewNote" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Note"
+          }
+        }
+      }
+    },
     "ui.library.previewPixelSize" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pixel size"
+          }
+        }
+      }
+    },
+    "ui.library.previewRGB" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RGB"
           }
         }
       }
@@ -1007,6 +1047,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Source"
+          }
+        }
+      }
+    },
+    "ui.library.previewTag" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag"
+          }
+        }
+      }
+    },
+    "ui.library.previewTimesCopied" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Times copied"
           }
         }
       }
