@@ -449,3 +449,11 @@ Clipboard: restored after the run.
 **Drift / observations (surfaced, not fixed):** the classifier's file `contentKey` depends on member order, so the same files dropped in a different order store a different item (dedupe miss). Left as is; S1 to decide whether it should sort.
 
 **S1 ruling (2026-11-17) on the contentKey order:** keep pasteboard-order keys for MVP, no change on s2/frd006. FR-001-15 specifies "standardised paths in pasteboard order", and FR-006-13 says a drop dedupes exactly like capture, so sorting is a cross-FRD change. Post-MVP: TASK-406 (sort the paths for the key only, keep the stored member order, and edit FR-001-15 and FR-006-13 in the same commit). The four assumptions above stand.
+
+**Worf on fee890f: pass with conditions (S1 rulings, 2026-11-17).** Worf's tests are on worf-s2-006 904b04f (S1 merges them). Queued for the next s2/frd006 commit, with the Shelf Missing-rule fix after the 397 merge:
+- W-1: a bundle trimmed to the 500-member cap is not a partial store; CAP-LIM-003 tells the user. Keep the code and `trimmedBundleIsNotPartial`. Amend FR-006-14 ("unless some part was skipped") and FR-006-18 ("when not every item was stored") to say trimming to the cap is reported by CAP-LIM-003 and does not count as skipped.
+- W-3: delete `acceptanceTakesTypesOnly` (tautological).
+- W-4: `dropIgnoresCaptureMode` can't fail; the real gate (OC-6090/6093/6094) is C2b's to test.
+- W-2 (undecodable image drop, no HUD): post-MVP ticket, untouched. W-5 to W-8: no action.
+
+**Queued after 397 lands (S1 split):** S1 deletes `ItemMember.existingURL` and reroutes paste and drag-out itself. S2: route the ShelfModel Missing rule (ShelfModel.swift:208-210, `effects.fileExists`, the default at ShelfPorts.swift:82) through the shared rule per FR-003-07 (no FRD edit), with tests for a bundle with one gone member and an empty bundle; and change ShelfModel.swift:193 to `kind.referencesFiles`.
