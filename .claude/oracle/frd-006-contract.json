@@ -816,7 +816,7 @@
     {
       "id": "OC-6082",
       "requirement": "FR-006-11",
-      "given": "Card C; system drag abort simulated",
+      "given": "Card C whose data the OS cannot supply for the drag (the pasteboard refuses its data provider)",
       "when": "user drags it",
       "then": "SHF-OS-001 HUD 'Couldn't drag that item out. Try again or paste it from the Library.'; paste count unchanged",
       "class": "error",
