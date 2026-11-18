@@ -66,7 +66,8 @@ struct Frd008ContractStringsTests {
     /// else under `ui.settings.` is a label or message and must be sentence case. Each key names its element kind, so a
     /// new Title Case string is red until someone says what kind of element it is.
     private static let titleCaseElements: [String: String] = [
-        "ui.settings.clearHistory": "button", "ui.settings.copyDiagnostics": "button", "ui.settings.projectPage": "button",
+        "ui.settings.clearHistory": "button", "ui.settings.copyDiagnostics": "button",
+        "ui.settings.importRecentScreenshots": "button", "ui.settings.projectPage": "button",
         "ui.settings.resetToDefaults": "button", "ui.settings.revealDataFolder": "button",
         "ui.settings.showSetupGuide": "button", "ui.settings.useSystemDefault": "button", "ui.settings.viewLicence": "button",
         "ui.settings.placementRightEdge": "popup value", "ui.settings.placementLeftEdge": "popup value",
