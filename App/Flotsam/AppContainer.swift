@@ -40,6 +40,10 @@ final class AppContainer {
     private var unsubscribeScreenshots: (@Sendable () -> Void)?
     /// Retained for the life of the app (FRD-002).
     private(set) var screenshots: ScreenshotWatcher?
+    /// An "Import recent screenshots" click that arrived before the watcher was wired; runs once it is (FR-002-12).
+    private var importRequestedBeforeReady = false
+    /// The database failed to open, so the watcher never will exist.
+    private var screenshotsUnavailable = false
     /// The one registration path for every global and item hotkey (FR-005-01). Created at launch so Settings can hold
     /// it; the bindings are applied once the Library exists (`startLibrary`).
     let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
@@ -84,6 +88,8 @@ final class AppContainer {
         }
         permissions = SystemPermissionProbe()
         loginItem = LoginItemController(service: SMLoginItemService())
+        // FR-002-12 / FR-008-04: the action exists from construction, so a click before pickup is wired is never a no-op.
+        actions.importRecentScreenshots = { [weak self] in self?.importRecentScreenshots() }
         Task { await openDatabase() }
         startPermissionLogging()
     }
@@ -125,6 +131,7 @@ final class AppContainer {
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             hud: { message in presenter.showHUD(message: message) },
             showSetupGuide: showSetupGuide,
+            importRecentScreenshots: { [weak self] in self?.actions.importRecentScreenshots?() },
             copyDiagnostics: {
                 await SettingsDiagnostics.copy(settings: settings, probe: permissions, storage: storage, reporter: reporter)
             })
@@ -155,7 +162,27 @@ final class AppContainer {
             startShelf(database: opened, paster: paster, frontmost: frontmost)
             startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
-        case .failure(let error): await reporter.report(error, origin: .background)
+        case .failure(let error):
+            await reporter.report(error, origin: .background)
+            // No library means nothing can be imported: a click that was waiting gets the real count (0), same HUD.
+            screenshotsUnavailable = true
+            if importRequestedBeforeReady {
+                importRequestedBeforeReady = false
+                presenter.showHUD(message: ScreenshotImportHUD.message(count: 0))
+            }
+        }
+    }
+
+    /// FR-002-12: the one entry for "Import recent screenshots", for onboarding and Settings. Runs the watcher's import
+    /// and shows "Imported {n}"; before the watcher exists the request is held and runs when it is ready.
+    private func importRecentScreenshots() {
+        if let watcher = screenshots {
+            let presenter = presenter
+            Task { await watcher.importRecentAnnouncing { presenter.showHUD(message: $0) } }
+        } else if screenshotsUnavailable {
+            presenter.showHUD(message: ScreenshotImportHUD.message(count: 0))
+        } else {
+            importRequestedBeforeReady = true
         }
     }
 
@@ -220,8 +247,10 @@ final class AppContainer {
                 Task { await watcher.didBecomeActive() }
             },
         ]
-        // FR-002-12: onboarding's checkbox and Settings' button both call this. The count is not shown here.
-        actions.importRecentScreenshots = { Task { _ = await watcher.importRecent() } }
+        if importRequestedBeforeReady {
+            importRequestedBeforeReady = false
+            importRecentScreenshots()
+        }
         Task { await watcher.start() }
     }
 
@@ -505,6 +534,7 @@ struct AppActions {
     var toggleShelf: (@MainActor () -> Void)?
     /// FR-008-03 Settings window; assigned by `installSettings`. The menu row and the Library both call this one closure.
     var openSettings: (@MainActor () -> Void)?
-    /// FRD-002 FR-002-12 "import screenshots from the last 30 days"; called from onboarding when the box is checked.
+    /// FRD-002 FR-002-12 "Import recent screenshots": onboarding's checkbox and the Settings button both call this
+    /// one closure, and it shows the "Imported {n}" HUD.
     var importRecentScreenshots: (@MainActor () -> Void)?
 }

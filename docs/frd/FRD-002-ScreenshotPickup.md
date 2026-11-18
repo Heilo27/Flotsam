@@ -91,7 +91,7 @@ Notice screenshots that macOS saves to disk and add them to history as `screensh
 | Screenshot folder | read-only path label + status | Settings › General | shows resolved folder and state (Watching, Using Desktop, Needs access, Paused) |
 | Choose folder... | button | Settings › General | opens folder picker; sets override |
 | Use system setting | button | Settings › General | clears override; shown only when an override exists |
-| Import recent screenshots | button with count result | Settings › General | runs FR-002-12; shows "Imported {n}" in a HUD |
+| Import Recent Screenshots | button with count result | Settings › General | runs FR-002-12; shows "Imported {n}" in a HUD |
 | Onboarding step: screenshots | step with checkbox | Onboarding (FRD-008) | explains folder access; "Import screenshots from the last 30 days" checked by default |
 | Notices | menu entries | menu bar | SSP-PRM-001, SSP-IO-001, SSP-IO-003, SSP-LIM-001, SSP-OS-001 |
 | Screenshot row and filter | list row, sidebar filter | Library (FRD-003) | uses kind `screenshot`; action "Reveal in Finder" |

@@ -511,6 +511,16 @@
         }
       }
     },
+    "ui.hud.screenshotsImported" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imported %lld"
+          }
+        }
+      }
+    },
     "ui.kind.bundle" : {
       "localizations" : {
         "en" : {
@@ -2787,6 +2797,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Image quality"
+          }
+        }
+      }
+    },
+    "ui.settings.importRecentScreenshots" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import Recent Screenshots"
           }
         }
       }

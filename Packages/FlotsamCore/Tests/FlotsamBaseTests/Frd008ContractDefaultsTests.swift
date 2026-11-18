@@ -393,7 +393,10 @@ import Testing
         #expect(titles == ["general", "shortcuts", "triggers", "privacy", "storage", "about"])
         for word in forbidden {
             #expect(!titles.contains { $0.contains(word) }, "pane title mentions \(word)")
-            #expect(!SettingsString.allCases.contains { $0.text.lowercased().contains(word) && $0 != .clearDone },
+            // The two exceptions are not settings transfer: .clearDone is a deletion message, and .importRecentScreenshots
+            // is FRD-002 FR-002-12's screenshot backfill button, required in Settings (it moves no settings).
+            #expect(!SettingsString.allCases.contains {
+                $0.text.lowercased().contains(word) && $0 != .clearDone && $0 != .importRecentScreenshots },
                     "a Settings string mentions \(word)")
         }
         let rows = entries.filter { $0 != .separator }
