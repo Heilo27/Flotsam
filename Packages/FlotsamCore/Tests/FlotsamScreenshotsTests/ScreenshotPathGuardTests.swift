@@ -102,4 +102,42 @@ import FlotsamBase
         let names = try scanner.scan(folder).get().map(\.url.lastPathComponent)
         #expect(names == ["Screenshot real.png"])
     }
+
+    // OC-421-W1 (AC-002-13 negative control): red if the guard compares against an unresolved folder and so rejects
+    // real files when the watched folder itself is reached through a link (e.g. a relocated Desktop).
+    @Test("a regular file is still accepted when the watched folder is itself reached through a link")
+    func linkedWatchedFolderStillWorks() async throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let real = try temp.folder("realshots")
+        _ = try temp.file("realshots/Screenshot 1.png", screenCapture: true)
+        let viaLink = temp.root.appendingPathComponent("linkedshots")
+        try FileManager.default.createSymbolicLink(at: viaLink, withDestinationURL: real)
+        let scanner = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences())
+        // Single-path candidate (the FSEvents route): FileManager cannot list a link-to-folder, but events name files.
+        let file = try #require(scanner.candidate(viaLink.appendingPathComponent("Screenshot 1.png")))
+        #expect(file.url.lastPathComponent == "Screenshot 1.png")
+        let recorder = IngestRecorder()
+        let attempt = await run(importer(recorder), file.url)
+        guard case .imported = attempt else { Issue.record("expected imported, got \(attempt)"); return }
+        #expect(recorder.names == ["Screenshot 1.png"])
+    }
+
+    // OC-421-W2 (AC-002-13 negative): a link to a directory and a dangling link are dropped by the scan; red if the
+    // scanner ever follows links when listing.
+    @Test("the scanner drops a link to a folder and a dangling link")
+    func scannerDropsDirectoryAndDanglingLinks() throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let folder = try temp.folder("shots")
+        let dir = try temp.folder("elsewhere")
+        _ = try temp.file("shots/Screenshot real.png", screenCapture: true)
+        try FileManager.default.createSymbolicLink(
+            at: folder.appendingPathComponent("Screenshot dir.png"), withDestinationURL: dir)
+        try FileManager.default.createSymbolicLink(
+            atPath: folder.appendingPathComponent("Screenshot dangling.png").path, withDestinationPath: "/nonexistent-flotsam-target.png")
+        let scanner = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences())
+        let names = try scanner.scan(folder).get().map(\.url.lastPathComponent)
+        #expect(names == ["Screenshot real.png"])
+    }
 }
