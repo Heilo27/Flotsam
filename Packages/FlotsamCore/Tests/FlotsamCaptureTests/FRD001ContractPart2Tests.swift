@@ -447,3 +447,268 @@ struct FRD001DedupeContractTests {
         }
     }
 }
+
+// MARK: Batch 3: OC-1076..OC-1078, OC-1107..OC-1109 (ingest ceilings and their Notices)
+
+private let tenMiB = 10 * 1024 * 1024
+private let fiveMiB = 5 * 1024 * 1024
+private let hundredMiB = 100 * 1024 * 1024
+
+/// The one info-only outcome shape of OC-1100..OC-1107: logged once at info, never a Notice, HUD or warning dot.
+@MainActor
+private func expectInfoOnly(_ rig: ContractRig, _ code: ErrorCode, sourceLocation: SourceLocation = #_sourceLocation) {
+    let records = rig.sink.logged(code)
+    #expect(records.count == 1, "exactly one \(code.rawValue) record", sourceLocation: sourceLocation)
+    #expect(records.map(\.level) == [.info], "\(code.rawValue) logs at info", sourceLocation: sourceLocation)
+    #expect(rig.presenter.latestNotices.isEmpty, "no Notice, so no warning dot", sourceLocation: sourceLocation)
+    #expect(rig.presenter.huds.isEmpty, "no HUD", sourceLocation: sourceLocation)
+}
+
+/// A valid 10 x 10 PNG followed by zero padding so the whole representation is exactly `total` bytes.
+private func paddedPNG(total: Int) -> Data {
+    let png = TestImage.make(.png, width: 10, height: 10, seed: 3)
+    return png + Data(repeating: 0, count: total - png.count)
+}
+
+@MainActor
+@Suite("FRD-001 contract part 2: ingest ceilings")
+struct FRD001LimitContractTests {
+
+    @Test("OC-1076 / OC-1108 (L-B pin): text over 10 MiB stores nothing, raises CAP-LIM-001 with {limit} filled, leaves the pasteboard alone")
+    func oc1076() async throws {
+        // given one stored item and 10 MiB + 1 byte of text; then delta 0, the Notice names the limit, the clipboard is intact.
+        try await withRig { rig in
+            await rig.copyText(uid("baseline"))
+            let big = String(repeating: "a", count: tenMiB + 1)
+            rig.pasteboard.copyText(big)
+            let changeBefore = rig.pasteboard.changeCount
+            await rig.process()
+            #expect(await rig.until { !noticeMessages(rig, code: .capLim001).isEmpty })
+            try #expect(await rig.itemCount() == 1)
+            #expect(noticeMessages(rig, code: .capLim001) == ["A copy was too large to save (over 10 MB). It is still on your clipboard."])
+            #expect(!rig.presenter.latestNotices.isEmpty)
+            #expect(rig.sink.logged(.capLim001).map(\.level) == [.default])
+            #expect(rig.pasteboard.writes == 0)
+            #expect(rig.pasteboard.changeCount == changeBefore)
+            let held = try rig.pasteboard.readSnapshot(types: [PB.text]).get().representations
+            #expect(held.count == 1)
+            #expect(held.first?.data == Data(repeating: 0x61, count: 10_485_761))
+        }
+    }
+
+    @Test("OC-1076 boundary: exactly 10 MiB of text is stored and raises no CAP-LIM-001")
+    func oc1076AtCeiling() async throws {
+        // given exactly 10 MiB; then count +1 and no LIM-001 anywhere. Kills `>` weakened to `>=` in the text ceiling.
+        try await withRig { rig in
+            rig.pasteboard.copyText(String(repeating: "b", count: tenMiB))
+            await rig.process()
+            #expect(await rig.until { (try await rig.itemCount()) == 1 })
+            #expect(rig.sink.logged(.capLim001).isEmpty)
+            #expect(rig.presenter.latestNotices.isEmpty)
+        }
+    }
+
+    @Test("OC-1077: plain text with an html over 5 MiB stores one item without the html, logs CAP-LIM-002 only")
+    func oc1077() async throws {
+        // given text plus 5 MiB + 1 byte of html; then count +1, no html stored, LIM-002 once at info, no Notice or HUD.
+        try await withRig { rig in
+            let text = uid("rich")
+            await rig.copyText(uid("baseline"))
+            await rig.copyText(text, extra: [(PB.html, Data(repeating: 0x20, count: fiveMiB + 1))])
+            let stored = try await rig.items()
+            #expect(stored.count == 2)
+            let mine = try #require(stored.first { $0.plainText == text })
+            try #expect(await rig.representationTypes(of: mine.id).contains(PB.html) == false)
+            #expect(mine.plainText == text, "the plain text is kept")
+            expectInfoOnly(rig, .capLim002)
+        }
+    }
+
+    @Test("OC-1077 boundary: html of exactly 5 MiB is kept and CAP-LIM-002 is not logged")
+    func oc1077AtCeiling() async throws {
+        try await withRig { rig in
+            let text = uid("rich")
+            await rig.copyText(text, extra: [(PB.html, Data(repeating: 0x20, count: fiveMiB))])
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            try #expect(await rig.representationTypes(of: stored[0].id).contains(PB.html))
+            #expect(rig.sink.logged(.capLim002).isEmpty)
+        }
+    }
+
+    @Test("OC-1078: an image over 100 MiB stores nothing and raises CAP-LIM-001 naming 100 MB")
+    func oc1078() async throws {
+        // given one stored item and a PNG of 100 MiB + 1 byte; then delta 0 and the Notice names the image ceiling.
+        try await withRig { rig in
+            await rig.copyText(uid("baseline"))
+            rig.pasteboard.copy(PB.png, paddedPNG(total: hundredMiB + 1))
+            await rig.process()
+            #expect(await rig.until { !noticeMessages(rig, code: .capLim001).isEmpty })
+            try #expect(await rig.itemCount() == 1)
+            #expect(noticeMessages(rig, code: .capLim001) == ["A copy was too large to save (over 100 MB). It is still on your clipboard."])
+            #expect(rig.pasteboard.writes == 0)
+        }
+    }
+
+    @Test("OC-1078 boundary: an image of exactly 100 MiB is stored with no CAP-LIM-001")
+    func oc1078AtCeiling() async throws {
+        try await withRig { rig in
+            rig.pasteboard.copy(PB.png, paddedPNG(total: hundredMiB))
+            await rig.process()
+            #expect(await rig.until(seconds: 20) { (try await rig.kinds()) == ["image"] })
+            #expect(rig.sink.logged(.capLim001).isEmpty)
+            #expect(rig.presenter.latestNotices.isEmpty)
+        }
+    }
+
+    @Test("OC-1107: a rich representation over its ceiling is info only: no Notice, no HUD, no dot")
+    func oc1107() async throws {
+        try await withRig { rig in
+            await rig.copyText(uid("rich"), extra: [(PB.rtf, Data(repeating: 0x20, count: fiveMiB + 1))])
+            try #expect(await rig.itemCount() == 1)
+            expectInfoOnly(rig, .capLim002)
+        }
+    }
+
+    @Test("OC-1109: a 600-file copy raises CAP-LIM-003 with n = 600 and the warning dot shows")
+    func oc1109() async throws {
+        try await withRig { rig in
+            rig.pasteboard.copy(PB.fileURLReps(try (0..<600).map { try rig.makeFile("g\($0).txt") }))
+            await rig.process()
+            #expect(await rig.until { !noticeMessages(rig, code: .capLim003).isEmpty })
+            #expect(noticeMessages(rig, code: .capLim003) == ["A copy of 600 files was trimmed to the first 500."])
+            #expect(!rig.presenter.latestNotices.isEmpty)
+        }
+    }
+}
+
+// MARK: Batch 3: OC-1080..OC-1083, OC-1085, OC-1087, OC-1098 (privacy suspension and resume, modes)
+
+private let prmMessage = "macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings."
+
+/// One clipboard change whose types list is empty (what macOS gives an app it has blocked), read the three times
+/// FR-001-18 b counts as one empty change, then settled.
+@MainActor
+private func emptyChange(_ rig: ContractRig) async {
+    rig.pasteboard.copy([PasteboardRepresentation]())
+    for _ in 0..<3 { rig.capture.captureNow() }
+    await rig.flush()
+}
+
+@MainActor
+private func suspendCapture(_ rig: ContractRig) async {
+    for _ in 0..<3 { await emptyChange(rig) }
+    _ = await rig.until { !noticeMessages(rig, code: .capPrm001).isEmpty }
+}
+
+@MainActor
+@Suite("FRD-001 contract part 2: privacy suspension, resume and modes")
+struct FRD001SuspensionContractTests {
+
+    @Test("OC-1080 / OC-1098: three blocked changes raise CAP-PRM-001 with its catalogue message, the dot shows, nothing is stored")
+    func oc1080() async throws {
+        try await withRig { rig in
+            await suspendCapture(rig)
+            #expect(noticeMessages(rig, code: .capPrm001) == [prmMessage])
+            #expect(!rig.presenter.latestNotices.isEmpty, "the menu-bar dot")
+            #expect(rig.sink.logged(.capPrm001).map(\.level) == [.default], "notice level")
+            try #expect(await rig.itemCount() == 0)
+        }
+    }
+
+    @Test("OC-1080 boundary: two blocked changes raise only the info CAP-VAL-001, never CAP-PRM-001")
+    func oc1080TwoChanges() async throws {
+        try await withRig { rig in
+            await emptyChange(rig)
+            await emptyChange(rig)
+            #expect(noticeMessages(rig, code: .capPrm001).isEmpty)
+            #expect(rig.presenter.latestNotices.isEmpty)
+            #expect(rig.sink.logged(.capPrm001).isEmpty)
+            #expect(rig.sink.logged(.capVal001).count == 2)
+        }
+    }
+
+    @Test("OC-1081: after suspension a readable copy is stored within one tick AND the warning dot clears")
+    func oc1081() async throws {
+        // given suspended capture; when access returns and V is copied (the 0.5 s timer, no manual poll); then V is
+        // stored and the CAP-PRM-001 Notice is gone. Fails today if nothing clears the Notice on resume.
+        try await withRig { rig in
+            await suspendCapture(rig)
+            #expect(!noticeMessages(rig, code: .capPrm001).isEmpty)
+            let v = uid("V")
+            rig.pasteboard.copyText(v)
+            #expect(await rig.until(seconds: 2) { try await rig.item(withText: v).count == 1 })
+            await rig.flush()
+            #expect(noticeMessages(rig, code: .capPrm001).isEmpty, "CAP-PRM-001 must clear when capture resumes")
+            #expect(rig.presenter.latestNotices.isEmpty, "the warning dot must clear when capture resumes")
+        }
+    }
+
+    @Test("OC-1082: two blocked changes then a readable copy raise no CAP-PRM-001 and the copy is stored; the count restarts")
+    func oc1082() async throws {
+        try await withRig { rig in
+            await emptyChange(rig)
+            await emptyChange(rig)
+            let readable = uid("readable")
+            await rig.copyText(readable)
+            try #expect(await rig.item(withText: readable).count == 1)
+            // the readable change reset the run: two more blocked changes still do not suspend.
+            await emptyChange(rig)
+            await emptyChange(rig)
+            #expect(rig.sink.logged(.capPrm001).isEmpty)
+            #expect(rig.presenter.latestNotices.isEmpty)
+        }
+    }
+
+    @Test("OC-1083: after suspension, access returns without a new copy; the 60 s probe resumes capture and clears the warning")
+    func oc1083() async throws {
+        // given suspension on an empty pasteboard; when the text becomes readable with NO changeCount bump and 60 s pass;
+        // then the probe stores it and the Notice clears.
+        try await withRig { rig in
+            await suspendCapture(rig)
+            let v = uid("probe")
+            rig.pasteboard.reveal([PasteboardRepresentation(uti: PB.text, data: PB.data(v))])
+            rig.clock.advance(by: 60)
+            #expect(await rig.until(seconds: 3) { try await rig.item(withText: v).count == 1 }, "the probe stores the now-readable copy")
+            await rig.flush()
+            #expect(noticeMessages(rig, code: .capPrm001).isEmpty, "CAP-PRM-001 must clear when capture resumes")
+            #expect(rig.presenter.latestNotices.isEmpty, "the warning dot must clear when capture resumes")
+        }
+    }
+
+    @Test("OC-1083 boundary: 59 s after suspension the probe has not run and the copy is not stored yet")
+    func oc1083TooEarly() async throws {
+        try await withRig { rig in
+            await suspendCapture(rig)
+            let v = uid("early")
+            rig.pasteboard.reveal([PasteboardRepresentation(uti: PB.text, data: PB.data(v))])
+            rig.clock.advance(by: 59)
+            try await Task.sleep(for: .milliseconds(1200))
+            try #expect(await rig.item(withText: v).isEmpty)
+        }
+    }
+
+    @Test("OC-1085 (Curated half): in Curated mode a copy stores nothing and logs CAP-POL-003 once")
+    func oc1085() async throws {
+        try await withRig { rig in
+            rig.settings.set(.curated, for: SettingKeys.captureMode)
+            let c = uid("C")
+            await rig.copyText(c)
+            try #expect(await rig.itemCount() == 0)
+            #expect(rig.sink.logged(.capPol003).count == 1)
+        }
+    }
+
+    @Test("OC-1087: Paused, then resumed, a copy 0.1 s later is stored within one tick")
+    func oc1087() async throws {
+        try await withRig { rig in
+            rig.settings.set(.paused, for: SettingKeys.captureMode)
+            try await Task.sleep(for: .milliseconds(200))
+            rig.settings.set(.active, for: SettingKeys.captureMode)
+            try await Task.sleep(for: .milliseconds(100))
+            let n = uid("N")
+            rig.pasteboard.copyText(n)
+            #expect(await rig.until(seconds: 0.9) { try await rig.item(withText: n).count == 1 })
+        }
+    }
+}
