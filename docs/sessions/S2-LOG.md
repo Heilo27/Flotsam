@@ -523,3 +523,10 @@ Clipboard: restored after the run.
 **Flakes:** OC-7132 passed (3.2 s). `optionArrowsStepThroughSidebarFilters` passed (0.06 s). No re-run.
 
 **Verdict:** main @ 37e00b8 is healthy for lane A1. Bootstrap, full tests, architecture check and build all pass.
+
+### S1 ruling on C2b slices (2026-11-17)
+- KEEP 5cc7da4 (slice 1) and 7eefa2b (slice 2); no revert. Slice 1 is the single-source Missing design S1 wanted.
+- O'Brien on TASK-409 (`obrien-409`) merges `origin/s2/frd006` and does slices 3–6 from the 7f64339 handoff.
+- `s2/frd006` is FROZEN: no more S2 pushes. App/ Shelf belongs to TASK-409.
+- S1 noted the oracle `shelf.empty` vs `ui.shelf.empty` mismatch.
+- S2 next: lane B 8T (FRD-001, then FRD-003), branches merged up to main 37e00b8.
