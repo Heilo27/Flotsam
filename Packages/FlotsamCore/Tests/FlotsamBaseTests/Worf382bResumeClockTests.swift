@@ -114,8 +114,7 @@ import Testing
     /// DEFECT: `creditsLostInterval` treats any resume within 0.5 s of a pause alignment as "same instant" and credits
     /// nothing, but up to 0.5 s of the slow interval has elapsed, so the next run is late by exactly the delay
     /// (delay 0.25 -> gap 5.25 s; 0.4 -> 5.4 s; the 30 s re-resolve is late the same way).
-    @Test(.disabled("DEFECT PollTick.swift:50 same-instant guard `now - alignedAt < interval` suppresses the resume credit for delays under 0.5 s, so work runs late by the delay (TASK-382 follow-up)"),
-          arguments: [0.25, 0.4])
+    @Test(arguments: [0.25, 0.4])
     func watchdogKeepsFiveSecondBoundWhenResumedUnderOneTick(delay: Double) {
         // given
         let sim = Sim()
@@ -132,8 +131,7 @@ import Testing
 
     /// AC-001-19, as above for the 30 s re-resolve paused at 12 s and resumed under one tick later.
     /// DEFECT: same cause as the watchdog case (delay 0.25 -> gap 30.25 s).
-    @Test(.disabled("DEFECT PollTick.swift:50 same-instant guard `now - alignedAt < interval` suppresses the resume credit for delays under 0.5 s, so work runs late by the delay (TASK-382 follow-up)"),
-          arguments: [0.25, 0.4])
+    @Test(arguments: [0.25, 0.4])
     func reResolveKeepsThirtySecondBoundWhenResumedUnderOneTick(delay: Double) {
         // given
         let sim = Sim()

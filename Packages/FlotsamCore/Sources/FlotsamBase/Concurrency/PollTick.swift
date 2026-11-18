@@ -20,6 +20,12 @@ public final class PollTick: Sendable {
     public static let interval: TimeInterval = 0.5
     /// FR-001-01.
     public static let tolerance: TimeInterval = 0.1
+    /// Two cadence changes closer than this count as one instant: the same main-actor turn (a pause and resume made
+    /// together, a toggle burst), which differ only by scheduling jitter. Far below `tolerance`, so a resume that
+    /// really was this late still keeps every bound within it; far above a clock read or a context switch, so a burst
+    /// is not mistaken for elapsed time. It must stay well under `interval`: any resume a real fraction of a tick after
+    /// a pause has that part of the slow interval elapsed and must be credited (AC-001-19).
+    static let sameInstantWindow: TimeInterval = 0.01
 
     private struct Entry {
         let ticks: Int
@@ -36,7 +42,8 @@ public final class PollTick: Sendable {
         /// When the first cadence change since the last firing happened, or nil if none has.
         var firstChangeAt: TimeInterval?
         /// When a change since the last firing moved the count forward on its own (pause alignment), or nil. That
-        /// move already credited the interval in progress, so a change right after it (same instant) credits nothing.
+        /// move already credited the interval in progress, so a change right after it (same instant, within
+        /// `sameInstantWindow`) credits nothing.
         var alignedAt: TimeInterval?
 
         /// Whether a cadence change from step `from` to step `to` at `now` loses an interval whose elapsed part must
@@ -47,7 +54,7 @@ public final class PollTick: Sendable {
         ///   change has already happened since the last firing, because the first lands on a firing, which is exact.
         func creditsLostInterval(from: Int?, to: Int?, now: TimeInterval) -> Bool {
             guard let from, let to else { return false }
-            if let alignedAt, now - alignedAt < PollTick.interval { return false }
+            if let alignedAt, now - alignedAt < PollTick.sameInstantWindow { return false }
             return to < from || firstChangeAt != nil
         }
 
