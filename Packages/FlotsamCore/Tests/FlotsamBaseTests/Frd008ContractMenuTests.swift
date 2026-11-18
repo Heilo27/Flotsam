@@ -133,6 +133,8 @@ struct Frd008ContractMenuTests {
     }
 
     // OC-8129. Red if Curated stops offering Resume, or Resume stops returning to Active.
+    // [Spec Drift] FR-007-12 vs FR-008-16: FRD-007 says Curated reads "Pause Capture"; FRD-008 (asserted here) says "Resume Capture".
+    // Not resolved here; reported to Friday, no FRD edited. See also the Rule 9 test below.
     @Test("OC-8129: Curated shows Resume Capture and choosing it makes the icon the active one")
     func curatedResumes() {
         let defaults = Frd008Defaults()

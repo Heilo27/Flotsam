@@ -8,10 +8,10 @@ public enum LibraryText {
         FlotsamStrings.text(forKey: key) ?? ""
     }
 
-    /// Fills a catalogue template. Only `%lld` and `%@` appear in templates (the catalogue lint), and each call site
-    /// passes exactly the matching argument types.
+    /// Fills a catalogue template, resolving a plural slot by its count (FR-000-05). Only `%lld`, `%@` and plural slots
+    /// appear in templates (the catalogue lint), and each call site passes exactly the matching argument types.
     static func format(_ key: String, _ arguments: CVarArg...) -> String {
-        String(format: string(key), arguments: arguments)
+        FlotsamStrings.formatted(forKey: key, arguments) ?? ""
     }
 
     public static let panelTitle = "ui.library.panelTitle"
@@ -37,7 +37,7 @@ public enum LibraryText {
     public static func noResultsTitle(query: String) -> String { format("ui.library.noResultsTitle", query) }
 
     public static func itemCount(_ count: Int) -> String {
-        count == 1 ? string("ui.library.footerOneItem") : format("ui.library.footerItems", count)
+        format("ui.library.footerItems", count)
     }
 
     /// "and 3 more": the file members past the preview's limit.

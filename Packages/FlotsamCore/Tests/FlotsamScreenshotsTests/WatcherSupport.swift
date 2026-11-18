@@ -378,3 +378,31 @@ extension ScreenshotWatcher {
         }
     }
 }
+
+/// A value a spawned task hands back to the test.
+final class Handoff<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Value?
+    func set(_ value: Value) { lock.withLock { stored = value } }
+    var value: Value? { lock.withLock { stored } }
+}
+
+/// TASK-466: runs `work` and returns whether it ended within `timeout`. A press that never resolves (a mutant that
+/// leaves a continuation hanging) fails its test with a clear expectation instead of hanging the whole suite.
+func finishes(within timeout: Duration = .seconds(10), _ work: @escaping @Sendable () async -> Void) async -> Bool {
+    let ended = Handoff<Bool>()
+    Task {
+        await work()
+        ended.set(true)
+    }
+    return await eventually(timeout: timeout) { ended.value == true }
+}
+
+extension ScreenshotWatcher {
+    /// `importRecent()`'s result, or nil when the press has not resolved within `timeout` (see `finishes`).
+    func importRecentWithin(_ timeout: Duration = .seconds(10)) async -> FlotsamResult<Int>? {
+        let result = Handoff<FlotsamResult<Int>>()
+        _ = await finishes(within: timeout) { result.set(await self.importRecent()) }
+        return result.value
+    }
+}

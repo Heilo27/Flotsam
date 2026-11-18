@@ -287,7 +287,7 @@
       "requirement": "AC-004-05",
       "given": "Tag T is on exactly 5 items; total item count N",
       "when": "user deletes T and confirms",
-      "then": "a confirmation (organize.confirm.deleteTag) stating 5 items appeared first; after confirming T is absent from the sidebar (tag count -1), item count is still N, and none of the 5 items carries T",
+      "then": "a confirmation (ui.organize.confirmDeleteTag) stating 5 items appeared first; after confirming T is absent from the sidebar (tag count -1), item count is still N, and none of the 5 items carries T",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -627,7 +627,7 @@
       "requirement": "AC-004-09",
       "given": "One pinned item P selected",
       "when": "user presses ⌘⌫ and then cancels the confirmation",
-      "then": "a confirmation (organize.confirm.delete) appears before anything is removed; after cancel P still exists and count is unchanged",
+      "then": "a confirmation (ui.organize.confirmDelete) appears before anything is removed; after cancel P still exists and count is unchanged",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true

@@ -69,16 +69,16 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// returned unfilled rather than handed to `String(format:)`.
     public func text(_ arguments: [MessageArgument]) -> String {
         let template = text
-        guard let kinds = FlotsamStrings.placeholderKinds(in: template), kinds == arguments.map(\.kind) else { return template }
-        return String(format: template, arguments: arguments.map { $0.formatArgument() })
+        guard let kinds = FlotsamStrings.formatKinds(in: template), kinds == arguments.map(\.kind) else { return template }
+        return FlotsamStrings.formatted(forKey: key, arguments.map { $0.formatArgument() }) ?? template
     }
 
     /// A template of one count and one label (`confirmShorten`: "{n} items older than {period}"). The label is one
     /// of our own catalogue period names, never user text.
     public func text(count: Int, label: SettingsString) -> String {
         let template = text
-        guard FlotsamStrings.placeholderKinds(in: template) == [.integer, .text] else { return template }
-        return String(format: template, max(0, count), label.text)
+        guard FlotsamStrings.formatKinds(in: template) == [.integer, .text] else { return template }
+        return FlotsamStrings.formatted(forKey: key, [max(0, count), label.text]) ?? template
     }
 
     /// The About line "Version {version} ({build})": two text slots filled from the bundle's own version strings.

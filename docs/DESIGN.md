@@ -319,8 +319,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.errorTitle` | History unavailable | (19/40) |
 | `ui.library.footerCopyOnly` | Press ⌘V to paste | (17/40) |
 | `ui.library.footerMultiDisabled` | Select one item to paste | (24/40) |
-| `ui.library.footerItems` | %lld items | (9/40) |
-| `ui.library.footerOneItem` | 1 item | (6/40) |
+| `ui.library.footerItems` | 1 item / %lld items (plural: one, other) | (9/40) |
 | `ui.library.footerSelected` | %lld selected | (12/40) |
 | `ui.library.hintPaste` | Paste | (5/15) |
 | `ui.library.hintPlain` | Plain text | (10/15) |
@@ -359,9 +358,9 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | Key | String | Count |
 |---|---|---|
 | `organize.confirm.deleteTag.title` | Delete tag “{name}”? | (20/40) |
-| `organize.confirm.deleteTag` | Remove tag “{name}” from {n} items? The items stay. | (51/150) |
+| `ui.organize.confirmDeleteTag` | Remove tag '{name}' from 1 item? / from {n} items? (plural: one, other) | (49/150) |
 | `organize.confirm.delete.title` | Delete this item? | (17/40) |
-| `organize.confirm.delete` | This permanently removes it from your history. | (46/150) |
+| `ui.organize.confirmDelete` | Delete {n} items permanently? This cannot be undone. (plural: one, other; one item uses `ui.organize.confirmDeleteOne`: Delete this item permanently? This cannot be undone.) | (53/150) |
 | `organize.confirm.ungroup.title` | Ungroup {n} items? | (18/40) |
 | `organize.confirm.ungroup` | They become separate items in your history. | (43/150) |
 | `organize.edit.formattingRemoved` | Saving removes formatting. The edited item becomes plain text. | (62/150) |
@@ -377,9 +376,12 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `settings.confirm.resetIgnored.title` | Reset ignored apps? | (19/40) |
 | `settings.confirm.resetIgnored` | Replace your list with the default apps? | (40/150) |
 | `storage.confirm.shorten.title` | Shorten history? | (16/40) |
-| `storage.confirm.shorten` | This permanently deletes {n} items older than {period}. Pinned items and items with a shortcut are kept. | (104/150) |
+| `ui.settings.confirmShorten` | This permanently deletes {n} item(s) older than {period}. Pinned items and items with a shortcut are kept. (plural: one, other) | (104/150) |
 | `storage.confirm.clear.title` | Clear all history? | (18/40) |
-| `storage.confirm.clear` | This permanently deletes {n} items. This can’t be undone. | (57/150) |
+| `ui.settings.clearCount` | This permanently deletes {n} item(s). This can’t be undone. (plural: one, other) | (57/150) |
+| `ui.settings.clearDone` | {n} item(s) deleted (plural: one, other) | (15/40) |
+| `ui.settings.confirmBudget` | Lowering the image budget removes {n} older image(s) ({size}). Pinned and shortcut items are kept. (plural: one, other) | (90/150) |
+| `ui.row.bundleCount` | 1 item / {n} items (plural: one, other) | (7/40) |
 | `settings.privacy.accessibility.help` | Lets Flotsam paste into the app you are using. | (46/150) |
 | `settings.privacy.input.help` | Lets triggers notice the text you type. Flotsam never stores keystrokes. | (72/150) |
 | `settings.privacy.pasteOther.help` | macOS 15.4 and later asks before apps read the clipboard. Choose Always Allow. | (78/150) |

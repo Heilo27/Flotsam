@@ -716,7 +716,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld items"
+            "value" : "%#@items@"
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -727,16 +749,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Select one item to paste"
-          }
-        }
-      }
-    },
-    "ui.library.footerOneItem" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "1 item"
           }
         }
       }
@@ -2146,7 +2158,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete %lld items permanently? This cannot be undone."
+            "value" : "Delete %#@items@ permanently? This cannot be undone."
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2448,7 +2482,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld items"
+            "value" : "%#@items@"
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2558,7 +2614,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This permanently deletes %lld items. This can’t be undone."
+            "value" : "This permanently deletes %#@items@. This can’t be undone."
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2588,7 +2666,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld items deleted"
+            "value" : "%#@items@ deleted"
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2638,7 +2738,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lowering the image budget removes %lld older images (%@). Pinned and shortcut items are kept."
+            "value" : "Lowering the image budget removes %#@images@ (%2$@). Pinned and shortcut items are kept."
+          },
+          "substitutions" : {
+            "images" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg older image"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg older images"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -2678,7 +2800,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This permanently deletes %lld items older than %@. Pinned items and items with a shortcut are kept."
+            "value" : "This permanently deletes %#@items@ older than %2$@. Pinned items and items with a shortcut are kept."
+          },
+          "substitutions" : {
+            "items" : {
+              "argNum" : 1,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg item"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg items"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
