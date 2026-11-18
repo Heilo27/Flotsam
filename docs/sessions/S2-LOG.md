@@ -267,3 +267,16 @@ Machine: macOS 27.3, Xcode 27.0, Swift 6.4. Fresh clone, detached at 97b5a14. Lo
 **Defects:** none.
 
 Clipboard: the prior contents (one item, `public.rtf` and `public.utf8-plain-text`) were saved before the run and restored after the app quit; a byte comparison of the saved and restored types and data matched.
+
+---
+
+## 2026-11-17: filler: test-build warnings on `s2/test-warnings` @ 1f40ae0 (from `main` 97b5a14)
+
+**Verdict: pass.** Tests-only change; no production code, no behaviour change.
+
+- Cause: `IngestActor.ingest` returns `FlotsamResult<IngestResult>` and never throws (failures come back as `.failure`), so the `try` on `rig.ingest.ingest(...)` in `DiskGuardIngestTests.swift` did nothing. `Rig.create` (which calls `.get()`) does throw, and its `try` stays.
+- Dropped the `try` at all 17 call sites: 8 statement sites (lines 44, 75, 113, 114, 115, 145, 151, 157) and 9 inside `#expect` (lines 171, 172, 177, 178, 179, 184, 197, 198, 203).
+- **Count differs from the earlier logs:** the build reports 17 "no calls to throwing functions occur within 'try' expression" warnings here (8 + 9), not 14 (8 + 6). After the change: 0 of them, and 0 warnings of any kind in the rebuilt test targets.
+- `swift test` (parallel, no scratch path), in `Packages/FlotsamCore`: exit 0, no failures. 292 tests in 45 suites with 8 known issues, the same as before. OC-7132 passed in the full run.
+- `bin/check-architecture.sh`: **pass**.
+- Test bugs found: none. No site was a test meant to exercise a throwing path; each asserts on the returned `FlotsamResult`.
