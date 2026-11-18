@@ -3,11 +3,9 @@ import Testing
 import FlotsamBase
 @testable import FlotsamScreenshots
 
-// TASK-456 QA (Worf): RED test for a proven cause of "Import Recent shows Imported 0" that is not a failure path.
-// Pressing the button activates the app, so `didBecomeActive` runs a reconcile scan that queues the same new files as
-// live pickup. `importRecent()` skips every path already `pending` (ScreenshotWatcher.importRecent, `jobs` filter), so the
-// press's own count excludes them and the HUD says "Imported 0" while the library gains the files.
-// Turns red-to-green when the HUD count reflects what the press imported or joined, not only what it queued itself.
+// TASK-456 QA (Worf): Import Recent coinciding with the `didBecomeActive` reconcile scan. Pressing the button activates
+// the app, so the reconcile queues the same new files as live pickup; the press must count those imports ("Imported 6"),
+// not skip them as already pending ("Imported 0") while the library gains the files.
 
 @MainActor
 private final class RaceHUDLog { var messages: [String] = [] }

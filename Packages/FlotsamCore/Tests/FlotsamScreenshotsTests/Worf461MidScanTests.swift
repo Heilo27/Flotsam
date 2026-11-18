@@ -3,12 +3,9 @@ import Testing
 import FlotsamBase
 @testable import FlotsamScreenshots
 
-// TASK-461 QA (Worf): RED test. The press joins only what is `pending` when it looks (entry snapshot, or when its scan
-// returns). A press that BEGAN before the reconcile queued the files, whose own folder scan returns after the
-// reconcile's imports have already ended, finds them in `ingestedLive`, skips them and reports "Imported 0" while the
-// library gained 4 files during the press: the TASK-456 symptom, in the interleaving "reconcile starts and finishes
-// inside the press's scan". Also kills the surviving mutation "remove the entry-snapshot join" (the scan-time join
-// alone passes every TASK-461 test).
+// TASK-461 QA (Worf): a press that BEGAN before the reconcile queued the files, whose own folder scan returns after
+// the reconcile's imports have ended, still counts them: the library gained 4 files during the press, so "Imported 4",
+// each ingested once.
 
 @MainActor
 private final class MidScanHUDLog { var messages: [String] = [] }
