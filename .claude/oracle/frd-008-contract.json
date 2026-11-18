@@ -1265,9 +1265,9 @@
     {
       "id": "OC-8127",
       "requirement": "AC-008-11",
-      "given": "Shelf on; Open Library ⌃⌘V; Save Clipboard ⌥⌘S; Toggle Shelf ⌘⇧9; mode Active",
+      "given": "Shelf on; Open Library ⌃⌘V; Save Clipboard ⌥⌘S; Toggle Shelf ⇧⌘9; mode Active",
       "when": "user clicks the menu-bar icon",
-      "then": "the menu is exactly, in order: Open Library ⌃⌘V; Save Clipboard ⌥⌘S; Toggle Shelf ⌘⇧9; separator; Pause Capture; Notices (submenu); separator; Settings… ⌘,; Show Setup Guide…; separator; Quit Flotsam ⌘Q (11 entries)",
+      "then": "the menu is exactly, in order: Open Library ⌃⌘V; Save Clipboard ⌥⌘S; Toggle Shelf ⇧⌘9; separator; Pause Capture; Notices (submenu); separator; Settings… ⌘,; Show Setup Guide…; separator; Quit Flotsam ⌘Q (11 entries)",
       "class": "layout",
       "source_verdict": "CONFIRMED",
       "must_verify": true
