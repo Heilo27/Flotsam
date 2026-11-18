@@ -1408,3 +1408,32 @@ Values are the median of 3 harness runs. Earlier A4 values are in brackets.
 - Real DB (03fc64cf…) and `-wal` (c1189741…) sha1 were unchanged throughout.
 - The walk prefs domain and its plist were deleted, and TextEdit docs were discarded unsaved.
 - No `com.apple.screencapture` change and no files on the real Desktop or Documents. Evidence (notes and screenshots) is kept in the session scratchpad.
+
+## 2026-11-18: A1 + A2 on `main` @ 19dd364 (TASK-451 de-flake; re-targeted from ca74844)
+
+**Verdict: PASS. Zero failures, no flakes, and both S1 re-checks pass.**
+
+**A1**
+- `swift test` exited 0. 2513 tests in 312 suites across 12 runs: 2513 passed, 0 failed, 15 known issues.
+- OC-4102 (pin p95), OC-7132 and the capture timing tests all passed in the full run. The 1-minute load average ranged from 22 to 164 during it.
+- `bin/check-architecture.sh` passed.
+- The Debug build has 1 warning: `ClipboardCapture.swift:118:27`, an unused `assumeIsolated` result. It is the same warning as before, moved from line 112.
+- The earlier partial run on ca74844 had the same totals, all passing, with no flake.
+
+**A2** (scratch `CFFIXED_USER_HOME`; built with the bundle-id override `io.github.heilo27.FlotsamWalk` so prefs are isolated)
+- The menu bar item showed 8 entries: PASS.
+- Text, URL and image copies were stored as `text`, `link` and `image`: PASS.
+- A concealed copy was skipped with CAP-POL-001: PASS.
+- The same file copied 5 times gave 1 stored item and 4 deduped, with `copyCount` 5: PASS.
+- Launch at login was unchecked in onboarding and stayed off after relaunch: PASS.
+  - Observation: macOS still showed a "Login Item Added" banner for Flotsam at launch.
+- (a) Copy Diagnostics item counts match the scratch DB by kind (text 2, link 1, image 1, file 1, all others 0): **PASS**. The all-zero defect seen at ecd9f87 is fixed.
+  - Side note: the diagnostics show `pasteboard: notDetermined`.
+- (b) Import Recent: one press now runs one pass (one dedup line per file, one window order-in). At ecd9f87 one press ran two parallel passes. **PASS**
+  - Count: fresh screenshots were imported by the watcher before any press: 3 written live gave 2 stored and 1 deduped. 3 written while the app was quit were imported at launch (`screenshot.scan count=3`). So each press imported 0 and deduped everything.
+  - A case where Import Recent finds anything the watcher missed was not produced.
+  - HUD: the log shows one window order-in per press, but none of 3 screen captures caught it at that load. Not visually confirmed.
+
+**Isolation**
+- Real DB, `-wal` and prefs sha1 matched their baselines (03fc64cf…, c1189741…, f20f539d…).
+- The walk prefs domain and its plist were removed, and no Flotsam launchd entry, process or crash report remains. The clone was deleted.
