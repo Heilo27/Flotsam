@@ -53,8 +53,9 @@ public final class TriggerMatcher {
     /// Flotsam's own windows are always excluded and not editable (FR-005-13).
     private let ownBundleId: String
 
+    /// The word typed so far. Its length is always `buffer.count` (graphemes): there is no second counter to drift from
+    /// it. A combining mark that arrives as its own key event joins the previous character and adds none.
     private var buffer = ""
-    private var bufferCount = 0
     /// A word that can no longer match until the next boundary or reset (FR-005-11). Its buffer is always empty.
     private var isDead = false
     private var lastEventAt: Date?
@@ -126,28 +127,27 @@ public final class TriggerMatcher {
     private func append(_ characters: String) {
         guard !isDead else { return }
         if wordApp == nil { wordApp = .some(environment.frontmostApp()) }
-        let added = characters.count
-        guard bufferCount + added <= TriggerGrammar.maximumLength else {
+        var grown = buffer
+        grown += characters
+        guard grown.count <= TriggerGrammar.maximumLength else {
             clearWord()
             isDead = true
             return
         }
-        buffer += characters
-        bufferCount += added
+        buffer = grown
     }
 
     private func backspace() {
-        if bufferCount == 0 {
+        if buffer.isEmpty {
             isDead = true
         } else {
             buffer.removeLast()
-            bufferCount -= 1
         }
     }
 
     /// True when no typed character is held. The matcher's own state, read by tests for the F-04 guarantee: the word
     /// buffer is empty after every boundary key (whatever its outcome) and after every reset.
-    var holdsNoCharacters: Bool { buffer.isEmpty && bufferCount == 0 }
+    var holdsNoCharacters: Bool { buffer.isEmpty }
 
     private func boundary(_ event: KeyEvent) -> MatcherResult {
         // Security F-04: the word is moved into `typed` and the buffer is cleared first, so every exit below (no match,
@@ -178,7 +178,6 @@ public final class TriggerMatcher {
 
     private func clearWord() {
         buffer = ""
-        bufferCount = 0
         isDead = false
         wordApp = nil
     }
