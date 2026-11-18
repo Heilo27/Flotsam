@@ -158,9 +158,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     }
 
     private func reveal(trigger: ShelfTrigger, screen: Int, sticky: Bool, span: PerfSpan) {
-        onReveal?()
-        // One Info line per reveal: the trigger type only, never a clip, file or app name (FR-006-18).
-        FlotsamLog.log(.shelf(.reveal, outcome: .revealed, detail: .trigger(trigger)))
+        // Hides the Library (FR-006-04) and writes the one Info line per reveal (FR-006-18).
+        ShelfRevealAnnouncement.announce(trigger, hideLibrary: onReveal)
         let visible = Self.visibleFrame(ofScreenAt: screen)
         let frame = ShelfLayout.frame(for: placement, in: visible, contentExtent: contentExtent())
         let transition = ShelfLayout.transition(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
