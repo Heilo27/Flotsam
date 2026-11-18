@@ -58,7 +58,7 @@ public enum ShelfDragPlanner {
     ///   provide (every member of a file card gone, so the drag does not start).
     public static func plan(_ candidates: [ShelfDragCandidate], files: any FileSystemPort) -> FlotsamResult<ShelfDragPlan> {
         guard !candidates.isEmpty else {
-            return .failure(FlotsamError(.shfOs001, "No card to drag"))
+            return .failure(ShelfDragStart.osError(.noCard))
         }
         var items: [ShelfDragItem] = []
         var contributing: [UUID] = []
@@ -69,8 +69,7 @@ public enum ShelfDragPlanner {
             contributing.append(candidate.itemId)
         }
         guard !items.isEmpty else {
-            let context: [LogKey: LogSafeValue] = candidates.count == 1 ? [.itemId: .id(candidates[0].itemId)] : [:]
-            return .failure(FlotsamError(.libDat001, "Nothing left to drag", context: context))
+            return .failure(ShelfDragStart.nothingLeftToDrag(cards: candidates.map(\.itemId)))
         }
         return .success(ShelfDragPlan(items: items, draggedItemIds: contributing))
     }
