@@ -109,8 +109,8 @@ public struct SettingsStore: Sendable {
         self.onInvalid = onInvalid
     }
 
-    /// Reads a value. A stored value that fails to parse or fails its validator is dropped from storage and the default
-    /// is returned with `recoveredFromInvalid` set; the first such read per key also calls `onInvalid`.
+    /// Reads a value. A stored value that fails to parse or fails its validator is overwritten with the default
+    /// and the default is returned with `recoveredFromInvalid` set; the first such read per key also calls `onInvalid`.
     public func read<Value: SettingValue>(_ key: SettingKey<Value>) -> SettingReading<Value> {
         guard let raw = store.string(forKey: key.name) else {
             return SettingReading(value: key.defaultValue, recoveredFromInvalid: false)
@@ -118,7 +118,8 @@ public struct SettingsStore: Sendable {
         if let value = Value(persisted: raw), key.validator(value) {
             return SettingReading(value: value, recoveredFromInvalid: false)
         }
-        store.removeValue(forKey: key.name)
+        // Rewrite the default rather than removing the key, so `defaults read` shows it (AC-008-02, OC-8011).
+        store.setString(key.defaultValue.persisted, forKey: key.name)
         let firstTime = hub.withLock { $0.reportedInvalid.insert(key.name).inserted }
         if firstTime { onInvalid?(key.name) }
         return SettingReading(value: key.defaultValue, recoveredFromInvalid: true)

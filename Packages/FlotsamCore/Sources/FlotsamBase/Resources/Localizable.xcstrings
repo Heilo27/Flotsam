@@ -2356,7 +2356,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add app"
+            "value" : "Add…"
           }
         }
       }
@@ -2536,7 +2536,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lowering the image limit removes %lld older images (%@). Pinned and shortcut items are kept."
+            "value" : "Lowering the image budget removes %lld older images (%@). Pinned and shortcut items are kept."
           }
         }
       }
@@ -2546,7 +2546,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lower the image limit?"
+            "value" : "Lower the image budget?"
           }
         }
       }
@@ -2826,7 +2826,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Launch at login"
+            "value" : "Launch at Login"
           }
         }
       }

@@ -81,7 +81,7 @@ import Testing
 
         raw.setString("fortnight", forKey: "storage.retention")
         #expect(store.value(SettingKeys.storageRetention) == .d30)
-        #expect(raw.string(forKey: "storage.retention") == nil, "the bad value is replaced, not left behind")
+        #expect(raw.string(forKey: "storage.retention") == "d30", "the bad value is replaced by the default (OC-8011)")
         raw.setString("fortnight", forKey: "storage.retention")
         #expect(store.value(SettingKeys.storageRetention) == .d30)
         #expect(reported.names == ["storage.retention"], "second corruption of the same key is not reported again")
