@@ -36,10 +36,15 @@ final class AppContainer {
     private var itemHotkeyAction: ItemHotkeyAction?
     /// The typed-trigger engine (FR-005-10). Nil until the database has opened. Retained: its loops run until `stop()`.
     private(set) var triggerEngine: TriggerEngine?
-    /// Asks the tap thread to clear the typed word (FR-005-11): shared by the tap adapter, the keyboard environment and
-    /// the wake and session observers below, so every "the word is no longer trustworthy" event takes one path.
+    /// Asks the tap thread to clear the typed word (FR-005-11): shared by the tap adapter and the engine, whose
+    /// `frontmostApplicationDidChange()` and `systemDidResume()` are the app's "the word is no longer trustworthy" paths.
     private let triggerReset = TriggerResetSignal()
     private var unsubscribeTriggerSetting: (@Sendable () -> Void)?
+    /// Told when the engine's status changes, so the menu-bar icon can show or clear the tap's warning dot (FR-005-19).
+    /// Set by the status item; read through the engine, so it needs no engine to exist yet.
+    var onTriggerStatusChange: (@MainActor () -> Void)?
+    /// True while the tap is latched off after repeated disablement (FR-005-19).
+    var showsTriggerWarning: Bool { triggerEngine?.showsWarningDot ?? false }
     /// One resync reads the item bindings at a time; a change that arrives meanwhile queues exactly one more.
     private var itemSyncRunning = false
     private var itemSyncPending = false
@@ -173,7 +178,7 @@ final class AppContainer {
             // ⌘K opens the shortcut-and-trigger editor for the one selected item (FR-005-09). The organise commands
             // (pin, tags, note, edit, delete, sort, ungroup) belong to FRD-004 and stay inert until it lands.
             external: { [weak editor] command, ids in
-                guard command == .shortcutAndTrigger, ids.count == 1, let id = ids.first else { return }
+                guard let id = command.shortcutEditorTarget(selection: ids) else { return }
                 editor?.open(itemId: id)
             },
             isAccessibilityTrusted: { probe.isAccessibilityTrusted })
@@ -201,7 +206,7 @@ final class AppContainer {
         files: LocalFileSystem, codec: AppKitRichTextCodec, preserver: ClipboardPreserver
     ) {
         let clock = SystemClock()
-        let keyboard = SystemKeyboardEnvironment(resetSignal: triggerReset)
+        let keyboard = SystemKeyboardEnvironment()
         let snapshot = TriggerSnapshotStore()
         let ownBundleId = Bundle.main.bundleIdentifier ?? FlotsamLog.fallbackSubsystem
         let expander = TriggerExpander(
@@ -214,6 +219,9 @@ final class AppContainer {
             permissions: permissions, reporter: reporter, clock: clock, resetSignal: triggerReset,
             ownBundleId: ownBundleId)
         triggerEngine = engine
+        // A change of frontmost application clears the typed word (FR-005-11).
+        keyboard.onFrontmostChange = { [weak engine] in engine?.frontmostApplicationDidChange() }
+        engine.onStatusChange = { [weak self] _ in self?.onTriggerStatusChange?() }
         Task { await engine.start() }
 
         // The permission prompt appears when the user turns triggers on, never at launch (FR-005-10).

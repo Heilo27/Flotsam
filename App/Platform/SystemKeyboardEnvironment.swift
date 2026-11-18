@@ -8,8 +8,9 @@ import FlotsamTriggers
 /// Text Input Source and `NSWorkspace`) are cached here and refreshed from their change notifications. Secure Event
 /// Input is a plain thread-safe Carbon call.
 ///
-/// A change of frontmost application also clears the typed word (FR-005-11), which is why the reset signal lives here:
-/// this is the one observer of that change.
+/// This is the one observer of a change of frontmost application. It refreshes the cache first, then tells the owner
+/// through `onFrontmostChange` (the engine clears the typed word, FR-005-11), so the cache is never staler than the
+/// signal.
 @MainActor
 final class SystemKeyboardEnvironment: KeyboardEnvironment {
     private struct Cache: Sendable {
@@ -21,12 +22,13 @@ final class SystemKeyboardEnvironment: KeyboardEnvironment {
     private static let inputSourceChanged = Notification.Name("com.apple.Carbon.TISNotifySelectedKeyboardInputSourceChanged")
 
     private let cache = LockedValue(Cache())
-    private let resetSignal: TriggerResetSignal
     private let frontmostProvider = WorkspaceFrontmostAppProvider()
     private var observers: [(center: NotificationCenter, token: any NSObjectProtocol)] = []
 
-    init(resetSignal: TriggerResetSignal) {
-        self.resetSignal = resetSignal
+    /// Called on the main actor after the cached frontmost application has been refreshed.
+    var onFrontmostChange: (@MainActor () -> Void)?
+
+    init() {
         refreshFrontmost()
         refreshInputSource()
 
@@ -36,7 +38,7 @@ final class SystemKeyboardEnvironment: KeyboardEnvironment {
             (workspace, workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
                     self?.refreshFrontmost()
-                    self?.resetSignal.request()
+                    self?.onFrontmostChange?()
                 }
             }),
             (distributed, distributed.addObserver(forName: Self.inputSourceChanged, object: nil, queue: .main) { [weak self] _ in
