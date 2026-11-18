@@ -18,7 +18,7 @@ private func earlier() -> Date { Date().addingTimeInterval(-10) }
 struct Task456ImportRecentFailureTests {
     private func announce(_ rig: WatcherRig) async -> [String] {
         let log = await HUDLog()
-        await rig.watcher.importRecentAnnouncing { message in log.messages.append(message) }
+        await rig.watcher.importRecentAnnouncingWithin { message in log.messages.append(message) }
         return await log.messages
     }
 
@@ -70,12 +70,13 @@ struct Task456ImportRecentFailureTests {
         let rig = try WatcherRig(watermark: earlier())
         defer { rig.cleanUp() }
         _ = try rig.shot(in: rig.desktop)
-        #expect(await rig.watcher.importRecent() == .success(1))
+        #expect(await rig.watcher.importRecentWithin() == .success(1), "the press must resolve with Imported 1")
         let chosen = try rig.temp.folder("Pictures/Chosen")
         rig.settings.set(try FolderOverride.choosing(chosen).get(), for: SettingKeys.screenshotsFolderOverride)
         rig.fileSystem.hide(chosen)
-        guard case .failure(let error) = await rig.watcher.importRecent() else {
-            Issue.record("a paused folder must fail the run")
+        let paused = await rig.watcher.importRecentWithin()
+        guard case .failure(let error)? = paused else {
+            Issue.record("a paused folder must fail the run (and the press must resolve); got \(String(describing: paused))")
             return
         }
         #expect(error.code == .sspIo003)

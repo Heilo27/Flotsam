@@ -60,7 +60,7 @@ public struct ShelfDropService: Sendable {
 
         switch await ingest.ingest(plan.candidate) {
         case .failure(let error):
-            return await fail(error)
+            return await fail(ShelfDropPlanner.ingestFailure(error))
         case .success(let result):
             // Stored with a trimmed bundle or dropped rich text: not a failure of the drop (FR-007-06).
             for warning in result.warnings { await reporter.report(warning, origin: .background) }

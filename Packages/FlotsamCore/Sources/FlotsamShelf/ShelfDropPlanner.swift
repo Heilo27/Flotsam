@@ -80,11 +80,22 @@ public enum ShelfDropPlanner {
         PasteboardTypes.hasHonoured(in: types) && !types.contains(where: PasteboardMarkers.neverStore.contains)
     }
 
+    /// The Shelf's refusal for a drop with nothing it can store (FR-006-14). The classifier's `CAP-VAL-001` and the
+    /// ingest pipeline's `CAP-VAL-001` for undecodable image data (FR-007-07) both become this one error, because the
+    /// capture code is Info and log-only (FR-007-07) and a drop is an explicit action that must show feedback.
+    static let nothingStorable = FlotsamError(.shfVal001, "Drop holds nothing storable")
+
+    /// A failure from the ingest pipeline as the Shelf reports it: `CAP-VAL-001` (undecodable image data) is
+    /// `nothingStorable`; every other error is already the right one.
+    static func ingestFailure(_ error: FlotsamError) -> FlotsamError {
+        error.code == .capVal001 ? nothingStorable : error
+    }
+
     /// The classifier speaks in capture codes; a drop's failures are the Shelf's own (FR-006-14).
     private static func mapped(_ error: FlotsamError, droppedFileCount: Int) -> FlotsamError {
         switch error.code {
         case .capVal001:
-            FlotsamError(.shfVal001, "Drop holds nothing storable")
+            nothingStorable
         case .capDat001:
             FlotsamError(.shfIo001, "Dropped files are gone", context: [.count: .int(droppedFileCount)])
         default:

@@ -223,6 +223,26 @@ private func failureCode(_ result: ShelfDropResult) -> ErrorCode? {
         #expect(await rig.raised(.shfVal001) == cases.count)
     }
 
+    @Test("OC-407-1 dropped image bytes that cannot be decoded are SHF-VAL-001: HUD with the catalogue text, nothing stored, no hold, one failed line")
+    func undecodableImageIsShfVal001() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        let junk = PasteboardRepresentation(uti: PasteboardTypes.png, data: Data([0, 1, 2, 3]))
+
+        let result = await rig.service.drop(
+            types: [PasteboardTypes.png], representations: [junk], source: nil, originatesInShelf: false,
+            occurredAt: Date())
+
+        #expect(failureCode(result) == .shfVal001)
+        #expect(rig.ingest.candidates.count == 1, "the bytes reach ingest: the refusal comes from decoding")
+        #expect(try await rig.itemCount() == 0)
+        #expect(rig.completed.count == 0)
+        #expect(rig.presenter.huds == ["Flotsam can't store that kind of content."])
+        #expect(await rig.raised(.shfVal001) == 1)
+        #expect(await rig.raised(.capVal001) == 0, "the capture code never reaches the user for a drop")
+        #expect(rig.dropLines.map(\.publicContext) == ["code=SHF-VAL-001 outcome=failed"])
+    }
+
     @Test("OC-6087 a Shelf card dragged back onto the Shelf is refused silently: no HUD, no ingest, no log")
     func ownDragIgnored() async throws {
         let rig = try await Rig.make()
