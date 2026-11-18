@@ -1083,3 +1083,119 @@ Fresh clone of main, Debug via `bin/build.sh`, each launch with its own scratch 
 **Verdict: PASS up to 1.0 s, FAIL at 1.5 s.** The 1.5 s result follows FR-001-01 (three reads of one changeCount, about 1 s, then the change counts as empty) plus FR-001-18(b) (three empty changes suspend capture). But AC-001-18 states no bound on the gap, and the late write never bumps changeCount, so a writer slower than about 1 s loses the copy permanently and three of them suspend capture. **Spec question for S1/Ryan:** bound AC-001-18 and FR-001-01 at about 1 s, or treat the 1.5 s case as a defect. Boundary not narrowed between 1.0 s and 1.5 s. Synthetic writer only; no Finder-style slow copy tried.
 
 **Data isolation:** sha1 of the real `flotsam.sqlite`, its `-wal` and `-shm`, and the real prefs plist identical before and after. Clone, scratch homes and harness deleted; pasteboard cleared; no Flotsam process left running.
+
+## FRD-002 8T (Screenshots): `s2/frd002-8t` @ 8ce85a9, base 9032ae1 (pushed 2026-11-18)
+
+Tests only: 5 new files plus display-name fixes in ScreenshotWatcherTests.swift. `swift test --filter FlotsamScreenshotsTests` gives 186 tests in 22 suites, 186 passed, 0 failed, 9 known issues, on 2 consecutive runs. main has since moved to 59d3ea2, so the branch has not been rebased.
+
+**Known issues, wrapped in withKnownIssue (production diverges from the contract):**
+- OC-2038 live and OC-2074 relaunch leg: a screenshot imported live and then deleted is imported again on relaunch. The seen set lives only in memory, and `meta.screenshots.lastScanAt` does not advance on a live import or on the 30 s tick. This contradicts AC-002-07 and FR-002-08.
+- OC-2041: the reconcile-scan outcome writes no LogEvent.
+- OC-2080: when an override folder is deleted and then recreated, `SettingsStore.read` drops the override, as FRD-008 AC-008-02 requires. So there is no SSP-IO-003 and nothing resumes. **[Spec Drift] FRD-002 vs FRD-008, for Ryan to rule on.**
+
+**[Spec Drift] for Ryan:** FR-002-12 says import-recent is "always available in Settings", but only onboarding calls it. This affects OC-2062 and the HUD halves of OC-2020 and OC-2055. It is not wrapped in withKnownIssue because it is UNTESTABLE-AT-PACKAGE.
+
+| ID | Status | Test file:name | Note |
+|---|---|---|---|
+| OC-2001 | PASS + PRE-EXISTING PASS | FRD002AuditATests.swift:tildeLocationAndAtomicRename; ScreenshotWatcherTests.swift:17 | ~/Pictures/Shots expands, hidden temp name not imported, rename imports once |
+| OC-2002 | PASS | FRD002NoticeContractTests.swift:folder conditions | Deleted system folder: Desktop fallback, one SSP-IO-001 across a second tick, status Using Desktop; control: nothing raised before deletion |
+| OC-2003 | PASS | FRD002NoticeContractTests.swift:folder conditions | Missing override: SSP-IO-003, status Paused; control: folder returns, held-back item stored, Desktop one still not |
+| OC-2004 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:17, ScreenshotWatcherTests.swift:111 | Override wins |
+| OC-2005 | PASS | FRD002WatcherContractTests.swift:~/Pictures/Tilde | Tilde location expanded; hidden temp name then rename imports once; defaults write modelled by the preference fake |
+| OC-2006 | PASS | FRD002AuditATests.swift:locationIsARegularFile | .usingDesktop, SSP-IO-001 once, Desktop shot imported. (SW:36 was mis-cited; now titled FR-002-01) |
+| OC-2007 | PASS (simulated) + UNTESTABLE-AT-PACKAGE (real eject) | FRD002AuditATests.swift:systemFolderVanishes | Vanish simulated via ProbedFileSystem.hide. Missing seam for the real part: a mounted disk image |
+| OC-2008 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:48 | Raised once per state change via NoticeLog; the watcher writes nothing to the LogSink for it |
+| OC-2009 | PASS | FRD002AuditATests.swift:locationChangeLiveDelivery | New folder event imported, old folder event not, old watch stopped |
+| OC-2010 | PASS | FRD002AuditATests.swift:activationThenLiveImport | No tick: file imported, assertion is < 30 s of clock elapsed (confirmed) |
+| OC-2011 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:73 |  |
+| OC-2012 | PASS | FRD002NoticeContractTests.swift:folder conditions | chmod 000: nothing imported, SSP-PRM-001 without path/name, Needs access; control: access restored, imported, notice cleared |
+| OC-2013 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:507 |  |
+| OC-2014 | PASS (TCC grant modelled) | FRD002WatcherContractTests.swift:permission restored | The real TCC prompt cannot run at package level |
+| OC-2015 | UNTESTABLE-AT-PACKAGE | - | Real macOS Files and Folders TCC prompt after tccutil reset. Missing seam: an OS permission-prompt harness (UI test on a reset TCC database); no port exists for the prompt |
+| OC-2016 | PASS | FRD002NoticeContractTests.swift:polling and unsettled | Failing stream found by the 5 s poll, SSP-OS-001 once, status Watching; control: working stream raises nothing |
+| OC-2017 | PASS | FRD002AuditATests.swift:fallbackEndsAndStreamDelivers | Notice cleared once, new stream delivers |
+| OC-2018 | PASS | FRD002AuditATests.swift:subfolderAndSymlinkIgnored | Nested + symlink by event, activation scan and tick, delta 0, watcher alive |
+| OC-2019 | PASS | FRD002AuditATests.swift:offThenOnDiscriminates | Shots newer than the launch watermark taken while off are not imported |
+| OC-2020 | PASS (pickup on) + PRE-EXISTING PASS (SW:428, now cited OC-2020) + UNTESTABLE-AT-PACKAGE (HUD text) | FRD002AuditATests.swift:backfillWithPickupOn; ScreenshotWatcherTests.swift:428 | 3 created, second run 0. HUD 'Imported 3': importRecent returns a count only and nothing in App shows a HUD for it (see NEW DIVERGENCE 1) |
+| OC-2021 | PASS + UNTESTABLE-AT-PACKAGE (Settings toggle UI) | FRD002AuditATests.swift:freshInstallDefaultsOn | Default value true, watcher starts watching. Missing seam: SwiftUI GeneralPane view-model |
+| OC-2022 | PASS (proxy) + UNTESTABLE-AT-PACKAGE (fs_usage) | FRD002AuditATests.swift:noFolderAccessWhileOff | Recording FileSystemPort: zero touches while off across start/tick/activate/wake/settings; control proves the recorder sees access. Missing seam: fs_usage |
+| OC-2023 | PASS + PRE-EXISTING PASS | FRD002AuditATests.swift:pausedThenResumedThenRelaunched; ScreenshotWatcherTests.swift:460 | Checked before and after relaunch, a later shot imports |
+| OC-2024 | PASS (Curated) + UNTESTABLE-AT-PACKAGE (Save Clipboard) | FRD002AuditATests.swift:curatedImportsNothing | Save Clipboard needs a pasteboard seam. SW:428 was mis-cited as 2024 (now OC-2020) |
+| OC-2025 | PASS | FRD002AuditATests.swift:exactOracleFileSet | png+jpg import; mov, PDF, hidden, subfolder, attribute-less do not |
+| OC-2026 | PASS | FRD002WatcherContractTests.swift | Case-insensitive extensions .PNG .JPEG .jpeg .TIF .tiff .heic imported (+6); .gif adds nothing |
+| OC-2027 | PASS | FRD002WatcherContractTests.swift | Unprefixed name with attribute imported; same name without not |
+| OC-2028 | PASS | FRD002WatcherContractTests.swift | No attribute: Screenshot / Screen Shot imported, Holiday not (+2) |
+| OC-2029 | PASS | FRD002WatcherContractTests.swift | Attribute false beats the Screenshot prefix, by live event and by reconcile scan |
+| OC-2030 | PASS | FRD002WatcherContractTests.swift | name=Grab pref imports Grab <uuid>.png; without the pref it does not |
+| OC-2031 | PASS | FRD002WatcherContractTests.swift | Nine localized catalogue prefixes imported; zh_HK separate |
+| OC-2032 | PASS | FRD002WatcherContractTests.swift | Hidden file: nothing for 5 s and two events; renamed visible: exactly one item. Disputed run not reproduced in 10 runs |
+| OC-2033 | PASS | FRD002AuditBTests.swift:gifAndMovLeaveNoTrace | gif+mov: candidates empty, log delta 0, no notices; png control adds exactly 1 record |
+| OC-2034 | PASS | FRD002WatcherContractTests.swift:growing file | 6 x 0.5 s chunks with events: one item, bytes read once, at >= 3.0 s elapsed |
+| OC-2035 | PASS | FRD002NoticeContractTests.swift:unsettled file | Growing file: SSP-IO-002 at info, nothing stored; control stable file stored |
+| OC-2036 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:322 (triesAreBounded) | candidates empty, SSP-IO-002 x4 |
+| OC-2037 | PASS | FRD002AuditBTests.swift:launchImportsExactlyTheNewThree | 3 new files + 1 non-screenshot: names == the 3 |
+| OC-2038 | PASS (launch-imported) + KNOWN-ISSUE (live-imported) | FRD002PipelineContractTests.swift:deletedStaysAbsentAcrossTriggers, liveImportedDeletedStaysAbsent | DIVERGENCE: a live-imported item deleted and relaunched before any reconcile scan returns (seen set memory-only, watermark not advanced on live import or the 30 s tick) |
+| OC-2039 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:226 (launchReconcile) | fresh imported, older not |
+| OC-2040 | PRE-EXISTING PASS + PASS | ScreenshotWatcherTests.swift:226; FRD002AuditBTests.swift:relaunchDoesNotReimportTwenty | 20 imported, relaunch, count stays 20, same names, watermark not backwards |
+| OC-2041 | KNOWN-ISSUE | FRD002AuditBTests.swift:scanOutcomeIsLogged | DIVERGENCE: LogEvent has no reconcile-scan outcome case; reconcileScan() logs nothing (2 known-issue expectations, wake and activation) |
+| OC-2042 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2043 | PASS | FRD002PipelineContractTests.swift:itemSurvivesFileDeletionAcrossReopen | Item survives file deletion across a reopen (41x29 stored copy) |
+| OC-2044 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2045 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2046 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2047 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2048 | UNTESTABLE-AT-PACKAGE | - | Finder reveal with the file selected (Cmd-R). Missing seam: a Finder/NSWorkspace reveal port with an assertion on the selected URL (FRD-003 library action, App target). Package half (original path stored) is not the contract's then-clause |
+| OC-2049 | PRE-EXISTING PASS | ScreenshotWatcherTests.swift:196 (repeatedEventsAreIdempotent) | count 1 |
+| OC-2050 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2051 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2052 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2053 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2054 | UNTESTABLE-AT-PACKAGE | - | A system Save-to-Clipboard capture is an OS screencapture plus the pasteboard monitor (FlotsamCapture on NSPasteboard.general, forbidden here). Missing seam: a pasteboard port driven by a real screenshot-to-clipboard. A seeded clipboard image would only assert the seed (B1); the nearest real coverage is screenshotDedupesAgainstClipboardImage (kind image item stays image) |
+| OC-2055 | PASS + UNTESTABLE-AT-PACKAGE (HUD) | FRD002AuditBTests.swift:backfillSevenHundred | 700 files: importRecent == 500, the 500 newest by name, 200 oldest absent. HUD 'Imported 500' has no producer (see NEW DIVERGENCE 1) |
+| OC-2056 | PRE-EXISTING PASS + PASS | ScreenshotWatcherTests.swift:~403; FRD002AuditBTests.swift:backfillSevenHundred | second importRecent == 0 |
+| OC-2057 | PASS | FRD002AuditBTests.swift:backfillHonoursSevenDayRetention, backfillSevenDayBoundary | 3 d in, 10 d out; 6.5 d in, 7.5 d out |
+| OC-2058 | PASS | FRD002AuditBTests.swift:backfillThirtyDayCap(retention:) | 20 d and 29 d in; 31 d and 40 d out |
+| OC-2059 | PASS | FRD002PipelineContractTests.swift | Through the real ingest pipeline, fresh DB instance |
+| OC-2060 | PASS (package half) + UNTESTABLE-AT-PACKAGE (checkbox default, UI) | FRD002PipelineContractTests.swift:checkedImportBringsInTheWeek | importRecent on 2 week-old shots: count +2, both by pixel-width identity, kind screenshot, fresh DB. The checkbox and its default-on live in App/Flotsam/OnboardingModel.swift (needs AppContainer, no package seam) |
+| OC-2061 | PASS (package half) + UNTESTABLE-AT-PACKAGE (checkbox UI) | FRD002PipelineContractTests.swift:uncheckedImportBringsInNothing | First run, no watermark, 2 week-old shots: tick, wake, activation and live events leave count 0 (fresh DB). The unchecked checkbox itself is App-side |
+| OC-2062 | UNTESTABLE-AT-PACKAGE + NEW DIVERGENCE 1 | - | Settings > General has no 'Import recent screenshots' button: App/Flotsam/Settings/GeneralPane.swift has no such control and importRecentScreenshots is wired only to onboarding (AppContainer.swift:200, OnboardingModel.swift:88). Even with a seam this would fail today |
+| OC-2063 | PASS | FRD002NoticeContractTests.swift:rejected content | 100 MiB + 1: not stored, SSP-LIM-001 once, not retried; boundary: exactly 100 MiB stored |
+| OC-2064 | PASS | FRD002NoticeContractTests.swift:rejected content | Non-image bytes: info log SSP-VAL-001 once, count 0, original untouched, not retried |
+| OC-2065 | PASS | FRD002AuditBTests.swift:validFilesPassTheStuckOne | Stuck mode-000 file + 5 valid: all 5 within 2.0 s, stuck not imported, SSP-IO-002 raised |
+| OC-2066 | PASS (proxy) + UNTESTABLE-AT-PACKAGE (signposts, p95) | FRD002AuditBTests.swift:burstLatencyBound | 20 in a burst within 2 s, peakInFlight <= 2 (fake ingest). Missing seam: pickup-import PerfInterval / injectable signposter; p95 needs real ingest + Library search |
+| OC-2067 | UNTESTABLE-AT-PACKAGE | - | 10,000-item Library, 100 files 3 s apart, p95 file-arrival-to-search <= 2.0 s: a timed perf run on real wall-clock and a real DB, not a deterministic test (SteppedClock skips sleeps). Missing seam: a screenshot-pickup case in FlotsamPerfTests (bin/perf.sh, FLOTSAM_PERF=1) and a pickup-import signpost |
+| OC-2068 | UNTESTABLE-AT-PACKAGE | - | 10 min idle CPU profile vs pickup-off baseline, < 0.1 % of a core: needs a real process under Instruments/sample. Missing seam: a CPU profiling harness (bin/perf.sh has none for pickup) |
+| OC-2069 | PASS + UNTESTABLE-AT-PACKAGE (log show, Copy Diagnostics, Notices window) | FRD002AuditBTests.swift:markerNeverLeaks | Marker folder and files, SSP-IO-001 and SSP-LIM-001 provoked: no marker in any record field or reported error. Missing seam: OSLog store reader, diagnostics export, Notices UI |
+| OC-2070 | PASS (log half) + UNTESTABLE-AT-PACKAGE (Settings label) | FRD002PipelineContractTests.swift:overrideFolderNameStaysOutOfTheLog | Override fold-zq7marker is the watched folder (via FolderOverride): marker-named screenshot imported, marker-named non-image rejected (SSP-VAL-001 logged, provoked); no marker in any record field. Settings label is SwiftUI (GeneralPane shows lastPathComponent), no seam |
+| OC-2071 | PASS | FRD002PipelineContractTests.swift:sessionLeavesWatchedFolderUntouched | Distinct widths keep content unique; Clear History bound uses the rig clock (test-bug fix) |
+| OC-2072 | PRE-EXISTING PASS (now cited) | ScreenshotWatcherTests.swift:111 (overrideFolderLifecycle) | Override S/O/Desktop emission, names == [inChosen] |
+| OC-2073 | PASS | FRD002AuditBTests.swift:oldFolderIsNeverScannedAgain | After location W->N, file in W: event, wake, activation, tick all skip it; control file in N imports |
+| OC-2074 | PASS (launch-imported, wake, activation) + KNOWN-ISSUE (live-imported relaunch leg) | FRD002PipelineContractTests.swift:deletedStaysAbsentAcrossTriggers, liveImportedDeletedStaysAbsent | Same divergence as OC-2038 |
+| OC-2075 | PASS | FRD002WatcherContractTests.swift:sameRuleEverywhere | Same 2 files from system folder, Desktop fallback and override, live and launch scan (6 combinations) |
+| OC-2076 | PASS | FRD002NoticeContractTests.swift | SSP-PRM-001 literal text, warning, no path/name, no HUD |
+| OC-2077 | PASS | FRD002NoticeContractTests.swift | SSP-IO-001 literal text, warning, no leak, no HUD |
+| OC-2078 | PASS | FRD002NoticeContractTests.swift | SSP-IO-002 never reaches the user; found once after it settles |
+| OC-2079 | PASS | FRD002NoticeContractTests.swift | SSP-IO-003 literal text, warning, no leak, no HUD |
+| OC-2080 | KNOWN-ISSUE | FRD002AuditBTests.swift:recreatedOverrideResumes | DIVERGENCE (spec drift FRD-002 vs FRD-008 AC-008-02): override deleted for real reads as none and SettingsStore.read drops it; no SSP-IO-003, no resume on recreate. Hide/unhide variant (SW:111) passes |
+| OC-2081 | PASS | FRD002NoticeContractTests.swift:rejected content | SSP-VAL-001 never reaches the user; next real screenshot stored |
+| OC-2082 | PASS | FRD002NoticeContractTests.swift:rejected content | Literal 'A screenshot was too large to import (over 100 MB).', warning, no path/name, no HUD |
+| OC-2083 | PASS | FRD002NoticeContractTests.swift:polling and unsettled | SSP-OS-001 literal text, warning, no leak, no HUD |
+| OC-2084 | PASS | FRD002PipelineContractTests.swift:unwritableDataFolderFailsCleanly | STO-IO-001 literal message, count 0, F SHA unchanged |
+| OC-2085 | PASS + UNTESTABLE-AT-PACKAGE (button visibility, label) | FRD002AuditBTests.swift:clearedOverrideImportsFromSystem | After clearing: override reads none, watch is S, S file imported, O file not. Button is in GeneralPane.swift (no package view model) |
+| OC-2086 | PASS (behavior) + UNTESTABLE-AT-PACKAGE (UI) | FRD002WatcherContractTests.swift:override choice | Choosing O: override resolves to O, only O watched and imported. Button visibility and label are SwiftUI in GeneralPane.swift |
+
+## Totals by status (86 IDs)
+
+- Fully covered, no gap: 63 (of which pre-existing only: 8)
+- Covered with an UNTESTABLE-AT-PACKAGE remainder (PASS / PRE-EXISTING half plus a missing seam): 13
+- KNOWN-ISSUE (production divergence, test wrapped in withKnownIssue): 4 (OC-2038 live, OC-2041, OC-2074 live, OC-2080); OC-2038 and OC-2074 also have a passing half
+- UNTESTABLE-AT-PACKAGE with no passing half: 6 (OC-2015, 2048, 2054, 2062, 2067, 2068)
+- Any PASS component (new or pre-existing): 78
+- Any UNTESTABLE-AT-PACKAGE component: 19
+
+## New divergences found in this pass
+1. FR-002-12 / OC-2062 (also the HUD half of OC-2020 and OC-2055): Settings > General has no 'Import recent screenshots' button and nothing shows 'Imported {n}'. importRecentScreenshots is wired only to onboarding (App/Flotsam/AppContainer.swift:200 discards the count; OnboardingModel.swift:88). Evidence is a code search, not a run: UNTESTABLE-AT-PACKAGE, but it would fail today. Severity: Major.
+2. From the earlier watcher-agent note, not a contract ID: a hidden temp file that stays hidden across a reconcile scan and is then renamed is not picked up on the rename event (the scan advanced the watermark past its birth date). OC-2032's scenario passes; real screencapture renames within milliseconds. For Friday to rule on.
+
+## Citation notes
+- ScreenshotWatcherTests.swift:17 still cites OC-2006 and 2072 for a test that proves plain-folder and system-vs-Desktop; probable mis-cite, left alone (out of the approved edit list).
