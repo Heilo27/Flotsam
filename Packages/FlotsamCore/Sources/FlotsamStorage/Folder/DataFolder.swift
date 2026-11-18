@@ -47,6 +47,18 @@ public struct DataFolder: Sendable {
             if case .failure = fileSystem.createDirectory(at: folder, permissions: Self.folderPermissions) {
                 return .failure(FlotsamError(.stoIo002, "Data folder could not be created"))
             }
+            // `createDirectory` applies its mode only to a folder it creates, so a folder an earlier build (or the
+            // user) left looser is tightened here, every launch (FR-007-01).
+            guard Self.enforceMode(Self.folderPermissions, at: folder) else {
+                return .failure(FlotsamError(.stoIo002, "Data folder permissions could not be restricted"))
+            }
+        }
+        // Folders Flotsam created in earlier launches: same rule, and only if they exist (they are made on demand).
+        for folder in [preMigrationURL] + existingQuarantineFolders(fileSystem: fileSystem)
+        where FileManager.default.fileExists(atPath: folder.path) {
+            guard Self.enforceMode(Self.folderPermissions, at: folder) else {
+                return .failure(FlotsamError(.stoIo002, "Data folder permissions could not be restricted"))
+            }
         }
         // Thumbnails are regenerable, so they are kept out of backups (FR-007-01). Best effort: a volume that cannot
         // honour the flag only makes the backup bigger.
@@ -60,11 +72,36 @@ public struct DataFolder: Sendable {
         return .success(())
     }
 
-    /// Database files are owner-only like the folder (FR-007-01). SQLite creates them with the process umask.
-    func restrictDatabaseFilePermissions() {
-        for url in databaseFileURLs where FileManager.default.fileExists(atPath: url.path) {
-            try? FileManager.default.setAttributes([.posixPermissions: Self.filePermissions], ofItemAtPath: url.path)
+    /// Sets `mode` on an existing path. True when the mode is in force afterwards (including "already was").
+    @discardableResult
+    private static func enforceMode(_ mode: Int, at url: URL) -> Bool {
+        let current = (try? FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int) ?? nil
+        if current == mode { return true }
+        do {
+            try FileManager.default.setAttributes([.posixPermissions: mode], ofItemAtPath: url.path)
+            return true
+        } catch {
+            return false
         }
+    }
+
+    /// Makes the database files owner-only BEFORE the pool opens them (FR-007-01, FR-007-02). SQLite creates `-wal`
+    /// and `-shm` with the mode of the main database file, ignoring the umask, so a main file that is already 0600
+    /// makes all three 0600 from the moment each exists. A missing main file is created empty (0600); a zero-byte
+    /// `flotsam.sqlite` is a new empty library, not damage (FR-007-13). Existing files written by an earlier build with
+    /// the process umask (0644) are tightened here, before SQLite touches them. Failure is `STO-IO-002`.
+    func prepareDatabaseFiles(fileSystem: any FileSystemPort) -> FlotsamResult<Void> {
+        if !fileSystem.fileExists(at: databaseURL),
+            case .failure = fileSystem.writeFile(Data(), to: databaseURL, permissions: Self.filePermissions)
+        {
+            return .failure(FlotsamError(.stoIo002, "Database file could not be created"))
+        }
+        for url in databaseFileURLs where FileManager.default.fileExists(atPath: url.path) {
+            guard Self.enforceMode(Self.filePermissions, at: url) else {
+                return .failure(FlotsamError(.stoIo002, "Database file permissions could not be restricted"))
+            }
+        }
+        return .success(())
     }
 
     /// Thumbnail file for an item at one size (FR-007-07): `thumbs/<itemId>-<size>.jpg`.
