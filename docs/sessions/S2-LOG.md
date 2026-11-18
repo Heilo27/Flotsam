@@ -1778,3 +1778,32 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 - `bin/build.sh Debug`: 0 compiler warnings. The only "warning:" line is the AppIntents metadata note.
 
 **Found, not fixed:** the header comment in `FRD002AuditBTests.swift` still says signposts have no test seam. `SignpostProbe` now provides one.
+
+## 2026-11-18: TASK-477, OC-5133 root cause, on `s2/task477` (base bc8cf82)
+
+**Verdict: test-timing defect, not a product race.**
+- The "extra" write is the first expansion's own clipboard restore, its write #2 ("previous clipboard"). It comes from `ClipboardPreserver.restore` (ClipboardPreservation.swift), via `PasteExpansion.finish`, which is `TriggerExpander.expand` step 8.
+- The test's `writesBefore` snapshot was taken after `eventually { writtenTexts.contains("gone text") }`. That condition is met after the first write, so the restore landed 3–10 ms later under load.
+- The first expansion's ⌘V lands late in the same way. That made line 133, the `keys.actions.count` check, flaky too.
+- The post-delete ';del' is ruled out as the source. In every instrumented failure, `decision == .pass` and the only writes were the expansion write and the restore.
+
+**Fix, 7615768 (test only, no FRD change):**
+- A new `expansionSettled` helper waits for the paste to be posted and the previous clipboard to be restored.
+- It waits for that both before the baseline snapshot and after the ';keep' expansion.
+- It asserts the baseline exactly: 2 writes, 2 key actions.
+- The no-write and no-key checks moved to after ';keep' settles. Events are handled serially, so any expansion from the deleted ';del' would already show up in the totals. The old checks, taken straight after the Space, passed whether or not it fired.
+- The new end-state checks are `writtenTexts == ["gone text","kept text"]`, writes == before+2 and keys == before+2.
+
+**Mutation:** skip `store.remove(itemIds:)` in the `.itemsDeleted` handler. The test goes red at decision == .pass, at keys == before+2, and at triggers.count == 1. The write-count check alone does not catch this, because once the item is deleted the expansion posts keys but writes nothing. Reverted.
+
+**OC-448-W8: unresolved.**
+- It passed 60/60 alone under 10× `yes` load, and 3/3 in the gate runs.
+- The original failure text could not be recovered. Line 108 is the `@Test` attribute, so a thrown `try` in file setup (WatcherRig, setxattr, setAttributes) is likely.
+- It is probably a different cause from OC-5133. That is unproven, so it is left unchanged.
+
+**Gates:**
+- arch PASS.
+- 3 consecutive full `swift test` runs under load: 2976 tests each, 0 failures, 19 known issues each. Load average at start 16 / 78 / 88, reaching 133 at the end.
+- `build.sh Debug`: 1 warning. It is the known ClipboardCapture:118 one, already fixed on `s2/task457`, which is not in this base.
+
+**Report only:** `TriggerEngine.run()` discards `ExpansionOutcome`, so tests have no engine completion signal. They infer the end of an expansion from the pasteboard instead.
