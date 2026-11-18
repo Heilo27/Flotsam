@@ -146,19 +146,40 @@ private func preflight(
 }
 
 @Suite struct Worf439bOSErrorTests {
+    // Log text: FR-000-01 requires a static English literal and FR-006-11 names no wording for these failures, so the
+    // strings below are pinned as the shipped log text (expectFlotsamError compares internalMessage verbatim).
     @Test(arguments: [
-        ShelfDragStart.OSFailure.noCard, .noWindow, .noEvent, .providerRejected, .noRepresentation,
+        (ShelfDragStart.OSFailure.noCard, "No card to drag"),
+        (.noWindow, "Drag source view has no window"),
+        (.noEvent, "Drag has no mouse event"),
+        (.providerRejected, "Pasteboard refused a drag item"),
+        (.noRepresentation, "Drag asked for a type the card does not hold"),
     ])
-    func everyOSFailureIsShfOs001(failure: ShelfDragStart.OSFailure) {
-        #expect(ShelfDragStart.osError(failure).code == .shfOs001)
-        #expect(ShelfDragStart.osError(failure).context.isEmpty)
+    func everyOSFailureIsShfOs001WithItsOwnLogText(failure: ShelfDragStart.OSFailure, message: String) {
+        expectFlotsamError(ShelfDragStart.osError(failure), code: .shfOs001, message: message)
     }
 
     @Test func nothingLeftToDragIsLibDat001WithTheCardOnlyWhenOne() {
-        #expect(ShelfDragStart.nothingLeftToDrag(cards: [shelfID(4)]).code == .libDat001)
-        #expect(ShelfDragStart.nothingLeftToDrag(cards: [shelfID(4)]).context == [.itemId: .id(shelfID(4))])
-        #expect(ShelfDragStart.nothingLeftToDrag(cards: [shelfID(4), shelfID(5)]).context.isEmpty)
-        #expect(ShelfDragStart.nothingLeftToDrag(cards: []).context.isEmpty)
+        expectFlotsamError(
+            ShelfDragStart.nothingLeftToDrag(cards: [shelfID(4)]),
+            code: .libDat001, message: "Nothing left to drag", context: [.itemId: .id(shelfID(4))])
+        expectFlotsamError(ShelfDragStart.nothingLeftToDrag(cards: [shelfID(4), shelfID(5)]), code: .libDat001, message: "Nothing left to drag")
+        expectFlotsamError(ShelfDragStart.nothingLeftToDrag(cards: []), code: .libDat001, message: "Nothing left to drag")
+    }
+
+    @Test func preflightAndLaunchRouteThroughTheSameLogText() {
+        // red if a call site builds its own error with different wording instead of going through osError.
+        let noWindow = preflight(plan([textItem(1)], cards: [1]), window: false)
+        guard case .failure(let windowError) = noWindow else { Issue.record("expected failure, got \(noWindow)"); return }
+        expectFlotsamError(windowError, code: .shfOs001, message: "Drag source view has no window")
+
+        let noEvent = preflight(plan([textItem(1)], cards: [1]), event: false)
+        guard case .failure(let eventError) = noEvent else { Issue.record("expected failure, got \(noEvent)"); return }
+        expectFlotsamError(eventError, code: .shfOs001, message: "Drag has no mouse event")
+
+        let rejected = ShelfDragStart.launch(plan([textItem(1)], cards: [1]), outcomes: [.providerRejected])
+        guard case .fail(let rejectedError) = rejected else { Issue.record("expected fail, got \(rejected)"); return }
+        expectFlotsamError(rejectedError, code: .shfOs001, message: "Pasteboard refused a drag item")
     }
 }
 
