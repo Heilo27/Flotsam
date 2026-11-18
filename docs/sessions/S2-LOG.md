@@ -1437,3 +1437,27 @@ Values are the median of 3 harness runs. Earlier A4 values are in brackets.
 **Isolation**
 - Real DB, `-wal` and prefs sha1 matched their baselines (03fc64cf…, c1189741…, f20f539d…).
 - The walk prefs domain and its plist were removed, and no Flotsam launchd entry, process or crash report remains. The clone was deleted.
+
+## 2026-11-18: S1 checks on main ea9b4af and obrien-460 @ 67a0883 (log only, nothing fixed)
+
+Setup: fresh clones, Debug builds with `PRODUCT_BUNDLE_IDENTIFIER=io.github.heilo27.FlotsamWalk`, and a clean sandbox (walk prefs domain and scratch `CFFIXED_USER_HOME`) before each launch. Real DB, -wal and prefs hashes were unchanged before and after (03fc64cf…, c1189741…, f20f539d…). No login item remained at the end (`launchctl print gui/$UID | grep -i flotsam` was empty).
+
+### TASK-460 "Login Item Added" banner: INCONCLUSIVE on both builds
+- `sfltool dumpbtm` timed out after 30 s (rc=142) before and after on both builds, without sudo. So there is no before/after BTM dump. The evidence is from `log show`.
+- **ea9b4af:**
+  - The only BTM event was `BTMManager.userDataDidChange`, about 0.4 s after the first clean launch, while onboarding was still on step 1. This is before any register call path can run.
+  - No BTM event fired when Launch at Login was unchecked on step 7, or on Continue.
+- **obrien-460 @ 67a0883:**
+  - Same pattern: one `userDataDidChange` about 0.4 s after the first launch, and none on uncheck or Continue.
+  - A third launch, with onboarding already complete, produced 0 events.
+- **Banner timing:** the banner stays on screen, so screenshots can't time it. The only matching system event is at first launch, not at Continue.
+- **Code:** the only `SMAppService.mainApp` calls in ea9b4af are in `App/Platform/SMLoginItemService.swift` (status read, register, unregister). What causes the launch-time BTM event is not determined. The live evidence can't separate the 460 reconcile path from the old guard + setEnabled path.
+
+### TASK-455 "Needs attention" dot clears after recovery: BLOCKED
+- The degraded state needs a missing Accessibility or Input Monitoring grant, and the walk can't change TCC.
+- The live app showed "capturing" and "No notices". This needs a human to revoke the grant, recover, and watch the dot.
+- Ticketmaster `get_task` returned "Task not found" for TASK-455 on this Mac.
+
+### TASK-453 ⌘A/⌘C/⌘V in Library search: PASS (ea9b4af)
+- Typed `hello453`, then ⌘A and ⌘C: the pasteboard read `hello453`.
+- Cleared the field, put `SENTINEL453` on the pasteboard, then ⌘V: the field read `SENTINEL453`.
