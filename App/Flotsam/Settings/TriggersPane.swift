@@ -1,16 +1,11 @@
 import FlotsamBase
 import SwiftUI
 
-/// The permission rows (FR-008-13), refreshed while the pane is on screen so a grant made in System Settings shows
-/// without reopening the window. Shared by Triggers and Privacy.
+/// The permission rows (FR-008-13). The owning pane re-reads `rows` through `refreshWhileVisible` (once for the whole
+/// group), so a grant made in System Settings shows without reopening the window.
 struct PermissionRows: View {
     let probe: any PermissionProbe
-    @State private var rows: [PermissionRow]
-
-    init(probe: any PermissionProbe) {
-        self.probe = probe
-        _rows = State(initialValue: PermissionRow.current(probe: probe))
-    }
+    let rows: [PermissionRow]
 
     var body: some View {
         ForEach(rows) { row in
@@ -27,12 +22,6 @@ struct PermissionRows: View {
             }
             .accessibilityElement(children: .contain)
         }
-        .task {
-            while !Task.isCancelled {
-                rows = PermissionRow.current(probe: probe)
-                try? await Task.sleep(for: .seconds(2))
-            }
-        }
     }
 }
 
@@ -40,13 +29,19 @@ struct PermissionRows: View {
 /// excluded apps.
 struct TriggersPane: View {
     let model: SettingsModel
+    @State private var rows: [PermissionRow]
+
+    init(model: SettingsModel) {
+        self.model = model
+        _rows = State(initialValue: PermissionRow.current(probe: model.env.permissions))
+    }
 
     var body: some View {
         let enabled = model.value(SettingKeys.triggersEnabled)
         Form {
             Section {
                 Toggle(isOn: model.binding(SettingKeys.triggersEnabled)) { Text(.expandTriggers) }
-                PermissionRows(probe: model.env.permissions)
+                PermissionRows(probe: model.env.permissions, rows: rows)
                 ForEach(
                     TriggerPermissionNotice.missing(triggersEnabled: enabled, probe: model.env.permissions), id: \.rawValue
                 ) { code in
@@ -62,5 +57,6 @@ struct TriggersPane: View {
             }
         }
         .settingsPaneChrome()
+        .refreshWhileVisible { rows = PermissionRow.current(probe: model.env.permissions) }
     }
 }
