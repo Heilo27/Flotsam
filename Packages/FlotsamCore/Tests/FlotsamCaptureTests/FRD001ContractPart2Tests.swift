@@ -672,13 +672,17 @@ struct FRD001SuspensionContractTests {
     @Test("OC-1083: after suspension, access returns without a new copy; the 60 s probe resumes capture and clears the warning")
     func oc1083() async throws {
         // given suspension on an empty pasteboard; when the text becomes readable with NO changeCount bump and 60 s pass;
-        // then the probe stores it and the Notice clears.
-        try await withRig { rig in
+        // then the probe stores it and the Notice clears. Timer seam (ADR-0011): the tick after the 60 s is fired by
+        // hand, so no 3 s real-timer window decides the outcome (TASK-447).
+        let timers = FakeTimers()
+        try await withRig(scheduleTimer: timers.schedule) { rig in
             await suspendCapture(rig)
+            let source = try #require(timers.live.first, "capture keeps a poll source while suspended")
             let v = uid("probe")
             rig.pasteboard.reveal([PasteboardRepresentation(uti: PB.text, data: PB.data(v))])
             rig.clock.advance(by: 60)
-            #expect(await rig.until(seconds: 3) { try await rig.item(withText: v).count == 1 }, "the probe stores the now-readable copy")
+            source.fire()
+            #expect(await rig.until(seconds: 10) { try await rig.item(withText: v).count == 1 }, "the probe stores the now-readable copy")
             await rig.flush()
             #expect(noticeMessages(rig, code: .capPrm001).isEmpty, "CAP-PRM-001 must clear when capture resumes")
             #expect(rig.presenter.latestNotices.isEmpty, "the warning dot must clear when capture resumes")
@@ -687,12 +691,17 @@ struct FRD001SuspensionContractTests {
 
     @Test("OC-1083 boundary: 59 s after suspension the probe has not run and the copy is not stored yet")
     func oc1083TooEarly() async throws {
-        try await withRig { rig in
+        let timers = FakeTimers()
+        try await withRig(scheduleTimer: timers.schedule) { rig in
             await suspendCapture(rig)
+            let source = try #require(timers.live.first, "capture keeps a poll source while suspended")
             let v = uid("early")
             rig.pasteboard.reveal([PasteboardRepresentation(uti: PB.text, data: PB.data(v))])
             rig.clock.advance(by: 59)
-            try await Task.sleep(for: .milliseconds(1200))
+            let queriesBefore = rig.pasteboard.typeQueries
+            source.fire()
+            await rig.flush()
+            #expect(rig.pasteboard.typeQueries == queriesBefore, "59 s: the probe has not run")
             try #expect(await rig.item(withText: v).isEmpty)
         }
     }

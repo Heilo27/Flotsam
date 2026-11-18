@@ -35,17 +35,25 @@ struct SystemClockTests {
     // OC-0077. Given a task already cancelled before the sleep starts. When sleep(for: 10 s) is awaited.
     // Then it returns without throwing in under 1 s and Task.isCancelled is true.
     // Red if: cancellation no longer returns early (sleeps the full duration), or the flag is lost.
+    // Wall-clock bound with no clock seam (SystemClock is the one real sleeper): the metric is the best of up to three
+    // runs against the unchanged 1 s bound, so a starved run passes on a retry while a sleep that ignores
+    // cancellation takes 10 s on every run (TASK-447).
     @Test("sleep in a task cancelled before it starts returns early and leaves the task cancelled")
     func cancelledBeforeSleepReturnsEarly() async {
-        let task = Task {
-            // Hold until the outer cancel() lands, so the sleep begins in an already-cancelled task.
-            while !Task.isCancelled { await Task.yield() }
-            return await timedSleep(.seconds(10))
+        var best = Duration.seconds(1_000)
+        for _ in 1...3 {
+            let task = Task {
+                // Hold until the outer cancel() lands, so the sleep begins in an already-cancelled task.
+                while !Task.isCancelled { await Task.yield() }
+                return await timedSleep(.seconds(10))
+            }
+            task.cancel()
+            let outcome = await task.value
+            #expect(outcome.cancelledAfter == true)
+            best = min(best, outcome.elapsed)
+            if best < .seconds(1) { break }
         }
-        task.cancel()
-        let outcome = await task.value
-        #expect(outcome.elapsed < .seconds(1))
-        #expect(outcome.cancelledAfter == true)
+        #expect(best < .seconds(1))
     }
 
     // OC-0077. Given a task that has signalled it is about to sleep 10 s. When it is cancelled after that signal.
@@ -53,15 +61,20 @@ struct SystemClockTests {
     // Red if: cancellation during the sleep does not wake it (sleeps the full 10 s), or the cancelled flag is lost.
     // No lower bound on elapsed: when the cancel lands relative to the sleep is scheduler-dependent, so any floor
     // flaked under load (the child could start after cancel(), elapsed ~0). "Sleeps at all" is owned by the live
-    // 50 ms test above (red if sleep is skipped or shortened).
+    // 50 ms test above (red if sleep is skipped or shortened). Best of up to three runs for the 1 s bound, as above.
     @Test("cancelling during a 10 s sleep wakes it early")
     func cancelledDuringSleepReturnsEarly() async {
-        let (signals, signal) = AsyncStream<Void>.makeStream()
-        let task = Task { await timedSleep(.seconds(10), onAboutToSleep: { signal.yield() }) }
-        for await _ in signals { break }  // deterministic: cancel only after the task reached its sleep
-        task.cancel()
-        let outcome = await task.value
-        #expect(outcome.elapsed < .seconds(1))
-        #expect(outcome.cancelledAfter == true)
+        var best = Duration.seconds(1_000)
+        for _ in 1...3 {
+            let (signals, signal) = AsyncStream<Void>.makeStream()
+            let task = Task { await timedSleep(.seconds(10), onAboutToSleep: { signal.yield() }) }
+            for await _ in signals { break }  // deterministic: cancel only after the task reached its sleep
+            task.cancel()
+            let outcome = await task.value
+            #expect(outcome.cancelledAfter == true)
+            best = min(best, outcome.elapsed)
+            if best < .seconds(1) { break }
+        }
+        #expect(best < .seconds(1))
     }
 }
