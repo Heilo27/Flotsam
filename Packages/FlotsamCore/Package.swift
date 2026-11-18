@@ -70,7 +70,7 @@ let package = Package(
         ),
         .testTarget(
             name: "FlotsamTriggersTests",
-            dependencies: ["FlotsamTriggers", "FlotsamBase", "FlotsamStorage", "FlotsamPaste"]
+            dependencies: ["FlotsamTriggers", "FlotsamBase", "FlotsamStorage", "FlotsamPaste", "FlotsamCapture", "FlotsamPayload"]
         ),
         .target(
             name: "FlotsamShelf",

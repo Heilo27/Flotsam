@@ -235,6 +235,8 @@ final class ExpanderHarness {
     let sink = RecordingSink()
     let reporter: ErrorReporter
     let expander: TriggerExpander
+    /// The ledger the expansion writes through, so a test can hand the same one to capture (FR-001-03).
+    let ledger = OwnWriteLedger()
 
     init(
         content: FlotsamResult<ItemContent> = .success(
@@ -244,7 +246,6 @@ final class ExpanderHarness {
         store = ExpansionStore(content)
         pasteboard = ExpansionPasteboard(plainText: clipboard, extraTypes: clipboardTypes)
         reporter = ErrorReporter(presenter: presenter, clock: clock, sink: sink)
-        let ledger = OwnWriteLedger()
         let preserver = ClipboardPreserver(pasteboard: pasteboard, ownWrites: ledger, clock: clock)
         let paste = PasteService(
             store: store, pasteboard: pasteboard, files: NoFiles(), frontmost: EnvironmentFrontmost(environment: environment),
