@@ -21,7 +21,7 @@ import Testing
         (FlotsamStrings.formatKinds(in: template) ?? []).map { $0 == .integer ? (count as CVarArg) : ("label" as CVarArg) }
     }
 
-    @Test("FR-000-05 the sweep finds the seven count strings that carry plural variations")
+    @Test("FR-000-05 the sweep finds the eight count strings that carry plural variations")
     func theExpectedKeysArePlural() throws {
         let expected: Set<String> = [
             "ui.library.footerItems", "ui.organize.confirmDelete", "ui.organize.confirmDeleteTag", "ui.row.bundleCount",
