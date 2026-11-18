@@ -712,3 +712,243 @@ struct FRD001SuspensionContractTests {
         }
     }
 }
+
+// MARK: Batch 3b: OC-1088, OC-1091..OC-1095, OC-1097, OC-1099..OC-1106, OC-1110 (latency, robustness, error codes)
+
+@MainActor
+@Suite("FRD-001 contract part 2: latency, robustness and error-code surfacing")
+struct FRD001RobustnessContractTests {
+
+    @Test("OC-1088: 50 copies at staggered times are each stored within one poll tick (plus ingest)")
+    func oc1088() async throws {
+        // given the real 0.5 s timer and no manual poll; for each copy measure write -> stored. A slower poll fails.
+        try await withRig { rig in
+            var slowest = 0.0
+            var missed: [Int] = []
+            for i in 0..<50 {
+                try await Task.sleep(for: .milliseconds((i * 37) % 120))
+                let text = uid("L\(i)")
+                let wrote = ContinuousClock.now
+                rig.pasteboard.copyText(text)
+                let stored = await rig.until(seconds: 1.5) { try await rig.item(withText: text).count == 1 }
+                let elapsed = ContinuousClock.now - wrote
+                let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+                slowest = max(slowest, seconds)
+                if !stored { missed.append(i) }
+            }
+            #expect(missed.isEmpty, "every copy was stored")
+            // 0.5 s interval + 0.1 s tolerance is the contract's 0.6 s; 0.15 s covers the 20 ms observer poll and ingest.
+            #expect(slowest <= 0.75, "slowest write -> stored was \(slowest) s")
+            try #expect(await rig.itemCount() == 50)
+        }
+    }
+
+    @Test("OC-1091 / OC-1099: a failing read creates nothing, logs CAP-OS-001 and shows its Notice; the next copy is stored")
+    func oc1091() async throws {
+        try await withRig { rig in
+            rig.pasteboard.failingTypes = [PB.text]
+            rig.pasteboard.copyText(uid("unreadable"))
+            await rig.process()
+            #expect(await rig.until { !noticeMessages(rig, code: .capOs001).isEmpty })
+            try #expect(await rig.itemCount() == 0)
+            #expect(noticeMessages(rig, code: .capOs001) == ["Flotsam couldn't read the clipboard just now. It will keep trying."])
+            #expect(rig.sink.logged(.capOs001).map(\.level) == [.default])
+
+            rig.pasteboard.failingTypes = []
+            try await Task.sleep(for: .milliseconds(300))
+            let y = uid("Y")
+            rig.pasteboard.copyText(y)
+            #expect(await rig.until(seconds: 2) { try await rig.item(withText: y).count == 1 }, "the timer kept running")
+            try #expect(await rig.itemCount() == 1)
+        }
+    }
+
+    @Test("OC-1092 / OC-1110: an unwritable store stores nothing and surfaces CAP-IO-001 (error level); writing works again afterwards")
+    func oc1110() async throws {
+        // given the database refusing writes (SQLITE_READONLY through query_only, the same failure an unwritable data
+        // folder gives the open pool); then no item, the CAP-IO-001 Notice and an error-level log record.
+        try await withRig { rig in
+            try await rig.database.pool.writeWithoutTransaction { try $0.execute(sql: "PRAGMA query_only = ON") }
+            let f = uid("F")
+            await rig.copyText(f)
+            #expect(await rig.until { !rig.presenter.latestNotices.isEmpty })
+            try #expect(await rig.item(withText: f).isEmpty)
+            let codes = rig.presenter.latestNotices.map(\.code.rawValue)
+            // OC-1092 accepts CAP-IO-001 or any STO-* code.
+            #expect(codes.allSatisfy { $0 == "CAP-IO-001" || $0.hasPrefix("STO-") }, "surfaced \(codes)")
+            // OC-1110 is stricter: the CAP-IO-001 catalogue message and an error-level record.
+            #expect(noticeMessages(rig, code: .capIo001) == ["Flotsam couldn't save a copy. The disk may be full or its data folder unreadable."], "surfaced \(codes)")
+            #expect(rig.sink.logged(.capIo001).map(\.level) == [.error])
+
+            try await rig.database.pool.writeWithoutTransaction { try $0.execute(sql: "PRAGMA query_only = OFF") }
+            let g = uid("G")
+            await rig.copyText(g)
+            try #expect(await rig.item(withText: g).count == 1)
+            try #expect(await rig.itemCount() == 1)
+        }
+    }
+
+    @Test("OC-1093 (sink half): no marker from a text, URL, email, phone, colour or file name reaches the log; kind, size and outcome do")
+    func oc1093() async throws {
+        try await withRig { rig in
+            let markers = ["zq7markerTEXT", "zq7markerURL", "zq7markerMAIL", "5550177", "7F3A9C", "zq7markerFILE"]
+            rig.pasteboard.copyText("hello zq7markerTEXT")
+            await rig.process()
+            for text in ["https://example.com/zq7markerURL", "zq7markerMAIL@example.com", "(415) 555-0177", "#7F3A9C"] {
+                await rig.copyText(text)
+            }
+            rig.pasteboard.copy(PB.fileURLReps([try rig.makeFile("zq7markerFILE.txt")]))
+            await rig.process()
+            try #expect(await rig.itemCount() == 6)
+            for marker in markers { #expect(!rig.sink.everything.contains(marker), "\(marker) leaked into the log") }
+            let processed = rig.sink.records.filter { $0.headline == "pasteboard.processed" }
+            #expect(processed.count == 6)
+            #expect(processed.allSatisfy { $0.publicContext.contains("outcome=stored") && $0.publicContext.contains("byteSize=") && $0.publicContext.contains("kind=") })
+        }
+    }
+
+    @Test("OC-1094: TransientType and AutoGeneratedType with unreadable data are rejected CAP-POL-001, never CAP-OS-001 or CAP-VAL-001")
+    func oc1094() async throws {
+        try await withRig { rig in
+            for marker in [PasteboardMarkers.transient, PasteboardMarkers.autoGenerated] {
+                rig.sink.reset()
+                rig.pasteboard.failingTypes = [marker, PB.text]
+                rig.pasteboard.copy([(PB.text, PB.data("x")), (marker, Data())])
+                await rig.process()
+                #expect(rig.sink.logged(.capPol001).count == 1, "\(marker)")
+                #expect(rig.sink.logged(.capOs001).isEmpty && rig.sink.logged(.capVal001).isEmpty, "\(marker)")
+                try #expect(await rig.itemCount() == 0)
+            }
+            #expect(rig.pasteboard.bytesRequested.isEmpty, "rejected on marker presence, no data read")
+            #expect(rig.presenter.latestNotices.isEmpty)
+        }
+    }
+
+    @Test("OC-1095: two texts within 50 ms: M2 is stored, M1 may be missed, and no error is raised")
+    func oc1095() async throws {
+        try await withRig { rig in
+            let m1 = uid("M1"), m2 = uid("M2")
+            rig.pasteboard.copyText(m1)
+            rig.pasteboard.copyText(m2)
+            await rig.process()
+            let stored = try await rig.items()
+            #expect(stored.contains { $0.plainText == m2 && $0.copyCount == 1 })
+            #expect((1...2).contains(stored.count))
+            #expect(rig.presenter.noticeLists.isEmpty && rig.presenter.huds.isEmpty)
+            #expect(await rig.reporter.recentErrors().isEmpty)
+        }
+    }
+
+    @Test("OC-1097: after stored, deduped, concealed, ignored-app, paused and over-limit copies the pasteboard is untouched")
+    func oc1097() async throws {
+        // given six outcomes; after each the changeCount equals the user's own copy and Flotsam wrote nothing.
+        try await withRig { rig in
+            @MainActor func check(_ label: String, expectedTypes: [String], _ copy: () -> Void) async {
+                copy()
+                let mine = rig.pasteboard.changeCount
+                await rig.process()
+                #expect(rig.pasteboard.changeCount == mine, "\(label): Flotsam changed the pasteboard")
+                #expect(rig.pasteboard.writes == 0, "\(label): Flotsam wrote to the pasteboard")
+                #expect(rig.pasteboard.currentTypeIdentifiers() == expectedTypes, "\(label): types were altered")
+            }
+            let text = uid("keep")
+            await check("stored", expectedTypes: [PB.text]) { rig.pasteboard.copyText(text) }
+            await check("deduped", expectedTypes: [PB.text]) { rig.pasteboard.copyText(text) }
+            await check("concealed", expectedTypes: [PB.text, PasteboardMarkers.concealed]) {
+                rig.pasteboard.copy([(PB.text, PB.data("s")), (PasteboardMarkers.concealed, Data())])
+            }
+            rig.ignored = ["com.example.writer"]
+            await check("ignored app", expectedTypes: [PB.text]) { rig.pasteboard.copyText(uid("ign")) }
+            rig.ignored = []
+            rig.settings.set(.paused, for: SettingKeys.captureMode)
+            await check("paused", expectedTypes: [PB.text]) { rig.pasteboard.copyText(uid("paused")) }
+            rig.settings.set(.active, for: SettingKeys.captureMode)
+            await check("over limit", expectedTypes: [PB.text]) { rig.pasteboard.copyText(String(repeating: "c", count: tenMiB + 1)) }
+            try #expect(await rig.itemCount() == 1)
+        }
+    }
+
+    // MARK: Info-only codes (OC-1100..OC-1106)
+
+    @Test("OC-1100: an unresolvable source logs CAP-OS-002 at info, stores the item as Unknown, shows nothing")
+    func oc1100() async throws {
+        try await withRig(frontmost: nil) { rig in
+            await rig.copyText(uid("anon"))
+            let stored = try await rig.items()
+            #expect(stored.count == 1)
+            #expect(stored.map(\.sourceBundleId) == [nil] && stored.map(\.sourceName) == [nil])
+            expectInfoOnly(rig, .capOs002)
+        }
+    }
+
+    @Test("OC-1101: a ConcealedType copy logs CAP-POL-001 at info only")
+    func oc1101() async throws {
+        try await withRig { rig in
+            rig.pasteboard.copy([(PB.text, PB.data("s")), (PasteboardMarkers.concealed, Data())])
+            await rig.process()
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capPol001)
+        }
+    }
+
+    @Test("OC-1102: a copy from an ignored app logs CAP-POL-002 at info only")
+    func oc1102() async throws {
+        try await withRig { rig in
+            rig.ignored = ["com.example.writer"]
+            await rig.copyText(uid("ignored"))
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capPol002)
+        }
+    }
+
+    @Test("OC-1103: a copy while Paused logs CAP-POL-003 at info only")
+    func oc1103() async throws {
+        try await withRig { rig in
+            rig.settings.set(.paused, for: SettingKeys.captureMode)
+            await rig.copyText(uid("paused"))
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capPol003)
+        }
+    }
+
+    @Test("OC-1104: a Flotsam paste-back logs CAP-POL-004 at info only")
+    func oc1104() async throws {
+        try await withRig { rig in
+            _ = rig.ledger.write([PasteboardRepresentation(uti: PB.text, data: PB.data("back"))], to: rig.pasteboard)
+            await rig.process()
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capPol004)
+        }
+    }
+
+    @Test("OC-1105: a whitespace-only text copy logs CAP-VAL-001 at info only")
+    func oc1105() async throws {
+        try await withRig { rig in
+            await rig.copyText("   \n")
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capVal001)
+        }
+    }
+
+    @Test("OC-1106: a file URL to a missing file logs CAP-DAT-001 at info only")
+    func oc1106() async throws {
+        try await withRig { rig in
+            rig.pasteboard.copy(PB.fileURLReps([rig.files.appendingPathComponent("missing.txt")]))
+            await rig.process()
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capDat001)
+        }
+    }
+}
+
+// MARK: Unreachable from this package (no seam in FlotsamCore; recorded in the session log, not faked here)
+//
+// OC-1079, OC-1089, OC-1090  performance, memory and signposts on a running app (p95, resident size, capture.persist).
+// OC-1084                    no seam: nothing raises CAP-PRM-001 at launch when the system access behaviour is not Allow
+//                            (PasteboardAccess feeds onboarding only). Reported as a defect from the code, not a test.
+// OC-1085 / OC-1086 (save)   the Save Clipboard action (AppContainer.saveClipboard) is a UI entry point; only the Curated
+//                            half of OC-1085 is covered above.
+// OC-1096                    needs a network monitor on a live process.
+// OC-1093 (log show)         only the sink half and the diagnostics ring are reachable; `log show` is an app-process check.
+// OC-1059/1064/1069/1070 and OC-1100..OC-1107 UI halves (rows, preview, menu-bar icon rendering, HUD drawing): the
+//                            presenter-level "no Notice, no HUD, no dot" half is asserted; pixels are Data's 8V.
