@@ -96,8 +96,7 @@ final class OnboardingModel {
     /// The only place onboarding registers the login item, and only on Continue (FR-008-15). A failure shows the HUD
     /// (SET-OS-001) and the switch reverts to what macOS reports.
     private func applyLoginItem() {
-        guard launchAtLogin != container.loginItem.isOn else { return }
-        if case .failure(let error) = container.loginItem.setEnabled(launchAtLogin) {
+        if case .failure(let error) = container.loginItem.reconcile(wanted: launchAtLogin) {
             let reporter = container.reporter
             Task { await reporter.report(error, origin: .userInitiated) }
             launchAtLogin = container.loginItem.isOn

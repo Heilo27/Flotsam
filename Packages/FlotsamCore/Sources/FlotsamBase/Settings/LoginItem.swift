@@ -31,4 +31,12 @@ public struct LoginItemController: Sendable {
         let result = on ? service.register() : service.unregister()
         return result.map { service.status }
     }
+
+    /// Brings macOS in line with what a switch says, and touches the service only when they differ. A switch that is off
+    /// while macOS has no login item makes no `register()` and no `unregister()` call, so no "Login Item Added" banner
+    /// can follow an unchecked box (FR-008-15). The one home of that rule for onboarding's Continue.
+    public func reconcile(wanted: Bool) -> FlotsamResult<LoginItemStatus> {
+        guard wanted != isOn else { return .success(status) }
+        return setEnabled(wanted)
+    }
 }
