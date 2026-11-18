@@ -502,6 +502,38 @@ private let msgUnknownVariable = "An unknown variable was left as plain text."
         model.stopRecording()
     }
 
+    // FR-005-04 / AC-005-04 (TASK-403): a rejected chord's inline error does not outlive the accepted chord that follows.
+    @Test func acceptedChordClearsThePriorInlineError() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.startRecording()
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C: reserved, rejected
+        #expect(model.recorder.errorMessage != nil)
+        #expect(model.recorder.isRecording)
+
+        pressInProcess(keyCode: 11, modifiers: [.control, .option])  // ⌃⌥B: accepted
+        #expect(model.hotkey == Chord(keyCode: 11, modifiers: [.control, .option]))
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+    }
+
+    // FR-005-04: Esc after a rejected chord also leaves no stale error.
+    @Test func escapeClearsThePriorInlineError() async throws {
+        let rig = try await Rig.make()
+        defer { rig.cleanUp() }
+        try await rig.seed(1)
+        let model = await rig.loaded(1)
+        model.startRecording()
+        pressInProcess(keyCode: 8, modifiers: [.command])  // ⌘C: rejected
+        #expect(model.recorder.errorMessage != nil)
+
+        pressInProcess(keyCode: 53, modifiers: [])  // Esc
+        #expect(model.recorder.isRecording == false)
+        #expect(model.recorder.errorMessage == nil)
+    }
+
     // A chord another Flotsam binding already owns is refused by the recorder (TRG-VAL-004).
     @Test func recorderRefusesAChordAnotherBindingOwns() async throws {
         let rig = try await Rig.make()

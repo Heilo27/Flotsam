@@ -11,7 +11,8 @@ import Observation
 @Observable
 final class ShortcutRecorderModel {
     private(set) var isRecording = false
-    /// The catalogue message of the last rejected chord; cleared when recording starts or ends.
+    /// The catalogue message of the last rejected chord; cleared when recording starts and in `stop()`, so every way
+    /// recording ends (accepted chord, Esc, Delete, focus loss) leaves no stale error (FR-005-04).
     private(set) var errorMessage: String?
     @ObservationIgnored private var monitor: Any?
     @ObservationIgnored private var registry: ShortcutRegistry?
@@ -41,6 +42,7 @@ final class ShortcutRecorderModel {
     func stop() {
         guard isRecording else { return }
         isRecording = false
+        errorMessage = nil
         if let monitor { NSEvent.removeMonitor(monitor) }
         monitor = nil
         registry?.endRecording()
