@@ -272,7 +272,7 @@ struct ClipboardRetryMarkersWorfTests {
         control.start()
         control.board.copy([text: Data("hunter2".utf8), "org.nspasteboard.ConcealedType": Data()])
         control.tick(6)
-        #expect(control.sink.count(containing: "CAP-POL-001") == 1, "control: observation of the skip must work")
+        await expectSettled(control.reporter, control.sink.count(containing: "CAP-POL-001"), 1, "control: observation of the skip must work")
 
         // given the marker lands on the retry tick
         let rig = try await Rig.make()
@@ -284,7 +284,7 @@ struct ClipboardRetryMarkersWorfTests {
         // when polling continues on the same changeCount
         rig.tick(6)
         // then one change is skipped once
-        #expect(rig.sink.count(containing: "CAP-POL-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-POL-001"), 1)
     }
 }
 
@@ -308,12 +308,12 @@ struct ClipboardRetrySuspensionWorfTests {
         rig.board.clear(); rig.tick(); rig.expire()
         try await rig.drain()
         // then CAP-PRM-001 is raised exactly once
-        #expect(rig.sink.count(containing: "CAP-PRM-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-PRM-001"), 1)
 
         // and a fourth does not raise it again
         rig.board.clear(); rig.tick(); rig.expire()
         try await rig.drain()
-        #expect(rig.sink.count(containing: "CAP-PRM-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-PRM-001"), 1)
     }
 
     @Test("OC-401-W10 the third empty change is not counted until its watch ends")
@@ -331,7 +331,7 @@ struct ClipboardRetrySuspensionWorfTests {
         // and the end of its watch tips it
         rig.expire()
         try await rig.drain()
-        #expect(rig.sink.count(containing: "CAP-PRM-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-PRM-001"), 1)
     }
 
     @Test("OC-401-W11 one empty change followed by a real copy never suspends, even repeated many times")
@@ -392,7 +392,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         control.board.copy(["com.example.unhonoured": Data("x".utf8)])
         control.tick(6)
         try await control.drain()
-        #expect(control.sink.count(containing: "CAP-VAL-001") == 1, "control: observation must work")
+        await expectSettled(control.reporter, control.sink.count(containing: "CAP-VAL-001"), 1, "control: observation must work")
 
         // given an empty first read, then an unhonoured type
         let rig = try await Rig.make()
@@ -405,7 +405,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick(6)
         try await rig.drain()
         // then the change is dropped once (FR-001-22: the next tick proceeds normally)
-        #expect(rig.sink.count(containing: "CAP-VAL-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-VAL-001"), 1)
     }
 
     @Test("OC-401-W15 read failure after a retry: CAP-OS-001 raised once, not on every tick (control: atomic)")
@@ -417,7 +417,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         control.board.copy(data("x"))
         control.tick(6)
         try await control.drain()
-        #expect(control.sink.count(containing: "CAP-OS-001") == 1, "control: observation must work")
+        await expectSettled(control.reporter, control.sink.count(containing: "CAP-OS-001"), 1, "control: observation must work")
 
         // given an empty first read, then a readable type whose read throws
         let rig = try await Rig.make()
@@ -431,7 +431,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick(6)
         try await rig.drain()
         // then one failed change raises one error
-        #expect(rig.sink.count(containing: "CAP-OS-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-OS-001"), 1)
         #expect(try await rig.texts() == [])
     }
 
@@ -442,7 +442,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         control.start()
         control.board.copy(data("x"))
         control.tick(6)
-        #expect(control.sink.count(containing: "CAP-POL-002") == 1, "control: observation must work")
+        await expectSettled(control.reporter, control.sink.count(containing: "CAP-POL-002"), 1, "control: observation must work")
 
         let rig = try await Rig.make(ignored: ["com.example.writer"])
         defer { rig.cleanUp() }
@@ -451,7 +451,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         rig.tick()
         rig.board.fill(data("x"))
         rig.tick(6)
-        #expect(rig.sink.count(containing: "CAP-POL-002") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-POL-002"), 1)
         #expect(try await rig.texts() == [])
     }
 
@@ -486,7 +486,7 @@ struct ClipboardRetryLatchWorfTests {
         control.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         control.board.copy(data("x"))
         control.tick(6)
-        #expect(control.sink.count(containing: "CAP-POL-003") == 1, "control: observation must work")
+        await expectSettled(control.reporter, control.sink.count(containing: "CAP-POL-003"), 1, "control: observation must work")
 
         // given an empty first read while active
         let rig = try await Rig.make()
@@ -499,7 +499,7 @@ struct ClipboardRetryLatchWorfTests {
         rig.board.fill(data("x"))
         rig.tick(6)
         // then the change is skipped once and nothing is stored
-        #expect(rig.sink.count(containing: "CAP-POL-003") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-POL-003"), 1)
         #expect(try await rig.texts() == [])
     }
 
@@ -510,7 +510,7 @@ struct ClipboardRetryLatchWorfTests {
         control.start()
         control.board.copy([text: Data("x".utf8), PasteboardMarkers.ownWrite: Data()])
         control.tick(6)
-        #expect(control.sink.count(containing: "CAP-POL-004") == 1, "control: observation must work")
+        await expectSettled(control.reporter, control.sink.count(containing: "CAP-POL-004"), 1, "control: observation must work")
 
         // given an empty first read, then Flotsam's own marker and payload
         let rig = try await Rig.make()
@@ -522,7 +522,7 @@ struct ClipboardRetryLatchWorfTests {
         // when polling continues
         rig.tick(6)
         // then one skip, nothing stored, nothing read
-        #expect(rig.sink.count(containing: "CAP-POL-004") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-POL-004"), 1)
         #expect(rig.board.snapshotReads == 0)
         #expect(try await rig.texts() == [])
     }
@@ -540,7 +540,7 @@ struct ClipboardRetryLatchWorfTests {
         _ = rig.ownWrites.write([PasteboardRepresentation(uti: text, data: Data("own".utf8))], to: rig.board)
         rig.tick(6)
         // then the ledger skip fires once, nothing is stored
-        #expect(rig.sink.count(containing: "CAP-POL-004") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-POL-004"), 1)
         #expect(try await rig.texts() == [])
     }
 
@@ -558,7 +558,7 @@ struct ClipboardRetryLatchWorfTests {
         rig.tick(6)
         try await rig.drain()
         // then one error for the one change, one read, nothing stored
-        #expect(rig.sink.count(containing: "CAP-OS-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-OS-001"), 1)
         #expect(rig.board.snapshotReads == 1)
         #expect(try await rig.texts() == [])
     }
@@ -603,7 +603,7 @@ struct ClipboardRetryLatchWorfTests {
         rig.tick(12)
         try await rig.drain()
         #expect(rig.board.snapshotReads == readsAtEnd)
-        #expect(rig.sink.count(containing: "CAP-VAL-001") == 1)
+        await expectSettled(rig.reporter, rig.sink.count(containing: "CAP-VAL-001"), 1)
         #expect(try await rig.texts() == [])
     }
 

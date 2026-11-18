@@ -84,7 +84,9 @@ private func withQARig(
         pasteboard: pasteboard, sourceApps: ContractSourceApps(frontmost: ContractRig.writerApp), ownWrites: OwnWriteLedger(),
         ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
         ignoredApps: { [] }, access: access, clock: clock, sink: sink,
-        scheduleTimer: timers?.schedule ?? ClipboardCapture.systemTimer)
+        // No test here relies on a real 0.5 s poll (the ones that need a tick pass FakeTimers or call captureNow()), and a
+        // live tick landing mid-assertion under full-suite load is what made these tests flake (TASK-425).
+        scheduleTimer: timers?.schedule ?? inertTimer)
     capture.start()
     let rig = QARig(database: database, presenter: presenter, sink: sink, clock: clock, reporter: reporter, pasteboard: pasteboard, capture: capture, settings: settings)
     do { try await body(rig) } catch {
