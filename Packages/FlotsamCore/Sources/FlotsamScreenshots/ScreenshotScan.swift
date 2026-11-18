@@ -161,9 +161,19 @@ public enum ScreenshotSelection {
     /// FR-002-08: the watermark may not pass the birth date of a file that is still to arrive (a hidden temporary that
     /// is renamed later) or still to settle, or the file would fall out of the window it is selected by. `births` are
     /// those files' birth dates; the ones past `holdWindow` are ignored.
-    public static func heldBack(_ proposed: Date, now: Date, births: [Date]) -> Date {
+    ///
+    /// `importedBirth` is the birth date of a file just imported: the watermark may not fall inside its slack either,
+    /// or the next launch selects it again (even when the user has deleted its item). The hold gives way to this only
+    /// as far as the held files stay selected: a file born later than the imported one stays inside the window
+    /// (born after the watermark minus the slack) while the watermark sits 5 s past the imported file. A held file
+    /// born at or before the imported one cannot be kept in the window and keep the imported file out; the hold wins.
+    public static func heldBack(_ proposed: Date, now: Date, births: [Date], importedBirth: Date? = nil) -> Date {
         guard let oldest = births.filter({ isHeld($0, now: now) }).min() else { return proposed }
-        return min(proposed, oldest)
+        let held = min(proposed, oldest)
+        guard let importedBirth else { return held }
+        let clearOfImported = importedBirth.addingTimeInterval(watermarkSlack)
+        guard clearOfImported > held, oldest.addingTimeInterval(watermarkSlack) > clearOfImported else { return held }
+        return clearOfImported
     }
 
     /// FR-002-08: where the watermark goes when a live import finishes: now, but never inside the slack of the file

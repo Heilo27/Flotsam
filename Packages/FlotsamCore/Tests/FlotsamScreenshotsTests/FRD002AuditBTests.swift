@@ -28,12 +28,9 @@ private func auditBUnreadable(_ rig: WatcherRig, _ name: String) throws -> URL {
     return url
 }
 
-/// Log records that report a reconcile scan's outcome. `screenshot.imported` is a per-file record, not a scan record.
-private func auditBScanOutcomeCount(_ records: [LogRecord]) -> Int {
-    records.filter {
-        let text = ($0.headline + " " + $0.publicContext).lowercased()
-        return text.contains("scan") || text.contains("reconcile")
-    }.count
+/// The `screenshot.scan` log lines (FR-000-11): one per reconcile scan, carrying its outcome and queued count.
+private func auditBScanLines(_ records: [LogRecord]) -> [LogRecord] {
+    records.filter { $0.headline == "screenshot.scan" }
 }
 
 /// Everything a record or a raised error could carry as text.
@@ -119,26 +116,32 @@ struct FRD002AuditBTests {
         #expect(try #require(rig.marks.value) >= watermark)
     }
 
-    @Test("OC-2041: waking from sleep and activating the app each log a completed reconcile-scan outcome")
+    @Test("OC-2041: waking from sleep and activating the app each log exactly one scan line: outcome succeeded, count 0")
     func scanOutcomeIsLogged() async throws {
         // given: pickup running, folder listable, nothing to import
         let rig = try WatcherRig(watermark: auditBEarlierLaunch())
         defer { rig.cleanUp() }
         await rig.watcher.start()
 
-        // when/then: wake
-        let beforeWake = rig.sink.records.count
+        // when/then: wake adds exactly one line, succeeded with 0 files queued
+        let beforeWake = auditBScanLines(rig.sink.records).count
         await rig.watcher.didWake()
-        #expect(await eventually(timeout: .seconds(1)) {
-            auditBScanOutcomeCount(Array(rig.sink.records.dropFirst(beforeWake))) >= 1
-        })
+        #expect(await eventually(timeout: .seconds(1)) { auditBScanLines(rig.sink.records).count > beforeWake })
+        await letItSettle()
+        let wakeLines = Array(auditBScanLines(rig.sink.records).dropFirst(beforeWake))
+        #expect(wakeLines.count == 1)
+        #expect(wakeLines.first?.publicContext.contains("outcome=succeeded") == true, "context: \(wakeLines.first?.publicContext ?? "")")
+        #expect(wakeLines.first?.publicContext.contains("count=0") == true, "context: \(wakeLines.first?.publicContext ?? "")")
 
-        // when/then: activation
-        let beforeActive = rig.sink.records.count
+        // when/then: activation adds exactly one more, the same way
+        let beforeActive = auditBScanLines(rig.sink.records).count
         await rig.watcher.didBecomeActive()
-        #expect(await eventually(timeout: .seconds(1)) {
-            auditBScanOutcomeCount(Array(rig.sink.records.dropFirst(beforeActive))) >= 1
-        })
+        #expect(await eventually(timeout: .seconds(1)) { auditBScanLines(rig.sink.records).count > beforeActive })
+        await letItSettle()
+        let activeLines = Array(auditBScanLines(rig.sink.records).dropFirst(beforeActive))
+        #expect(activeLines.count == 1)
+        #expect(activeLines.first?.publicContext.contains("outcome=succeeded") == true, "context: \(activeLines.first?.publicContext ?? "")")
+        #expect(activeLines.first?.publicContext.contains("count=0") == true, "context: \(activeLines.first?.publicContext ?? "")")
     }
 
     // MARK: Import recent screenshots

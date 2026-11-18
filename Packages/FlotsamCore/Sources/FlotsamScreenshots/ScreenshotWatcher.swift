@@ -529,12 +529,12 @@ public actor ScreenshotWatcher {
 
     /// FR-002-08: `proposed`, but not past the birth of a file that is not finished: still hidden, queued, unstable
     /// or failed. Its birth date has to stay inside the window the next scan selects by.
-    private func heldWatermark(_ proposed: Date) -> Date {
+    private func heldWatermark(_ proposed: Date, importedBirth: Date? = nil) -> Date {
         let now = clock.now()
         unfinished = unfinished.filter { ScreenshotSelection.isHeld($0.value, now: now) }
         hiddenFiles = hiddenFiles.filter { ScreenshotSelection.isHeld($0.value, now: now) }
         return ScreenshotSelection.heldBack(
-            proposed, now: now, births: Array(unfinished.values) + Array(hiddenFiles.values))
+            proposed, now: now, births: Array(unfinished.values) + Array(hiddenFiles.values), importedBirth: importedBirth)
     }
 
     private func seedWatermarkIfNone(at date: Date) async {
@@ -629,7 +629,7 @@ public actor ScreenshotWatcher {
         unfinished[job.file.url.path] = nil
         guard active else { return }
         let proposed = ScreenshotSelection.watermarkAfterImport(of: job.file, now: clock.now())
-        await advanceWatermark(to: heldWatermark(proposed), scan: false)
+        await advanceWatermark(to: heldWatermark(proposed, importedBirth: job.file.createdAt), scan: false)
     }
 
     /// A job's end counts toward its own press (a backfill job) and every press that joined it (a live job).
