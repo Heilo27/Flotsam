@@ -92,7 +92,10 @@ public final class FlotsamDatabase: Sendable {
                 // FR-007-17 / FR-007-13: a clean open on a launch that did not migrate ends the life of old plaintext copies.
                 if !migratedThisLaunch { layout.expirePlaintextCopies(fileSystem: fileSystem, now: clock.now()) }
                 // FR-007-13: an earlier launch failed closed partway through a quarantine, so nobody was told yet.
-                if notice == nil, layout.consumePendingNotices(fileSystem: fileSystem) {
+                // WHY: consumed even when this launch quarantined for real (`notice` already set), or the stale marker
+                // would raise a second STO-DB-002 at a later clean launch. One notice covers both.
+                let hadPendingNotice = layout.consumePendingNotices(fileSystem: fileSystem)
+                if notice == nil, hadPendingNotice {
                     notice = FlotsamError(.stoDb002, "Database damaged; moved aside and recreated")
                 }
                 FlotsamLog.log(.database(.open, outcome: .opened), sink: logSink)

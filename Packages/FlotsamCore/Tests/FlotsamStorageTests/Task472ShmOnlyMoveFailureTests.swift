@@ -41,4 +41,30 @@ struct Task472ShmOnlyMoveFailureTests {
             .filter { V370.sha(root.appendingPathComponent($0)) == walSha } ?? []
         #expect(held.count == 1 && held[0].hasPrefix("corrupt-"), "the -wal stays preserved in the quarantine, got \(held)")
     }
+
+    // Worf finding on TASK-472: a marker left in an empty corrupt-A/ by a failed first launch must be consumed by the
+    // launch that quarantines for real (STO-DB-002 already raised there), or the next clean launch raises it again.
+    @Test func staleMarkerConsumedByLaterRealQuarantine_noSecondNotice() async throws {
+        let root = V370.makeRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Data("not a database, just damaged bytes".utf8).write(to: V370.dbURL(root))
+        let fs = Worf380FileSystem()
+        fs.failMoveNamed = ["flotsam.sqlite"]
+
+        let first = await open(root, fs: fs)
+        #expect(first.0?.code == .stoDb003)
+
+        try await Task.sleep(for: .milliseconds(10))  // a distinct corrupt-<ms> name for the second launch
+        let second = await open(root)
+        #expect(second.0 == nil)
+        #expect(second.1?.code == .stoDb002, "the launch that quarantines tells the user")
+
+        let third = await open(root)
+        #expect(third.0 == nil)
+        #expect(third.1 == nil, "the stale marker from the failed first launch must not raise a second notice")
+
+        let markers = (try? FileManager.default.subpathsOfDirectory(atPath: root.path))?
+            .filter { $0.hasSuffix(DataFolder.noticePendingMarkerName) } ?? []
+        #expect(markers.isEmpty, "no marker survives a launch that opened, got \(markers)")
+    }
 }
