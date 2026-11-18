@@ -244,6 +244,58 @@ import FlotsamStorage
         #expect(r.keys.targets.isEmpty)
     }
 
+    // OC-423-W1..W4 (Worf, TASK-423): every caller of the shared post addresses the recorded target, and no path posts
+    // to a different pid even when the bundle id matches.
+
+    /// Given the Library paste action / when it posts / then the single ⌘V is addressed to the recorded pid (AC1).
+    /// Red if `paste` passes any other app, or a fresh frontmost read, to the poster.
+    @Test func libraryPasteAddressesTheCommandVToTheRecordedTarget() async throws {
+        let r = rig(.success(richContent))
+        _ = try await r.service.paste(itemId: itemId, mode: .paste, target: Self.target, host: r.host).get()
+        #expect(r.keys.targets == [FrontmostApp(bundleId: "com.apple.Notes", processId: 42)])
+        #expect(r.keys.posts == 1)
+    }
+
+    /// Given the item-hotkey expansion path / when it pastes / then it posts once, to the recorded pid (FR-005-14).
+    @Test func expandedPasteAddressesTheCommandVToTheRecordedTarget() async throws {
+        let r = rig(.success(richContent))
+        let board = FakePasteboard()
+        let ledger = OwnWriteLedger()
+        let clock = RecordingClock()
+        let expansion = PasteExpansion(
+            pasteboard: board, files: FakeFiles(existing: []), codec: FakeRichTextCodec(),
+            preserver: ClipboardPreserver(pasteboard: board, ownWrites: ledger, clock: clock), ownWrites: ledger, clock: clock)
+        let outcome = try await r.service.pasteExpanded(itemId: itemId, target: Self.target, expansion: expansion).get()
+        #expect(outcome == .pasted)
+        #expect(r.keys.targets == [FrontmostApp(bundleId: "com.apple.Notes", processId: 42)])
+    }
+
+    /// Given the expansion path and a target that never returns / then LIB-OS-001, nothing addressed anywhere.
+    @Test func expandedPasteToAMismatchedTargetPostsNothing() async {
+        let r = rig(.success(richContent), pollsUntilTarget: nil)
+        let board = FakePasteboard()
+        let ledger = OwnWriteLedger()
+        let clock = RecordingClock()
+        let expansion = PasteExpansion(
+            pasteboard: board, files: FakeFiles(existing: []), codec: FakeRichTextCodec(),
+            preserver: ClipboardPreserver(pasteboard: board, ownWrites: ledger, clock: clock), ownWrites: ledger, clock: clock)
+        let result = await r.service.pasteExpanded(itemId: itemId, target: Self.target, expansion: expansion)
+        #expect(failureCode(result) == .libOs001)
+        #expect(r.keys.targets.isEmpty)
+        #expect(r.keys.posts == 0)
+    }
+
+    /// Given a same-bundle relaunch (new pid) is frontmost, not the recorded pid / then nothing is posted (boundary:
+    /// bundle id alone must not satisfy the target check). Red if the comparison drops processId.
+    @Test func sameBundleDifferentPidIsNotTheTarget() async {
+        // The fake reports Notes pid 42 as frontmost at once; the recorded target is the same bundle at pid 43.
+        let r = rig(.success(richContent), pollsUntilTarget: 0)
+        let relaunched = FrontmostApp(bundleId: "com.apple.Notes", processId: 43)
+        let result = await r.service.postPaste(target: relaunched)
+        #expect(failureCode(result) == .libOs001)
+        #expect(r.keys.targets.isEmpty)
+    }
+
     private func failureCode<T>(_ result: FlotsamResult<T>) -> ErrorCode? {
         if case .failure(let error) = result { return error.code }
         return nil
