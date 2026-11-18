@@ -1055,3 +1055,17 @@ Clean clone detached at 3b5c01c; `ef250e4` (merge of worf-401b, TASK-401 reread-
 **Not done:** TASK-401 empty-between-clear-and-write race (AC-001-18) was not provoked; nothing about the symlinked folder was re-run (not in scope).
 
 **Defects / follow-ups for S1:** none new for the product. The two df9bf09 defects are retracted as not reproduced on 3b5c01c, with the harness cause above as the likely explanation. Optional: confirm intended behaviour for a URL-only (`public.url`, no text) pasteboard.
+
+## FRD-006 8T (Shelf) — s2/frd006-8t @ e31e6ff (pushed 2026-11-18)
+
+Contract tests for all 123 oracle IDs (OC-6001..6123), base df9bf09, with s2/frd006-8t-b (part 3) and origin/main 18a306f merged in (merges only, no rebase). New files in Packages/FlotsamCore/Tests: Frd006Contract{Reveal,Settings,Shortcut,Model}Tests, FlotsamShelfTests/Frd006Contract{Drag,Behavior,PrecitedGap}Tests. `swift test --filter Frd006`: 79 tests, all pass, 0 known issues. `bin/check-architecture.sh` passes. Sources diff vs merge-base empty (no product code touched). Mutation checks: 6 seeded breaks (incl. pasteCount +2, dropHighlightDuration 1.0, .libDat001→.shfOs001), all turned tests red, all reverted. Author on new commits: Friday only.
+
+**Probable defect (code read, not run; App layer, no library seam):** OC-6082. `ShelfDragOut.draggingSession(_:endedAt:operation:)` returns silently when the operation is empty, so a system-aborted drag shows no SHF-OS-001 HUD. Paste count stays correct. Severity Major.
+
+**No seam: manual:** OC-6007, 6010, 6011, 6037, 6077 (4 pt threshold is private in the App target's ShelfCardInteraction), 6081, 6089, 6108, 6111, 6112, 6113, 6114, 6121.
+
+**Partial (library half tested, rest app-side or unmeasurable in unit tests):** 6067, 6069 (changeCount half), 6070, 6071 (AppKit half), 6074, 6078 (recordPaste wiring), 6094 (ignored-app copy case), 6105 (timer and flash draw; constant tested), 6107, 6109 (scroll), 6115 (CPU clause), 6116, 6117 (drag-out log emission), 6119 (network clause).
+
+**PASS:** every other ID, by a new Frd006 test or by an existing library test confirmed in the part 3 audit (ShelfRevealMachine, ShelfLayout, ShelfModel, ShelfPresentation, ShelfKeyMap, ShelfDragPlanner, ShelfDrop*, ShelfLogEvent tests). Part 3 closed 11 gaps among pre-cited IDs: 6020, 6040, 6078, 6079, 6080, 6088, 6090, 6091, 6093, 6094, 6105.
+
+**Follow-up suggestion:** the app-side halves above need app-level (UI or integration) coverage.
