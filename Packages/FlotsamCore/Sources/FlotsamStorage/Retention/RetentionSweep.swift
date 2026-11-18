@@ -78,9 +78,10 @@ extension FlotsamDatabase {
     public func runRetentionSweep(preset: RetentionPreset, budget: ImageBudget) async -> FlotsamResult<SweepOutcome> {
         await Signposts.measure(.retentionSweep) { () async -> FlotsamResult<SweepOutcome> in
             var deleted = 0
+            var deletedBytes: Int64 = 0
             if let period = preset.periodMillis {
                 switch await sweepOldItems(period: period) {
-                case .success(let count): deleted = count
+                case .success(let swept): (deleted, deletedBytes) = swept
                 case .failure(let error): return .failure(error)
                 }
             }
@@ -91,13 +92,20 @@ extension FlotsamDatabase {
             case .failure(let error): return .failure(error)
             case .success(let outcome):
                 await stampLastSweep()
+                // FR-000-11: one line per sweep, rows and bytes removed by both passes. Counts only, never an item.
+                FlotsamLog.log(
+                    .retentionSwept(
+                        rows: deleted + outcome.evictedCount,
+                        bytes: Int(truncatingIfNeeded: deletedBytes + outcome.evictedBytes)),
+                    sink: logSink)
                 return .success(SweepOutcome(retentionDeleted: deleted, budget: outcome))
             }
         }
     }
 
-    private func sweepOldItems(period: Int64) async -> FlotsamResult<Int> {
+    private func sweepOldItems(period: Int64) async -> FlotsamResult<(rows: Int, bytes: Int64)> {
         var total = 0
+        var totalBytes: Int64 = 0
         while true {
             let deletionGuard = eligibleGuard(period)
             let arguments = deletionGuard.arguments + [Self.sweepBatchSize]
@@ -113,15 +121,16 @@ extension FlotsamDatabase {
             } catch {
                 return .failure(Self.readFailure(error))
             }
-            guard !ids.isEmpty else { return .success(total) }
+            guard !ids.isEmpty else { return .success((total, totalBytes)) }
             Signposts.event(.retentionSweepBatch)
-            switch await deleteWhileEligible(ids: ids, guard: deletionGuard) {
+            switch await deleteItemsWhileEligible(ids: ids, guard: deletionGuard) {
             case .failure(let error): return .failure(error)
             case .success(let removed):
                 total += removed.count
+                totalBytes += removed.reduce(0) { $0 + $1.byteSize }
                 // Nothing removed means the batch vanished or became exempt under us; stop and let the next sweep
                 // look again rather than spin on a library that is changing faster than we read it.
-                if removed.isEmpty { return .success(total) }
+                if removed.isEmpty { return .success((total, totalBytes)) }
             }
         }
     }

@@ -1161,6 +1161,16 @@
         }
       }
     },
+    "ui.library.spokenPinned" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pinned"
+          }
+        }
+      }
+    },
     "ui.library.tagOverflow" : {
       "localizations" : {
         "en" : {

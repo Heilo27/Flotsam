@@ -27,6 +27,7 @@ public enum ShortcutStatus: Sendable, Equatable {
 @MainActor
 public final class ShortcutRegistry {
     private let registrar: any HotkeyRegistrar
+    private let sink: any LogSink
     private let systemHotkeys: (any SystemHotkeyProvider)?
     private var bindings: [ShortcutID: Chord] = [:]
     private var actions: [ShortcutID: @MainActor () -> Void] = [:]
@@ -35,8 +36,11 @@ public final class ShortcutRegistry {
     private var recorders = 0
     private var itemsSuspended = false
 
-    public init(registrar: any HotkeyRegistrar, systemHotkeys: (any SystemHotkeyProvider)? = nil) {
+    public init(
+        registrar: any HotkeyRegistrar, systemHotkeys: (any SystemHotkeyProvider)? = nil, sink: any LogSink = OSLogSink()
+    ) {
         self.registrar = registrar
+        self.sink = sink
         self.systemHotkeys = systemHotkeys
     }
 
@@ -208,9 +212,11 @@ public final class ShortcutRegistry {
         case .success(let handle):
             registrations[id] = handle
             failed.remove(id)
+            FlotsamLog.log(.hotkeyRegistered(outcome: .registered), sink: sink)
             return .success(())
         case .failure(let error):
             failed.insert(id)
+            FlotsamLog.log(.hotkeyRegistered(outcome: .failed), sink: sink)
             return .failure(error)
         }
     }

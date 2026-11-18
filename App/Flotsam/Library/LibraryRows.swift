@@ -75,43 +75,29 @@ private struct RowInteraction: ViewModifier {
                 else if flags.contains(.shift) { model.extend(to: row.id) }
                 else { model.select(id: row.id) }
             }
-            .contextMenu {
-                Button(LibraryText.string(LibraryText.menuPaste)) { act { model.perform(.paste(.paste)) } }
-                Button(LibraryText.string(LibraryText.menuPastePlain)) { act { model.perform(.paste(.plainText)) } }
-                Button(LibraryText.string(LibraryText.menuCopy)) { act { model.perform(.paste(.copyOnly)) } }
-                Divider()
-                Button(LibraryText.string(LibraryText.menuShortcutAndTrigger)) { act { model.perform(.external(.shortcutAndTrigger)) } }
-                Button(LibraryText.string(LibraryText.menuPreview)) { act { model.perform(.togglePreview) } }
-                if row.kind.referencesFiles {
-                    Button(LibraryText.string(LibraryText.menuReveal)) { act { model.perform(.revealInFinder) } }
-                }
-                Divider()
-                organizeMenu
-            }
+            .contextMenu { contextMenu }
             .id(row.id)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(row.accessibilityLabel)
             .accessibilityAddTraits(model.selection.contains(row.id) ? .isSelected : [])
     }
 
-    /// Pin, Tags, Note, Edit, Ungroup and Delete (FR-004-01, -03, -06, -07, -09, -11). Edit and Ungroup need exactly one
-    /// item; the coordinator checks again, so a stale menu cannot act on the wrong selection.
+    /// The menu is `LibraryContextMenu` (FR-003-22); this only draws it. Note, Edit and Ungroup need exactly one item;
+    /// the coordinator checks again, so a stale menu cannot act on the wrong selection.
     @ViewBuilder
-    private var organizeMenu: some View {
-        let single = !model.selection.contains(row.id) || model.selection.count == 1
-        Button(LibraryText.string(model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned) ? LibraryText.menuUnpin : LibraryText.menuPin)) { act { model.perform(.external(.pin)) } }
-        Button(LibraryText.string(LibraryText.menuTags)) { act { model.perform(.external(.tags)) } }
-        if single {
-            Button(LibraryText.string(LibraryText.menuNote)) { act { model.perform(.external(.note)) } }
-            if row.kind.isTextEditable {
-                Button(LibraryText.string(LibraryText.menuEdit)) { act { model.perform(.external(.edit)) } }
-            }
-            if row.kind == .bundle {
-                Button(LibraryText.string(LibraryText.menuUngroup)) { act { model.perform(.external(.ungroup)) } }
+    private var contextMenu: some View {
+        let entries = LibraryContextMenu.entries(
+            kind: row.kind,
+            pinUnpins: model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned),
+            singleTarget: !model.selection.contains(row.id) || model.selection.count == 1)
+        ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+            switch entry {
+            case .separator:
+                Divider()
+            case .item(let titleKey, let command, let isDestructive):
+                Button(LibraryText.string(titleKey), role: isDestructive ? .destructive : nil) { act { model.perform(command) } }
             }
         }
-        Divider()
-        Button(LibraryText.string(LibraryText.menuDelete), role: .destructive) { act { model.perform(.external(.delete)) } }
     }
 
     /// A context-menu command acts on the row it was opened on (FR-003-22).
@@ -184,7 +170,7 @@ struct LibraryListRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: symbolName(for: row.kind)).frame(width: 22).foregroundStyle(.secondary)
+            LibraryRowLead(model: model, row: row)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: row.primaryText).lineLimit(1)
                 HStack(spacing: 6) {
@@ -197,12 +183,41 @@ struct LibraryListRow: View {
             if let badge = row.shortcutBadge { Text(verbatim: badge).font(.caption.monospaced()).foregroundStyle(.secondary) }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .frame(height: LibraryLayout.listRowHeight)
         .background(
             rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
             in: RoundedRectangle(cornerRadius: 6)
         )
         .rowInteraction(model: model, row: row)
+    }
+}
+
+/// The lead slot of a list row (FR-003-07): always `LibraryLayout.listLeadSize` square. Images and screenshots show their
+/// thumbnail; every other row, and an image whose thumbnail has not loaded, shows its kind icon in the same tile, so
+/// every row's text starts at the same edge. Files, folders and bundles show the kind icon: the presentation carries no
+/// file path to ask the system for a Finder icon.
+private struct LibraryRowLead: View {
+    let model: LibraryViewModel
+    let row: LibraryRowPresentation
+    @State private var thumbnail: NSImage?
+
+    var body: some View {
+        let side = LibraryLayout.listLeadSize
+        ZStack {
+            if let thumbnail {
+                Image(nsImage: thumbnail).resizable().scaledToFill()
+            } else {
+                Image(systemName: symbolName(for: row.kind)).foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: side, height: side)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .accessibilityHidden(true)
+        .task(id: row.id) {
+            thumbnail = nil
+            guard row.kind == .image || row.kind == .screenshot else { return }
+            if let data = await model.thumbnail(for: row.id, size: .grid) { thumbnail = NSImage(data: data) }
+        }
     }
 }
 

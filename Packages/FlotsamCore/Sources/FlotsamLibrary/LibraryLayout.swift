@@ -5,6 +5,11 @@ import FlotsamBase
 public enum LibraryLayout {
     public static let minimumSize = PanelSize(width: 560, height: 360)
 
+    /// A list row is 44 pt tall (FR-003-07, FR-003-21, DESIGN section 3.1).
+    public static let listRowHeight: CGFloat = 44
+    /// The lead slot of a list row: a 32 pt thumbnail or kind icon (FR-003-07, DESIGN section 3.1).
+    public static let listLeadSize: CGFloat = 32
+
     /// The remembered size, raised to the minimum (FR-003-03).
     public static func clamped(_ size: PanelSize) -> PanelSize {
         PanelSize(width: max(size.width, minimumSize.width), height: max(size.height, minimumSize.height))

@@ -39,6 +39,9 @@ enum ContractPNG {
 @MainActor
 struct RealLibrary {
     let root: URL
+    // One clock for every add: secondsAgo offsets from this fixed instant, so ordering never depends on how long
+    // the adds take under load (OC-3007 swapped two rows 1 s apart when the run was slow).
+    let epoch = Date()
     let database: FlotsamDatabase
     let ingest: IngestActor
     let paster = FakePaster()
@@ -86,7 +89,7 @@ struct RealLibrary {
         let candidate = IngestCandidate(
             kind: kind, contentKey: key, plainText: text, representations: representations, members: members,
             source: source.map { SourceApp(bundleId: "com.example.\($0.lowercased())", name: $0) }, origin: .pasteboard,
-            occurredAt: Date().addingTimeInterval(-secondsAgo), originalPath: originalPath)
+            occurredAt: epoch.addingTimeInterval(-secondsAgo), originalPath: originalPath)
         return try await ingest.ingest(candidate).get()
     }
 

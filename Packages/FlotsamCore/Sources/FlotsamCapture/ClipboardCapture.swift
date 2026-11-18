@@ -10,7 +10,10 @@ import Foundation
 /// and ingests it, so the main thread never hashes, converts images or touches the database (FR-001-17). Capture has
 /// no persistence code of its own.
 ///
-/// Tick cost (FR-001-01): one `changeCount` comparison, nothing else, until the count changes.
+/// Tick cost (FR-001-01): one `changeCount` comparison, nothing else, until the count changes. While Paused (FR-001-19)
+/// the 0.5 s poll does not run at all: the timer slows to the cadence `PollTick` gives the work still registered with
+/// it (the watchdog, the re-resolve), and resuming re-baselines `changeCount` so nothing copied during the pause is
+/// captured.
 @MainActor
 public final class ClipboardCapture {
     /// FR-001-01. The values live with the tick every periodic job shares (`PollTick`).
@@ -38,7 +41,15 @@ public final class ClipboardCapture {
     private let ingest: IngestActor
     private let pollTick: PollTick
 
-    private var timer: Timer?
+    private let scheduleTimer: TimerScheduler
+    /// Cancels the one scheduled timer source; nil when none is scheduled.
+    private var cancelTimer: (@MainActor () -> Void)?
+    /// The interval `timer` was scheduled at, which is `pollTick.cadence` as of the last `syncTimer()`.
+    private var timerCadence: TimeInterval?
+    private var isStarted = false
+    /// FR-001-19: capture mode is Paused, so the poll is skipped and `PollTick` is told the 0.5 s tick is not needed.
+    private var isPollPaused = false
+    private var unsubscribeSettings: (@Sendable () -> Void)?
     private var continuation: AsyncStream<CapturedPayload>.Continuation?
     private var consumer: Task<Void, Never>?
 
@@ -60,8 +71,10 @@ public final class ClipboardCapture {
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
         access: any PasteboardAccessPort = UngatedPasteboardAccess(),
-        clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick()
+        clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick(),
+        scheduleTimer: @escaping TimerScheduler = ClipboardCapture.systemTimer
     ) {
+        self.scheduleTimer = scheduleTimer
         self.pasteboard = pasteboard
         self.access = access
         self.sourceApps = sourceApps
@@ -80,7 +93,8 @@ public final class ClipboardCapture {
     /// Starts the poll and the ingest consumer, then runs the launch check (FR-001-02 d). When the system reports an
     /// access behaviour other than "Allow", capture starts suspended with `CAP-PRM-001` (FR-001-18 a).
     public func start() {
-        guard timer == nil else { return }
+        guard !isStarted else { return }
+        isStarted = true
         let (stream, continuation) = AsyncStream<CapturedPayload>.makeStream()
         self.continuation = continuation
         let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink)
@@ -88,25 +102,93 @@ public final class ClipboardCapture {
             for await payload in stream { await worker.handle(payload) }
         }
 
-        // `.common` so the timer keeps firing while a menu is tracked (FR-001-01).
-        let timer = Timer(timeInterval: Self.pollInterval, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.poll()
-                // Slower periodic work shares this timer's tick (S5, ADR-0004); the poll itself goes first.
-                self?.pollTick.fire()
+        // FR-001-19: the mode decides whether the poll runs; the timer follows the cadence `PollTick` reports.
+        unsubscribeSettings = settings.subscribe { [weak self] change in
+            guard change.name == SettingKeys.captureMode.name else { return }
+            // The store calls handlers before `set` returns. On the main thread apply the mode right there, so the
+            // baseline is read at the change and no check can run between the change and the re-baseline; from any
+            // other thread hop, and `captureNow` re-baselines first if it gets there before the hop does.
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { self?.applyMode() }
+            } else {
+                Task { @MainActor in self?.applyMode() }
             }
         }
-        timer.tolerance = Self.pollTolerance
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        pollTick.observeCadence { [weak self] in Task { @MainActor in self?.syncTimer() } }
+        isPollPaused = settings.value(SettingKeys.captureMode) == .paused
+        pollTick.setFastTickNeeded(!isPollPaused)
+        syncTimer()
         if !access.isReadAllowed { raise(beginSuspension(reason: "pasteboard access is not Allow")) }
         captureNow()
     }
 
+    /// One firing of the shared timer: the pasteboard poll (skipped while Paused, FR-001-19), then the slower periodic
+    /// work (S5, ADR-0004). The poll goes first.
+    func timerFired() {
+        guard isStarted else { return }  // a firing delivered after stop() does no work (TASK-430 OC-430-05)
+        if !isPollPaused { poll() }
+        pollTick.fire()
+    }
+
+    /// FR-001-19: enters or leaves Paused. Pausing stops the poll and lets `PollTick` slow the timer. Resuming brings
+    /// the 0.5 s cadence back and runs one immediate check against a baseline re-read now, so a change made while
+    /// Paused is never captured. Idempotent: only a change of Paused does anything. Returns whether it changed.
+    /// Also called from `captureNow` (the settings subscription reaches here through a main-actor hop, so a check can
+    /// land after the mode changed but before this ran) so the baseline is re-read before anything is compared.
+    @discardableResult
+    func applyMode() -> Bool {
+        guard isStarted else { return false }
+        let paused = settings.value(SettingKeys.captureMode) == .paused
+        guard paused != isPollPaused else { return false }
+        isPollPaused = paused
+        pollTick.setFastTickNeeded(!paused)
+        syncTimer()
+        guard !paused else { return true }
+        lastProcessedChangeCount = pasteboard.changeCount
+        rereadingChangeCount = nil
+        captureNow()
+        return true
+    }
+
+    /// The interval the timer is scheduled at now, or nil when it is not scheduled. Exposed for tests.
+    var scheduledTimerInterval: TimeInterval? { cancelTimer == nil ? nil : timerCadence }
+
+    /// ADR-0011 seam: schedules a repeating timer at `interval` (with `tolerance`) that calls `fire` on the main actor,
+    /// and returns the function that cancels it. Tests pass a fake to count sources and fire them by hand.
+    public typealias TimerScheduler = @MainActor (_ interval: TimeInterval, _ tolerance: TimeInterval, _ fire: @escaping @MainActor () -> Void) -> @MainActor () -> Void
+
+    /// The production scheduler: a `Timer` on the main run loop in `.common` mode so it keeps firing while a menu is
+    /// tracked (FR-001-01).
+    public static let systemTimer: TimerScheduler = { interval, tolerance, fire in
+        let timer = Timer(timeInterval: interval, repeats: true) { _ in
+            MainActor.assumeIsolated { fire() }
+        }
+        timer.tolerance = tolerance
+        RunLoop.main.add(timer, forMode: .common)
+        return { timer.invalidate() }
+    }
+
+    /// Schedules the one timer at `pollTick.cadence`: rescheduled when the cadence changes, removed when nothing needs
+    /// a firing. There is never more than one timer.
+    private func syncTimer() {
+        guard isStarted else { return }
+        let wanted = pollTick.cadence
+        if cancelTimer != nil, timerCadence == wanted { return }
+        cancelTimer?()
+        cancelTimer = nil
+        timerCadence = wanted
+        guard let wanted else { return }
+        cancelTimer = scheduleTimer(wanted, Self.pollTolerance) { [weak self] in self?.timerFired() }
+    }
+
     /// Stops polling and returns once every payload already handed off has been ingested.
     public func stop() async {
-        timer?.invalidate()
-        timer = nil
+        isStarted = false
+        unsubscribeSettings?()
+        unsubscribeSettings = nil
+        cancelTimer?()
+        cancelTimer = nil
+        timerCadence = nil
         continuation?.finish()
         continuation = nil
         await consumer?.value
@@ -117,6 +199,8 @@ public final class ClipboardCapture {
     /// launch. Idempotent (an unchanged `changeCount` returns at once) and returns after the item is queued, not
     /// after it is persisted. While suspended (FR-001-18) it is also the retry.
     public func captureNow() {
+        // A Paused to Active change not yet applied re-baselines here (and runs its own check), never compares first.
+        if applyMode() { return }
         poll(retrySuspended: suspendedSince != nil)
     }
 

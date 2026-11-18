@@ -87,33 +87,47 @@ public final class FlotsamDatabase: Sendable {
         // Two attempts: the second runs only after a damaged file was moved aside (FR-007-13). A fresh file that is
         // itself reported damaged is a real fault, not something another quarantine can fix.
         for attemptNumber in 0..<2 {
-            switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations) {
+            switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations, sink: logSink) {
             case .opened(let pool, let migratedThisLaunch):
                 // FR-007-17 / FR-007-13: a clean open on a launch that did not migrate ends the life of old plaintext copies.
                 if !migratedThisLaunch { layout.expirePlaintextCopies(fileSystem: fileSystem, now: clock.now()) }
+                FlotsamLog.log(.database(.open, outcome: .opened), sink: logSink)
                 return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink))
             case .failed(let error):
+                FlotsamLog.log(.database(.open, outcome: .failed), sink: logSink)
                 return .failure(error)
             case .damaged:
                 guard attemptNumber == 0, quarantine(layout: layout, fileSystem: fileSystem) else {
+                    FlotsamLog.log(.database(.open, outcome: .failed), sink: logSink)
                     return .failure(FlotsamError(.stoDb003, "Database damaged and could not be set aside"))
                 }
                 notice = FlotsamError(.stoDb002, "Database damaged; moved aside and recreated")
             }
         }
+        FlotsamLog.log(.database(.open, outcome: .failed), sink: logSink)
         return .failure(FlotsamError(.stoDb003, "Database could not be opened"))
     }
 
     // MARK: Opening
 
-    private static func attempt(layout: DataFolder, fileSystem: any FileSystemPort, migrations: [Migration]) -> Attempt {
+    /// Logs the FR-000-11 `database.*` steps as they happen: the integrity check on an existing file, the migration when
+    /// one ran, and the post-migration integrity check. Outcomes only; no path and no row content.
+    private static func attempt(
+        layout: DataFolder, fileSystem: any FileSystemPort, migrations: [Migration], sink: any LogSink
+    ) -> Attempt {
         let existed = (fileSystem.fileInfo(at: layout.databaseURL)?.byteSize ?? 0) > 0
         do {
             if existed {
                 // A read-only probe comes first and runs the integrity check (FR-007-13), so a newer-version or damaged
                 // database is refused or quarantined while still byte-identical: opening the pool would switch the
                 // journal mode, rewrite the header and VACUUM (AC-007-15).
-                switch try probe(layout: layout, fileSystem: fileSystem) {
+                let probed = try probe(layout: layout, fileSystem: fileSystem)
+                if case .damaged = probed {
+                    FlotsamLog.log(.database(.integrityCheck, outcome: .failed), sink: sink)
+                } else {
+                    FlotsamLog.log(.database(.integrityCheck, outcome: .passed), sink: sink)
+                }
+                switch probed {
                 case .damaged: return .damaged
                 case .version(let version) where version > Migrations.newestVersion(in: migrations):
                     return .failed(FlotsamError(.stoDb003, "Database was written by a newer version"))
@@ -129,13 +143,19 @@ public final class FlotsamDatabase: Sendable {
                     ? preMigrationCopy(pool: pool, layout: layout, fromVersion: fromVersion, fileSystem: fileSystem)
                     : .success(())
             }
-            if case .failure(let error) = migrated { return .failed(error) }
+            if case .failure(let error) = migrated {
+                FlotsamLog.log(.database(.migrate, outcome: .failed), sink: sink)
+                return .failed(error)
+            }
             // WHY: the second check verifies the migrated file. The probe already vouched for the file as found, so a
             // failure here is a migration bug (or the open itself writing a bad file), not user damage. It still takes
             // the damaged path, because a database that fails its integrity check must not stay live, but the file has
             // been written to by now: that quarantined copy is not the bytes the user had.
             let versionAfter = try pool.read { try MigrationRunner.currentVersion($0) }
-            return try pool.read { try integrityCheckPasses($0) } ? .opened(pool, migratedThisLaunch: versionAfter != versionBefore) : .damaged
+            if versionAfter != versionBefore { FlotsamLog.log(.database(.migrate, outcome: .migrated), sink: sink) }
+            let passed = try pool.read { try integrityCheckPasses($0) }
+            FlotsamLog.log(.database(.integrityCheck, outcome: passed ? .passed : .failed), sink: sink)
+            return passed ? .opened(pool, migratedThisLaunch: versionAfter != versionBefore) : .damaged
         } catch {
             return isDamage(error) ? .damaged : .failed(mapped(error))
         }

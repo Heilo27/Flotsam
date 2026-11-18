@@ -17,6 +17,8 @@ extension ImageBudget {
 /// What one budget pass did (FR-007-08).
 public struct BudgetOutcome: Sendable, Equatable {
     public let evictedCount: Int
+    /// Stored bytes of the evicted items, for the sweep's `retention.swept` line (FR-000-11).
+    public let evictedBytes: Int64
     /// `STO-LIM-001` when exempt (and just-ingested) images alone are over budget and the 24 h throttle allows
     /// another Notice. Storage cannot show a Notice itself; the caller puts this in front of the user.
     public let notice: FlotsamError?
@@ -44,7 +46,7 @@ extension FlotsamDatabase {
     /// Deletion goes through `deleteWhileEligible(ids:guard:)` in batches, so each transaction holds the writer briefly and blobs,
     /// thumbnails and `itemsDeleted` are handled in one place.
     public func enforceImageBudget(_ budget: ImageBudget, protecting: UUID? = nil) async -> FlotsamResult<BudgetOutcome> {
-        guard let limit = budget.limitBytes else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
+        guard let limit = budget.limitBytes else { return .success(BudgetOutcome(evictedCount: 0, evictedBytes: 0, notice: nil)) }
 
         let now = clock.now().epochMillis
         let planned: BudgetPlan
@@ -53,15 +55,18 @@ extension FlotsamDatabase {
         } catch {
             return .failure(Self.readFailure(error))
         }
-        guard planned.total > limit else { return .success(BudgetOutcome(evictedCount: 0, notice: nil)) }
+        guard planned.total > limit else { return .success(BudgetOutcome(evictedCount: 0, evictedBytes: 0, notice: nil)) }
         let chosen = planned.evict
         let remaining = planned.remainingAfterEviction
 
         var evicted = 0
+        var evictedBytes: Int64 = 0
         for batch in chosen.chunked(into: Self.evictionBatchSize) {
             // Re-checked at deletion: an image pinned or given a shortcut since the plan was made is kept.
-            switch await deleteWhileEligible(ids: batch, guard: Exemption.autoDeletableGuard(now: now)) {
-            case .success(let removed): evicted += removed.count
+            switch await deleteItemsWhileEligible(ids: batch, guard: Exemption.autoDeletableGuard(now: now)) {
+            case .success(let removed):
+                evicted += removed.count
+                evictedBytes += removed.reduce(0) { $0 + $1.byteSize }
             case .failure(let error): return .failure(error)
             }
         }
@@ -71,7 +76,7 @@ extension FlotsamDatabase {
 
         // Still over after every candidate went: what is left is exempt or protected.
         let notice = remaining > limit ? await budgetNoticeIfDue() : nil
-        return .success(BudgetOutcome(evictedCount: evicted, notice: notice))
+        return .success(BudgetOutcome(evictedCount: evicted, evictedBytes: evictedBytes, notice: notice))
     }
 
     /// What a budget pass would delete, decided but not yet done.
