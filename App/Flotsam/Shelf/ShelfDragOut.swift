@@ -29,6 +29,8 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
 
     private var prepared: Task<FlotsamResult<ShelfDragPlan>, Never>?
     private var draggedItemIds: [UUID] = []
+    /// The session's begin callback ran; without it an ended session was aborted by the system (`ShelfDragEnd`).
+    private var sessionBegan = false
     /// `NSPasteboardItem` does not retain its data provider; these live until the session ends.
     private var providers: [Provider] = []
 
@@ -87,6 +89,7 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
             dragItem.setDraggingFrame(frame, contents: index == 0 ? image : nil)
             return dragItem
         }
+        sessionBegan = false
         let session = view.beginDraggingSession(with: dragItems, event: event, source: self)
         session.animatesToStartingPositionsOnCancelOrFail = true
     }
@@ -127,18 +130,30 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     /// `.copy` whatever Option or Command is held (FR-006-10).
     func ignoreModifierKeys(for session: NSDraggingSession) -> Bool { true }
 
-    func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) { onSession?(true) }
+    func draggingSession(_ session: NSDraggingSession, willBeginAt screenPoint: NSPoint) {
+        sessionBegan = true
+        onSession?(true)
+    }
 
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         onSession?(false)
         providers = []
         let cards = draggedItemIds
         draggedItemIds = []
-        guard operation != [], let ports, !cards.isEmpty else { return }
-        // FR-006-11: one paste per card however many pasteboard items it contributed; FR-006-18: the count only.
-        Task { for id in cards { await ports.recordPaste(id) } }
-        FlotsamLog.log(.shelf(.dragOut, outcome: .draggedOut, detail: .count(cards.count)))
-        onAccepted?()
+        let began = sessionBegan
+        sessionBegan = false
+        guard let ports else { return }
+        switch ShelfDragEnd.resolve(accepted: operation != [], sessionBegan: began, cards: cards) {
+        case .accepted(let accepted):
+            // FR-006-11: one paste per card however many pasteboard items it contributed; FR-006-18: the count only.
+            Task { for id in accepted { await ports.recordPaste(id) } }
+            FlotsamLog.log(.shelf(.dragOut, outcome: .draggedOut, detail: .count(accepted.count)))
+            onAccepted?()
+        case .aborted(let error):
+            ports.report(error)
+        case .userCancelled, .none:
+            break
+        }
     }
 
     // MARK: Drag image
