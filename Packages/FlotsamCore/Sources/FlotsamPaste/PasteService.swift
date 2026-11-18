@@ -14,6 +14,8 @@ public final class PasteService {
     private let keys: any KeyEventPoster
     private let clock: any WallClock
     private let ownWrites: OwnWriteLedger
+    /// Set at the first paste attempt made without Accessibility, so the system prompt shows once, not on every choice.
+    private var accessibilityPrompted = false
 
     public init(
         store: any PasteItemStore, pasteboard: any PasteboardPort, files: any FileSystemPort,
@@ -55,7 +57,7 @@ public final class PasteService {
         host.hidePanel()
 
         guard mode != .copyOnly else { return .success(.copied) }
-        guard accessibility.isAccessibilityTrusted else { return .success(.copiedAccessibilityDenied) }
+        guard accessibilityAllowsPaste() else { return .success(.copiedAccessibilityDenied) }
 
         // Step 6.
         await waitUntilHidden(host)
@@ -85,11 +87,22 @@ public final class PasteService {
         }
         if case .failure(let error) = await store.recordPaste(of: itemId) { FlotsamLog.log(error, category: .library) }
 
-        guard accessibility.isAccessibilityTrusted else { return .success(.copiedAccessibilityDenied) }
+        guard accessibilityAllowsPaste() else { return .success(.copiedAccessibilityDenied) }
         await clock.sleep(for: PasteTiming.settle)
         if case .failure(let error) = await postPaste(target: target) { return .failure(error) }
         await expansion.finish(staged)
         return .success(.pasted)
+    }
+
+    /// Whether ⌘V can be posted. The first attempt without Accessibility also asks macOS for it (FR-008-13: "first paste
+    /// attempt"); the item is copied either way, so the user is never left without it. Later attempts do not prompt.
+    private func accessibilityAllowsPaste() -> Bool {
+        if accessibility.isAccessibilityTrusted { return true }
+        if !accessibilityPrompted {
+            accessibilityPrompted = true
+            accessibility.request(.accessibility)
+        }
+        return false
     }
 
     /// Step 1 of both sequences. Data missing (`LIB-IO-001`) deletes the item.

@@ -198,23 +198,34 @@ struct Frd008ContractOnboardingTests {
         #expect(!OnboardingFlow.shouldShowAutomatically(settings: defaults.store()))
     }
 
-    // OC-8098. DEFECT: quitting mid-onboarding (command-Q, no window close) leaves nothing persisted and the flow has no
-    // saved step, so a relaunch shows onboarding again from step 1. Red when a relaunch re-shows steps 1-3.
+    // OC-8098. Quitting mid-onboarding (command-Q, no window close) must not bring steps 1-3 back. The flow saves its
+    // step on every move; a relaunch resumes from the saved step. Red when a relaunch re-shows steps 1-3.
     @Test("OC-8098: quitting on step 4 does not bring steps 1-3 back at relaunch")
     func quitMidwayDoesNotRepeatSteps() {
         let defaults = Frd008Defaults()
         defer { defaults.wipe() }
-        // given steps 1-3 finished (advance x3) and the app quit without closing the window
-        var flow = OnboardingFlow(gatesPasteboard: true)
-        for _ in 0..<3 { flow.advance() }
-        #expect(flow.current == .inputMonitoring)
-        // when relaunched
-        let relaunched = OnboardingFlow(gatesPasteboard: true)
-        let shownAutomatically = OnboardingFlow.shouldShowAutomatically(settings: defaults.store())
-        // then steps 1-3 are not shown again: either it stays closed or it resumes past step 3
-        withKnownIssue("DEFECT OC-8098: nothing persists onboarding progress; relaunch after command-Q restarts at step 1") {
-            #expect(!shownAutomatically || relaunched.position > 3)
+        func launch() -> (OnboardingProgress, SettingsStore) {
+            let raw = UserDefaultsStore(defaults: UserDefaults(suiteName: defaults.name)!)
+            return (OnboardingProgress(store: raw), SettingsStore(store: raw))
         }
+        // given steps 1-3 finished (advance x3, saved on each move) and the app quit without closing the window
+        let (progress, _) = launch()
+        var flow = OnboardingFlow(gatesPasteboard: true, resumingAt: progress.savedStep())
+        for _ in 0..<3 {
+            flow.advance()
+            progress.save(flow.current)
+        }
+        #expect(flow.current == .inputMonitoring)
+        // when relaunched (a fresh reader over the same defaults)
+        let (relaunchedProgress, relaunchedSettings) = launch()
+        let relaunched = OnboardingFlow(gatesPasteboard: true, resumingAt: relaunchedProgress.savedStep())
+        let shownAutomatically = OnboardingFlow.shouldShowAutomatically(settings: relaunchedSettings)
+        // then steps 1-3 are not shown again: either it stays closed or it resumes past step 3
+        #expect(!shownAutomatically || relaunched.position > 3)
+        #expect(relaunched.current == .inputMonitoring)
+        // negative: with no saved step (Show Setup Guide, or a first launch) the flow starts at step 1
+        relaunchedProgress.clear()
+        #expect(OnboardingFlow(gatesPasteboard: true, resumingAt: relaunchedProgress.savedStep()).position == 1)
     }
 
     // OC-8100. Red if the default capture mode stops capturing, so onboarding being open would block capture.
