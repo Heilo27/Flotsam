@@ -701,27 +701,28 @@ struct FRD001SuspensionContractTests {
 
     @Test("OC-1087: Paused, then resumed, a copy 0.1 s later is detected within 0.6 s and stored")
     func oc1087() async throws {
-        // given Paused for 0.2 s, then Active; when N is copied 0.1 s later; then N is detected within the contract's
-        // 0.6 s (measured write -> first read by the real 0.5 s timer, not write -> stored, so ingest and the test's own
-        // database polling cannot eat the margin) and ends up stored once. A sample taken while the main actor was
-        // starved (see `sampleDetection`) says nothing about the product and is taken again.
-        try await withRig { rig in
+        // given Paused, then Active; when N is copied after the resume; then the poll source capture left running
+        // is bound to the contract's 0.6 s (interval + tolerance: the longest a copy can wait for the next tick) and
+        // the very next tick reads N and stores it once. Runs on the timer seam (ADR-0011) with the source fired by
+        // hand: a real-timer latency sample cannot be told apart from main-actor starvation under a full-suite run
+        // (TASK-447), so latency is asserted as the scheduled bound plus "one tick is enough", not as a wall clock.
+        let timers = FakeTimers()
+        try await withRig(scheduleTimer: timers.schedule) { rig in
             rig.settings.set(.paused, for: SettingKeys.captureMode)
-            try await Task.sleep(for: .milliseconds(200))
             rig.settings.set(.active, for: SettingKeys.captureMode)
-            try await Task.sleep(for: .milliseconds(100))
-            var sample: DetectionSample?
-            var n = ""
-            for _ in 0..<5 {
-                n = uid("N")
-                sample = await sampleDetection(rig, copying: n)
-                if let sample, !sample.starved { break }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            let result = try #require(sample, "capture never read the copy")
-            #expect(!result.starved, "the main actor stayed starved for 5 samples: cannot measure latency on this load")
-            #expect(result.latency <= detectionBound, "detected \(result.latency) s after the copy")
+            #expect(await rig.until { !timers.live.isEmpty }, "resuming Active leaves a poll source running")
+            let source = try #require(timers.live.last, "capture polls after the resume")
+            #expect(timers.live.count == 1, "sources live after the resume: \(timers.live.count)")
+            #expect(source.interval + source.tolerance <= detectionBound,
+                    "worst-case wait for the next tick is \(source.interval + source.tolerance) s")
+
+            let n = uid("N")
+            let readsBefore = rig.pasteboard.typeQueries
+            rig.pasteboard.copyText(n)
+            source.fire()
+            #expect(rig.pasteboard.typeQueries > readsBefore, "the first tick after the copy read it")
             #expect(await rig.until(seconds: 10) { try await rig.item(withText: n).count == 1 })
+            try #expect(await rig.itemCount() == 1)
         }
     }
 }
@@ -731,32 +732,6 @@ struct FRD001SuspensionContractTests {
 /// FR-001-20 / the oracle: a copy is detected at most 0.6 s after the write (0.5 s interval + 0.1 s tolerance).
 private let detectionBound = 0.6
 
-private struct DetectionSample {
-    /// Seconds from the pasteboard write to the capture's first read of it.
-    let latency: Double
-    /// True when a 20 ms main-actor sleep ran over by more than 0.1 s while waiting: the process was starved, so the
-    /// real timer was late for reasons that are not the product's poll interval.
-    let starved: Bool
-}
-
-/// Copies `text` and waits (up to 10 s) for the real poll timer to read it. Returns nil when it never did.
-@MainActor
-private func sampleDetection(_ rig: ContractRig, copying text: String) async -> DetectionSample? {
-    rig.pasteboard.copyText(text)
-    var worstOvershoot = 0.0
-    var previous = ContinuousClock.now
-    let deadline = previous + .seconds(10)
-    while ContinuousClock.now < deadline {
-        try? await Task.sleep(for: .milliseconds(20))
-        let now = ContinuousClock.now
-        let gap = now - previous
-        worstOvershoot = max(worstOvershoot, Double(gap.components.seconds) + Double(gap.components.attoseconds) / 1e18 - 0.02)
-        previous = now
-        if let latency = rig.pasteboard.detectionLatency { return DetectionSample(latency: latency, starved: worstOvershoot > 0.1) }
-    }
-    return nil
-}
-
 // MARK: Batch 3b: OC-1088, OC-1091..OC-1095, OC-1097, OC-1099..OC-1106, OC-1110 (latency, robustness, error codes)
 
 @MainActor
@@ -765,27 +740,31 @@ struct FRD001RobustnessContractTests {
 
     @Test("OC-1088: 50 copies at staggered times are each detected within 0.6 s and stored exactly once")
     func oc1088() async throws {
-        // given the real 0.5 s timer and no manual poll; for each copy measure write -> first read (the detection
-        // latency the oracle bounds at 0.6 s, with ingest and the test's database polling kept out of it). A poll
-        // slower than 0.5 s + 0.1 s tolerance puts samples over the bound. Samples taken while the main actor was
-        // starved (full parallel suite) are not evidence either way and are excluded, but at least 35 of the 50 must
-        // be clean or the test fails rather than pass on nothing.
-        try await withRig { rig in
+        // given the capture's scheduled poll source; the contract's 0.6 s is that source's interval + tolerance (a
+        // copy waits at most one interval for the next tick, which may be late by at most the tolerance), so it is
+        // asserted once, and then each of the 50 copies must be read by the NEXT tick of that same source (the
+        // source stays live and one tick is enough, whatever the copy's offset) and stored exactly once. Fired by
+        // hand on the timer seam (ADR-0011): the real-timer latency samples this replaces were discarded as
+        // "starved" under a full-suite run and failed the test on the discard count (TASK-447).
+        let timers = FakeTimers()
+        try await withRig(scheduleTimer: timers.schedule) { rig in
+            let source = try #require(timers.live.first, "capture schedules its poll source")
+            #expect(source.interval + source.tolerance <= detectionBound,
+                    "worst-case wait for the next tick is \(source.interval + source.tolerance) s")
             var texts: [String] = []
-            var latencies: [Double] = []
-            var starvedCount = 0
             var unread: [Int] = []
             for i in 0..<50 {
-                try await Task.sleep(for: .milliseconds((i * 37) % 120))
                 let text = uid("L\(i)")
                 texts.append(text)
-                guard let sample = await sampleDetection(rig, copying: text) else { unread.append(i); continue }
-                if sample.starved { starvedCount += 1 } else { latencies.append(sample.latency) }
+                let readsBefore = rig.pasteboard.typeQueries
+                rig.pasteboard.copyText(text)
+                source.fire()
+                if rig.pasteboard.typeQueries == readsBefore { unread.append(i) }
+                #expect(timers.live.count == 1 && timers.live.first === source, "the poll source stayed running after copy \(i)")
+                // Each copy is stored before the next: the dedupe/ingest path of copy i must not see copy i+1.
+                #expect(await rig.until(seconds: 10) { try await rig.item(withText: text).count == 1 }, "copy \(i) stored")
             }
-            #expect(unread.isEmpty, "every copy was read by the timer: unread \(unread)")
-            #expect(latencies.count >= 35, "\(starvedCount) of 50 samples were taken under main-actor starvation")
-            let slowest = latencies.max() ?? .infinity
-            #expect(slowest <= detectionBound, "slowest clean write -> first read was \(slowest) s")
+            #expect(unread.isEmpty, "every copy was read by the very next tick: unread \(unread)")
             #expect(await rig.until(seconds: 15) { try await rig.itemCount() == 50 })
             for text in texts { try #expect(await rig.item(withText: text).count == 1, "\(text) stored exactly once") }
         }
