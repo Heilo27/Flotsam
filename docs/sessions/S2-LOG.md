@@ -1325,3 +1325,86 @@ Values are the median of 3 harness runs. Earlier A4 values are in brackets.
 **Isolation**
 - Real DB, -wal and prefs sha1 identical before and after, and matching earlier entries.
 - No `defaults write`, no processes left behind.
+
+## 2026-11-18: Live functional walk of the Debug app on main ecd9f87 (includes 1ee480b)
+
+**Verdict: no blocking failures. 7 of 10 flows PASS and 3 PARTIAL, with 4 minor defects. No crashes and no `.ips` reports.**
+
+- **Setup:** clean clone, `bin/bootstrap.sh`, Debug build. A real-user walk driven with System Events keystrokes, AX presses, cliclick drags and pasteboard writes, with TextEdit and Finder as the other apps.
+- **Isolation:** each launch used a scratch `CFFIXED_USER_HOME`.
+- **Flows 4-10:** run on a copy built with only `PRODUCT_BUNDLE_IDENTIFIER=io.github.heilo27.FlotsamWalk` changed, so the app's UserDefaults landed in a throwaway domain (see Disclosure). No code was changed.
+
+| Flow | Result |
+|---|---|
+| 1 Launch, menu bar, onboarding, AX prompt | PARTIAL |
+| 2 Hotkey panel, search, Return paste, ⇧Return copy | PASS |
+| 3 Capture kinds and concealed copy | PASS |
+| 4 Pause, Resume, Curated | PASS |
+| 5 Shelf | PASS |
+| 6 Library: tags, pin, note, edit, sort, bundles | PARTIAL |
+| 7 Settings panes, shortcut recorder, ignored apps | PARTIAL |
+| 8 Text triggers in TextEdit | PASS |
+| 9 Screenshot pickup, Import Recent | PASS |
+| 10 Clear history, quit and relaunch | PASS |
+
+**FAILs (all minor)**
+1. **Sort is not named in the footer (FR-004-12).**
+   - Repro: open the Library and press ⌘S repeatedly.
+   - Expected: the footer names the active sort.
+   - Actual: it shows only "N items".
+2. **⌘A in edit text does not select all.**
+   - Repro: select a text item, press ⌘E, press ⌘A, type Z.
+   - Expected: the text is replaced by Z.
+   - Actual: Z is appended.
+   - Driven by System Events keystrokes, so likely real but worth a human confirm.
+3. **Copy Diagnostics item counts are wrong.**
+   - Repro: Settings › About › Copy Diagnostics.
+   - Expected: counts match the store.
+   - Actual: the "Items" section reports 0 for every kind while the DB holds 28 items (the Storage pane shows 27).
+4. **Unexpected SET-DAT-001 notice (flow 1).**
+   - It appeared during the onboarding run.
+   - The likely cause is the launch argument that forced onboarding. Not confirmed.
+
+**Passes worth noting**
+- **Flow 1:** the menu bar item and all 8 onboarding steps work.
+- **Flow 2:** with TextEdit frontmost, the hotkey opened the panel. Typing filtered, Return pasted into TextEdit, and ⇧Return copied without pasting.
+- **Flow 3:** text, URL, image, file, rich text from TextEdit and a multi-file Finder selection (stored as a bundle) were each stored once with the right kind. A concealed copy was not stored.
+- **Flow 4:** Pause and Resume work from the menu. Curated is the "Capture mode" popup in Settings › Storage, not a menu item.
+- **Flow 5:** Shelf enable and reveal work. Dragging an item out to Finder and TextEdit and dropping a file in all work.
+- **Flow 6:** pin, note, tags, edit text, sort, bundle ungroup, grid view and delete work.
+- **Flow 7:** ignored apps work: with TextEdit listed, its copy was skipped (CAP-POL-002, 0 rows). After removal, the same copy was stored. The shortcut recorder works, including conflict rejection. Reset to Defaults and the Storage popups write their prefs.
+- **Flow 8:** ⌘K opens "Shortcut and Trigger". The trigger `;wlkx` plus Space expanded in TextEdit, and the trigger and Space were consumed.
+- **Flow 9:** a capture written into the scratch watched folder appeared in about 2 s.
+- **Flow 10:**
+  - 37 items survived quit and relaunch.
+  - Clear History removed 35 and kept the pinned item and the triggered item, as the Storage pane text says.
+  - A new copy survived a second relaunch.
+
+**Observations (not FAILs, for triage)**
+- The panel footer has no ⇧Return hint.
+- A copy-only ⇧Return is logged as `paste.back started/succeeded`.
+- The menu bar status reads "Needs attention" while capturing normally.
+- Search text typed before ⌘K does not filter, so the trigger was set on the first row.
+- Import Recent imported nothing (only deduped) and showed no HUD. Logs show two parallel passes per press.
+- Any image written to the watched folder is imported, including the walk's own `screencapture` output.
+- The Clear History range defaults to "Last hour". The "Also delete pinned items and items with a shortcut" path was not tested.
+- Onboarding's "Launch at login" is pre-checked and triggers the macOS "Login Item Added" banner. It was unchecked or switched off each time.
+
+**Not verified**
+- Launch at Login effect: it toggles, but no pref or launchctl evidence was found.
+- Edge-hover Shelf reveal: the pref was set but not exercised.
+- Triggers pane "Add…": result unclear.
+- Open System Settings buttons and Project Page: not pressed.
+
+**Disclosure: real prefs written in part 1**
+- The app uses `UserDefaults.standard`, and `CFFIXED_USER_HOME` does not redirect CFPreferences. The first (onboarding) run therefore wrote the real `io.github.heilo27.Flotsam` domain.
+- Its plist sha1 went from c190d732… to f20f539d….
+- It still holds only `onboarding.completed` and `settings.lastPane`, the same keys recorded on 2026-11-17.
+- No `defaults write` was run. The rest of the walk used the bundle-id copy, and the hash did not change again.
+- Launch at Login was switched off. No Flotsam login item, launchd job or process remains.
+- In part 2 an agent opened Clear History by mistake in the walk copy and cancelled it. No items were lost.
+
+**Isolation**
+- Real DB (03fc64cf…) and `-wal` (c1189741…) sha1 were unchanged throughout.
+- The walk prefs domain and its plist were deleted, and TextEdit docs were discarded unsaved.
+- No `com.apple.screencapture` change and no files on the real Desktop or Documents. Evidence (notes and screenshots) is kept in the session scratchpad.
