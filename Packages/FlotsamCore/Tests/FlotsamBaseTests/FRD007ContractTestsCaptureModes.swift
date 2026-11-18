@@ -56,9 +56,9 @@ import Testing
     }
 
     /// OC-7105 wording. The contract and docs/DESIGN.md name the paused label 'Flotsam, paused'; the shipped catalogue
-    /// string `ui.menu.iconPaused` is 'Flotsam, capture paused'. FRD-008 does not fix the wording, so this is a wording
-    /// defect against the contract and the design table, not a Spec Drift. Red (known issue goes unrecorded) the moment
-    /// the label is made to match.
+    /// string `ui.menu.iconPaused` is 'Flotsam, capture paused'. No FRD fixes this wording (FRD-008 pins the shipped
+    /// one only through its own contract test), so this is contract wording not in the FRD: unverified, not a proven
+    /// product defect. Red (known issue goes unrecorded) the moment the label is made to match.
     @Test("OC-7105 the paused icon's accessibility label reads 'Flotsam, paused'")
     func oc7105_pausedLabelWording() {
         // given the paused icon
@@ -66,7 +66,7 @@ import Testing
 
         // when its VoiceOver label is read
         // then it is the contract's wording
-        withKnownIssue("OC-7105 product defect (Minor): ui.menu.iconPaused is 'Flotsam, capture paused'; contract and DESIGN.md say 'Flotsam, paused'") {
+        withKnownIssue("OC-7105 contract wording not in FRD; unverified: ui.menu.iconPaused is 'Flotsam, capture paused'; contract and DESIGN.md say 'Flotsam, paused'") {
             #expect(FlotsamStrings.text(forKey: key) == "Flotsam, paused")
         }
     }
@@ -74,6 +74,10 @@ import Testing
     /// OC-7108. In every mode the menu has exactly one capture-mode row, it is Pause or Resume Capture, and no number
     /// of presses reaches Curated; Curated is reachable only by writing the setting (Storage), which persists.
     /// Red if a mode gains a second or a Curated row, a toggle's `next` becomes `.curated`, or the title is not Pause/Resume Capture.
+    /// [Spec Drift] FR-007-12 vs FR-008-16: for Curated, FR-007-12 says the menu item reads "Pause Capture" (and pauses);
+    /// FR-008-16 says it reads "Resume Capture" (and sets active). The title check below accepts either wording, so this
+    /// test takes neither side for Curated; the FR-008-16 side is pinned by Frd008ContractMenuTests, and the two copies
+    /// of the toggle rule are the known issue there. Surfaced to Friday; no FRD edited here.
     @Test("OC-7108 the menu offers only Pause or Resume Capture in every mode and no press selects Curated")
     func oc7108_menuNeverOffersCurated() {
         let titles = ["Pause Capture", "Resume Capture"]
