@@ -17,6 +17,13 @@ No sync, no accounts, no telemetry, no license keys. See [`docs/TRUTHS.md`](docs
 
 Requires macOS 14+. MIT licensed.
 
+## Privacy
+Flotsam keeps your history in a folder on your Mac and sends it nowhere. Deleting a clip removes it from that history, but Flotsam keeps two kinds of safety copy of its database for a while, and a clip you deleted can still be inside one:
+- **Upgrade backup.** When an update changes how the database is stored, Flotsam first copies the database. It deletes that copy the next time you open Flotsam and the upgraded database opens and checks out healthy, usually within hours. If that launch fails, or Flotsam quits before it, the copy stays until a launch succeeds.
+- **Damaged-database copy.** If the database is found damaged, Flotsam moves it aside so you can recover from it, starts a new empty history, and keeps the moved-aside copy for 30 days, then deletes it. While one of these copies exists, the upgrade backup is kept too, because it may be the last good version of your history.
+
+**Clear History** deletes both kinds of copy at once. Both live in Flotsam's data folder, readable only by your account.
+
 ## Download and install
 Get `Flotsam-<version>.dmg` from [GitHub Releases](https://github.com/Heilo27/Flotsam/releases), open it, drag Flotsam to Applications, launch it. Check the download with `shasum -a 256 -c Flotsam-<version>.dmg.sha256`. Updates are a new DMG; Flotsam never phones home.
 
