@@ -1621,3 +1621,7 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
 - Full `swift test` (Packages/FlotsamCore): exit 0. 2697 tests across 12 runs (sum of the "Test run with N tests" lines only), 0 failures, 15 known issues (1 + 5 + 9). No "recorded an issue" lines.
 - `bin/check-architecture.sh`: passed.
 - Pushed as a plain push. Handed to S1 to merge.
+
+### S1 ruling: TASK-458 / SET-DAT-001 (2026-11-18)
+- The SET-DAT-001 from the folder-bookmark launch argument is a harness artifact, not an app defect. A bookmark made outside the app, or made without `.withSecurityScope`, cannot resolve with scope (NSCocoaError 259). The app's own `choosing()` round trip resolves as usable (OC-8065). No scope-less fallback will be added.
+- From now on, smoke runs set the screenshot folder override through the app (the Settings UI or onboarding), never with a hand-made launch-argument bookmark. That SET-DAT-001 is no longer logged as a defect.
