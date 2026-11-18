@@ -79,3 +79,15 @@ private final class CountingLoginService: LoginItemService, @unchecked Sendable 
         #expect(!controller.isOn)
     }
 }
+
+/// TASK-460: S2 saw macOS record the app (a BTMManager event and the "Login Item Added" banner) about 0.4 s after first
+/// launch, on onboarding step 1, with no register call. The only launch-time touch of `SMAppService` was the status
+/// read in onboarding's `refresh()`; it now happens only on step 7.
+@Suite struct LoginStatusReadTimingTests {
+    @Test func onboardingReadsTheLoginStatusOnlyOnTheLoginStep() {
+        for step in OnboardingStep.allCases {
+            #expect(OnboardingFlow.readsLoginStatus(on: step) == (step == .loginItem), "step \(step)")
+        }
+        #expect(!OnboardingFlow.readsLoginStatus(on: .welcome))
+    }
+}
