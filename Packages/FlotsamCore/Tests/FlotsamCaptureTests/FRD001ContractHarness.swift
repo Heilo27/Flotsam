@@ -43,6 +43,21 @@ final class ContractPasteboard: PasteboardPort {
     func copy(_ representations: [PasteboardRepresentation]) {
         reps = representations
         changeCount += 1
+        lastCopyInstant = ContinuousClock.now
+        firstReadAfterCopy = nil
+    }
+
+    /// When the latest copy happened, and when capture first listed the types after it (the poll that saw the new
+    /// count). Their difference is detection latency (FR-001-20) with ingest and the test's own database polling
+    /// kept out of it.
+    private var lastCopyInstant: ContinuousClock.Instant?
+    private var firstReadAfterCopy: ContinuousClock.Instant?
+
+    /// Seconds from the latest copy to the first type-list read after it; nil until capture has looked.
+    var detectionLatency: Double? {
+        guard let copied = lastCopyInstant, let read = firstReadAfterCopy else { return nil }
+        let elapsed = read - copied
+        return Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
     }
 
     func copy(_ pairs: [(String, Data)]) { copy(pairs.map { PasteboardRepresentation(uti: $0.0, data: $0.1) }) }
@@ -53,6 +68,7 @@ final class ContractPasteboard: PasteboardPort {
 
     func currentTypeIdentifiers() -> [String] {
         typeQueries += 1
+        if firstReadAfterCopy == nil, lastCopyInstant != nil { firstReadAfterCopy = ContinuousClock.now }
         var seen: [String] = []
         for rep in reps where !seen.contains(rep.uti) { seen.append(rep.uti) }
         return seen

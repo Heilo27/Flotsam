@@ -699,18 +699,62 @@ struct FRD001SuspensionContractTests {
         }
     }
 
-    @Test("OC-1087: Paused, then resumed, a copy 0.1 s later is stored within one tick")
+    @Test("OC-1087: Paused, then resumed, a copy 0.1 s later is detected within 0.6 s and stored")
     func oc1087() async throws {
+        // given Paused for 0.2 s, then Active; when N is copied 0.1 s later; then N is detected within the contract's
+        // 0.6 s (measured write -> first read by the real 0.5 s timer, not write -> stored, so ingest and the test's own
+        // database polling cannot eat the margin) and ends up stored once. A sample taken while the main actor was
+        // starved (see `sampleDetection`) says nothing about the product and is taken again.
         try await withRig { rig in
             rig.settings.set(.paused, for: SettingKeys.captureMode)
             try await Task.sleep(for: .milliseconds(200))
             rig.settings.set(.active, for: SettingKeys.captureMode)
             try await Task.sleep(for: .milliseconds(100))
-            let n = uid("N")
-            rig.pasteboard.copyText(n)
-            #expect(await rig.until(seconds: 0.9) { try await rig.item(withText: n).count == 1 })
+            var sample: DetectionSample?
+            var n = ""
+            for _ in 0..<5 {
+                n = uid("N")
+                sample = await sampleDetection(rig, copying: n)
+                if let sample, !sample.starved { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            let result = try #require(sample, "capture never read the copy")
+            #expect(!result.starved, "the main actor stayed starved for 5 samples: cannot measure latency on this load")
+            #expect(result.latency <= detectionBound, "detected \(result.latency) s after the copy")
+            #expect(await rig.until(seconds: 10) { try await rig.item(withText: n).count == 1 })
         }
     }
+}
+
+// MARK: Detection latency measurement (OC-1087, OC-1088)
+
+/// FR-001-20 / the oracle: a copy is detected at most 0.6 s after the write (0.5 s interval + 0.1 s tolerance).
+private let detectionBound = 0.6
+
+private struct DetectionSample {
+    /// Seconds from the pasteboard write to the capture's first read of it.
+    let latency: Double
+    /// True when a 20 ms main-actor sleep ran over by more than 0.1 s while waiting: the process was starved, so the
+    /// real timer was late for reasons that are not the product's poll interval.
+    let starved: Bool
+}
+
+/// Copies `text` and waits (up to 10 s) for the real poll timer to read it. Returns nil when it never did.
+@MainActor
+private func sampleDetection(_ rig: ContractRig, copying text: String) async -> DetectionSample? {
+    rig.pasteboard.copyText(text)
+    var worstOvershoot = 0.0
+    var previous = ContinuousClock.now
+    let deadline = previous + .seconds(10)
+    while ContinuousClock.now < deadline {
+        try? await Task.sleep(for: .milliseconds(20))
+        let now = ContinuousClock.now
+        let gap = now - previous
+        worstOvershoot = max(worstOvershoot, Double(gap.components.seconds) + Double(gap.components.attoseconds) / 1e18 - 0.02)
+        previous = now
+        if let latency = rig.pasteboard.detectionLatency { return DetectionSample(latency: latency, starved: worstOvershoot > 0.1) }
+    }
+    return nil
 }
 
 // MARK: Batch 3b: OC-1088, OC-1091..OC-1095, OC-1097, OC-1099..OC-1106, OC-1110 (latency, robustness, error codes)
@@ -719,27 +763,31 @@ struct FRD001SuspensionContractTests {
 @Suite("FRD-001 contract part 2: latency, robustness and error-code surfacing")
 struct FRD001RobustnessContractTests {
 
-    @Test("OC-1088: 50 copies at staggered times are each stored within one poll tick (plus ingest)")
+    @Test("OC-1088: 50 copies at staggered times are each detected within 0.6 s and stored exactly once")
     func oc1088() async throws {
-        // given the real 0.5 s timer and no manual poll; for each copy measure write -> stored. A slower poll fails.
+        // given the real 0.5 s timer and no manual poll; for each copy measure write -> first read (the detection
+        // latency the oracle bounds at 0.6 s, with ingest and the test's database polling kept out of it). A poll
+        // slower than 0.5 s + 0.1 s tolerance puts samples over the bound. Samples taken while the main actor was
+        // starved (full parallel suite) are not evidence either way and are excluded, but at least 35 of the 50 must
+        // be clean or the test fails rather than pass on nothing.
         try await withRig { rig in
-            var slowest = 0.0
-            var missed: [Int] = []
+            var texts: [String] = []
+            var latencies: [Double] = []
+            var starvedCount = 0
+            var unread: [Int] = []
             for i in 0..<50 {
                 try await Task.sleep(for: .milliseconds((i * 37) % 120))
                 let text = uid("L\(i)")
-                let wrote = ContinuousClock.now
-                rig.pasteboard.copyText(text)
-                let stored = await rig.until(seconds: 1.5) { try await rig.item(withText: text).count == 1 }
-                let elapsed = ContinuousClock.now - wrote
-                let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
-                slowest = max(slowest, seconds)
-                if !stored { missed.append(i) }
+                texts.append(text)
+                guard let sample = await sampleDetection(rig, copying: text) else { unread.append(i); continue }
+                if sample.starved { starvedCount += 1 } else { latencies.append(sample.latency) }
             }
-            #expect(missed.isEmpty, "every copy was stored")
-            // 0.5 s interval + 0.1 s tolerance is the contract's 0.6 s; 0.15 s covers the 20 ms observer poll and ingest.
-            #expect(slowest <= 0.75, "slowest write -> stored was \(slowest) s")
-            try #expect(await rig.itemCount() == 50)
+            #expect(unread.isEmpty, "every copy was read by the timer: unread \(unread)")
+            #expect(latencies.count >= 35, "\(starvedCount) of 50 samples were taken under main-actor starvation")
+            let slowest = latencies.max() ?? .infinity
+            #expect(slowest <= detectionBound, "slowest clean write -> first read was \(slowest) s")
+            #expect(await rig.until(seconds: 15) { try await rig.itemCount() == 50 })
+            for text in texts { try #expect(await rig.item(withText: text).count == 1, "\(text) stored exactly once") }
         }
     }
 
@@ -748,7 +796,8 @@ struct FRD001RobustnessContractTests {
         try await withRig { rig in
             rig.pasteboard.failingTypes = [PB.text]
             rig.pasteboard.copyText(uid("unreadable"))
-            await rig.process()
+            // No rig.process(): that stops and restarts the timer, which would hide a failure path that kills it. The
+            // real timer must hit the failure and then keep running on its own.
             #expect(await rig.until { !noticeMessages(rig, code: .capOs001).isEmpty })
             try #expect(await rig.itemCount() == 0)
             #expect(noticeMessages(rig, code: .capOs001) == ["Flotsam couldn't read the clipboard just now. It will keep trying."])
@@ -917,6 +966,29 @@ struct FRD001RobustnessContractTests {
             _ = rig.ledger.write([PasteboardRepresentation(uti: PB.text, data: PB.data("back"))], to: rig.pasteboard)
             await rig.process()
             try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capPol004)
+        }
+    }
+
+    @Test("OC-1104: each own-write guard rejects on its own (marker alone; ledger alone)")
+    func oc1104EachGuard() async throws {
+        // given a change that carries the own-write marker but is NOT in the ledger, then a change that IS in the ledger
+        // but whose types carry no marker (the marker types are swapped out without a new changeCount); then both are
+        // rejected with CAP-POL-004 at info. Deleting either guard lets one of them through and into the store.
+        try await withRig { rig in
+            rig.pasteboard.copy([
+                PasteboardRepresentation(uti: PB.text, data: PB.data(uid("marker-only"))),
+                PasteboardRepresentation(uti: PasteboardMarkers.ownWrite, data: Data()),
+            ])
+            await rig.process()
+            try #expect(await rig.itemCount() == 0, "marker alone must reject")
+            expectInfoOnly(rig, .capPol004)
+        }
+        try await withRig { rig in
+            _ = rig.ledger.write([PasteboardRepresentation(uti: PB.text, data: PB.data(uid("ledger-only")))], to: rig.pasteboard)
+            rig.pasteboard.reveal([PasteboardRepresentation(uti: PB.text, data: PB.data(uid("ledger-only-visible")))])
+            await rig.process()
+            try #expect(await rig.itemCount() == 0, "a ledger-recorded change must reject even with no marker type")
             expectInfoOnly(rig, .capPol004)
         }
     }
