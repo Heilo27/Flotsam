@@ -98,14 +98,16 @@ public protocol KeyboardEnvironment: Sendable {
 }
 
 /// Posts the synthetic keys a trigger expansion needs, on top of ⌘V (FR-005-14, FR-005-15). Every event carries
-/// `FlotsamEventMarker.value`. `KeyEventPoster.postPaste(to:)` carries it too.
+/// `FlotsamEventMarker.value`. Like `KeyEventPoster.postPaste(to:)`, every post is addressed to `target`'s process,
+/// never to whichever application holds focus when the event is delivered, and the adapter re-checks that `target` is
+/// still frontmost and running immediately before posting. False means nothing was posted.
 @MainActor
 public protocol TriggerKeyPoster: KeyEventPoster {
     /// Key down then key up, `count` times, back to back (FR-005-14 step 5 uses key code 51, FR-005-15 re-posts the
     /// boundary key). Every event is created before any is posted, so false means none was posted.
-    func postKeyPress(keyCode: UInt16, count: Int) -> Bool
-    /// Types `text` as one Unicode string event (FR-005-15 re-types the trigger).
-    func postText(_ text: String) -> Bool
+    func postKeyPress(keyCode: UInt16, count: Int, to target: FrontmostApp) -> Bool
+    /// Types `text` as Unicode string events (FR-005-15 re-types the trigger).
+    func postText(_ text: String, to target: FrontmostApp) -> Bool
 }
 
 /// The chords macOS itself owns right now: enabled symbolic hotkeys from `CopySymbolicHotKeys()` (FR-005-02 d).
