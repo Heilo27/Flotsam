@@ -58,7 +58,7 @@ struct ScreenshotImporter: Sendable {
         case .success(let value): info = value
         }
         // FR-002-16: never read through a link, and never read a file that resolves outside the watched folder.
-        guard ScreenshotPathGuard.accepts(file.url, kind: info.kind) else {
+        guard ScreenshotPathGuard.accepts(file.url, kind: info.kind, in: file.folder) else {
             return .rejected(FlotsamError(.sspVal001, "Not a regular file inside the screenshot folder"), byteSize: 0)
         }
         let bytes: Data
@@ -67,7 +67,7 @@ struct ScreenshotImporter: Sendable {
         case .success(let data): bytes = data
         }
         // The date is re-derived from the settled file: a file that was still being written reports its final dates.
-        let settled = ScreenshotFile(url: file.url, info: info)
+        let settled = ScreenshotFile(url: file.url, folder: file.folder, info: info)
         let candidate = IngestCandidate(
             kind: .screenshot,
             contentKey: ContentKey.image(bytes),

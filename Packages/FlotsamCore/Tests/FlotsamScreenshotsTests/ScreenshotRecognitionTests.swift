@@ -91,7 +91,7 @@ import FlotsamBase
         let url = try temp.file("Screenshot b.png", bytes: Data(repeating: 7, count: 321))
         let born = Date(timeIntervalSince1970: 1_700_000_000)
         try FileManager.default.setAttributes([.creationDate: born, .modificationDate: Date()], ofItemAtPath: url.path)
-        let file = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences()).candidate(url)
+        let file = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences()).candidate(url, in: temp.root)
         #expect(file?.createdAt == born)
         #expect(file?.byteSize == 321)
     }

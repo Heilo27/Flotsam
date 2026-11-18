@@ -13,9 +13,11 @@ import FlotsamBase
             fileSystem: fileSystem, stability: StabilityCheck(fileSystem: fileSystem, clock: ManualClock()), ingest: recorder)
     }
 
-    private func run(_ importer: ScreenshotImporter, _ url: URL) async -> ScreenshotImportAttempt {
+    /// `folder` is the watched folder the file is judged against; it defaults to the file's own parent.
+    private func run(_ importer: ScreenshotImporter, _ url: URL, in folder: URL? = nil) async -> ScreenshotImportAttempt {
         let info = LocalFileSystem().fileInfo(at: url)
-        let file = ScreenshotFile(url: url, createdAt: info?.modifiedAt ?? Date(), byteSize: info?.byteSize ?? 0)
+        let file = ScreenshotFile(
+            url: url, folder: folder ?? url.deletingLastPathComponent(), createdAt: info?.modifiedAt ?? Date(), byteSize: info?.byteSize ?? 0)
         return await importer.run(file, countsAsCopy: true)
     }
 
@@ -81,10 +83,13 @@ import FlotsamBase
         try temp.folder("shots")
         let link = temp.root.appendingPathComponent("shots/Screenshot x.png")
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
-        #expect(!ScreenshotPathGuard.accepts(link, kind: .regular))
-        #expect(!ScreenshotPathGuard.accepts(link, kind: .symbolicLink))
-        #expect(ScreenshotPathGuard.accepts(outside, kind: .regular))
-        #expect(!ScreenshotPathGuard.accepts(outside, kind: .directory))
+        let shots = temp.root.appendingPathComponent("shots")
+        let inside = try temp.file("shots/Screenshot inside.png")
+        #expect(!ScreenshotPathGuard.accepts(link, kind: .regular, in: shots))
+        #expect(!ScreenshotPathGuard.accepts(link, kind: .symbolicLink, in: shots))
+        #expect(!ScreenshotPathGuard.accepts(outside, kind: .regular, in: shots))
+        #expect(ScreenshotPathGuard.accepts(inside, kind: .regular, in: shots))
+        #expect(!ScreenshotPathGuard.accepts(inside, kind: .directory, in: shots))
     }
 
     @Test("the scanner lists a regular screenshot and drops both kinds of link")
@@ -115,10 +120,10 @@ import FlotsamBase
         try FileManager.default.createSymbolicLink(at: viaLink, withDestinationURL: real)
         let scanner = ScreenshotFolderScanner(fileSystem: LocalFileSystem(), preferences: FixedPreferences())
         // Single-path candidate (the FSEvents route): FileManager cannot list a link-to-folder, but events name files.
-        let file = try #require(scanner.candidate(viaLink.appendingPathComponent("Screenshot 1.png")))
+        let file = try #require(scanner.candidate(viaLink.appendingPathComponent("Screenshot 1.png"), in: viaLink))
         #expect(file.url.lastPathComponent == "Screenshot 1.png")
         let recorder = IngestRecorder()
-        let attempt = await run(importer(recorder), file.url)
+        let attempt = await run(importer(recorder), file.url, in: viaLink)
         guard case .imported = attempt else { Issue.record("expected imported, got \(attempt)"); return }
         #expect(recorder.names == ["Screenshot 1.png"])
     }
@@ -190,7 +195,54 @@ import FlotsamBase
         try FileManager.default.createSymbolicLink(atPath: escape.path, withDestinationPath: "../elsewhere/Screenshot out.png")
         #expect(FileManager.default.fileExists(atPath: outside.path))
         let recorder = IngestRecorder()
-        let attempt = await run(importer(recorder), escape)
+        let attempt = await run(importer(recorder), escape, in: viaLink)
+        guard case .rejected(let error, _) = attempt else { Issue.record("expected rejected, got \(attempt)"); return }
+        #expect(error.code == .sspVal001)
+        #expect(recorder.candidates.isEmpty)
+    }
+
+    // FR-002-16: the guard itself enforces "direct child of the watched folder"; it does not lean on the watcher's filter.
+    @Test("the guard rejects folder/../x.png and a descendant folder/sub/x.png, called directly")
+    func dotDotAndDescendantRejected() throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let folder = try temp.folder("shots")
+        let sibling = try temp.file("Screenshot up.png")
+        let nested = try temp.file("shots/sub/Screenshot deep.png")
+        let direct = try temp.file("shots/Screenshot direct.png")
+        let dotDot = folder.appendingPathComponent("../Screenshot up.png")
+        #expect(FileManager.default.fileExists(atPath: dotDot.path))
+        #expect(!ScreenshotPathGuard.accepts(dotDot, kind: .regular, in: folder))
+        #expect(!ScreenshotPathGuard.accepts(sibling, kind: .regular, in: folder))
+        #expect(!ScreenshotPathGuard.accepts(nested, kind: .regular, in: folder))
+        #expect(!ScreenshotPathGuard.accepts(folder.appendingPathComponent("../shots/Screenshot direct.png"), kind: .regular, in: folder))
+        #expect(ScreenshotPathGuard.accepts(direct, kind: .regular, in: folder))
+    }
+
+    @Test("the guard accepts a direct child under a symlinked root, however the root is named")
+    func directChildUnderSymlinkedRootAccepted() throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let real = try temp.folder("realshots")
+        let file = try temp.file("realshots/Screenshot 1.png")
+        let viaLink = temp.root.appendingPathComponent("linkedshots")
+        try FileManager.default.createSymbolicLink(at: viaLink, withDestinationURL: real)
+        let namedViaLink = viaLink.appendingPathComponent("Screenshot 1.png")
+        #expect(ScreenshotPathGuard.accepts(namedViaLink, kind: .regular, in: viaLink))
+        #expect(ScreenshotPathGuard.accepts(namedViaLink, kind: .regular, in: real))
+        #expect(ScreenshotPathGuard.accepts(file, kind: .regular, in: viaLink))
+        let sub = try temp.file("realshots/sub/Screenshot 2.png")
+        #expect(!ScreenshotPathGuard.accepts(sub, kind: .regular, in: viaLink))
+    }
+
+    @Test("the importer rejects a settled file that is not a direct child of its watched folder")
+    func importerRejectsDescendant() async throws {
+        let temp = try TempFolder()
+        defer { temp.cleanUp() }
+        let folder = try temp.folder("shots")
+        let nested = try temp.file("shots/sub/Screenshot deep.png")
+        let recorder = IngestRecorder()
+        let attempt = await run(importer(recorder), nested, in: folder)
         guard case .rejected(let error, _) = attempt else { Issue.record("expected rejected, got \(attempt)"); return }
         #expect(error.code == .sspVal001)
         #expect(recorder.candidates.isEmpty)

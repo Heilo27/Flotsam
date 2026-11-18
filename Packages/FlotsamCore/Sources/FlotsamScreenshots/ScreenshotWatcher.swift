@@ -568,7 +568,7 @@ public actor ScreenshotWatcher {
             guard parent.path == folder.path else { return nil }
             let child = folder.appendingPathComponent(url.lastPathComponent)
             guard visited.insert(child.path).inserted else { return nil }
-            return scanner.candidate(child)
+            return scanner.candidate(child, in: folder)
         }
     }
 }

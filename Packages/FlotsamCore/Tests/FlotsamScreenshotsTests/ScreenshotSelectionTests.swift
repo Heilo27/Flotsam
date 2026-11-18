@@ -9,7 +9,7 @@ import FlotsamBase
     private let day: TimeInterval = 24 * 60 * 60
 
     private func file(_ name: String, _ createdAt: Date) -> ScreenshotFile {
-        ScreenshotFile(url: URL(fileURLWithPath: "/shots/\(name).png"), createdAt: createdAt, byteSize: 1)
+        ScreenshotFile(url: URL(fileURLWithPath: "/shots/\(name).png"), folder: URL(fileURLWithPath: "/shots"), createdAt: createdAt, byteSize: 1)
     }
 
     @Test("FR-002-08 first launch (no watermark) imports nothing")
