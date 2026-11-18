@@ -110,7 +110,7 @@ import FlotsamBase
         #expect(imageRow.byteSize == Int64(imageBlobBytes))
         #expect(imageBlobBytes > 0)
 
-        let thumbsBuilt = await waitUntil { !rig.store.names(in: rig.store.thumbsDir).isEmpty }
+        let thumbsBuilt = await rig.awaitThumbnails(imageId)
         #expect(thumbsBuilt)
         #expect(try rig.row(imageId).byteSize == imageRow.byteSize)
         #expect(try rig.row(rtfId).byteSize == rtfRow.byteSize)

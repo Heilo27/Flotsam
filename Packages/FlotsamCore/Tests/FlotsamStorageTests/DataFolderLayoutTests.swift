@@ -58,8 +58,7 @@ import FlotsamBase
         defer { rig.cleanUp() }
         let png = TestImage.make(width: 64, height: 48, format: .png)
         let id = try await rig.create(rig.image("k-7001", png))
-        let thumb = rig.store.thumbURL(0, 256).deletingLastPathComponent()
-        let built = await waitUntil { (try? FileManager.default.contentsOfDirectory(atPath: thumb.path))?.count == 2 }
+        let built = await rig.awaitThumbnails(id)
         #expect(built, "both thumbnail sizes should exist before modes are read")
 
         let entries = everyEntry(under: rig.store.root)
