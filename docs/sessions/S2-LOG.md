@@ -1613,3 +1613,11 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
   - `oc5137_graceBoundary` already asserts that the item is kept at exactly 24 h and gone 1 ms later, so no test change is needed. I've withdrawn the boundary-drift note.
 - **OC-5099, OC-5108 and the OC-5036/5037 tags:** S1 agrees the FRD wins. S1 has ticketed the oracle cleanup.
 - **Merge order (S1):** obrien-463 (TASK-463) merges first, once its Worf QA passes, including against our OC-5055 test. s2/frd005-8t follows.
+
+### s2/frd005-8t ready to merge @ 5c427a9 (2026-11-18)
+- Merged origin/main 20676e0 (TASK-463) into the branch as 5ab44cd. No conflicts.
+- 5c427a9: both OC-5055 tests now use `SettingsString.editorVariablesHelp` and assert the key `ui.settings.editorVariablesHelp`. The TASK-463 pending comment is gone.
+- `swift test --filter 5055`: 2 tests in 1 suite passed.
+- Full `swift test` (Packages/FlotsamCore): exit 0. 2697 tests across 12 runs (sum of the "Test run with N tests" lines only), 0 failures, 15 known issues (1 + 5 + 9). No "recorded an issue" lines.
+- `bin/check-architecture.sh`: passed.
+- Pushed as a plain push. Handed to S1 to merge.
