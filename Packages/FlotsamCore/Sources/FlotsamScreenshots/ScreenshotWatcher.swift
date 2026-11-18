@@ -265,7 +265,14 @@ public actor ScreenshotWatcher {
     private func activate(freshWatermark: Bool) async {
         active = true
         lastMode = settings.value(SettingKeys.captureMode)
-        if freshWatermark { await advanceWatermark(to: clock.now()) }
+        let mine = session
+        if freshWatermark {
+            await advanceWatermark(to: clock.now())
+            // The write suspends: pickup may have been turned off (and on again) meanwhile. Registering the timer now
+            // would leave one running after off (FR-002-05), or a second one beside the new activation's. `session`,
+            // not `generation`: a re-resolution that rebuilds the watch is not an overtaker of the activation.
+            guard active, session == mine else { return }
+        }
         cancelTick = pollTick.every(Self.tickInterval) { [weak self] in Task { await self?.tickFired() } }
         await evaluate(reconcile: true)
     }
@@ -335,7 +342,7 @@ public actor ScreenshotWatcher {
         location = resolved
         guard let folder = resolved.folder else {
             // Nothing is watched, so a refusal or a polling fallback raised for the previous folder no longer stands.
-            leaveFallbackState()
+            await leaveFallbackState()
             await markAccessGranted()
             guard active, generation == mine else { return }
             status = .paused
@@ -343,7 +350,9 @@ public actor ScreenshotWatcher {
             return
         }
         status = resolved == .watching(folder) ? .watching : .usingDesktop
-        startWatch(on: folder)
+        await startWatch(on: folder)
+        // Raising or clearing the polling notice suspends, like every other await here.
+        guard active, generation == mine else { return }
         await reconcileScan()
     }
 
@@ -352,8 +361,16 @@ public actor ScreenshotWatcher {
         let wanted = resolved.warning
         guard wanted != raisedLocationWarning else { return }
         let previous = raisedLocationWarning
+        let mine = session
         raisedLocationWarning = wanted
-        if let previous { await clear(previous) }
+        if let previous {
+            await clear(previous)
+            // The clear suspends. Pickup off ends the session and has cleared `wanted` itself (FR-002-05), so raising
+            // it now would leave it standing. A later re-resolution may have claimed or released it meanwhile
+            // (`raisedLocationWarning` no longer `wanted`): then it owns the notice. Not `generation`: a rebuild
+            // that found `wanted` already claimed raised nothing, so this call is still the one that must.
+            guard active, session == mine, raisedLocationWarning == wanted else { return }
+        }
         switch wanted {
         case .sspIo001?: await report(FlotsamError(.sspIo001, "System screenshot location unusable, watching Desktop"))
         case .sspIo003?: await report(Self.pausedError)
@@ -369,7 +386,8 @@ public actor ScreenshotWatcher {
         generation += 1
     }
 
-    private func startWatch(on folder: URL) {
+    /// The watch is installed before the first suspension (the notice calls), so an overtaker's `teardown` stops it.
+    private func startWatch(on folder: URL) async {
         let current = generation
         let handler: @Sendable (FolderEvent) -> Void = { [weak self] event in
             guard let self else { return }
@@ -378,26 +396,35 @@ public actor ScreenshotWatcher {
         switch eventSource.start(watching: folder, handler: handler) {
         case .success(let started):
             watch = started
-            leaveFallbackState()
+            await leaveFallbackState()
         case .failure:
-            watch = startPolling(folder, handler: handler)
+            await startPolling(folder, handler: handler)
         }
     }
 
-    /// FR-002-04: the stream could not be created or went invalid; list the folder every 5 s instead.
-    private func startPolling(_ folder: URL, handler: @escaping @Sendable (FolderEvent) -> Void) -> (any FolderWatch)? {
-        guard case .success(let started) = fallbackSource.start(watching: folder, handler: handler) else { return nil }
+    /// FR-002-04: the stream could not be created or went invalid; list the folder every 5 s instead. Installs the
+    /// polling watch (nil when even that cannot start) and raises `SSP-OS-001` once.
+    ///
+    /// The notice is awaited in the caller's own flow, never from an unstructured `Task` (TASK-483): such a task is
+    /// queued behind whatever is already waiting for the actor, so a `deactivate` already in line ran first, cleared
+    /// the notice, and then the task raised it again after pickup was off (FR-002-05).
+    private func startPolling(_ folder: URL, handler: @escaping @Sendable (FolderEvent) -> Void) async {
+        guard case .success(let started) = fallbackSource.start(watching: folder, handler: handler) else {
+            watch = nil
+            return
+        }
+        watch = started
         if !inFallback {
             inFallback = true
-            Task { await self.report(FlotsamError(.sspOs001, "Folder events unavailable, polling every 5 seconds")) }
+            await report(FlotsamError(.sspOs001, "Folder events unavailable, polling every 5 seconds"))
         }
-        return started
     }
 
-    private func leaveFallbackState() {
+    /// Awaited for the same reason as `startPolling`'s notice: the clear stays ordered with the raise before it.
+    private func leaveFallbackState() async {
         guard inFallback else { return }
         inFallback = false
-        Task { await self.clear(.sspOs001) }
+        await clear(.sspOs001)
     }
 
     /// FR-002-04: "leaving the fallback (stream creation succeeds on a later re-resolution) clears it". The 30 s tick is
@@ -412,7 +439,9 @@ public actor ScreenshotWatcher {
         guard case .success(let started) = eventSource.start(watching: folder, handler: handler) else { return }
         watch?.stop()
         watch = started
-        leaveFallbackState()
+        await leaveFallbackState()
+        // The clear suspends: an overtaker (`deactivate`, a rebuild) owns the watch and the scan now.
+        guard active, generation == current else { return }
         // Whatever arrived while only the poll was looking is already covered; the gap to the stream is not.
         await reconcileScan()
     }
@@ -426,7 +455,7 @@ public actor ScreenshotWatcher {
             guard let folder = location?.folder else { return }
             watch?.stop()
             let current = generation
-            watch = startPolling(folder) { [weak self] event in
+            await startPolling(folder) { [weak self] event in
                 guard let self else { return }
                 Task { await self.handle(event, generation: current) }
             }
@@ -497,10 +526,14 @@ public actor ScreenshotWatcher {
 
     /// FR-002-03: pickup stays idle and the next tick or activation lists the folder again.
     private func markAccessDenied(at scanStart: Date) async {
+        let mine = generation
         watch?.stop()
         watch = nil
         status = .needsAccess
         await seedWatermarkIfNone(at: scanStart)
+        // The seed suspends: pickup off (FR-002-05: no condition outlives it) or a rebuild may have overtaken this
+        // refusal, and either one owns the status and the notice now.
+        guard active, generation == mine else { return }
         guard !accessDenied else { return }
         accessDenied = true
         await report(Self.accessDeniedError)
@@ -629,7 +662,9 @@ public actor ScreenshotWatcher {
             // and ends unstable must not put its file back, or a later reactivation would retry a file from before the
             // off period. A file still unstable in the same session stays on the list.
             if job.batch == nil, job.session == session { noteUnstable(job.file) }
-            await report(error)
+            // A live job of an ended session reports nothing either: SSP-IO-002 would stand for a file nobody is
+            // watching. A press's job is the user's own request (FR-002-12), so its notice stands in any session.
+            if job.batch != nil || job.session == session { await report(error) }
         case .rejected(let error, let byteSize):
             seen.insert(job.file)
             retry[job.file.url.path] = nil
