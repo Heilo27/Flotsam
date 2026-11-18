@@ -50,7 +50,7 @@ struct TriggersPane: View {
                 ForEach(
                     TriggerPermissionNotice.missing(triggersEnabled: enabled, probe: model.env.permissions), id: \.rawValue
                 ) { code in
-                    Text(verbatim: FlotsamStrings.message(for: FlotsamError(code, "Permission missing for triggers")))
+                    Text(verbatim: TriggerPermissionNotice.text(for: code))
                         .settingsCaption()
                 }
             }

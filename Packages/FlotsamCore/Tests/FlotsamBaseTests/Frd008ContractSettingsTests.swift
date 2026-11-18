@@ -176,11 +176,9 @@ import Testing
         #expect(TriggerPermissionNotice.missing(triggersEnabled: true, probe: probe) == [.setPrm001])
         #expect(rows.first { $0.kind == .accessibility }?.status.text == "Not granted")
         #expect(rows.first { $0.kind == .inputMonitoring }?.status.text == "Granted")
-        let text = FlotsamStrings.text(forKey: "error.SET-PRM-001") ?? ""
+        let text = TriggerPermissionNotice.text(for: .setPrm001)
         #expect(text.contains("Accessibility"))
-        withKnownIssue("DEFECT OC-8038: SET-PRM-001 text says paste is unavailable; oracle says the message states triggers are paused (spec/catalogue wording drift)") {
-            #expect(text.lowercased().contains("trigger"))
-        }
+        #expect(text.lowercased().contains("trigger"))
     }
 
     // OC-8039. Both granted: nothing inline, both rows Granted. Both missing: both codes, in a stable order.

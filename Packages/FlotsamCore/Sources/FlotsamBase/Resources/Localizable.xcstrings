@@ -3511,6 +3511,16 @@
         }
       }
     },
+    "ui.settings.triggersAccessibilityPaused" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security."
+          }
+        }
+      }
+    },
     "ui.settings.usageDatabase" : {
       "localizations" : {
         "en" : {
