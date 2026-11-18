@@ -1479,3 +1479,41 @@ The build used a new bundle ID (`io.github.heilo27.FlotsamWalk460b`) and a fresh
 - **Caveat: this was not a first registration for macOS.** BTM already held an app item named Flotsam (`2.Flotsam`) from earlier walk builds. It re-pointed that item's path to the new build. A clean first-registration test needs a different PRODUCT_NAME as well. `launchctl print` does not show this BTM item. It was left in place: it was created by an earlier walk build and has no launchd job.
 - **Control build:** not run, because nothing fired before step 7.
 - **End state:** no Flotsam process is running. The walk prefs domains are removed. The real DB, -wal and prefs hashes are unchanged (03fc64cf…, c1189741…, f20f539d…).
+
+## 2026-11-18: TASK-460 first-sight BTM test on obrien-460 @ 5267479
+
+The method changed from the request. A PRODUCT_NAME override breaks the build ("Multiple commands produce …bundle/Contents", because the package resource bundles take PRODUCT_NAME too). So each copy was built with a bundle-id override only (`io.github.heilo27.flotsam.btmtest1` / `btmtest2`). The built .app, its executable, CFBundleName and CFBundleDisplayName were then renamed to FlotsamBTM1 / FlotsamBTM2 and ad-hoc re-signed. No source change, nothing committed. No `sfltool resetbtm` or other machine-wide action.
+
+**Results**
+- (a) Arriving at step 7, nothing touched: **no banner and no register call.** The log shows only status reads (3 = not found), about every 2.1 s.
+- (b) Uncheck, then Continue (BTM1): no BTM event, no banner, no item.
+- (c) Check, then Continue (BTM2): `registerLaunchItem` fired 41 ms after Continue, the banner request followed 6 ms later, and status went to 1. A "FlotsamBTM2" banner was shown.
+  - A clean unregister was possible: Settings › Launch at Login OFF → `unregisterLaunchItem`, status 0.
+  - After quit, `launchctl print gui/501 | grep -i flotsam` is empty.
+
+**This corrects my Check 1 and 1b entries.** A persistent "Login Item Added: Flotsam" banner from earlier walk builds (BTM item 2.Flotsam) was still on screen when Run A started. Dismissing it removed that notification request, which proves it was stale. The "banner on arrival at step 7" I logged for 5267479 was most likely this stale banner, so treat it as unreliable. On a never-seen name and bundle id, 5267479 registers only on Continue with the box checked.
+
+**2.1 s status-read caller:** `App/Flotsam/OnboardingView.swift:26-31`.
+- It is a `.task` loop: `model.refresh()`, then a 2 s sleep. `didBecomeActive` at :32-34 also triggers a refresh.
+- `refresh()` is at `OnboardingModel.swift:39-45`. It is gated by `Onboarding.swift:60` (`readsLoginStatus`, step == .loginItem).
+- It reads `SMLoginItemService.swift:7-8` (`SMAppService.mainApp.status`).
+
+**Caveats**
+- `sfltool dumpbtm` timed out (rc 142). The pre-launch "no item" check rests on the BTM log ("record not found") and launchctl.
+- A system `userDataDidChange` burst at 09:50:17 during Run A steps 1-6 has no app-originated register call; its cause is unknown.
+
+**End state**
+- Both apps have quit, and both test domains and plists are deleted.
+- No FlotsamBTM1/2 BTM item is left. The old 2.Flotsam item was left untouched.
+- Real DB, -wal and prefs hashes match the baselines: 03fc64cf…, c1189741…, f20f539d….
+
+## 2026-11-18: FRD-005 8T, OC-5137 per S1 ruling (FR-007-10 wins)
+
+Branch `s2/frd005-8t` is at **5ce3c78**.
+- 45f5c3b: the known-issue wrapper is gone.
+  - The test now asserts that an immediate second sweep after the trigger is cleared keeps the item. The existing companion test asserts kept at exactly 24 h, gone 1 ms later.
+  - Mutation: with the grace removed in `Exemption.autoDeletableSQL`, the new test goes red. Reverted.
+- 5ce3c78 merges origin/main, which brings in 89866d2. Merged, not rebased: no force-push.
+- Full run of FlotsamCore after the merge: **2664 tests, 0 failures, 15 known issues**, exit 0.
+
+**Exact 24 h boundary.** The 89866d2 contract line says "a sweep 24 h or more after the clear removes it". FR-007-09 says eligible when `exemptReleasedAt` is "older than 24 h", which is a strict comparison. The code (`exemptReleasedAt < now-24h`) keeps the item at exactly 24 h. The test follows the FRD and the code. The contract line should say "more than 24 h" (contract drift, OC-5137).
