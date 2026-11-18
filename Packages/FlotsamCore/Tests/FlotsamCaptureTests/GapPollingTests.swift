@@ -51,6 +51,29 @@ struct GapPollingTests {
         #expect(readsPerFire == 1, "changeCount reads per tick: \(readsPerFire)")
     }
 
+    /// OC-115-02 OC-116-01 (production timer, upper bound). given the PRODUCTION scheduler (`ClipboardCapture.systemTimer`,
+    /// which the timer-seam tests no longer reach) on an idle board for ~2.3 s, when `changeCount` reads are counted,
+    /// then there are at most the launch read plus one per whole 0.5 s of the MEASURED window, plus one of slack for the
+    /// timer being created just before the window opens. A run-loop timer never fires early and never bursts to catch
+    /// up, so a starved machine only lowers the count: the bound cannot flake, and it needs no lower bound. Turns red if
+    /// the real timer is scheduled faster than the contract's 0.5 s interval (AC-001-01: at most 2.5 wake-ups/s); a
+    /// timer 2x too fast fires about 9 reads in 2.3 s against the 6 allowed, 5x about 23.
+    @Test("OC-115-02 OC-116-01 the production timer does not wake faster than every 0.5 s")
+    func productionTimerNotFasterThanContract() async throws {
+        let rig = try await GapRig()
+        defer { Task { await rig.cleanUp() } }
+        let started = ContinuousClock.now
+        rig.capture.start()
+        try await Task.sleep(for: .milliseconds(2300))
+        let reads = rig.pasteboard.changeCountReads
+        let elapsed = ContinuousClock.now - started
+        let window = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+        await rig.settle()
+
+        let allowed = 1 + Int(window / 0.5) + 1
+        #expect(reads <= allowed, "reads \(reads) in \(window) s; at most \(allowed) at a 0.5 s interval")
+    }
+
     /// OC-116-02. given 2.3 s of ticks with nothing copied, then no tick reads pasteboard bytes. Turns red if an
     /// idle tick starts reading content (the cost the AC-001-01 CPU budget forbids).
     @Test("OC-116-02 idle ticks read only the change count, never bytes")
