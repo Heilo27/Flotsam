@@ -1650,3 +1650,33 @@ Fresh clone for each target. The runs used `swift test --package-path Packages/F
 - **Defects:** none found in production code.
 - **Process note:** the commits' Co-Authored-By trailer says Sonnet 5.5, which is the model that wrote them, rather than the Opus 5.5 line in the brief. They are left as they are, because no force-push is allowed.
 - **Next:** FRD-000 8T on a new `s2/frd000-8t` from current origin/main.
+
+## 2026-11-18: FRD-000 8T on `s2/frd000-8t` @ 0f2ad26 (cut from main ee59355)
+- **Slices:**
+  - S1 Fatal: 199982a, 8 tests (OC-0008, 0009, 0010, 0069, 0070).
+  - S2 Catalogue: 6adee52, 6 tests (OC-0017, 0033, 0048, 0074, 0075).
+  - S3 Gaps: 0f2ad26, 13 disabled no-seam stubs plus the CITED header.
+- **Mutations, re-run by S2 itself because the agent's results were lost to compaction:**
+  - `FatalAlert.nearestExistingFolder` changed to `return folder`: OC-0009 ×3 and OC-0069 went red, 6 issues.
+  - `URLSession.shared` added to FlotsamBase: OC-0048 went red.
+  - Both were reverted and the tree is clean.
+- **Coverage (77 ids):** 10 tested, 63 cited, 4 untestable (0025, 0054, 0055, 0056 UI half), 0 uncovered.
+  - Caveat: a cited id was counted when an existing test or suite title names it. Nobody re-checked that each of those 63 asserts the behaviour.
+  - OC-0056's data half rests on `tagNameBoundary`, which does not carry the id.
+- **Full run on the branch:** exit 0. 2740 tests, 17 known issues (1 + 5 + 11), 0 "recorded an issue". Arch passed.
+- **Defect (Major): OC-0017, plurals.**
+  - FR-000-05 requires plural and count variations to use catalogue variations. `ui.settings.clearDone` has none, so it reads "1 items deleted".
+  - The test is wrapped in `withKnownIssue` until S1 rules.
+  - The same class, untested:
+    - "%lld items"
+    - "Delete %lld items permanently?"
+    - "Remove tag '%@' from %lld items?" (FRD-004)
+    - "This permanently deletes %lld items…"
+    - the "older than" template
+- **Correction to the FRD-004 entry:** the delete-tag "1 items" IS a defect under FR-000-05. FR-004-04's literal "{n} items" is the template, and FR-000-05 makes it plural-aware. It is not a copy-only note.
+- **Untestable, with the seam each needs:**
+  - OC-0025: a pure HUD placement function plus a clock.
+  - OC-0054: an injectable VoiceOver announcer.
+  - OC-0055: a pure `Notice.menuTitle` in FlotsamBase.
+  - OC-0056: the inline error view lives in the App target.
+- **[Spec Drift]:** none.
