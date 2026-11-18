@@ -85,7 +85,7 @@ struct Worf487MinimumMacOSTests {
     }
 
     // OC-487-05. Red if any one of the places that state the minimum OS is moved off 26.0. TASK-488: Info.plist no longer
-    // holds a literal; it derives from MACOSX_DEPLOYMENT_TARGET, so the literals live in project.yml and Package.swift.
+    // holds a literal; it derives from MACOSX_DEPLOYMENT_TARGET, which xcodegen sets from options.deploymentTarget, so the literals live in project.yml (once) and Package.swift.
     @Test("OC-487-05: project.yml and Package.swift state 26.0, Info.plist derives it, nothing else")
     func minimumVersionsAgree() throws {
         // given the declarations
@@ -95,7 +95,7 @@ struct Worf487MinimumMacOSTests {
         // when reading them
         // then the literals are 26.0, Info.plist derives from the deployment target, and none keeps the old value
         #expect(yml.contains("macOS: \"26.0\""))
-        #expect(yml.contains("MACOSX_DEPLOYMENT_TARGET: \"26.0\""))
+        #expect(!yml.contains("MACOSX_DEPLOYMENT_TARGET:"), "project.yml states the deployment target once, in options.deploymentTarget")
         #expect(yml.contains("LSMinimumSystemVersion: \"$(MACOSX_DEPLOYMENT_TARGET)\""))
         #expect(plist.contains("<key>LSMinimumSystemVersion</key>\n\t<string>$(MACOSX_DEPLOYMENT_TARGET)</string>"))
         #expect(package.contains("platforms: [.macOS(\"26.0\")]"))
