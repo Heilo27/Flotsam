@@ -78,7 +78,7 @@ M = measured here, S = spec-only (code does not exist yet or was not isolated).
 | 000 | FR-000-13 in-memory error ring buffer (100 entries) | KEEP | S, tiny and bounded |
 | 000 | Log sink writes | KEEP | S, only on events, no periodic flush |
 | 001 | FR-001-01 0.5 s poll, `changeCount` only | KEEP | M (prototype): 2.0 wake-ups/s, 0.015 % |
-| 001 | FR-001-19 Paused keeps the timer running | CHANGE | S: stop the timer while Paused (ticket) |
+| 001 | FR-001-19 Paused keeps the timer running | CHANGE | S: stop the poll while Paused and slow the shared timer to 5 s (TASK-382, done) |
 | 001 | FR-001-20 / AC-001-01 / AC-001-16 budgets | CHANGE | edited to the S5 numbers in this commit; the single wake-up source is in place (TASK-381) |
 | 002 | FR-002-02 30 s folder re-resolve | CHANGE | M (prototype): folded into the poll tick (TASK-381, done; wake-ups not re-measured) |
 | 002 | FR-002-04 FSEvents 0.3 s latency | KEEP | S, event-driven, no idle cost |
