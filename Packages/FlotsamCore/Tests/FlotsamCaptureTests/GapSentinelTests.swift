@@ -12,7 +12,7 @@ private struct SentinelDataSource: DiagnosticsDataSource {
     func permissionStates() async -> [PermissionName: PermissionState] { [:] }
     func itemCounts() async -> [ItemKind: Int] {
         let count = (try? await database.pool.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item") }) ?? 0
-        return [.text: count ?? 0]
+        return [.text: count]
     }
     func storageBytes() async -> (database: Int, blobs: Int) { (0, 0) }
 }

@@ -71,21 +71,21 @@ struct GapPollingTests {
         let modeName = "gap.tracking.mode"
         CFRunLoopAddCommonMode(CFRunLoopGetMain(), CFRunLoopMode(modeName as CFString))
         rig.capture.start()
-        var controlFires = 0
-        let control = Timer(timeInterval: 0.2, repeats: true) { _ in controlFires += 1 }
+        let fires = GapCounter()
+        let control = Timer(timeInterval: 0.2, repeats: true) { _ in fires.increment() }
         RunLoop.main.add(control, forMode: .default)
         let readsBefore = rig.pasteboard.changeCountReads
 
         // when: only the tracking-style mode runs
         Self.spin(mode: RunLoop.Mode(modeName), seconds: 1.3)
         let readsInMode = rig.pasteboard.changeCountReads - readsBefore
-        let controlInMode = controlFires
+        let controlInMode = fires.value
 
         // then
         #expect(readsInMode >= 2, "capture ticks while tracking: \(readsInMode)")
         #expect(controlInMode == 0, "control: a .default-only timer must not fire in the custom mode (\(controlInMode))")
         Self.spin(mode: .default, seconds: 0.5)
-        #expect(controlFires >= 1, "control: the .default timer works when its mode runs")
+        #expect(fires.value >= 1, "control: the .default timer works when its mode runs")
         control.invalidate()
         await rig.settle()
     }

@@ -78,4 +78,35 @@ struct GapDedupeTests {
         #expect(rows.map(\.plainText) == ["ABC", "abc"])
         #expect(rows.map(\.copyCount) == [2, 1])
     }
+    /// OC-144-05. given "abc" copied and tagged "Work", then "newer" copied, then "abc" copied again, when read through
+    /// a FRESH database, then one "abc" item remains with copyCount 2, still tagged, and it is first in Recent
+    /// (AC-001-13). Turns red if the re-copy creates a second item, drops the tag, or fails to move it to the top.
+    @Test("OC-144-05 re-copying a tagged item keeps one tagged item, copyCount 2, first in Recent")
+    func recopyKeepsTagAndMovesFirst() async throws {
+        let rig = try await GapRig()
+        defer { Task { await rig.cleanUp() } }
+        rig.capture.start()
+        rig.text("abc")
+        rig.capture.captureNow()
+        #expect(await eventually { await rig.itemCount() == 1 })
+        try await rig.database.pool.write { db in
+            try db.execute(sql: "INSERT INTO tag (name, color, createdAt) VALUES ('Work', 'red', 0)")
+            try db.execute(sql: "INSERT INTO itemTag (itemId, tagId) SELECT id, (SELECT id FROM tag WHERE name = 'Work') FROM item")
+        }
+        rig.text("newer")
+        rig.capture.captureNow()
+        #expect(await eventually { await rig.itemCount() == 2 })
+        rig.text("abc")
+        rig.capture.captureNow()
+        #expect(await eventually { rig.itemsChangedCount.value == 3 })
+        await rig.settle()
+
+        let fresh = try await FlotsamDatabase.open(folder: rig.folder).get()
+        let page = try await fresh.items(matching: LibraryQuery()).get()
+        #expect(page.rows.count == 2)
+        #expect(page.rows.map(\.primaryLine) == ["abc", "newer"])
+        #expect(page.rows.first?.tagNames == ["Work"])
+        #expect(page.rows.last?.tagNames == [])
+        #expect(try await rig.freshRows().map(\.copyCount) == [2, 1])
+    }
 }
