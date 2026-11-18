@@ -92,8 +92,10 @@ public struct ColorChannels: Sendable, Equatable {
         return (name, arguments)
     }
 
-    /// A plain decimal number with an optional trailing "%" (sign, ASCII digits, one point; no exponent, "nan", "inf", hex
-    /// or non-ASCII digits).
+    /// A plain decimal number with an optional trailing "%" (sign, digits, one point; no exponent, "nan", "inf" or hex).
+    /// The pattern fixes the shape: `Double(_:)` alone would accept exponents, "nan", "inf" and hex floats. Digits are
+    /// ASCII because `Double(_:)` rejects any other digit; the `[0-9]` class is not what excludes them. A number too
+    /// large for `Double` (309 or more digits) is infinite and so rejected: a non-finite number is not a colour.
     /// Returns the numeric part, always finite; nil for anything else.
     private static func parseNumber(_ token: Substring) -> Double? {
         let body = token.hasSuffix("%") ? token.dropLast() : token
