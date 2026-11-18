@@ -530,3 +530,21 @@ Clipboard: restored after the run.
 - `s2/frd006` is FROZEN: no more S2 pushes. App/ Shelf belongs to TASK-409.
 - S1 noted the oracle `shelf.empty` vs `ui.shelf.empty` mismatch.
 - S2 next: lane B 8T (FRD-001, then FRD-003), branches merged up to main 37e00b8.
+
+## 2026-11-17: B FRD-001 8T, part 2 (INCOMPLETE, handoff)
+
+**Status: part 2 test code NOT started; stopped on the compaction cap. Next OC ID: OC-1056.** Branch `s2/frd001-8t` @ 190fde0, pushed. Merged `origin/main` 9fcb65c (merge commit 58a14dc); main was still 9fcb65c at the last fetch. The final full `swift test` was NOT run after the merge, so no main-SHA verdict yet.
+
+**Counts:** `swift test --filter FRD001Contract` at 190fde0: 49 tests in 2 suites, 49 passed, 0 failed (OC-1002..1055, part 1). No part 2 tests exist yet (OC-1056..OC-1110 are all unwritten).
+
+**Defects found:** none confirmed (nothing in part 2 has been run). Suspected, unconfirmed (needs a test): nothing clears the CAP-PRM-001 Notice or warning dot when capture resumes (OC-1081, OC-1083). Code: `ClipboardCapture.swift:210-213` (`noteReadability(.readable)` only logs a trace); the only non-test `clearNotices(code:)` caller is `App/Flotsam/AppContainer.swift:136` (screenshot watcher). Likely Major.
+
+**Leads (code reading only, not yet confirmed by test):** L-A refuted (CAP-LIM-003 context is `members.count`, not the 500 limit). L-B refuted (CAP-LIM-001 carries `.limitBytes`). Both still need a pinning test in part 2.
+
+**Handoff for the next agent:**
+- Harness is ready (190fde0): `withRig`, `uid`, `fileName` are internal in `FRD001ContractHarness.swift`; added `ContractSourceApps.names`, `ContractPasteboard.reveal(_:)` (set contents with no `changeCount` bump) and `ContractPasteboard.writes`.
+- Create `Packages/FlotsamCore/Tests/FlotsamCaptureTests/FRD001ContractPart2Tests.swift`, starting with batch 1: OC-1056 (symlink name `link.txt` preserved), OC-1057 (600 files -> one bundle with 500 members, Notice 'A copy of 600 files was trimmed to the first 500.'), OC-1058 (exactly 500 -> no LIM-003), OC-1059..1063 source resolution, OC-1064..1066 remote clipboard. Then continue to OC-1110.
+- Run: `swift test --package-path Packages/FlotsamCore --filter FRD001Contract`. Commit `[FRD-001] 8T: ...` with both trailers, explicit-path `git add`, push after each batch.
+- Before the final full `swift test`: `git fetch origin`, `git merge origin/main` (merge only), record the main SHA tested.
+
+**Unreachable IDs (part 1, from the test file's Unreachable comment):** OC-1001, 1003, 1022, 1023, 1033 (need a running app: CPU profile, menu tracking, Secure Event Input, system screenshot), plus the UI halves of OC-1005..1010, 1030, 1042, 1044, 1045, 1055 (panel/hotkey/paste UI). Part 2 unreachable list not yet built.
