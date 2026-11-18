@@ -54,15 +54,16 @@ public enum TemplateVariables {
     }
 
     /// Save-time check: `TRG-VAL-005` when the text holds a name or format that is not a variable. It is a warning;
-    /// the caller saves anyway and shows the notice. Only the count goes into the error (never the text itself).
+    /// the caller saves anyway and shows the notice. The error carries no context: its catalogue message has no
+    /// placeholder (FRD-000 section 8), so a `count` would make `FlotsamStrings` fall back to the SYS-INT-001 text.
+    /// The text itself never goes into the error.
     public static func validate(_ text: String) -> FlotsamResult<Void> {
         let unknown = scan(Array(text)).filter { span in
             if case .unknown = span.kind { return true }
             return false
         }
         guard unknown.isEmpty else {
-            return .failure(FlotsamError(
-                .trgVal005, "Text holds a variable the expander does not know", context: [.count: .int(unknown.count)]))
+            return .failure(FlotsamError(.trgVal005, "Text holds a variable the expander does not know"))
         }
         return .success(())
     }

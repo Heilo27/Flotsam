@@ -413,10 +413,8 @@ private let msgUnknownVariable = "An unknown variable was left as plain text."
         #expect(rig.didSave.value == 1)
     }
 
-    // OC-5058 `then`: the warning reads 'An unknown variable was left as plain text.' DEFECT: TemplateVariables.validate
-    // attaches a `count` context, FlotsamStrings.message(for:) turns it into an argument, the catalogue template has no
-    // placeholder, so the arity check falls back to the SYS-INT-001 text. Known issue until fixed; flips red when fixed
-    // (remove withKnownIssue then).
+    // OC-5058 `then`: the warning reads 'An unknown variable was left as plain text.' (TASK-395: validate used to attach
+    // a `count` context the catalogue template has no placeholder for, so the text fell back to SYS-INT-001.)
     @Test func unknownVariableWarningReadsTheCatalogueText() async throws {
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
@@ -425,10 +423,8 @@ private let msgUnknownVariable = "An unknown variable was left as plain text."
         model.triggerText = ";foo1"
         await model.save()
 
-        withKnownIssue("DEFECT: TRG-VAL-005 shows the generic SYS-INT-001 text (TASK-395)") {
-            #expect(model.warningMessage == msgUnknownVariable)
-            #expect(rig.huds.value == [msgUnknownVariable])
-        }
+        #expect(model.warningMessage == msgUnknownVariable)
+        #expect(rig.huds.value == [msgUnknownVariable])
     }
 
     // Negative of OC-5058: ordinary text and a known variable raise no warning and no HUD.
