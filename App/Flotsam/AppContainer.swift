@@ -5,6 +5,7 @@ import FlotsamLibrary
 import FlotsamPaste
 import FlotsamPayload
 import FlotsamScreenshots
+import FlotsamShelf
 import FlotsamStorage
 import Foundation
 
@@ -28,8 +29,12 @@ final class AppContainer {
     private(set) var capture: ClipboardCapture?
     /// The Library panel (FR-003-01). Nil until the database has opened; the menu item is disabled until then.
     private(set) var library: LibraryPanelController?
+    /// The Shelf panel (FR-006-01). Nil until the database has opened; the menu item is disabled until then.
+    private(set) var shelf: ShelfPanelController?
     private var libraryHotkey: LibraryHotkey?
+    private var shelfHotkey: LibraryHotkey?
     private var unsubscribeHotkey: (@Sendable () -> Void)?
+    private var unsubscribeShelfHotkey: (@Sendable () -> Void)?
     private var unsubscribeScreenshots: (@Sendable () -> Void)?
     /// Retained for the life of the app (FRD-002).
     private(set) var screenshots: ScreenshotWatcher?
@@ -91,7 +96,13 @@ final class AppContainer {
         case .success(let opened):
             database = opened
             startCapture(database: opened)
-            startLibrary(database: opened)
+            // The Library and the Shelf paste through one service and read one frontmost app (FR-006-08).
+            let frontmost = WorkspaceFrontmostAppProvider()
+            let paster = PasteService(
+                store: opened, pasteboard: SystemPasteboard(), files: LocalFileSystem(), frontmost: frontmost,
+                accessibility: permissions, keys: CGEventKeyPoster(), clock: SystemClock(), ownWrites: ownWrites)
+            startShelf(database: opened, paster: paster, frontmost: frontmost)
+            startLibrary(database: opened, paster: paster, frontmost: frontmost)
             startScreenshots(database: opened)
         case .failure(let error): await reporter.report(error, origin: .background)
         }
@@ -158,14 +169,60 @@ final class AppContainer {
         Task { await watcher.start() }
     }
 
+    /// FRD-006: builds the Shelf over the opened database and points `actions.toggleShelf` at it (FR-006-03c). The Shelf
+    /// pastes through the Library's `PasteService` (FR-006-08) and reads Missing from the same row flag (FR-006-14).
+    private func startShelf(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
+        let reporter = reporter
+        let capture = capture
+        let effects = ShelfEffects(
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+            captureNow: { capture?.captureNow() },
+            confirmDelete: { message in Self.confirmDelete(message) })
+        let controller = ShelfPanelController(
+            settings: settings, frontmost: frontmost, thumbnail: { await database.thumbnail(itemId: $0, size: .grid) },
+            makeModel: { host in
+                ShelfModel(
+                    source: database, paster: ShelfPasteAdapter(service: paster), host: host, events: database.events,
+                    details: database, effects: effects)
+            })
+        shelf = controller
+        // Only one Flotsam panel is open at a time: showing the Shelf hides the Library (FR-006-04). The reverse is
+        // `actions.openLibrary` and the Library hotkey below.
+        controller.onReveal = { [weak self] in self?.library?.hidePanel() }
+        actions.toggleShelf = { [weak controller] in controller?.toggle() }
+
+        // The Toggle Shelf hotkey (FR-006-03c, FR-005-07): unbound by default, and unregistered while the Shelf is off.
+        // `LibraryHotkey` is the one registration path; only the chord it reads differs.
+        let hotkey = LibraryHotkey(
+            registrar: CarbonHotkeyRegistrar(), preferences: SettingsShelfHotkeyPreferences(settings: settings)
+        ) { [weak controller] in controller?.toggle(.hotkey) }
+        if case .failure(let error) = hotkey.apply() {
+            Task { await reporter.report(error, origin: .background) }
+        }
+        shelfHotkey = hotkey
+        let watched: Set<String> = [SettingKeys.shortcutsToggleShelf.name, SettingKeys.shelfEnabled.name]
+        unsubscribeShelfHotkey = settings.subscribe { [weak hotkey] change in
+            guard watched.contains(change.name) else { return }
+            Task { @MainActor in
+                if case .failure(let error) = hotkey?.apply() { await reporter.report(error, origin: .background) }
+            }
+        }
+    }
+
+    /// The delete confirmation (FR-004-09) as a modal alert; the Shelf's panel is not key, so a sheet has no parent.
+    private static func confirmDelete(_ message: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: ShelfText.string(ShelfText.buttonDelete))
+        alert.addButton(withTitle: ShelfText.string(ShelfText.buttonCancel))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     /// Builds the Library stack over the opened database and registers its hotkey (FR-003-01, FR-005-01).
-    private func startLibrary(database: FlotsamDatabase) {
+    private func startLibrary(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
         let reporter = reporter
         let probe = permissions
-        let frontmost = WorkspaceFrontmostAppProvider()
-        let paster = PasteService(
-            store: database, pasteboard: SystemPasteboard(), files: LocalFileSystem(), frontmost: frontmost,
-            accessibility: probe, keys: CGEventKeyPoster(), clock: SystemClock(), ownWrites: ownWrites)
 
         // FRD-004: the coordinator and the organizer need each other (rejected input shows inline), so the organizer is
         // handed over after both exist.
@@ -193,11 +250,18 @@ final class AppContainer {
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller
-        actions.openLibrary = { [weak controller] in controller?.toggle() }
+        // Only one Flotsam panel is open at a time: opening the Library hides the Shelf (FR-006-04).
+        actions.openLibrary = { [weak controller, weak self] in
+            self?.shelf?.libraryOpened()
+            controller?.toggle()
+        }
 
         let hotkey = LibraryHotkey(
             registrar: CarbonHotkeyRegistrar(), preferences: SettingsLibraryHotkeyPreferences(settings: settings)
-        ) { [weak controller] in controller?.toggle() }
+        ) { [weak controller, weak self] in
+            self?.shelf?.libraryOpened()
+            controller?.toggle()
+        }
         if case .failure(let error) = hotkey.apply() {
             Task { await reporter.report(error, origin: .background) }
         }

@@ -32,3 +32,16 @@ public struct SettingsLibraryHotkeyPreferences: LibraryHotkeyPreferences {
 
     public var openLibraryChord: ChordBinding { settings.value(SettingKeys.shortcutsOpenLibrary) }
 }
+
+/// The Toggle Shelf chord (FR-005-01, FR-006-03c) in the shape `LibraryHotkey` registers: the `shortcuts.toggleShelf`
+/// setting, or none while `shelf.enabled` is off (FR-005-07). The name on the protocol says "Library" because the one
+/// registration path was written first for the Library; the chord is whatever the adapter returns.
+public struct SettingsShelfHotkeyPreferences: LibraryHotkeyPreferences {
+    private let settings: SettingsStore
+
+    public init(settings: SettingsStore) { self.settings = settings }
+
+    public var openLibraryChord: ChordBinding {
+        settings.value(SettingKeys.shelfEnabled) ? settings.value(SettingKeys.shortcutsToggleShelf) : ChordBinding.none
+    }
+}

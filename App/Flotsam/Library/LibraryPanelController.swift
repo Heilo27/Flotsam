@@ -193,7 +193,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
 }
 
 /// Carries a non-Sendable `NSEvent` across `MainActor.assumeIsolated`; local monitors are always called on the main thread.
-private struct Unchecked<Value>: @unchecked Sendable {
+/// Shared with the Shelf's key monitor.
+struct Unchecked<Value>: @unchecked Sendable {
     let value: Value
     init(_ value: Value) { self.value = value }
 }

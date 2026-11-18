@@ -7,7 +7,7 @@ public struct LibraryPreview: Equatable {
     /// Text beyond this many characters is behind "Show more" (FR-003-14).
     public static let textLimit = 20_000
     /// File and folder members listed before "and n more".
-    public static let memberLimit = 10
+    public static let memberLimit = 20
 
     public struct Field: Equatable {
         public let label: String
