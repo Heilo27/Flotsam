@@ -26,7 +26,7 @@ struct IngestWorker: Sendable {
         switch await ingest.ingest(candidate) {
         case .failure(let error):
             // FR-001-22: this item is lost, the pipeline carries on with the next.
-            await reporter.report(error, origin: .background)
+            await reporter.report(Self.captureFailure(error), origin: .background)
         case .success(let result):
             for warning in result.warnings { await reporter.report(warning, origin: .background) }
             FlotsamLog.log(
@@ -34,6 +34,19 @@ struct IngestWorker: Sendable {
                     kind: classification.kind, byteSize: payload.representations.reduce(0) { $0 + $1.data.count },
                     outcome: result.outcome.isBump ? .deduped : .stored, policy: nil),
                 sink: sink)
+        }
+    }
+}
+
+extension IngestWorker {
+    /// A write the disk or database refused (`STO-DB-001`, `STO-IO-001`) is, for capture, a copy that could not be
+    /// saved: `CAP-IO-001` (FR-001-22), keeping the cause. Every other pipeline failure keeps its own code.
+    static func captureFailure(_ error: FlotsamError) -> FlotsamError {
+        switch error.code {
+        case .stoDb001, .stoIo001:
+            FlotsamError(.capIo001, "Capture write refused", context: error.context, underlying: error.underlying)
+        default:
+            error
         }
     }
 }

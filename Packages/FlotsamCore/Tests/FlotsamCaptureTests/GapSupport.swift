@@ -69,12 +69,14 @@ final class GapKV: KeyValueStore, @unchecked Sendable {
 final class GapPresenter: ErrorPresenter, @unchecked Sendable {
     private let lock = NSLock()
     private var huds: [String] = []
-    private var lastNotices: [Notice] = []
+    /// Every Notice list the user was ever shown, not only the latest: a Notice that cleared again (CAP-PRM-001 on
+    /// resume, FR-001-18) was still shown.
+    private var noticeHistory: [[Notice]] = []
     func showHUD(message: String) { lock.withLock { huds.append(message) } }
-    func noticesChanged(_ notices: [Notice]) { lock.withLock { lastNotices = notices } }
+    func noticesChanged(_ notices: [Notice]) { lock.withLock { noticeHistory.append(notices) } }
     func presentFatal(_ error: FlotsamError) {}
     /// Everything the user would have been shown, as one string.
-    var shown: String { lock.withLock { String(reflecting: huds) + String(reflecting: lastNotices) } }
+    var shown: String { lock.withLock { String(reflecting: huds) + String(reflecting: noticeHistory) } }
 }
 
 /// The log-sink seam (FR-000-09/10): keeps every record, whole.

@@ -54,6 +54,20 @@ public protocol PasteboardPort {
     func write(_ representations: [PasteboardRepresentation]) -> FlotsamResult<Int>
 }
 
+/// Whether macOS currently lets Flotsam read what other apps copy (FRD-001 FR-001-18 a). Separate from
+/// `PasteboardPort` because it is a system privacy setting, not part of reading or writing the board.
+@MainActor
+public protocol PasteboardAccessPort {
+    /// False when the system reports an access behaviour other than "Allow" (macOS 15.4 and later).
+    var isReadAllowed: Bool { get }
+}
+
+/// Access on macOS versions that do not gate pasteboard reads, and the default when no system probe is supplied.
+public struct UngatedPasteboardAccess: PasteboardAccessPort {
+    public init() {}
+    public var isReadAllowed: Bool { true }
+}
+
 /// String-valued key-value storage behind `SettingsStore`. Only `SettingsStore` may use it for settings (ADR-0009).
 public protocol KeyValueStore: Sendable {
     func string(forKey key: String) -> String?
