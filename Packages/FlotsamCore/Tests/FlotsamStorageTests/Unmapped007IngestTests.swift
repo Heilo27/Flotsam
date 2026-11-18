@@ -15,7 +15,7 @@ import FlotsamBase
 //     and sidebar count that event makes the windows re-read. UI half deferred to TASK-363.
 //   - OC-7098: the progress sheet, HUD string and release-build timing are UI / 9F. Storage's half is the work:
 //     10,000 items (2,000 images with blobs) cleared, count 0, deletedCount 10,000, progress reported up to
-//     (10,000, 10,000), inside the 5 s budget (the budget is applied to a debug build here, so it is a floor).
+//     (10,000, 10,000), inside the 5 s budget (the budget is applied to a debug build here, so it is a floor, and is load-normalized, TASK-475).
 //   - OC-7106: the menu item and the poll are Capture / app-shell. Storage's half is the CaptureMode logic the menu
 //     label and the poll gate both read, and that the chosen mode persists. UI half deferred to TASK-363.
 //   - OC-7118: the Notice throttle and the five log lines are written by Capture (FlotsamCapture is an empty
@@ -133,14 +133,22 @@ private let png16 = TestImage.make(width: 16, height: 16, format: .png)
         let events = EventCollector(s.database.events)
 
         // when All time is confirmed
-        let started = Date()
+        // The 5 s budget is on the clear call alone (setup is excluded) and is load-normalized (TASK-475): the wall time
+        // is scaled by the CPU share a spinning probe thread was given while the clear ran, so a machine running at
+        // load average 700 does not turn a 2 s clear into a 13 s failure, while a clear that really does more work or
+        // stalls (the share stays near 1) still reads its full wall time against 5 s.
+        let probe = CPUShareProbe()
+        defer { _ = probe.stop() }  // a throwing clear must still end the spin thread; stop() is idempotent
+        let started = DispatchTime.now().uptimeNanoseconds
         let outcome = try await s.database.clearHistory(range: .allTime, includeExempt: false) { done, total in
             progress.mutate { $0.append([done, total]) }
         }.get()
-        let elapsed = Date().timeIntervalSince(started)
+        let wall = Double(DispatchTime.now().uptimeNanoseconds - started) / 1e9
+        let share = probe.stop()
+        let loadNormalized = wall * max(share, 0.02)
 
-        // then it finished within 5 s, deleted 10,000, left no row, representation or blob, and told the UI
-        #expect(elapsed < 5.0)
+        // then it finished within 5 s (load-normalized), deleted 10,000, left no row, representation or blob, and told the UI
+        #expect(loadNormalized < 5.0, "Clear History of 10,000 took \(wall) s wall, CPU share \(share), load-normalized \(loadNormalized) s")
         #expect(outcome.deletedCount == 10_000)
         #expect(try s.count("item") == 0)
         #expect(try s.count("representation") == 0)
@@ -234,6 +242,59 @@ private let png16 = TestImage.make(width: 16, height: 16, format: .png)
         rig.fileSystem.setCapacity(10 * 1024 * mib)
         _ = try await rig.create(rig.image("k-7118-after", png16))
         #expect(try rig.itemCount() == 1)
+    }
+}
+
+/// How much of a core the machine gave a thread that wanted all of one, over the window between `init` and `stop()`:
+/// thread CPU time divided by wall time, 1.0 on an idle machine and small when it is starved. A wall-clock budget
+/// multiplied by this is the time the work would have taken with the CPU to itself, so the budget stops depending on
+/// how many other processes (or other tests) are running. A sleep or an I/O stall inside the work does not lower the
+/// share, so it still counts against the budget in full.
+final class CPUShareProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stopRequested = false
+    private var share = 1.0
+    private var sink: UInt64 = 0
+    private let running = DispatchSemaphore(value: 0)
+    private let finished = DispatchSemaphore(value: 0)
+
+    init() {
+        let thread = Thread { [self] in run() }
+        thread.start()
+        running.wait()
+    }
+
+    /// Ends the window and returns the share, in (0, 1]. Safe to call more than once (a `defer` guards the throw
+    /// path while the happy path reads the value): the first call ends the window, later calls return the same share.
+    func stop() -> Double {
+        lock.withLock { stopRequested = true }
+        finished.wait()
+        finished.signal()
+        return lock.withLock { share }
+    }
+
+    /// True once `stop()` has asked the spin thread to end (read by the TASK-475 worf tests to see a deferred stop ran).
+    var stopWasRequested: Bool { lock.withLock { stopRequested } }
+
+    private static func threadCPUNanos() -> UInt64 {
+        var ts = timespec()
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts)
+        return UInt64(ts.tv_sec) * 1_000_000_000 + UInt64(ts.tv_nsec)
+    }
+
+    private func run() {
+        let wall0 = DispatchTime.now().uptimeNanoseconds
+        let cpu0 = Self.threadCPUNanos()
+        running.signal()
+        var acc: UInt64 = 1
+        while !lock.withLock({ stopRequested }) {
+            for _ in 0..<20_000 { acc = acc &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407 }
+        }
+        sink = acc
+        let cpu = Double(Self.threadCPUNanos() - cpu0)
+        let wall = Double(DispatchTime.now().uptimeNanoseconds - wall0)
+        lock.withLock { share = wall > 0 ? min(1, cpu / wall) : 1 }
+        finished.signal()
     }
 }
 

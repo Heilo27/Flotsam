@@ -69,7 +69,8 @@ public final class FlotsamDatabase: Sendable {
     }
 
     private enum Attempt {
-        /// `migratedThisLaunch`: a migration ran (or the file was new) in this very launch (FR-007-17 expiry).
+        /// `migratedThisLaunch`: a migration ran (or the file was new) in this very launch, so this launch cannot yet
+        /// confirm it (FR-007-17).
         case opened(DatabasePool, migratedThisLaunch: Bool)
         case damaged
         case failed(FlotsamError)
@@ -89,7 +90,9 @@ public final class FlotsamDatabase: Sendable {
         for attemptNumber in 0..<2 {
             switch attempt(layout: layout, fileSystem: fileSystem, migrations: migrations, sink: logSink) {
             case .opened(let pool, let migratedThisLaunch):
-                // FR-007-17 / FR-007-13: a clean open on a launch that did not migrate ends the life of old plaintext copies.
+                // FR-007-17 / FR-007-13: a clean open (integrity check passed) on a launch that did not migrate confirms the
+                // schema an earlier launch migrated to, which ends the pre-migration copy; it also expires old quarantines.
+                // `.failed` and `.damaged` never get here, and neither does the launch that migrated: the copy stays.
                 if !migratedThisLaunch { layout.expirePlaintextCopies(fileSystem: fileSystem, now: clock.now()) }
                 // FR-007-13: an earlier launch failed closed partway through a quarantine, so nobody was told yet.
                 // WHY: consumed even when this launch quarantined for real (`notice` already set), or the stale marker
