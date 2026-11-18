@@ -662,3 +662,29 @@ Known flakes (OC-7132, `optionArrowsStepThroughSidebarFilters`) did not fail, so
 **Unreachable from the package (reasons are in the test file's trailing comment):** OC-1079, 1089, 1090 (performance, memory, signposts need the app); OC-1084 (no seam, defect above); the Save Clipboard halves of OC-1085/1086 (`saveClipboard` at `AppContainer.swift:222` is a UI entry point, never assigned); OC-1096 (network monitor); the `log show` half of OC-1093; UI halves of OC-1059, 1064, 1069, 1070, 1077, 1100..1107 (rows, preview, menu-bar icon, HUD pixels, Data's 8V).
 
 **Verdict:** FAIL (3 Major defects open). L-A refuted, L-B refuted. Confidence: Moderate (batch 3b has not been mutation-checked, and one full run showed load flakes).
+
+## 2026-11-17: A2 + Shelf re-smoke on main 1c87093
+
+**Verdict: FAIL (1 Major defect: the Toggle Shelf hotkey toggles the Library instead).** Clean clone at 1c87093, `bin/bootstrap.sh`, `bin/build.sh Debug`: both succeeded. Launched with `CFFIXED_USER_HOME` on a scratch home.
+
+**A2 launch smoke**
+- a. Build and launch: PASS.
+- b. Menu bar item present: PASS. Items: Open Library, Save Clipboard, Toggle Shelf, Pause Capture, Notices, Settings, Show Setup Guide, Quit Flotsam.
+- c. Quit cleanly via the menu: PASS (process gone within 3 s).
+- d. Crash logs `~/Library/Logs/DiagnosticReports/Flotsam*`: none before, none after. `log show` faults for process Flotsam: none.
+
+**Shelf re-smoke**
+- a1. Hotkey, Library open: FAIL. There is no default Shelf hotkey (`shortcuts.toggleShelf` defaults to `ChordBinding.none`, Settings.swift:49), so the brief's "default" does not exist. Bound for the test to ctrl+cmd+B via a launch argument (`-shortcuts.toggleShelf 11:3`, never written to disk); the menu item showed the chord. Pressing it with the Library open hid the Library and showed NO Shelf; with the Library closed it OPENED the Library; ctrl+cmd+V (Library chord) also toggled the Library. Window lists via System Events AX: B from closed gave the Library window (760x480), V closed it, B opened it again. No `shelf.reveal` line for any hotkey press.
+- a2. Menu item "Toggle Shelf" (trigger menuItem): PASS. Shelf window (280x160 at the right edge) appeared and the Library window was gone from the AX window list (one-panel rule holds on this path).
+- a3. Reverse (Shelf up, then Open Library): PASS. Only the Library window remained.
+- b. `shelf.reveal` log (menu path): PASS. Quote: `[io.github.heilo27.Flotsam:shelf] shelf.reveal outcome=revealed trigger=menuItem <private>` at 21:49:50.666 and 21:50:04.445. Hotkey path: no line, because the Shelf never revealed.
+- c. TASK-411 warning (`makeKeyWindow called on _NSGlassEffectWindow`): 3 in this launch (21:47:38.548, 21:47:44.363, 21:50:06.228). Each coincided with a menu-bar menu open or the Open Library click, not with a Shelf show (Shelf shows were at 21:49:50 and 21:50:04 with no warning within 1.5 s). Observed only.
+- d. Esc hides the Shelf: PASS (AX window list empty 1.5 s after Esc).
+
+**Defects**
+1. Major. Hotkey collision between the two `CarbonHotkeyRegistrar` instances. `App/Flotsam/AppContainer.swift:197` (Shelf) and `:260` (Library) each create their own registrar. `App/Platform/CarbonHotkeyRegistrar.swift:14,16,23` gives every instance the same signature "FLTS" and ids starting at 1, and each installs its own application-level event handler (`:65`) that looks the pressed id up in its own `entries`. The Shelf chord (id 1) is therefore delivered to the Library registrar's handler, which finds ITS id 1, runs the Library toggle and returns noErr. Matches the observed behaviour exactly. Fix direction: one shared registrar, or distinct ids/signatures. (Read from source plus the black-box behaviour above; I did not add logging to confirm the dispatch order.)
+2. Minor (spec vs brief). Toggle Shelf has no default chord; FR-006-03c says "unbound by default", so this is as designed, but the A2/Shelf brief should not expect a default.
+
+**Observations (not defects):** the Library chord toggles (open/close) with ctrl+cmd+V; System Events `keystroke` went to TextEdit (frontmost) while the Carbon hotkeys still fired system-wide.
+
+**Data isolation.** Real DB opened read-only before and after: 17 items both times, not written. Pasteboard saved and restored (was an empty string; 0 bytes after). No TCC prompts. TextEdit not touched. DISCLOSURE: one `defaults write` with `CFFIXED_USER_HOME` set landed in the REAL prefs domain `io.github.heilo27.Flotsam` (key `shortcuts.toggleShelf`); noticed at once and removed with `defaults delete`. Real prefs now again hold only `onboarding.completed` and `settings.lastPane`. The prefs plist mtime changed; the DB did not. Scratch clone deleted; logs and screenshots kept in the session scratchpad.
