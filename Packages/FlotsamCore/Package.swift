@@ -77,6 +77,12 @@ let package = Package(
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload"]
         ),
         .testTarget(name: "FlotsamShelfTests", dependencies: ["FlotsamShelf", "FlotsamBase", "FlotsamStorage", "FlotsamPayload"]),
+        // S2 perf harnesses (opt-in, measurement only): every test is gated on FLOTSAM_PERF=1, so a plain `swift test`
+        // skips them. Sources symlink the storage fixture and the App's SystemPasteboard so nothing is copied; see bin/perf.sh.
+        .testTarget(
+            name: "FlotsamPerfTests",
+            dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload", "FlotsamCapture"]
+        ),
         // Worf (TASK-318): compiles the App-target editor model and its recorder (symlinked sources) so the editor's
         // save and validation rules run under `swift test` with no app launch.
         .testTarget(
