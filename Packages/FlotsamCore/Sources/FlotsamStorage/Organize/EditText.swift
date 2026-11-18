@@ -25,7 +25,7 @@ extension FlotsamDatabase {
             }
             guard text.utf8.count <= IngestLimits.maxTextBytes else {
                 throw OrganizeRejection(error: FlotsamError(
-                    .orgLim003, "Edited text is over the text ceiling", context: [.byteSize: .bytes(IngestLimits.maxTextBytes)]))
+                    .orgLim003, "Edited text is over the text ceiling", context: [.limitBytes: .bytes(IngestLimits.maxTextBytes)]))
             }
 
             let rich = IngestLimits.richTypeIdentifiers.sorted()

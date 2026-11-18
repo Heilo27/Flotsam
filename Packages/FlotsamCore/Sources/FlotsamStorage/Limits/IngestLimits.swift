@@ -40,13 +40,14 @@ extension IngestLimits {
 
     /// Applies every ceiling in one place. Failure means "skip the item"; warnings mean "stored, but trimmed".
     ///
-    /// The ceiling goes into the error as `byteSize` so the Notice can render `{limit}` with binary units
-    /// (FR-007-06) without Storage owning any user-facing formatting.
+    /// The ceiling goes into the error as `limitBytes`, the one context key `FlotsamStrings.message(for:)` reads for
+    /// `{limit}`, so the Notice renders it with binary units (FR-007-06) without Storage owning any user-facing
+    /// formatting. `byteSize` is a different quantity (a stored or available size) and never carries a ceiling.
     static func apply(to candidate: IngestCandidate) -> FlotsamResult<LimitedPayload> {
         func skip(_ ceiling: Int) -> FlotsamResult<LimitedPayload> {
             .failure(FlotsamError(
                 limitCode(for: candidate.origin), "Payload over the ingest ceiling",
-                context: [.byteSize: .bytes(ceiling)]))
+                context: [.limitBytes: .bytes(ceiling)]))
         }
 
         if let text = candidate.plainText, text.utf8.count > maxTextBytes { return skip(maxTextBytes) }
@@ -64,7 +65,7 @@ extension IngestLimits {
         if droppedRich > 0 {
             warnings.append(FlotsamError(
                 .capLim002, "Rich representation dropped; plain text kept",
-                context: [.count: .int(droppedRich), .byteSize: .bytes(maxRichRepresentationBytes)]))
+                context: [.count: .int(droppedRich), .limitBytes: .bytes(maxRichRepresentationBytes)]))
         }
 
         if candidate.kind == .image || candidate.kind == .screenshot {
