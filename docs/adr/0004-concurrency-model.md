@@ -27,6 +27,7 @@ Recurring work (truth S5, at most 2.5 wake-ups/s idle; the poll alone is about 2
   - Retention sweep: `RetentionScheduler` sleeps 30 s once, then 1 h between sweeps, and wakes on wake-from-sleep. About 0.0003 wake-ups/s. Too coarse to share a 0.5 s tick.
   - Reconcile sweep: `ReconcileScheduler` sleeps 15 s once, then 7 days. Effectively zero idle cost.
   - Fallback folder poll: `PollingFolderSource`, 5 s, runs only after the FSEvents stream fails (FR-002-04). 0.2 wake-ups/s while degraded, none otherwise.
+  - Visible-window status refresh: the Settings permission rows re-read every 2 s (`VisibleRefresh`, FR-008-13 b) only while their pane is on screen in a visible window; the onboarding window does the same while open. Both go through the one `refreshWhileVisible` modifier and `VisibleRefresh.interval`, so the 2 s cadence has a single home and the visibility rule (`VisibleRefresh.isVisible`) is shared; a dropped owner cancels its loop. None runs while idle, so it is outside the idle wake-up budget.
   - Transient waits: the 40 ms to 500 ms paste, clipboard-restore, expander and screenshot stability waits, and the UI dismiss delays. They run only while one user action is in flight and never recur while idle.
 
 Rules:

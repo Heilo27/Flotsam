@@ -33,7 +33,7 @@ final class OnboardingModel {
     var openLibraryChord: ChordBinding { container.settings.value(SettingKeys.shortcutsOpenLibrary) }
     var canOpenLibrary: Bool { container.actions.openLibrary != nil }
 
-    /// Permission state is read fresh each time (FR-008-13 rule b); the view calls this on a 2 s tick and on activation.
+    /// Permission state is read fresh each time (FR-008-13 rule b); the view calls this through `refreshWhileVisible` (on activation and every `VisibleRefresh.interval` while its window is visible).
     func refresh() {
         accessibilityGranted = container.permissions.isGranted(.accessibility)
         inputMonitoringGranted = container.permissions.isGranted(.inputMonitoring)

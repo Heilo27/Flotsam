@@ -112,7 +112,7 @@ struct Frd008ContractPermissionsTests {
         for _ in 0..<3 {
             let probe = Frd008Probe()  // a relaunch: every permission declined
             _ = PermissionRow.current(probe: probe)
-            _ = PasteGate.outcome(probe: probe)
+            _ = PasteGate.isAllowed(probe: probe)
             _ = TriggerPermissionNotice.missing(triggersEnabled: true, probe: probe)
             #expect(probe.requests.isEmpty)
             #expect(probe.opened.isEmpty)
@@ -123,10 +123,10 @@ struct Frd008ContractPermissionsTests {
     @Test("OC-8108: a launch after Accessibility was granted while quit reads Granted and pastes")
     func grantWhileQuitIsSeenAtLaunch() {
         let before = Frd008Probe()
-        #expect(PasteGate.outcome(probe: before) != .paste)
+        #expect(!PasteGate.isAllowed(probe: before))
         let afterRelaunch = Frd008Probe(granted: [.accessibility])
         #expect(PermissionRow.current(probe: afterRelaunch).first?.status.text == "Granted")
-        #expect(PasteGate.outcome(probe: afterRelaunch) == .paste)
+        #expect(PasteGate.isAllowed(probe: afterRelaunch))
         #expect(afterRelaunch.isAccessibilityTrusted)
     }
 
@@ -146,14 +146,14 @@ struct Frd008ContractPermissionsTests {
     @Test("OC-8111/8119: choosing an item with Accessibility off shows the exact copy-only HUD")
     func copyOnlyHUD() async {
         let rig = Rig()
-        #expect(PasteGate.outcome(accessibilityGranted: false)
-            == .copyOnly(FlotsamError(.setPrm001, "Accessibility not granted; pasting by copy only")))
+        #expect(!PasteGate.isAllowed(probe: Frd008Probe()))
+        #expect(PasteGate.copyOnlyError() == FlotsamError(.setPrm001, "Accessibility not granted; pasting by copy only"))
         await rig.reporter.report(FlotsamError(.setPrm001, "copied only"), origin: .userInitiated)
         #expect(rig.presenter.huds == [
             "Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V."
         ])
         // negative: granted never copy-only
-        #expect(PasteGate.outcome(accessibilityGranted: true) == .paste)
+        #expect(PasteGate.isAllowed(probe: Frd008Probe(granted: [.accessibility])))
     }
 
     // OC-8115. Red if a single choice can show more than one HUD, or the first denied choice shows none.
@@ -188,9 +188,9 @@ struct Frd008ContractPermissionsTests {
     @Test("OC-8118: granting Accessibility while running flips the decision from copy-only to paste")
     func grantWithoutRelaunch() {
         let probe = Frd008Probe()
-        #expect(PasteGate.outcome(probe: probe) != .paste)
+        #expect(!PasteGate.isAllowed(probe: probe))
         probe.set(.accessibility, true)
-        #expect(PasteGate.outcome(probe: probe) == .paste)
+        #expect(PasteGate.isAllowed(probe: probe))
     }
 
     // The production paste path (PasteService, Library, Shelf, item hotkeys) never calls PasteGate: it is dead code and

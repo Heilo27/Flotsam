@@ -107,17 +107,14 @@ private struct FakeProbe: PermissionProbe {
 
 @Suite struct PermissionModelTests {
     @Test func withoutAccessibilityChoosingCopiesOnlyAndRaisesSETPRM001() {
-        guard case .copyOnly(let error) = PasteGate.outcome(probe: FakeProbe()) else {
-            Issue.record("expected copy-only")
-            return
-        }
-        #expect(error.code == .setPrm001)
-        #expect(PasteGate.outcome(probe: FakeProbe(accessibility: true)) == .paste)
+        #expect(!PasteGate.isAllowed(probe: FakeProbe()))
+        #expect(PasteGate.copyOnlyError().code == .setPrm001)
+        #expect(PasteGate.isAllowed(probe: FakeProbe(accessibility: true)))
     }
 
     @Test func grantingTakesEffectWithoutRelaunchBecauseStateIsReadEachTime() {
-        #expect(PasteGate.outcome(accessibilityGranted: false) != .paste)
-        #expect(PasteGate.outcome(accessibilityGranted: true) == .paste)
+        #expect(!PasteGate.isAllowed(probe: FakeProbe(accessibility: false)))
+        #expect(PasteGate.isAllowed(probe: FakeProbe(accessibility: true)))
     }
 
     @Test func triggersOnWithAMissingPermissionNamesIt() {
