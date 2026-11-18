@@ -107,6 +107,15 @@ final class ClipboardCaptureTests: XCTestCase {
         capture.captureNow()
     }
 
+    /// Starts capture with the launch read baselined away: Paused then Active re-reads the baseline (FR-001-19). The
+    /// empty board at launch would otherwise open the watch of an empty change that the first copy supersedes and
+    /// counts (FR-001-01, FR-001-18 b), a count the sequences that call this do not mean to make.
+    private func startWithLaunchReadBaselined() {
+        capture.start()
+        settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        settings.set(CaptureMode.active, for: SettingKeys.captureMode)
+    }
+
     override func tearDown() async throws {
         await capture.stop()
         try? FileManager.default.removeItem(at: folder)
@@ -217,7 +226,7 @@ final class ClipboardCaptureTests: XCTestCase {
 
     /// FR-001-18 b still holds: a change that stays empty across its re-reads counts, and three such changes suspend.
     func testThreeChangesThatStayEmptyStillSuspendCapture() async throws {
-        capture.start()
+        startWithLaunchReadBaselined()
         for _ in 1...3 {
             pasteboard.beginCopy()
             readThenLetEmptyWatchEnd()
@@ -230,7 +239,7 @@ final class ClipboardCaptureTests: XCTestCase {
     /// TASK-408: types listed but bytes empty is "no readable type data" (FR-001-18 b) just as an empty type list is,
     /// so it reaches CAP-PRM-001 at the same threshold. Listing types must not reset the count.
     func testThreeChangesWithTypesListedButEmptyBytesSuspendCapture() async throws {
-        capture.start()
+        startWithLaunchReadBaselined()
         pasteboard.returnsEmptyBytes = true
         for n in 1...3 {
             pasteboard.copy([textType: Data("gated \(n)".utf8)])
@@ -248,7 +257,7 @@ final class ClipboardCaptureTests: XCTestCase {
     /// A change that yields bytes still resets the count: two listed-but-empty changes, a real copy, two more never
     /// reach three in a row.
     func testReadableChangeResetsTheListedButEmptyCount() async throws {
-        capture.start()
+        startWithLaunchReadBaselined()
         for _ in 1...2 {
             pasteboard.returnsEmptyBytes = true
             pasteboard.copy([textType: Data("gated".utf8)])

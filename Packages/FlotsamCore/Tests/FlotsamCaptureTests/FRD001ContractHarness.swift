@@ -47,6 +47,13 @@ final class ContractPasteboard: PasteboardPort {
         firstReadAfterCopy = nil
     }
 
+    /// `clearContents`: empties the board and bumps `changeCount`. The first half of a non-atomic copy.
+    func clear() { copy([PasteboardRepresentation]()) }
+
+    /// `writeObjects` after a `clear()`: fills the board WITHOUT a second bump, as NSPasteboard does (FR-001-01).
+    func fill(_ representations: [PasteboardRepresentation]) { reps = representations }
+    func fillText(_ text: String) { fill([PasteboardRepresentation(uti: PasteboardTypes.plainText, data: Data(text.utf8))]) }
+
     /// When the latest copy happened, and when capture first listed the types after it (the poll that saw the new
     /// count). Their difference is detection latency (FR-001-20) with ingest and the test's own database polling
     /// kept out of it.
@@ -212,10 +219,11 @@ final class ContractRig {
         let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data")).get()
         let rig = ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture)
         if startCapture {
-            // Starting on an empty pasteboard opens the watch of an empty change (FR-001-01), and counting it logs one
-            // CAP-VAL-001. Let the watch run out so that record lands now, settle it, then start clean.
-            rig.clock.advance(by: ClipboardCapture.emptyChangeWatchLimit)
-            rig.capture.captureNow()
+            // Starting on an empty pasteboard opens the watch of an empty change (FR-001-01), which would later count
+            // toward FR-001-18 b. Paused then Active re-reads the baseline (FR-001-19), so that launch read is never
+            // counted or logged; settle, then start clean.
+            rig.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+            rig.settings.set(CaptureMode.active, for: SettingKeys.captureMode)
             await rig.flush()
             rig.sink.reset()
         }

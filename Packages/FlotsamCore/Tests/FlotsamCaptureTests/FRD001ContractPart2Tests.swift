@@ -586,12 +586,14 @@ struct FRD001LimitContractTests {
 
 private let prmMessage = "macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings."
 
-/// One clipboard change whose types list is empty (what macOS gives an app it has blocked), read the three times
-/// FR-001-18 b counts as one empty change, then settled.
+/// One clipboard change whose types list is empty (what macOS gives an app it has blocked), watched until its watch
+/// ends (FR-001-01), when FR-001-18 b counts it as one empty change, then settled.
 @MainActor
 private func emptyChange(_ rig: ContractRig) async {
     rig.pasteboard.copy([PasteboardRepresentation]())
-    for _ in 0..<3 { rig.capture.captureNow() }
+    rig.capture.captureNow()
+    rig.clock.advance(by: ClipboardCapture.emptyChangeWatchLimit)
+    rig.capture.captureNow()
     await rig.flush()
 }
 

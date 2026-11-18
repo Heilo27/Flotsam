@@ -98,7 +98,16 @@ private struct Rig {
         return Rig(folder: folder, database: database, board: board, sink: sink, capture: capture, settings: settings, ownWrites: ownWrites, clock: clock)
     }
 
-    /// Ticks the poll once.
+    /// Starts capture with the launch read baselined away: Paused then Active re-reads the baseline (FR-001-19). Without
+    /// it the empty board at launch opens the watch of an empty change, which the first copy supersedes and counts
+    /// (FR-001-01, FR-001-18 b), a count none of these sequences means to make.
+    func start() {
+        capture.start()
+        settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        settings.set(CaptureMode.active, for: SettingKeys.captureMode)
+    }
+
+    /// Ticks the poll.
     func tick(_ times: Int = 1) { for _ in 0..<times { capture.captureNow() } }
     /// Lets the watch of the change in hand run out and ticks once, which is when an empty change counts.
     func expire() { clock.advance(by: ClipboardCapture.emptyChangeWatchLimit); tick() }
@@ -131,7 +140,7 @@ struct ClipboardRetryStoresOnceWorfTests {
         // given a copy caught between clear and write
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         // when the board fills before the next tick and polling carries on for many ticks
@@ -148,7 +157,7 @@ struct ClipboardRetryStoresOnceWorfTests {
         // given a copy caught empty on two consecutive ticks
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick(2)
         // when it fills before the third read and polling carries on
@@ -160,18 +169,19 @@ struct ClipboardRetryStoresOnceWorfTests {
         #expect(rig.board.snapshotReads == 1)
     }
 
-    @Test("OC-401-W3 a board that fills only after all three reads came back empty is not captured by the retry")
-    func fillsAfterTheWindowIsNotCaptured() async throws {
-        // given a change that stayed empty for the first read and both retries
+    @Test("OC-401-W3 a board that fills only after the empty change's watch has ended is not captured")
+    func fillsAfterTheWatchIsNotCaptured() async throws {
+        // given a change that stayed empty until its watch ran out (FR-001-01: the limit, no longer three reads)
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
-        rig.tick(3)
+        rig.tick()
+        rig.expire()
         // when data lands on the same count afterwards
         rig.board.fill(data("late"))
         rig.tick(4)
-        // then the window has closed: nothing stored (FR-001-01: three reads in all)
+        // then the watch has ended: nothing stored
         #expect(try await rig.texts() == [])
     }
 
@@ -180,7 +190,7 @@ struct ClipboardRetryStoresOnceWorfTests {
         // given an empty change on its first read
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         // when a different, complete copy arrives before the retry
@@ -196,7 +206,7 @@ struct ClipboardRetryStoresOnceWorfTests {
         // given the first copy captured on its retry tick
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.fill(data("one"))
@@ -214,7 +224,7 @@ struct ClipboardRetryStoresOnceWorfTests {
         // given two clears in a row with a poll after each
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.clear()
@@ -239,7 +249,7 @@ struct ClipboardRetryMarkersWorfTests {
         // given an empty first read
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         // when the board fills with a password-shaped payload plus the marker, and polling continues
@@ -255,7 +265,7 @@ struct ClipboardRetryMarkersWorfTests {
         // control: the same copy arriving atomically, polled for 6 ticks
         let control = try await Rig.make()
         defer { control.cleanUp() }
-        control.capture.start()
+        control.start()
         control.board.copy([text: Data("hunter2".utf8), "org.nspasteboard.ConcealedType": Data()])
         control.tick(6)
         #expect(control.sink.count(containing: "CAP-POL-001") == 1, "control: observation of the skip must work")
@@ -263,7 +273,7 @@ struct ClipboardRetryMarkersWorfTests {
         // given the marker lands on the retry tick
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.fill([text: Data("hunter2".utf8), "org.nspasteboard.ConcealedType": Data()])
@@ -284,7 +294,7 @@ struct ClipboardRetrySuspensionWorfTests {
         // given two changes that stay empty across all their reads
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
         try await rig.drain()
         // then not yet suspended
@@ -307,7 +317,7 @@ struct ClipboardRetrySuspensionWorfTests {
         // given two persistent empties
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
         // when the third is read twice, still inside its watch
         rig.board.clear(); rig.tick(2)
@@ -325,7 +335,7 @@ struct ClipboardRetrySuspensionWorfTests {
         // given the pattern empty-change, real copy, repeated five times
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for n in 1...5 {
             rig.board.clear(); rig.tick(); rig.expire()
             rig.board.copy(data("real \(n)")); rig.tick()
@@ -341,7 +351,7 @@ struct ClipboardRetrySuspensionWorfTests {
         // given two persistent empties, a real copy, then two more persistent empties
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
         rig.board.copy(data("real")); rig.tick()
         for _ in 1...2 { rig.board.clear(); rig.tick(); rig.expire() }
@@ -355,7 +365,7 @@ struct ClipboardRetrySuspensionWorfTests {
         // given suspended capture
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         for _ in 1...3 { rig.board.clear(); rig.tick(); rig.expire() }
         // when access returns and the user copies
         rig.board.copy(data("back"))
@@ -374,7 +384,7 @@ struct ClipboardRetryEarlyExitWorfTests {
     func noHonouredTypeRaisedOnce() async throws {
         let control = try await Rig.make()
         defer { control.cleanUp() }
-        control.capture.start()
+        control.start()
         control.board.copy(["com.example.unhonoured": Data("x".utf8)])
         control.tick(6)
         try await control.drain()
@@ -383,7 +393,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         // given an empty first read, then an unhonoured type
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.fill(["com.example.unhonoured": Data("x".utf8)])
@@ -398,7 +408,7 @@ struct ClipboardRetryEarlyExitWorfTests {
     func readFailureRaisedOnce() async throws {
         let control = try await Rig.make()
         defer { control.cleanUp() }
-        control.capture.start()
+        control.start()
         control.board.failReads = true
         control.board.copy(data("x"))
         control.tick(6)
@@ -408,7 +418,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         // given an empty first read, then a readable type whose read throws
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.failReads = true
         rig.board.clear()
         rig.tick()
@@ -425,14 +435,14 @@ struct ClipboardRetryEarlyExitWorfTests {
     func ignoredAppSkippedOnce() async throws {
         let control = try await Rig.make(ignored: ["com.example.writer"])
         defer { control.cleanUp() }
-        control.capture.start()
+        control.start()
         control.board.copy(data("x"))
         control.tick(6)
         #expect(control.sink.count(containing: "CAP-POL-002") == 1, "control: observation must work")
 
         let rig = try await Rig.make(ignored: ["com.example.writer"])
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.fill(data("x"))
@@ -446,7 +456,7 @@ struct ClipboardRetryEarlyExitWorfTests {
         // given a failed read on a complete copy
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.failReads = true
         rig.board.copy(data("bad"))
         rig.tick(2)
@@ -468,7 +478,7 @@ struct ClipboardRetryLatchWorfTests {
     func pausedMidRereadSkippedOnce() async throws {
         let control = try await Rig.make()
         defer { control.cleanUp() }
-        control.capture.start()
+        control.start()
         control.settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         control.board.copy(data("x"))
         control.tick(6)
@@ -477,7 +487,7 @@ struct ClipboardRetryLatchWorfTests {
         // given an empty first read while active
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         // when the user pauses capture and the board fills, and polling continues on the same changeCount
@@ -493,7 +503,7 @@ struct ClipboardRetryLatchWorfTests {
     func ownWriteMarkerAfterRetrySkippedOnce() async throws {
         let control = try await Rig.make()
         defer { control.cleanUp() }
-        control.capture.start()
+        control.start()
         control.board.copy([text: Data("x".utf8), PasteboardMarkers.ownWrite: Data()])
         control.tick(6)
         #expect(control.sink.count(containing: "CAP-POL-004") == 1, "control: observation must work")
@@ -501,7 +511,7 @@ struct ClipboardRetryLatchWorfTests {
         // given an empty first read, then Flotsam's own marker and payload
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.fill([text: Data("x".utf8), PasteboardMarkers.ownWrite: Data()])
@@ -518,7 +528,7 @@ struct ClipboardRetryLatchWorfTests {
         // given the poll caught Flotsam's own copy between clearContents and setData (same changeCount afterwards)
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.writeBumps = false
         rig.board.clear()
         rig.tick()
@@ -535,7 +545,7 @@ struct ClipboardRetryLatchWorfTests {
         // given an empty first read
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         // when the board fills but every snapshot reports a different changeCount than the one polled
@@ -554,7 +564,7 @@ struct ClipboardRetryLatchWorfTests {
         // given a change that exits through a skip after a retry
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.clear()
         rig.tick()
         rig.board.fill([text: Data("secret".utf8), PasteboardMarkers.concealed: Data()])
@@ -569,19 +579,26 @@ struct ClipboardRetryLatchWorfTests {
         #expect(try await rig.copyCounts() == [1])
     }
 
-    @Test("OC-401-W23 types listed but bytes empty: exactly three reads of one change, then no more, one CAP-VAL-001")
-    func typesListedBytesEmptyUsesThreeReads() async throws {
+    @Test("OC-401-W23 types listed but bytes empty: read on every tick of the watch, then no more, one CAP-VAL-001")
+    func typesListedBytesEmptyReadsUntilTheWatchEnds() async throws {
         // given a change whose types are listed but whose bytes come back empty
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.emptyBytes = true
         rig.board.copy(data("x"))
-        // when polling continues far past the budget
+        // when polling continues inside the watch
         rig.tick(12)
         try await rig.drain()
-        // then the budget was three reads (not one: the latch survives a non-empty types list; not unbounded)
-        #expect(rig.board.snapshotReads == 3)
+        // then every tick read it (the real timer may add reads of its own: at least 12), and none counted it yet
+        #expect(rig.board.snapshotReads >= 12)
+        #expect(rig.sink.count(containing: "CAP-VAL-001") == 0)
+        // and when the watch ends it counts once and is read no more
+        rig.expire()
+        let readsAtEnd = rig.board.snapshotReads
+        rig.tick(12)
+        try await rig.drain()
+        #expect(rig.board.snapshotReads == readsAtEnd)
         #expect(rig.sink.count(containing: "CAP-VAL-001") == 1)
         #expect(try await rig.texts() == [])
     }
@@ -591,7 +608,7 @@ struct ClipboardRetryLatchWorfTests {
         // given a change whose bytes come back empty on the first two reads
         let rig = try await Rig.make()
         defer { rig.cleanUp() }
-        rig.capture.start()
+        rig.start()
         rig.board.emptyBytes = true
         rig.board.copy(data("late"))
         rig.tick(2)

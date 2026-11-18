@@ -24,6 +24,14 @@ private struct QARig {
     let reporter: ErrorReporter
     let pasteboard: ContractPasteboard
     let capture: ClipboardCapture
+    let settings: SettingsStore
+
+    /// Re-reads the baseline (Paused then Active, FR-001-19), dropping the watch the launch read of an empty board
+    /// opened, which the first copy would otherwise supersede and count as an empty change (FR-001-01, FR-001-18 b).
+    func baselineLaunchRead() {
+        settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
+        settings.set(CaptureMode.active, for: SettingKeys.captureMode)
+    }
 
     func settle() async {
         for _ in 0..<4 {
@@ -45,10 +53,18 @@ private struct QARig {
         try await database.pool.read { try String.fetchAll($0, sql: "SELECT plainText FROM item ORDER BY rowid") }
     }
 
-    /// One change with no type data, polled the three times FR-001-01 / FR-001-18 b count as one empty change.
+    /// One change with no type data, watched until its watch ends (FR-001-01), which is when FR-001-18 b counts it as
+    /// one empty change.
     func emptyChange() async {
         pasteboard.copy([PasteboardRepresentation]())
-        for _ in 0..<3 { capture.captureNow() }
+        capture.captureNow()
+        await letWatchEnd()
+    }
+
+    /// Runs the clock out on the change being watched and ticks once, so an empty change ends and is counted.
+    func letWatchEnd() async {
+        clock.advance(by: ClipboardCapture.emptyChangeWatchLimit)
+        capture.captureNow()
         await settle()
     }
 
@@ -72,7 +88,7 @@ private func withQARig(access: any PasteboardAccessPort, prefill: String? = nil,
         ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
         ignoredApps: { [] }, access: access, clock: clock, sink: sink)
     capture.start()
-    let rig = QARig(database: database, presenter: presenter, sink: sink, clock: clock, reporter: reporter, pasteboard: pasteboard, capture: capture)
+    let rig = QARig(database: database, presenter: presenter, sink: sink, clock: clock, reporter: reporter, pasteboard: pasteboard, capture: capture, settings: settings)
     do { try await body(rig) } catch {
         await capture.stop()
         throw error
@@ -176,6 +192,7 @@ struct Task414SuspensionTests {
     @Test("OC-1084 boundary: access Allow at launch, two empty changes: no CAP-PRM-001 (the launch check does not lower the three-change rule)")
     func allowedThenTwoEmpty() async throws {
         try await withQARig(access: SwitchableAccess(true)) { rig in
+            rig.baselineLaunchRead()
             await rig.emptyChange()
             await rig.emptyChange()
             #expect(rig.sink.logged(.capPrm001).isEmpty)
@@ -188,7 +205,7 @@ struct Task414SuspensionTests {
         try await withQARig(access: SwitchableAccess(false)) { rig in
             await rig.settle()
             #expect(rig.codes == [.capPrm001])
-            await rig.emptyChange()  // finish the launch change's three reads so the reveal below is a hidden, not a re-read, change
+            await rig.letWatchEnd()  // end the launch change's watch so the reveal below is a hidden, not a re-read, change
             let v = uid("probe")
             rig.pasteboard.reveal([PasteboardRepresentation(uti: PasteboardTypes.plainText, data: Data(v.utf8))])
             rig.clock.advance(by: 59)
