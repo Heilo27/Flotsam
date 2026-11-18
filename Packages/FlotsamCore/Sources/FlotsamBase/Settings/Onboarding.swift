@@ -54,6 +54,11 @@ public struct OnboardingFlow: Equatable, Sendable {
         importRecent && pickupEnabled
     }
 
+    /// The one home of when onboarding asks macOS for the login item status (FR-008-15, TASK-460): only while the user is on
+    /// step 7. Even a read of `SMAppService.mainApp.status` at launch makes Background Task Management record the app, and
+    /// macOS then shows "Login Item Added" before the user has chosen anything.
+    public static func readsLoginStatus(on step: OnboardingStep) -> Bool { step == .loginItem }
+
     public var steps: [OnboardingStep] { OnboardingStep.allCases.filter { $0 != .clipboard || gatesPasteboard } }
     public var position: Int { (steps.firstIndex(of: current) ?? 0) + 1 }
     public var total: Int { steps.count }
