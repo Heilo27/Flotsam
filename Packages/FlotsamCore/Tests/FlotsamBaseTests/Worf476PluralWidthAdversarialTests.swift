@@ -70,15 +70,10 @@ import Testing
         #expect(try resolve(Float(1.0)) == Self.other)
     }
 
-    // OC-476-W6: KNOWN (Minor, latent): NSNumber counts read "one" under the old `as? Int` (Foundation bridging) but read
-    // "other" under the BinaryInteger cast. No shipped caller passes NSNumber (counts are Int). Red (known issue clears)
-    // when the resolver also bridges NSNumber; then drop withKnownIssue.
-    @Test("FR-000-05 OC-476-W6 KNOWN: NSNumber(1) as the count reads other (regression vs as? Int); no shipped caller boxes counts")
+    // OC-476-W6: NSNumber counts read "one" under the old `as? Int` (Foundation bridging); the resolver bridges them too.
+    @Test("FR-000-05 OC-476-W6 NSNumber(1) as the count reads one; NSNumber(2) reads other")
     func nsNumber() throws {
-        let boxedOne = try resolve(NSNumber(value: 1))
-        withKnownIssue("BinaryInteger cast does not bridge NSNumber(1), which `as? Int` did") {
-            #expect(boxedOne == Self.one)
-        }
+        #expect(try resolve(NSNumber(value: 1)) == Self.one)
         #expect(try resolve(NSNumber(value: 2)) == Self.other)
     }
 

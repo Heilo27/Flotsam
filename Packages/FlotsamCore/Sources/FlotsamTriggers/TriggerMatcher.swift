@@ -145,7 +145,14 @@ public final class TriggerMatcher {
         }
     }
 
+    /// True when no typed character is held. The matcher's own state, read by tests for the F-04 guarantee: the word
+    /// buffer is empty after every boundary key (whatever its outcome) and after every reset.
+    var holdsNoCharacters: Bool { buffer.isEmpty && bufferCount == 0 }
+
     private func boundary(_ event: KeyEvent) -> MatcherResult {
+        // Security F-04: the word is moved into `typed` and the buffer is cleared first, so every exit below (no match,
+        // each suppression, a match) leaves the buffer empty. `typed` is a local; it outlives this call only inside a
+        // `TriggerMatch`, which the expander needs to re-type the word on failure (FR-005-15).
         let typed = buffer
         let wasDead = isDead
         let startedIn = wordApp
