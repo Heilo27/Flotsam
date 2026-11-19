@@ -206,26 +206,19 @@ struct LaunchIsolationResolutionTests {
     }
 }
 
-/// Empties the throwaway suite and deletes the preferences file it left, so a test run leaves nothing behind.
-private func removeSuite(_ name: String) {
-    UserDefaults(suiteName: name)?.removePersistentDomain(forName: name)
-    if let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first {
-        try? FileManager.default.removeItem(at: library.appendingPathComponent("Preferences/\(name).plist"))
-    }
-}
-
 @Suite("TASK-519 launch isolation effects")
 struct LaunchIsolationEffectsTests {
     @Test("a suite store writes to its own domain and not to the standard one")
     func suiteIsSeparate() throws {
-        let name = "flotsam-519-\(UUID().uuidString)"
-        defer { removeSuite(name) }
+        let suite = TestDefaultsSuite("task519")
+        defer { suite.remove() }
+        let name = suite.name
         let key = "task519.\(UUID().uuidString)"
         let store = try #require(LaunchIsolation(
             dataFolderOverride: nil, defaultsSuite: name, fakeSecure: false, authScript: .allow).settingsStore())
         store.setString("v", forKey: key)
         #expect(store.string(forKey: key) == "v")
-        #expect(UserDefaults(suiteName: name)?.string(forKey: key) == "v")
+        #expect(suite.defaults.string(forKey: key) == "v")
         #expect(UserDefaults.standard.string(forKey: key) == nil)
         store.removeValue(forKey: key)
         #expect(store.string(forKey: key) == nil)
