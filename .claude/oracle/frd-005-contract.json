@@ -1519,6 +1519,17 @@
       "source_verdict": "CONFIRMED",
       "must_verify": true,
       "added": "2026-11-18 TASK-493 (Ryan's ruling: non-ASCII kills the word until the next boundary): new requirement text, FR-005-11 / AC-005-10"
+    },
+    {
+      "id": "OC-5152",
+      "requirement": "FR-005-11,FR-005-08",
+      "given": "Trigger ';sig'",
+      "when": "user types U+037E (Greek question mark, which Unicode normalises to ';') then 'sig' then Space; and separately, with no identifiable frontmost application, types U+037E 's' 'i' 'g' then Space; then in the first case types ';sig' Space",
+      "then": "U+037E kills the word: no expansion, nothing is held as a prefix, and the Space is inserted as typed (not suppressed as unknown-app); the next ';sig' Space expands normally",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-493 (Ryan's ruling: any non-ASCII input kills the word, overriding the TASK-499 U+037E fold): FR-005-11"
     }
   ]
 }

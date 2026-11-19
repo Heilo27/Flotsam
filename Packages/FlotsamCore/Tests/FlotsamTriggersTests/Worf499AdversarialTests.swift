@@ -31,15 +31,17 @@ import Testing
         #expect(h.space() == .suppressed(.unknownApp))
     }
 
-    // OC-499-W02: given no app, when U+037E 'sig' is typed (canonically ';'), then it is held as a prefix and the
-    // boundary is suppressed as unknown. Red if the prefix test compared raw scalars.
+    // OC-499-W02 (superseded by TASK-493, OC-5152): given no app, when U+037E 'sig' is typed (canonically ';'), then
+    // the word is dead: nothing is held as a prefix and the boundary passes through rather than being suppressed as
+    // unknown. Red if U+037E were folded to ';' and held.
     @Test(arguments: unknownApps)
-    func greekQuestionMarkIsHeldAsTheSemicolonPrefix(app: FrontmostApp?) {
+    func greekQuestionMarkKillsTheWordAndIsNotHeldAsTheSemicolonPrefix(app: FrontmostApp?) {
         let h = harness([UUID(): ";sig"], in: app)
         h.type("\u{037E}s")
-        #expect(!h.matcher.holdsNoCharacters)
+        #expect(h.matcher.holdsNoCharacters)
         h.type("ig")
-        #expect(h.space() == .suppressed(.unknownApp))
+        #expect(h.matcher.holdsNoCharacters)
+        #expect(h.space() == .pass)
     }
 
     // OC-499-W03: given no app, when ';SiG' (mixed case) typed, then held and suppressed; ';SX' dies.

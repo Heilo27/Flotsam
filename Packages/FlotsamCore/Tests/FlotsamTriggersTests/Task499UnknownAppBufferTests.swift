@@ -66,13 +66,17 @@ import Testing
     }
 }
 
-/// TASK-499 issue 4: the matcher compares triggers as Swift strings, which are canonically equivalent under Unicode
-/// normalisation, so the Greek question mark (U+037E, which normalises to ";") types a ";" trigger.
+/// TASK-499 issue 4, superseded by TASK-493 (FR-005-11, Ryan's ruling): any typed non-ASCII scalar kills the word, even
+/// one that Unicode normalises to ASCII, so the Greek question mark (U+037E, canonically ";") does not type a ";" trigger.
 @Suite struct Task499GrammarNormalisationTests {
-    @Test func greekQuestionMarkMatchesTheSemicolonTrigger() {
+    // OC-5152: given trigger ";sig", when U+037E "sig" is typed then Space, then nothing matches (the word is dead);
+    // and the next word ";sig" Space matches. Red if canonical equivalence were allowed to fold U+037E to ";".
+    @Test func greekQuestionMarkKillsTheWordInsteadOfMatchingTheSemicolonTrigger() {
         let id = UUID()
         let h = MatcherHarness(triggers: [id: ";sig"], excluded: [])
         h.type("\u{037E}sig")
+        #expect(h.space().match == nil)
+        h.type(";sig")
         #expect(h.space().match?.itemId == id)
     }
 
