@@ -1186,6 +1186,17 @@
       "source_verdict": "CONFIRMED",
       "must_verify": true,
       "added": "2026-11-18 TASK-503 (Friday's ruling: a concealed copy whose plain text cannot be read is handled like any other unreadable copy, fail closed): FR-001-25 / AC-001-25 as amended in TASK-503"
+    },
+    {
+      "id": "OC-1118",
+      "requirement": "AC-001-25,FR-001-25",
+      "given": "Capture mode Active, Flotsam running, the secure vault available, source app not on the ignored list",
+      "when": "a pasteboard is written with org.nspasteboard.ConcealedType plus a plain text representation that is only whitespace",
+      "then": "the change is dropped with CAP-POL-001 (a skip, not CAP-OS-001); the Library item count is unchanged (delta 0) and no secure item exists",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-506 (TASK-503 QA follow-up): FR-001-25 / AC-001-25 now state the whitespace-only case; behaviour unchanged from IngestWorker.handleSecure"
     }
   ]
 }
