@@ -152,7 +152,7 @@ public struct LibraryFooter: Equatable {
         let paste = Hint(key: LibraryText.string("ui.library.keyReturn"), label: LibraryText.string("ui.library.hintPaste"))
         let secondary = isAccessibilityTrusted
             ? Hint(key: LibraryText.string("ui.library.keyOptionReturn"), label: LibraryText.string("ui.library.hintPlain"))
-            : Hint(key: LibraryText.string("ui.library.keyShiftReturn"), label: LibraryText.string("ui.library.hintCopy"))
+            : Hint(key: LibraryText.string("ui.library.keyCommandC"), label: LibraryText.string("ui.library.hintCopy"))
         hints = [paste, secondary, preview]
         countText = LibraryText.itemCount(totalCount)
         notice = isAccessibilityTrusted ? nil : LibraryText.string("ui.library.footerCopyOnly")

@@ -863,6 +863,16 @@
         }
       }
     },
+    "ui.library.keyCommandC" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘C"
+          }
+        }
+      }
+    },
     "ui.library.keyEsc" : {
       "localizations" : {
         "en" : {
