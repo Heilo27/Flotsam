@@ -69,7 +69,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// Local AI access (FRD-010). `mcpEnableTitle`, `mcpEnableBody` and `mcpTurnOn` are the warning shown before the
     /// switch turns on (FR-010-02); `mcpApprove*`, `mcpAllow` and `mcpDeny` are the prompt for an unknown AI app (FR-010-04).
     case mcpHeader, mcpToggle, mcpHelp, mcpHelperPath, mcpNoClients, mcpRevoke, mcpRevokeHelp
-    case mcpEnableTitle, mcpEnableBody, mcpTurnOn, mcpApproveTitle, mcpApproveBody, mcpAllow, mcpDeny
+    case mcpEnableTitle, mcpEnableBody, mcpTurnOn, mcpApproveTitle, mcpApproveName, mcpApproveBody, mcpAllow, mcpDeny
 
     // Storage
     case keepHistoryFor, keepHelp

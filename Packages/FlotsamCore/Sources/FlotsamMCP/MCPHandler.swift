@@ -234,7 +234,7 @@ enum MCPText {
     static let searchDescription =
         "Search the clipboard history, newest first. Returns text previews and metadata. Leave query empty to list the most recent items."
     static let getItemDescription = "Get one history item by id, with its text up to 20,000 characters."
-    static let queryDescription = "Text to look for; matches the item's text, note, tags and source app."
+    static let queryDescription = "Text to look for; matches the item's text, note, tags, source app and the file names it lists."
     static let kindDescription = "Only items of this kind."
     static let idDescription = "The id of an item, as returned by search_history."
     static let notFound = "No such item."

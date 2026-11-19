@@ -111,7 +111,12 @@ final class MCPSocketServer: @unchecked Sendable {
 
         let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
         guard descriptor >= 0 else { return .failure(FlotsamError(.setOs002, "socket() failed")) }
+        // The file is created by bind() with the process umask, so for that instant it could be group- or world-readable
+        // before the chmod below. umask is process-wide: 0o177 only ever makes other files created in this window
+        // stricter, never looser, and the previous value is put back straight after.
+        let previousMask = umask(0o177)
         let bound = MCPWire.withSockaddr(address) { bind(descriptor, $0, $1) }
+        umask(previousMask)
         guard bound == 0, chmod(path, 0o600) == 0, listen(descriptor, Int32(maxConnections)) == 0, setNonBlocking(descriptor, true) else {
             close(descriptor)
             unlink(path)

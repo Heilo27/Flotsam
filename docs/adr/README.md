@@ -4,7 +4,7 @@ One file per significant decision. Format: Status, Context (forces), Decision, A
 
 | ADR | Decision | Status |
 |---|---|---|
-| [0001](0001-module-structure.md) | One SPM package, ten targets in layers, platform adapters in the app target | Accepted |
+| [0001](0001-module-structure.md) | One SPM package, eleven targets in layers, platform adapters in the app target | Accepted |
 | [0002](0002-sqlite-binding-grdb.md) | GRDB (system SQLite) is the only SQLite binding | Accepted |
 | [0003](0003-search-strategy.md) | Search default: in-database substring scan; FTS5 trigram pending spike S-1 | Accepted (default), S-1 pending |
 | [0004](0004-concurrency-model.md) | Concurrency model: actors, MainActor boundary, tap thread | Accepted |

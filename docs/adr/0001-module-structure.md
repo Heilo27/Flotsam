@@ -11,7 +11,7 @@ Eight FRDs (001 to 008) plus the error system (000) must share one process witho
 - Several flows are shared and must have one owner (Rule 9): the paste sequence (FR-003-15 is also steps 6 of FR-005-14), payload classification and `contentKey` (Capture, Shelf drop FR-006-13, screenshot import), search normalisation (writer in Storage, query tokens in Library).
 
 ## Decision
-One local SPM package, `Packages/FlotsamCore`, with ten library targets in four layers, and one app target `Flotsam` that owns everything that touches the UI or a system adapter.
+One local SPM package, `Packages/FlotsamCore`, with eleven library targets in four layers, and one app target `Flotsam` that owns everything that touches the UI or a system adapter.
 
 ```
 L4  Flotsam (app target)     SwiftUI + AppKit panels, menu bar, Settings, onboarding,
@@ -49,7 +49,7 @@ Rules (enforced by `bin/check-architecture.sh`, run before every commit and in C
 
 ## Alternatives rejected
 - **One package target with folders.** Cheapest to start, but ARCH-001 then lives only in review and a grep; the first rushed commit makes Library import Capture. Reversible later but the damage is imports, not files.
-- **A Swift package per module (ten packages).** More ceremony (ten manifests, version pinning) for no extra enforcement over multi-target.
+- **A Swift package per module (eleven packages).** More ceremony (eleven manifests, version pinning) for no extra enforcement over multi-target.
 - **Platform adapters as their own package target.** It would be imported only by the app, so it adds a target and an edge with no consumer. Adapters stay in the app target until a second binary (CLI, helper) needs them.
 - **Merging Shortcuts and Triggers.** They share FRD-005 but not mechanism: Carbon registration needs no permission and never runs on a tap thread; the matcher is thread-confined and needs both permissions. Separate failure modes, separate targets.
 

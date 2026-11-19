@@ -308,6 +308,8 @@ function finish(   L, t) {
   }
   all = ""
   for (L = 1; L <= nl; L++) { lstart[L] = length(all) + 1; all = all san[L] "\n" }
+  declbind = 0
+  for (L = 1; L <= nl; L++) if (san[L] ~ /(^|[^A-Za-z0-9_$])func[ \t]+bind[ \t]*\(/) declbind = 1
   for (L = 1; L <= nl; L++) {
     t = san[L]
     if (t ~ /(^|[^A-Za-z0-9_$.])(print|NSLog|dump|debugPrint)[ \t]*\(/ || \
@@ -318,11 +320,19 @@ function finish(   L, t) {
     if (t ~ /(^|[^A-Za-z0-9_$])localizedDescription/) hit("LOCDESC", L)
     # No TCP/UDP/IP of any kind (FRD-008 FR-008-18, ADR-0013): no URL loading, no Network.framework (every NW* type), no
     # CFNetwork / CFSocket / CFStream / NSStream, no name resolution, no AF_INET / AF_INET6 / PF_INET sockets or datagram
-    # sockets, no web view, no updater. The one local transport the local MCP server uses, an AF_UNIX socket in the
-    # user's data folder (ADR-0013), names none of these, so it passes; a TCP or UDP listener cannot be written without
-    # naming one. UserDefaults only behind the SettingsStore adapter (ADR-0009); GRDB/SQLite only in Storage.
+    # sockets, no web view, no updater. This rule is name-based: it catches the names above, and an AF_UNIX socket names
+    # none of them, so it passes here. It cannot see a TCP listener written some other way, so the SOCKET and AFUNIX
+    # rules below confine every raw socket call to the two files that may make one (defence in depth, not proof).
+    # UserDefaults only behind the SettingsStore adapter (ADR-0009); GRDB/SQLite only in Storage.
     if (t ~ /(^|[^A-Za-z0-9_$])(URLSession|URLRequest|NSURLSession|NSURLConnection|URLConnection|NW[A-Z][A-Za-z]*|WKWebView|CFNetwork|CFSocket|CFStream|CFHost|NSStream|NSNetService|Sparkle|getaddrinfo|gethostbyname|AF_INET|PF_INET|SOCK_DGRAM|sockaddr_in|IPPROTO_)/ || \
         t ~ /(^|[^A-Za-z0-9_$])import[ \t]+(Network|CFNetwork)([^A-Za-z0-9_]|$)/) hit("NETWORK", L)
+    # Raw socket calls and the AF_UNIX family (ADR-0013): allowed only in the MCP server and the helper (see the SOCKET and
+    # AFUNIX checks below). A bare bind( is skipped in a file that declares its own func bind (a method named bind is not
+    # the system call); Darwin.bind( is always flagged.
+    if (t ~ /(^|[^A-Za-z0-9_$.])(socket|listen|connect)[ \t]*\(/ || \
+        t ~ /(^|[^A-Za-z0-9_$])Darwin[ \t]*\.[ \t]*(socket|bind|listen|connect)[ \t]*\(/ || \
+        (!declbind && t ~ /(^|[^A-Za-z0-9_$.])bind[ \t]*\(/)) hit("SOCKET", L)
+    if (t ~ /(^|[^A-Za-z0-9_$])AF_UNIX/) hit("AFUNIX", L)
     if (t ~ /(^|[^A-Za-z0-9_$])UserDefaults/) hit("USERDEFAULTS", L)
     # Drop the try! / as! tokens (their own rules report them), then flag a ! that follows an identifier char, ) or ]
     # and is not the start of !=.
@@ -414,6 +424,12 @@ hits=$(lint_hits LOCDESC)
 [ -n "$hits" ] && fail "localizedDescription used (use UnderlyingErrorInfo)" "$hits"
 hits=$(lint_hits NETWORK)
 [ -n "$hits" ] && fail "network API referenced (TCP/UDP/IP is banned; a local AF_UNIX socket is the only transport, ADR-0013)" "$hits"
+# ADR-0013: the local MCP transport is the only socket code. Raw socket calls live in the app's server and the stdio helper;
+# the AF_UNIX family may also appear in MCPWire, the one place both ends build the address from.
+hits=$(lint_hits SOCKET | grep -v -e '^App/Platform/MCPSocketServer\.swift:' -e '^App/MCPHelper/main\.swift:')
+[ -n "$hits" ] && fail "socket()/bind()/listen()/connect() outside App/Platform/MCPSocketServer.swift and App/MCPHelper/main.swift" "$hits"
+hits=$(lint_hits AFUNIX | grep -v -e '^App/Platform/MCPSocketServer\.swift:' -e '^App/MCPHelper/main\.swift:' -e "^$SRC/FlotsamBase/MCP/MCPWire\.swift:")
+[ -n "$hits" ] && fail "AF_UNIX outside the MCP server, the helper and MCPWire" "$hits"
 hits=$(lint_hits GRDBIMPORT | grep "^$SRC/" | grep -v "^$SRC/FlotsamStorage/")
 [ -n "$hits" ] && fail "GRDB/SQLite3 imported outside Storage" "$hits"
 

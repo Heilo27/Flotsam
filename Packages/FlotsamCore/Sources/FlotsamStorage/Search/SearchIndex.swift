@@ -2,7 +2,14 @@ import FlotsamBase
 import Foundation
 import GRDB
 
-/// Builds `item.searchText` (FR-007-18): the normalised concatenation of every field FR-003-09 makes searchable.
+/// Builds the two search columns of an item (FR-007-18, FR-010-08), from one field list so they cannot drift:
+/// - `item.searchText`: the normalised concatenation of every field FR-003-09 makes searchable. The Library and the Shelf
+///   match against it.
+/// - `item.searchTextExposed`: the same, minus every field an outside reader (an approved MCP client, FRD-010) is not
+///   shown. It never holds recognised image text (FR-003-55: for in-app search only), the bundle name, the kind label or
+///   the original file name, and holds at most the first `ExposureLimits.maxFileNames` member names, which is all that
+///   `get_item` returns. A match is an answer to "does this text occur", so any matched field is readable by probing;
+///   the only safe surface is the one the tool already returns.
 ///
 /// It reads the fields back from the database rather than from the caller's value, so insertion, a note edit, a tag
 /// rename and a member change all go through the one implementation. Callers invoke `refresh` inside the same
@@ -24,32 +31,45 @@ enum SearchIndex {
             arguments: [plainTextCharacterLimit, recognizedTextCharacterLimit, itemId])
         else { return }
 
-        var fields: [String] = []
+        // Every field goes to `library`; only the ones an MCP client is shown also go to `exposed`.
+        var library: [String] = []
+        var exposed: [String] = []
+        func add(_ field: String, exposedToo: Bool) {
+            library.append(field)
+            if exposedToo { exposed.append(field) }
+        }
+
         // A secure clip's content is never searchable (FR-003-09); the schema keeps its plainText NULL, and this
         // keeps a future code path that sets it from reaching the index.
         let isSecure: Bool = row["isSecure"]
-        if !isSecure, let text: String = row["text"] { fields.append(text) }
-        // FR-003-55: what text recognition read from an image is searchable, and only searchable: nothing else reads it.
-        if !isSecure, let recognized: String = row["recognized"] { fields.append(recognized) }
-        if let note: String = row["note"] { fields.append(note) }
-        if let name: String = row["name"] { fields.append(name) }
-        fields += try String.fetchAll(
+        if !isSecure, let text: String = row["text"] { add(text, exposedToo: true) }
+        // FR-003-55: what text recognition read from an image is searchable, and only searchable: nothing else reads it,
+        // and an MCP client never matches against it (FRD-010 FR-010-08).
+        if !isSecure, let recognized: String = row["recognized"] { add(recognized, exposedToo: false) }
+        if let note: String = row["note"] { add(note, exposedToo: true) }
+        if let name: String = row["name"] { add(name, exposedToo: false) }
+        for tag in try String.fetchAll(
             db,
             sql: "SELECT tag.name FROM itemTag JOIN tag ON tag.id = itemTag.tagId WHERE itemTag.itemId = ? ORDER BY tag.name",
             arguments: [itemId])
-        if let source: String = row["sourceName"] { fields.append(source) }
-        fields += try String.fetchAll(
+        { add(tag, exposedToo: true) }
+        if let source: String = row["sourceName"] { add(source, exposedToo: true) }
+        let members = try String.fetchAll(
             db, sql: "SELECT path FROM bundleMember WHERE itemId = ? ORDER BY ordinal", arguments: [itemId]
         ).map { URL(fileURLWithPath: $0).lastPathComponent }
+        for (index, member) in members.enumerated() { add(member, exposedToo: index < ExposureLimits.maxFileNames) }
         if let kindName: String = row["kind"], let kind = ItemKind(rawValue: kindName) {
-            fields.append(KindLabel.text(for: kind))
+            add(KindLabel.text(for: kind), exposedToo: false)
         }
         if let original: String = row["originalPath"] {
-            fields.append(URL(fileURLWithPath: original).lastPathComponent)
+            add(URL(fileURLWithPath: original).lastPathComponent, exposedToo: false)
         }
 
         try db.execute(
-            sql: "UPDATE item SET searchText = ? WHERE id = ?",
-            arguments: [SearchNormalizer.normalize(fields.joined(separator: "\n")), itemId])
+            sql: "UPDATE item SET searchText = ?, searchTextExposed = ? WHERE id = ?",
+            arguments: [
+                SearchNormalizer.normalize(library.joined(separator: "\n")),
+                SearchNormalizer.normalize(exposed.joined(separator: "\n")), itemId,
+            ])
     }
 }

@@ -68,17 +68,25 @@ final class LocalMCPService {
         }
     }
 
-    private func makeServer(database: FlotsamDatabase) -> MCPSocketServer {
+    /// One gate for the life of the app, not one per server: the refusal cooldown and the global lockout (FR-010-06) live
+    /// in it, and switching the server off and on must not clear them.
+    private lazy var gate = MCPGate(ports: gatePorts())
+
+    private func gatePorts() -> MCPGate.Ports {
         let settings = settings
         let approvals = SettingKeys.mcpApprovals
-        let gate = MCPGate(ports: MCPGate.Ports(
+        return MCPGate.Ports(
             isApproved: { settings.value(approvals).contains(key: $0) },
             // One read-modify-write at a time, on the main actor, so two approvals cannot overwrite each other.
             record: { approval in
                 await MainActor.run { settings.set(settings.value(approvals).adding(approval), for: approvals) }
             },
             ask: { client in await MainActor.run { MCPAlerts.approve(client) } },
-            now: { Date() }))
+            now: { Date() })
+    }
+
+    private func makeServer(database: FlotsamDatabase) -> MCPSocketServer {
+        let settings = settings
         let handler = MCPHandler(
             database: database,
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },

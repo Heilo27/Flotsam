@@ -147,4 +147,19 @@ enum Schema {
             CREATE INDEX item_ocrPending ON item(lastCopiedAt) WHERE ocrAt IS NULL AND isSecure = 0 AND kind IN ('image', 'screenshot');
             """)
     }
+
+    /// The searchable text an outside reader may match against (FRD-010 FR-010-08): `searchText` minus recognised image
+    /// text, the bundle name, the kind label and the original file name (`SearchIndex`). A search that matched
+    /// recognised text would let a client read it one probe at a time, so MCP queries this column and never `searchText`.
+    ///
+    /// Existing rows are rebuilt here through `SearchIndex.refresh` (the one implementation of both columns), in the same
+    /// transaction as the column, so there is no moment when a row has the column and not its value. `refresh` also
+    /// rewrites `searchText` with the value it already has. A later migration that adds a column `SearchIndex` reads must not
+    /// rely on this one running against the newer `SearchIndex`: it would have to backfill for itself.
+    static func createVersion5(_ db: Database) throws {
+        try db.execute(sql: "ALTER TABLE item ADD COLUMN searchTextExposed TEXT NOT NULL DEFAULT ''")
+        for id in try String.fetchAll(db, sql: "SELECT id FROM item") {
+            try SearchIndex.refresh(db, itemId: id)
+        }
+    }
 }

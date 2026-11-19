@@ -5057,6 +5057,16 @@
         }
       }
     },
+    "ui.settings.mcpApproveName" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It shows itself as:"
+          }
+        }
+      }
+    },
     "ui.settings.mcpApproveTitle" : {
       "localizations" : {
         "en" : {

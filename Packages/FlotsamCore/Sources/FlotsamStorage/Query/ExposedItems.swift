@@ -37,8 +37,8 @@ extension FlotsamDatabase {
     /// The visibility gate (FR-010-08): a secure item is never visible, whatever its row says elsewhere (the flag and the
     /// ciphertext are each enough to hide it), and neither is an item copied from an ignored app. Ignored apps are
     /// dropped at capture, but a copy stored before the user added the app to the list is still in the library, so the
-    /// gate also checks them at read time. Secure rows are not in `searchText` either (FR-007-03), so a search cannot
-    /// match them even before this gate runs.
+    /// gate also checks them at read time. Secure rows carry no content in the search columns either (FR-007-03), so a
+    /// search cannot match their content even before this gate runs.
     static func exposureGate(ignoredApps: Set<String>) -> Selection {
         var sql = "isSecure = 0 AND secureCiphertext IS NULL"
         var arguments = StatementArguments()
@@ -51,12 +51,14 @@ extension FlotsamDatabase {
         return Selection(sql: sql, arguments: arguments)
     }
 
-    /// Newest-first items matching `text` (the Library's own search: `Selection`) and, if given, `kind`, behind the gate.
+    /// Newest-first items matching `text` and, if given, `kind`, behind the gate. The match runs over `searchTextExposed`, the
+    /// fields this reader is shown (text, note, tags, source app, the file names it is given), never `searchText`: that one
+    /// holds recognised image text (FR-003-55), and a search that could match it would let the reader read it by probing.
     /// An empty `text` lists the most recent. Failure is `STO-DB-004`, as for every read (FR-007-18).
     public func exposedItems(
         matching text: String, kind: ItemKind?, limit: Int, textLimit: Int, ignoredApps: Set<String>
     ) async -> FlotsamResult<[ExposedItem]> {
-        let selection = Selection(filter: kind.map { .kind($0) } ?? .all, text: text)
+        let selection = Selection(filter: kind.map { .kind($0) } ?? .all, text: text, surface: .exposed)
         let gate = Self.exposureGate(ignoredApps: ignoredApps)
         let bounded = min(max(limit, 1), ExposureLimits.maxResults)
         do {

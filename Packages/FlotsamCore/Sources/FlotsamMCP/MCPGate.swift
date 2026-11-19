@@ -9,7 +9,11 @@ import Foundation
 /// - A client approved earlier (its key is in the persisted list) is admitted with no prompt.
 /// - An unknown client prompts once. Allow records the approval; Deny is remembered for `denyCooldown`, in memory only,
 ///   so a client that is refused cannot make the prompt reappear in a loop. The cooldown is not persisted: quitting
-///   the app clears it, and the user can always approve a client by retrying after.
+///   the app clears it, and the user can always approve a client by retrying after. The owner keeps one gate for the
+///   life of the app, so switching the server off and on does not clear it.
+/// - Refusals are also counted across all clients: after `lockoutDenials` refusals within `lockoutWindow`, every unknown
+///   client is refused without a prompt until the oldest of them ages out. A hostile program that copies itself to a new
+///   path for each attempt is a new client each time, so the per-client cooldown alone would let it prompt forever.
 /// - Only one prompt is ever open. A second client that connects while one is showing is refused without being
 ///   remembered (it can retry); a second connection from the same client waits on the same answer.
 /// - Approval is read live from the persisted list on every call (`isApproved`), so a revoke takes effect on the next
@@ -47,8 +51,14 @@ public actor MCPGate {
     /// How long a denied client is refused without a new prompt (FR-010-06).
     public static let denyCooldown: TimeInterval = 300
 
+    /// The refusals that start a global lockout, and the period they are counted over (FR-010-06).
+    public static let lockoutDenials = 3
+    public static let lockoutWindow: TimeInterval = 600
+
     private let ports: Ports
     private var deniedUntil: [String: Date] = [:]
+    /// When the user answered Don't Allow, oldest first, within `lockoutWindow`.
+    private var denials: [Date] = []
     private var pending: (key: String, task: Task<Bool, Never>)?
 
     public init(ports: Ports) { self.ports = ports }
@@ -60,6 +70,8 @@ public actor MCPGate {
         if ports.isApproved(key) { return .approved }
         let now = ports.now()
         deniedUntil = deniedUntil.filter { $0.value > now }
+        denials = denials.filter { $0 > now.addingTimeInterval(-Self.lockoutWindow) }
+        if denials.count >= Self.lockoutDenials { return .denied }
         if deniedUntil[key] != nil { return .denied }
 
         if let pending {
@@ -79,7 +91,9 @@ public actor MCPGate {
         let allowed = await task.value
         pending = nil
         if allowed { return .approved }
-        deniedUntil[key] = ports.now().addingTimeInterval(Self.denyCooldown)
+        let refusedAt = ports.now()
+        deniedUntil[key] = refusedAt.addingTimeInterval(Self.denyCooldown)
+        denials.append(refusedAt)
         return .denied
     }
 }

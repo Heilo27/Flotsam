@@ -19,14 +19,16 @@ enum MCPAlerts {
         return alert.runModal() == .alertSecondButtonReturn
     }
 
-    /// FR-010-04: the first connection of an unknown AI app. The name and what identifies it (its signature, or its path
-    /// when unsigned) are the system's facts about the connecting program, never what it called itself. Don't Allow is
+    /// FR-010-04: the first connection of an unknown AI app. What identifies it (its signature, or its path when unsigned)
+    /// comes first, because that is the system's fact about the connecting program; the app's own name is second and
+    /// labelled, because an app bundle chooses its name and any program can pick a trusted-looking one. Don't Allow is
     /// the default button, so a stray Return or a click-through does not grant access.
     static func approve(_ client: MCPClientIdentity) -> Bool {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = SettingsString.mcpApproveTitle.text
-        alert.informativeText = [client.name, client.detail, "", SettingsString.mcpApproveBody.text].joined(separator: "\n")
+        alert.informativeText = [client.detail, SettingsString.mcpApproveName.text + " " + client.name, "", SettingsString.mcpApproveBody.text]
+            .joined(separator: "\n")
         alert.addButton(withTitle: SettingsString.mcpDeny.text)
         alert.addButton(withTitle: SettingsString.mcpAllow.text)
         NSApplication.shared.activate()

@@ -90,6 +90,21 @@ extension FlotsamDatabase {
 
     // MARK: Selection (the one definition of filter + search)
 
+    /// Which column a search token is matched against. The Library and the Shelf search everything searchable
+    /// (`searchText`); an outside reader (MCP, FRD-010) matches only what it is shown (`searchTextExposed`, built by
+    /// `SearchIndex`). The column name is one of these two constants, never input.
+    enum SearchSurface {
+        case library
+        case exposed
+
+        var column: String {
+            switch self {
+            case .library: return "searchText"
+            case .exposed: return "searchTextExposed"
+            }
+        }
+    }
+
     /// A WHERE clause over `item` plus its arguments.
     struct Selection {
         let sql: String
@@ -100,7 +115,7 @@ extension FlotsamDatabase {
             self.arguments = arguments
         }
 
-        init(filter: LibraryFilter, text: String) {
+        init(filter: LibraryFilter, text: String, surface: SearchSurface = .library) {
             var clauses: [String] = []
             var arguments = StatementArguments()
             switch filter {
@@ -122,9 +137,9 @@ extension FlotsamDatabase {
                 clauses.append("id IN (SELECT itemId FROM bundleMember WHERE isDirectory = 0 AND (\(patterns)))")
                 arguments += StatementArguments(VideoFileTypes.extensions.map { "%." + $0 })
             }
-            // `searchText` is already normalised, and tokens go through the same normaliser (FR-003-09).
+            // The column is already normalised, and tokens go through the same normaliser (FR-003-09).
             for token in SearchNormalizer.tokens(from: text) {
-                clauses.append("instr(searchText, ?) > 0")
+                clauses.append("instr(\(surface.column), ?) > 0")
                 arguments += [token]
             }
             sql = clauses.isEmpty ? "1" : clauses.joined(separator: " AND ")
