@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import Testing
 import FlotsamBase
+import FlotsamPayload
 @testable import FlotsamStorage
 @testable import FlotsamCapture
 
@@ -56,6 +57,7 @@ private final class Sink37: LogSink, @unchecked Sendable {
 struct Frd000PasteboardCallsiteTests {
     private static let text = "public.utf8-plain-text"
     private static let concealed = "org.nspasteboard.ConcealedType"
+    private static let transient = "org.nspasteboard.TransientType"
 
     /// Waits (bounded) until the sink holds `count` pasteboard-processed lines; the ingest runs off the main actor.
     private func waitForProcessed(_ sink: Sink37, _ count: Int) async {
@@ -64,8 +66,8 @@ struct Frd000PasteboardCallsiteTests {
 
     /// OC-0037. Mutation: drop the `.pasteboardProcessed` log in IngestWorker (stored/deduped) or ClipboardCapture.skip
     /// (skipped), or swap the stored/deduped outcome mapping; the line count or an outcome literal goes red.
-    @Test("OC-0037 a new copy, the same copy again and a concealed copy log stored, deduped and skipped + CAP-POL-001, no content")
-    func newDuplicateAndConcealedCopies() async throws {
+    @Test("OC-0037 a new copy, the same copy again and a transient copy log stored, deduped and skipped + CAP-POL-001, no content")
+    func newDuplicateAndTransientCopies() async throws {
         // given a capture pipeline over a real database
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-oc0037-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -80,12 +82,12 @@ struct Frd000PasteboardCallsiteTests {
         let marker = "OC37-MARKER-TEXT"  // 16 bytes
         capture.start()
 
-        // when a new text is copied, then the same text again, then a concealed item
+        // when a new text is copied, then the same text again, then a transient item
         board.copy([Self.text: Data(marker.utf8)]); capture.captureNow()
         await waitForProcessed(sink, 1)
         board.copy([Self.text: Data(marker.utf8)]); capture.captureNow()
         await waitForProcessed(sink, 2)
-        board.copy([Self.text: Data("OC37-SECRET".utf8), Self.concealed: Data("1".utf8)]); capture.captureNow()
+        board.copy([Self.text: Data("OC37-SECRET".utf8), Self.transient: Data("1".utf8)]); capture.captureNow()
         await waitForProcessed(sink, 3)
         await capture.stop()
 
@@ -100,8 +102,41 @@ struct Frd000PasteboardCallsiteTests {
         let everything = sink.all.map { "\($0.publicText) \($0.privateText)" }.joined(separator: "\n")
         #expect(!everything.contains("OC37-MARKER-TEXT"))
         #expect(!everything.contains("OC37-SECRET"))
-        // and the stored item is the one row: the deduped copy bumped it, the concealed copy never persisted
+        // and the stored item is the one row: the deduped copy bumped it, the transient copy never persisted
         let count = try await database.pool.read { try Int.fetchAll($0, sql: "SELECT COUNT(*) FROM item") }
         #expect(count == [1])
+    }
+
+    /// OC-0037's concealed half (TASK-503): a concealed copy now ends `stored` as a secure item, with its byte size and
+    /// kind in the line and none of its content anywhere. Mutation: restore the old drop (skipped + CAP-POL-001): the
+    /// outcome literal and the row count go red.
+    @Test("OC-0037 a concealed copy logs stored as a secure item, no content")
+    func concealedCopyLogsStored() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-oc0037c-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let vault = SecureClipVault(store: MemoryKeychain())
+        let database = try await FlotsamDatabase.open(folder: folder, secureVault: vault).get()
+        let settings = SettingsStore(store: KV37())
+        let board = Board37()
+        let sink = Sink37()
+        let capture = ClipboardCapture(
+            pasteboard: board, sourceApps: App37(), ownWrites: OwnWriteLedger(),
+            ingest: IngestActor(database: database, settings: settings), settings: settings,
+            reporter: ErrorReporter(presenter: Presenter37(), sink: sink), ignoredApps: { [] }, access: AllowedPasteboardAccess(),
+            vault: vault, sink: sink)
+        capture.start()
+
+        board.copy([Self.text: Data("OC37-SECRET".utf8), Self.concealed: Data("1".utf8)]); capture.captureNow()
+        await waitForProcessed(sink, 1)
+        await capture.stop()
+
+        let lines = sink.processed.map(\.publicText)
+        #expect(lines.count == 1)
+        #expect(lines.first?.hasSuffix("outcome=stored") == true)
+        #expect(lines.first?.contains("CAP-POL-001") == false)
+        let everything = sink.all.map { "\($0.publicText) \($0.privateText)" }.joined(separator: "\n")
+        #expect(!everything.contains("OC37-SECRET"))
+        let secure = try await database.pool.read { try Int.fetchAll($0, sql: "SELECT COUNT(*) FROM item WHERE isSecure = 1") }
+        #expect(secure == [1])
     }
 }

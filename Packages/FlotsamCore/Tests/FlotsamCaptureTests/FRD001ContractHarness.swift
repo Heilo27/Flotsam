@@ -167,6 +167,24 @@ struct StoredItem: Equatable {
     let sourceName: String?
 }
 
+/// A Keychain stand-in for the secure vault: the key lives in memory, so no test touches the real Keychain.
+final class MemoryKeychain: SecureKeyStore, @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Data?
+    private let unreadable: Bool
+    init(unreadable: Bool = false) { self.unreadable = unreadable }
+    var key: Data? { lock.withLock { stored } }
+    func readKey() -> FlotsamResult<Data?> {
+        lock.withLock { unreadable ? .failure(FlotsamError(.libDat002, "keychain locked")) : .success(stored) }
+    }
+    func storeKeyIfAbsent(_ key: Data) -> FlotsamResult<Data> {
+        lock.withLock {
+            if stored == nil { stored = key }
+            return .success(stored!)
+        }
+    }
+}
+
 @MainActor
 final class ContractRig {
     let folder: URL
@@ -180,6 +198,10 @@ final class ContractRig {
     let presenter = FRD001RecordingPresenter()
     let clock = ManualClock()
     let reporter: ErrorReporter
+    /// The secure vault capture and the database were built with; nil unless the rig was made `withVault` (then a
+    /// concealed copy fails closed, FR-001-04 gate 3). Its key lives in `keychain`, an in-memory fake.
+    let vault: SecureClipVault?
+    let keychain: MemoryKeychain
     private(set) var capture: ClipboardCapture!
     /// Bundle identifiers on the ignored list (read live by capture on every change).
     var ignored: Set<String> {
@@ -200,12 +222,16 @@ final class ContractRig {
     static let writerApp = SourceApp(bundleId: "com.example.writer", name: "Writer")
 
     static func make(
-        frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true,
+        frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true, withVault: Bool = false,
         scheduleTimer: @escaping ClipboardCapture.TimerScheduler = ClipboardCapture.systemTimer
     ) async throws -> ContractRig {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-frd001-\(UUID().uuidString)")
-        let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data")).get()
-        let rig = ContractRig(root: root, database: database, frontmost: frontmost, startCapture: startCapture, scheduleTimer: scheduleTimer)
+        let keychain = MemoryKeychain()
+        let vault = withVault ? SecureClipVault(store: keychain) : nil
+        let database = try await FlotsamDatabase.open(folder: root.appendingPathComponent("data"), secureVault: vault).get()
+        let rig = ContractRig(
+            root: root, database: database, frontmost: frontmost, startCapture: startCapture, keychain: keychain, vault: vault,
+            scheduleTimer: scheduleTimer)
         if startCapture {
             // Starting on an empty pasteboard opens the watch of an empty change (FR-001-01), which would later count
             // toward FR-001-18 b. Paused then Active re-reads the baseline (FR-001-19), so that launch read is never
@@ -219,9 +245,11 @@ final class ContractRig {
     }
 
     private init(
-        root: URL, database: FlotsamDatabase, frontmost: SourceApp?, startCapture: Bool,
-        scheduleTimer: @escaping ClipboardCapture.TimerScheduler
+        root: URL, database: FlotsamDatabase, frontmost: SourceApp?, startCapture: Bool, keychain: MemoryKeychain,
+        vault: SecureClipVault?, scheduleTimer: @escaping ClipboardCapture.TimerScheduler
     ) {
+        self.keychain = keychain
+        self.vault = vault
         self.folder = root.appendingPathComponent("data")
         self.files = root.appendingPathComponent("files")
         try? FileManager.default.createDirectory(at: files, withIntermediateDirectories: true)
@@ -233,7 +261,8 @@ final class ContractRig {
         self.capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: sourceApps, ownWrites: ledger,
             ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { box.value }, access: AllowedPasteboardAccess(), clock: clock, sink: sink, scheduleTimer: scheduleTimer)
+            reporter: reporter, ignoredApps: { box.value }, access: AllowedPasteboardAccess(), vault: vault, clock: clock, sink: sink,
+            scheduleTimer: scheduleTimer)
         if startCapture { capture.start() }
     }
 
@@ -290,6 +319,23 @@ final class ContractRig {
                     pixelWidth: $0["pixelWidth"], pixelHeight: $0["pixelHeight"],
                     sourceBundleId: $0["sourceBundleId"], sourceName: $0["sourceName"]) }
         }
+    }
+
+    /// Secure rows (concealed copies kept encrypted): how many, and whether any holds plain text or a search entry.
+    func secureRows() async throws -> [(plainText: String?, searchText: String?, ciphertext: Data?, sourceName: String?, hotkeyCode: Int?, trigger: String?)] {
+        try await database.pool.read { db in
+            try Row.fetchAll(db, sql: "SELECT plainText, searchText, secureCiphertext, sourceName, hotkeyCode, trigger FROM item WHERE isSecure = 1 ORDER BY rowid")
+                .map { (plainText: $0["plainText"], searchText: $0["searchText"], ciphertext: $0["secureCiphertext"],
+                        sourceName: $0["sourceName"], hotkeyCode: $0["hotkeyCode"], trigger: $0["trigger"]) }
+        }
+    }
+
+    /// Every byte under the data folder (database, WAL, shared memory, blobs, thumbnails) as one string, to grep for a secret.
+    func allDataBytes() -> Data {
+        var all = Data()
+        guard let walker = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: nil) else { return all }
+        for case let url as URL in walker { all.append((try? Data(contentsOf: url)) ?? Data()) }
+        return all
     }
 
     /// Kinds of all items in insertion order.
@@ -457,11 +503,12 @@ let inertTimer: ClipboardCapture.TimerScheduler = { _, _, _ in { } }
 
 @MainActor
 func withRig(
-    frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true,
+    frontmost: SourceApp? = ContractRig.writerApp, startCapture: Bool = true, withVault: Bool = false,
     scheduleTimer: @escaping ClipboardCapture.TimerScheduler = ClipboardCapture.systemTimer,
     _ body: (ContractRig) async throws -> Void
 ) async throws {
-    let rig = try await ContractRig.make(frontmost: frontmost, startCapture: startCapture, scheduleTimer: scheduleTimer)
+    let rig = try await ContractRig.make(
+        frontmost: frontmost, startCapture: startCapture, withVault: withVault, scheduleTimer: scheduleTimer)
     do { try await body(rig) } catch {
         await rig.finish()
         throw error
