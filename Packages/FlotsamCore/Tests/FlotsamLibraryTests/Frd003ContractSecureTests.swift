@@ -611,50 +611,41 @@ struct SecureContractRig {
         ok.cleanUp()
     }
 
-    // MARK: Command-C (FR-003-23 / AC-003-19 name it; FR-003-08 does not list it)
+    // MARK: Command-C (FR-003-08 key table, FR-003-23 / AC-003-19)
 
-    // The FRD text of FR-003-23 and AC-003-19 says Command-C on a secure row asks the owner before anything is copied.
-    // The Library key map has no Command-C row (LibraryKeyMap.swift table, no `.character("c")` entry) and
-    // FR-003-08 does not list it, so the key is unhandled and falls through to the search field. [Spec Drift] between
-    // FR-003-08 and FR-003-23/AC-003-19, surfaced to Ryan. These tests state the AC as written and are expected to
-    // fail today; when Command-C is wired (or the FRD drops it) `withKnownIssue` reports "did not fail" and this block
-    // is to be removed or rewritten with the ruling.
+    // Command-C on the selected row is the copy-only path (Shift-Return) through PasteService, behind the same secure gate.
+    @discardableResult
     private func cmdC(on rig: SecureContractRig) async -> Bool { await rig.press(.character("c"), .command) }
 
-    @Test("OC-3108 AC-003-19 [Spec Drift]: Command-C on a cancelled secure row is gated and copies nothing")
+    @Test("OC-3108 AC-003-19 Command-C on a cancelled secure row is gated and copies nothing")
     func commandCCancelled() async throws {
         let rig = try await SecureContractRig(answers: [SecureContractAuthenticator.cancelled])
         let id = try await rig.addSecure()
         await rig.open()
         rig.select(id)
-        await withKnownIssue("FR-003-23/AC-003-19 name Command-C; the Library has no Command-C binding (FR-003-08 omits it)") {
-            let handled = await cmdC(on: rig)
-            #expect(handled)
-            #expect(rig.authenticator.requests == 1)
-            #expect(codes(rig) == [.libOs002])
-        }
-        // not part of the known issue: whatever Command-C does today, it never writes the secret
+        let handled = await cmdC(on: rig)
+        #expect(handled)
+        #expect(rig.authenticator.requests == 1)
+        #expect(codes(rig) == [.libOs002])
         #expect(rig.lastText != "hunter2-secret")
         rig.cleanUp()
     }
 
-    @Test("OC-3110 AC-003-19 [Spec Drift]: Command-C on a secure row with a missing key reports LIB-DAT-002 without a prompt")
+    @Test("OC-3110 AC-003-19 Command-C on a secure row with a missing key reports LIB-DAT-002 without a prompt")
     func commandCMissingKey() async throws {
         let rig = try await SecureContractRig()
         let id = try await rig.addSecure()
         rig.vault.isKeyAvailable = false
         await rig.open()
         rig.select(id)
-        await withKnownIssue("FR-003-23/AC-003-19 name Command-C; the Library has no Command-C binding (FR-003-08 omits it)") {
-            let handled = await cmdC(on: rig)
-            #expect(handled)
-            #expect(codes(rig) == [.libDat002])
-        }
+        let handled = await cmdC(on: rig)
+        #expect(handled)
+        #expect(codes(rig) == [.libDat002])
         #expect(rig.authenticator.requests == 0)
         rig.cleanUp()
     }
 
-    @Test("OC-3114 AC-003-19 [Spec Drift]: Return twice then Command-C asks the owner three times")
+    @Test("OC-3114 AC-003-19 Return twice then Command-C asks the owner three times")
     func commandCAsksAgain() async throws {
         let rig = try await SecureContractRig()
         let id = try await rig.addSecure()
@@ -662,25 +653,59 @@ struct SecureContractRig {
         rig.select(id)
         await rig.press(.returnKey)
         await rig.press(.returnKey)
-        await withKnownIssue("FR-003-23/AC-003-19 name Command-C; the Library has no Command-C binding (FR-003-08 omits it)") {
-            await cmdC(on: rig)
-            #expect(rig.authenticator.requests == 3)
-        }
+        await cmdC(on: rig)
+        #expect(rig.authenticator.requests == 3)
         rig.cleanUp()
     }
 
-    @Test("OC-3117 AC-003-19 [Spec Drift]: Command-C on a plain text item copies its text with no prompt")
+    @Test("OC-3117 AC-003-19 Command-C on a plain text item copies its text with no prompt")
     func commandCPlain() async throws {
         let rig = try await SecureContractRig()
         let id = try await rig.addPlain("plain-text", secondsAgo: 0)
         await rig.open()
         rig.select(id)
-        await withKnownIssue("FR-003-23/AC-003-19 name Command-C; the Library has no Command-C binding (FR-003-08 omits it)") {
-            let handled = await cmdC(on: rig)
-            #expect(handled)
-            #expect(rig.lastText == "plain-text")
-        }
+        let handled = await cmdC(on: rig)
+        #expect(handled)
+        #expect(rig.lastText == "plain-text")
         #expect(rig.authenticator.requests == 0)
+        rig.cleanUp()
+    }
+
+    // FR-003-08: with selected text in the search field, Command-C is the field's own copy and the row is untouched.
+    @Test("FR-003-08 Command-C with selected search text is not the Library's: no prompt, no copy, no error; without it the row is copied")
+    func commandCYieldsToSearchSelection() async throws {
+        let rig = try await SecureContractRig()
+        let secure = try await rig.addSecure()
+        await rig.open()
+        rig.select(secure)
+        let before = rig.pasteboard.written.count
+        // with a selection in the search field: not handled
+        let handled = rig.model.handle(LibraryKeyStroke(.character("c"), .command), searchHasSelection: true)
+        await rig.model.pasteTask?.value
+        await rig.model.settled()
+        #expect(!handled)
+        #expect(rig.authenticator.requests == 0)
+        #expect(rig.pasteboard.written.count == before)
+        #expect(rig.reported.errors.isEmpty)
+        // control: the same key with no selection is the Library's and asks the owner
+        #expect(await cmdC(on: rig))
+        #expect(rig.authenticator.requests == 1)
+        rig.cleanUp()
+    }
+
+    @Test("FR-003-08 Command-C on a plain row with selected search text copies nothing; with no selection it copies the row")
+    func commandCYieldsToSearchSelectionPlain() async throws {
+        let rig = try await SecureContractRig()
+        let id = try await rig.addPlain("plain-text", secondsAgo: 0)
+        await rig.open()
+        rig.select(id)
+        let before = rig.pasteboard.written.count
+        let handled = rig.model.handle(LibraryKeyStroke(.character("c"), .command), searchHasSelection: true)
+        await rig.model.settled()
+        #expect(!handled)
+        #expect(rig.pasteboard.written.count == before)
+        #expect(await cmdC(on: rig))
+        #expect(rig.lastText == "plain-text")
         rig.cleanUp()
     }
 }

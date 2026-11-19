@@ -435,10 +435,11 @@ public final class LibraryViewModel {
     // MARK: Keyboard
 
     /// Resolves and runs a key. False means the Library does not own the key and it belongs to the search field
-    /// (FR-003-08).
+    /// (FR-003-08). `searchHasSelection` is true while the search field holds a non-empty text selection; the panel reads
+    /// it from the field editor, since the model does not own the caret.
     @discardableResult
-    public func handle(_ stroke: LibraryKeyStroke) -> Bool {
-        let context = LibraryKeyMap.Context(searchIsEmpty: searchText.isEmpty, viewMode: viewMode)
+    public func handle(_ stroke: LibraryKeyStroke, searchHasSelection: Bool = false) -> Bool {
+        let context = LibraryKeyMap.Context(searchIsEmpty: searchText.isEmpty, viewMode: viewMode, searchHasSelection: searchHasSelection)
         guard let command = LibraryKeyMap.command(for: stroke, in: context) else { return false }
         perform(command)
         return true
