@@ -6,7 +6,7 @@ import GRDB
 /// for the image worker or the disk, and the whole pipeline has a single place to read.
 ///
 /// Order: (1) look up `contentKey` and bump on a match; (2) prepare the payload (limits, disk guard, image pipeline);
-/// (3) write blobs; (4) insert item, representations, members and `searchText` in one transaction that first
+/// (3) write blobs (a failure in 2 or 3 first re-checks `contentKey`, see `bumpOrFail`); (4) insert item, representations, members and `searchText` in one transaction that first
 /// re-checks `contentKey`; (5) after commit, publish `itemsChanged`.
 ///
 /// Why the second look-up: this actor suspends at every `await`, so two identical payloads can both pass step 1
@@ -40,14 +40,14 @@ public actor IngestActor {
 
         let prepared: PreparedItem
         switch await prepare(candidate) {
-        case .failure(let error): return .failure(error)
+        case .failure(let error): return await bumpOrFail(candidate, occurredAt: occurredAt, failure: error)
         case .success(let value): prepared = value
         }
 
         let itemId = UUID()
         let stored: [StoredRepresentation]
         switch writeBlobs(prepared.representations, itemId: itemId) {
-        case .failure(let error): return .failure(error)
+        case .failure(let error): return await bumpOrFail(candidate, occurredAt: occurredAt, failure: error)
         case .success(let value): stored = value
         }
 
@@ -95,6 +95,24 @@ public actor IngestActor {
             })
         } catch {
             return .failure(FlotsamDatabase.writeFailure(error))
+        }
+    }
+
+    /// A step 2-5 failure (limits, disk guard, image decode, blob write) for a payload another identical copy may
+    /// have stored while this one was suspended: look the `contentKey` up again before reporting it. A match is the
+    /// same bump as step 1 (no notice, and `writeBlobs` has already removed anything it wrote); no match is the
+    /// original failure. Ingest is idempotent per payload, so a race loser never fails for a payload that is stored
+    /// (FR-007-05). If the look-up itself fails, the original failure is the one that explains the copy, and the
+    /// look-up error is reported rather than swallowed.
+    private func bumpOrFail(
+        _ candidate: IngestCandidate, occurredAt: Int64, failure: FlotsamError
+    ) async -> FlotsamResult<IngestResult> {
+        switch await bumpIfKnown(candidate, occurredAt: occurredAt) {
+        case .failure(let lookupError):
+            database.report(lookupError)
+            return .failure(failure)
+        case .success(let id?): return matched(id, countsAsCopy: candidate.countsAsCopy)
+        case .success(nil): return .failure(failure)
         }
     }
 
