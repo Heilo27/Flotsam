@@ -19,6 +19,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
     /// The auto-bundle row (FR-001-12, FR-008-04): label and caption.
     case autoBundle, autoBundleHelp
+    /// The capture-cue row (FR-001-30, FR-008-04): label and caption.
+    case captureCue, captureCueHelp
 
     // Shortcuts
     case shortcutOpenLibrary, shortcutSaveClipboard, shortcutAddClip, shortcutToggleShelf, shortcutPasteQueue

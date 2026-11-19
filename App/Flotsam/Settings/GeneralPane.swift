@@ -63,6 +63,10 @@ struct GeneralPane: View {
                 Text(.autoBundleHelp).settingsCaption()
             }
             Section {
+                Toggle(isOn: model.binding(SettingKeys.captureCue)) { Text(.captureCue) }
+                Text(.captureCueHelp).settingsCaption()
+            }
+            Section {
                 Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
             }
         }
