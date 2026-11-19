@@ -56,14 +56,8 @@ import Testing
         #expect(SettingsPane.lastOpened(in: launch()) == .about, "a later choice replaces the earlier one")
     }
 
-    // OC-8024 has no seam here, and none in a `swift test` process: the oracle asks for the Settings window count to
-    // stay 1 and for the window to become key and front after "Settings..." and after Cmd-comma, with the window sent
-    // behind TextEdit. Key/front needs the process to be the active app (it never is under a test runner, see
-    // MainMenuTests), and the window is built by SettingsWindowController (App target) over a SettingsEnvironment that
-    // needs the login-item, permission and shortcut objects. What the code guarantees by construction: every caller
-    // (menu row, Library Cmd-comma, a Notice) goes through the one `actions.openSettings` closure, which calls
-    // `SettingsWindowController.openSettings()`, which reuses its single `window` and calls `makeKeyAndOrderFront`.
-    // Still a live-app check (TASK-518, the real-OS matrix).
+    // OC-8024 (one window, refocused, key and front) is in Frd008SettingsWindowDriverTests: the driver owns the single
+    // window and the front request. That the window really becomes key under a running app is a live check (TASK-518).
 
     // OC-8026. Turning the Shelf off is stored at once with no Apply step and survives relaunch.
     @Test func oc8026_changeAppliesWithoutCommitAndSurvivesRelaunch() {
