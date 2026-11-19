@@ -87,7 +87,7 @@
       "requirement": "AC-008-01",
       "given": "The app target's test suite",
       "when": "the registry enumeration unit test runs",
-      "then": "it asserts exactly the 20 keys of the FR-008-01 table with equal types and defaults and passes; a source scan finds zero UserDefaults reads/writes outside the registry accessor and zero repeated literal defaults",
+      "then": "it asserts exactly the 22 keys of the FR-008-01 table (the original 20 plus `library.layout` and `library.compactPanelSize`; re-issued by Friday 2026-11-19, TASK-535) with equal types and defaults and passes; a source scan finds zero UserDefaults reads/writes outside the registry accessor and zero repeated literal defaults",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true

@@ -44,20 +44,20 @@ private final class OneScreen: LibraryScreenProvider {
 
     @Test func columns_previewClosed_isHiddenAndListShownInBothLayouts() {
         for layout in LibraryLayoutMode.allCases {
-            let columns = LibraryColumns.resolve(layout: layout, previewOpen: false)
+            let columns = LibraryColumns.resolve(layout: layout, previewOpen: false, hasPreviewableRow: true)
             #expect(columns.preview == .hidden, "\(layout)")
             #expect(columns.showsList, "\(layout)")
         }
     }
 
     @Test func columns_standardPreviewOpen_isARightPaneAndTheListStays() {
-        let columns = LibraryColumns.resolve(layout: .standard, previewOpen: true)
+        let columns = LibraryColumns.resolve(layout: .standard, previewOpen: true, hasPreviewableRow: true)
         #expect(columns.preview == .rightPane)
         #expect(columns.showsList)
     }
 
     @Test func columns_compactPreviewOpen_replacesTheList() {
-        let columns = LibraryColumns.resolve(layout: .compact, previewOpen: true)
+        let columns = LibraryColumns.resolve(layout: .compact, previewOpen: true, hasPreviewableRow: true)
         #expect(columns.preview == .replacesList)
         #expect(!columns.showsList)
     }

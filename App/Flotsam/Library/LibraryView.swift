@@ -29,7 +29,8 @@ struct LibraryView: View {
                     LibraryPreviewView(model: model)
                         .frame(minWidth: 200, idealWidth: 280, maxWidth: 360)
                 case .replacesList:
-                    // Compact: the preview takes the list's place and the sidebar stays; ↑/↓ still move the selection.
+                    // Compact: the preview takes the list's place and the sidebar stays; ↑/↓ still move the selection. `LibraryColumns`
+                    // only says this while a row is selected in a loaded list, so the empty, no-results and error messages stay visible.
                     LibraryPreviewView(model: model)
                         .frame(maxWidth: .infinity)
                 }

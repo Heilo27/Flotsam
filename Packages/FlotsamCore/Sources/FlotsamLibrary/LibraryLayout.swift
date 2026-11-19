@@ -77,11 +77,15 @@ public struct LibraryColumns: Sendable, Equatable {
     /// The list is drawn unless the preview has taken its place.
     public var showsList: Bool { preview != .replacesList }
 
-    public static func resolve(layout: LibraryLayoutMode, previewOpen: Bool) -> LibraryColumns {
+    /// `hasPreviewableRow` is true when the results column holds a loaded list with exactly one row selected. In
+    /// Compact the preview takes the results column's place only then: an empty history, a search with no match and a
+    /// failed load put their message (with Retry) in that column (FR-003-17, FR-003-20), so the preview gives way to it
+    /// and comes back when a row is selected again (FR-003-14). Standard keeps its own pane, so it is not affected.
+    public static func resolve(layout: LibraryLayoutMode, previewOpen: Bool, hasPreviewableRow: Bool) -> LibraryColumns {
         guard previewOpen else { return LibraryColumns(preview: .hidden) }
         switch layout {
         case .standard: return LibraryColumns(preview: .rightPane)
-        case .compact: return LibraryColumns(preview: .replacesList)
+        case .compact: return LibraryColumns(preview: hasPreviewableRow ? .replacesList : .hidden)
         }
     }
 }

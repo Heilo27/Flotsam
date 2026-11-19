@@ -115,7 +115,9 @@ public final class LibraryViewModel {
     public var visibleRows: [ItemRow] { Array(loadedRows.prefix(visibleLimit)) }
 
     /// Where the preview is drawn, if at all (FR-003-06, FR-003-14).
-    public var columns: LibraryColumns { LibraryColumns.resolve(layout: layout, previewOpen: isPreviewOpen) }
+    public var columns: LibraryColumns {
+        LibraryColumns.resolve(layout: layout, previewOpen: isPreviewOpen, hasPreviewableRow: loadState == .loaded && selectedRow != nil)
+    }
 
     public var sidebarEntries: [SidebarEntry] { sidebar.map(SidebarEntry.entries(from:)) ?? [] }
 

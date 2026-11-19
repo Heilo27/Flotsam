@@ -216,16 +216,13 @@ private final class W535InvalidLog: @unchecked Sendable {
 
     // The list column carries the "no results" message (FR-003-17). In Compact the open preview takes that column's
     // place, so a search with no match leaves the user a blank "preview unavailable" pane and no "No results" message.
-    // Known issue (TASK-535 QA finding F1); this test turns green, and the `withKnownIssue` wrapper starts failing, when
-    // the layout keeps the results-state message visible.
+    // TASK-535 QA finding F1, fixed: the preview replaces the list only while a row is selected (FR-003-14).
     @Test func compactPreview_noResultsMessageIsStillVisible() async {
         let harness = await compactWithPreview(rows: 3)
         harness.model.setSearchText("zzz-no-match")
         await harness.model.settled()
         #expect(harness.model.isNoResults)
-        withKnownIssue("F1: the preview hides the list column that carries the no-results message") {
-            #expect(harness.model.columns.showsList)
-        }
+        #expect(harness.model.columns.showsList)
     }
 
     // Same for a failed load: the inline error and its Retry button live in the list column (FR-003-20).
@@ -237,9 +234,7 @@ private final class W535InvalidLog: @unchecked Sendable {
             Issue.record("expected the load to fail")
             return
         }
-        withKnownIssue("F1: the preview hides the list column that carries the error and Retry") {
-            #expect(harness.model.columns.showsList)
-        }
+        #expect(harness.model.columns.showsList)
     }
 
     // MARK: 2. Layout switch, saved sizes, hostile values
