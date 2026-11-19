@@ -41,6 +41,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
   | Return | paste selected item into the target app and close |
   | ⌥Return | paste as plain text (drops rich and image-only representations) and close |
   | ⇧Return | copy to clipboard only, close |
+  | ⌘C | copy the selected item to the clipboard only, close (the same action as ⇧Return); when the search field has selected text, ⌘C copies that text instead and the row is untouched |
   | ⌘1 ... ⌘9 | paste the Nth visible row (as numbered by badges) and close |
   | Space (search field empty) / ⌘Y | toggle preview |
   | Esc | first press that applies: clear search if non-empty; else close preview if open; else, with several rows selected, reduce the selection to one row (the cursor row); else close panel |
@@ -56,7 +57,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
   | ⌘⇧U | ungroup the selected bundle [FRD-004] |
   | ⌘K | open the shortcut and trigger editor for the selected item [FRD-005] |
   | ⌘, | open Settings |
-  With two or more items selected, Return, ⌥Return and ⇧Return are disabled (footer hint says so); ⌘P, ⌘T, ⌘N and ⌘⌫ (FRD-004) apply to all selected. Keys are fixed in v1 (not user-remappable). A key not handled passes to the search field. ⌘A, ⌘C, ⌘V, ⌘X, ⌘Z and ⇧⌘Z are deliberately absent from the table: they are the standard text-editing keys, provided by the main menu (FRD-008 FR-008-19) and acting on the focused field, including the edit card's.
+  With two or more items selected, Return, ⌥Return, ⇧Return and ⌘C are disabled (footer hint says so); ⌘P, ⌘T, ⌘N and ⌘⌫ (FRD-004) apply to all selected. Keys are fixed in v1 (not user-remappable). A key not handled passes to the search field. ⌘A, ⌘V, ⌘X, ⌘Z and ⇧⌘Z are deliberately absent from the table: they are the standard text-editing keys, provided by the main menu (FRD-008 FR-008-19) and acting on the focused field, including the edit card's. ⌘C is in the table (it copies the selected row, the same as ⇧Return, through the same secure-item gate, FR-003-23) except while the search field has selected text, when it is the standard text copy; in the Organize overlays and the edit card, which own the keyboard, ⌘C is always the standard text copy.
 
 **Search**
 - **FR-003-09** Search semantics. The query is split on whitespace into tokens; an item matches when every token matches (AND). A token matches as a case-insensitive, diacritic-insensitive substring of any searchable field: plain text (first 10,000 characters), link URL, note, tag names, source app name, file and folder names of files and bundle members, kind label, and the screenshot original file name. Results keep the active sort order (FRD-004); there is no relevance ranking. Searching runs within the active sidebar filter.

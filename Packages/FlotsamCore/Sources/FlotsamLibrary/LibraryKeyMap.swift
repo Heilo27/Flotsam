@@ -44,10 +44,13 @@ public enum LibraryKeyMap {
     public struct Context: Sendable, Equatable {
         public var searchIsEmpty: Bool
         public var viewMode: LibraryViewMode
+        /// The search field holds a non-empty text selection: ⌘C then copies that text, not the row (FR-003-08).
+        public var searchHasSelection: Bool
 
-        public init(searchIsEmpty: Bool, viewMode: LibraryViewMode) {
+        public init(searchIsEmpty: Bool, viewMode: LibraryViewMode, searchHasSelection: Bool = false) {
             self.searchIsEmpty = searchIsEmpty
             self.viewMode = viewMode
+            self.searchHasSelection = searchHasSelection
         }
     }
 
@@ -62,6 +65,8 @@ public enum LibraryKeyMap {
             LibraryKeyStroke(.returnKey): .paste(.paste),
             LibraryKeyStroke(.returnKey, .option): .paste(.plainText),
             LibraryKeyStroke(.returnKey, .shift): .paste(.copyOnly),
+            // ⌘C is ⇧Return's copy-only path on the selected row (FR-003-08); see the selection exception in `command`.
+            LibraryKeyStroke(.character("c"), .command): .paste(.copyOnly),
             LibraryKeyStroke(.character("y"), .command): .togglePreview,
             LibraryKeyStroke(.escape): .escape,
             LibraryKeyStroke(.up, .option): .previousFilter,
@@ -95,6 +100,8 @@ public enum LibraryKeyMap {
             guard context.viewMode == .grid else { return nil }
             return .move(stroke.input == .left ? .left : .right)
         }
+        // With text selected in the search field, ⌘C is the standard text copy and goes to the field (FR-003-08).
+        if stroke == LibraryKeyStroke(.character("c"), .command), context.searchHasSelection { return nil }
         return table[stroke]
     }
 }
