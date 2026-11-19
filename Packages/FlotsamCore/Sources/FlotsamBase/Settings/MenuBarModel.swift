@@ -27,6 +27,8 @@ public struct MenuIcon: Equatable, Sendable {
 public enum MenuEntry: Equatable, Sendable {
     case openLibrary(ChordBinding)
     case saveClipboard(ChordBinding)
+    /// "Add Clip…": opens the text entry window (FR-004-19).
+    case addClip(ChordBinding)
     case toggleShelf(ChordBinding)
     case separator
     /// "Pause Capture" or "Resume Capture"; choosing it writes `next` to `capture.mode`.
@@ -62,15 +64,16 @@ public enum MenuBarModel {
             mode: settings.value(SettingKeys.captureMode), shelfEnabled: settings.value(SettingKeys.shelfEnabled),
             openLibrary: settings.value(SettingKeys.shortcutsOpenLibrary),
             saveClipboard: settings.value(SettingKeys.shortcutsSaveClipboard),
+            addClip: settings.value(SettingKeys.shortcutsAddClip),
             toggleShelf: settings.value(SettingKeys.shortcutsToggleShelf))
     }
 
     public static func entries(
         mode: CaptureMode, shelfEnabled: Bool, openLibrary: ChordBinding, saveClipboard: ChordBinding,
-        toggleShelf: ChordBinding
+        addClip: ChordBinding = .none, toggleShelf: ChordBinding
     ) -> [MenuEntry] {
         let toggle = captureToggle(for: mode)
-        var rows: [MenuEntry] = [.openLibrary(openLibrary), .saveClipboard(saveClipboard)]
+        var rows: [MenuEntry] = [.openLibrary(openLibrary), .saveClipboard(saveClipboard), .addClip(addClip)]
         if shelfEnabled { rows.append(.toggleShelf(toggleShelf)) }
         rows += [.separator, .captureToggle(titleKey: toggle.titleKey, next: toggle.next)]
         if mode == .active { rows.append(.pauseFor) }

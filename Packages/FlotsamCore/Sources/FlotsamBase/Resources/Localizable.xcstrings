@@ -1503,6 +1503,16 @@
         }
       }
     },
+    "ui.menu.addClip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Clip…"
+          }
+        }
+      }
+    },
     "ui.menu.clearRecent" : {
       "localizations" : {
         "en" : {
@@ -2655,6 +2665,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add…"
+          }
+        }
+      }
+    },
+    "ui.settings.addClipDone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clip added"
+          }
+        }
+      }
+    },
+    "ui.settings.addClipHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type or paste text to keep as a clip. It is saved like any copied text, so you can give it a shortcut or trigger."
+          }
+        }
+      }
+    },
+    "ui.settings.addClipSave" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add"
+          }
+        }
+      }
+    },
+    "ui.settings.addClipWindow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Clip"
           }
         }
       }
@@ -3913,6 +3963,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shelf placement"
+          }
+        }
+      }
+    },
+    "ui.settings.shortcutAddClip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Clip"
           }
         }
       }

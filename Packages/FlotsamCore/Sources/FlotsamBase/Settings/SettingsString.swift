@@ -19,7 +19,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
 
     // Shortcuts
-    case shortcutOpenLibrary, shortcutSaveClipboard, shortcutToggleShelf
+    case shortcutOpenLibrary, shortcutSaveClipboard, shortcutAddClip, shortcutToggleShelf
     case shortcutNotSet, shortcutRecord, shortcutRecording, shortcutClear, shortcutNeedsModifier, shortcutsFootnote
 
     // Item editor: shortcut and trigger (FR-005-09)
@@ -27,6 +27,9 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// The variable help caption: lists {date}, {time}, {clipboard} and format examples (FR-005-17, FRD-005 section 8).
     case editorVariablesHelp
     case editorNoTrigger, editorSave, editorItemGone, editorLoadFailed
+
+    // Add Clip window (FR-004-19)
+    case addClipWindow, addClipHelp, addClipSave, addClipDone
 
     // Triggers and permissions
     case expandTriggers, permissionAccessibility, permissionInputMonitoring

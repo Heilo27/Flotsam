@@ -18,6 +18,9 @@ struct ShortcutsPane: View {
                     model: model, label: .shortcutSaveClipboard, id: .saveClipboard, key: SettingKeys.shortcutsSaveClipboard,
                     allowClear: true)
                 ShortcutRow(
+                    model: model, label: .shortcutAddClip, id: .addClip, key: SettingKeys.shortcutsAddClip,
+                    allowClear: true)
+                ShortcutRow(
                     model: model, label: .shortcutToggleShelf, id: .toggleShelf, key: SettingKeys.shortcutsToggleShelf,
                     allowClear: true)
             } footer: {

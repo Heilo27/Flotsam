@@ -45,6 +45,8 @@ public enum SettingKeys {
         owner: "FR-005-01", validator: { $0.isUsable })
     public static let shortcutsSaveClipboard = SettingKey(
         "shortcuts.saveClipboard", default: ChordBinding.none, owner: "FR-005-01", validator: { $0.isUsable })
+    public static let shortcutsAddClip = SettingKey(
+        "shortcuts.addClip", default: ChordBinding.none, owner: "FR-005-01", validator: { $0.isUsable })
     public static let shortcutsToggleShelf = SettingKey(
         "shortcuts.toggleShelf", default: ChordBinding.none, owner: "FR-005-01", validator: { $0.isUsable })
     public static let triggersEnabled = SettingKey("triggers.enabled", default: true, owner: "FR-005-10")
@@ -70,7 +72,8 @@ public enum SettingKeys {
     public static let all: [SettingDescriptor] = [
         captureMode.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
         shelfEnabled.descriptor, shelfPlacement.descriptor, shelfRevealOnEdgeHover.descriptor,
-        shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsToggleShelf.descriptor,
+        shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsAddClip.descriptor,
+        shortcutsToggleShelf.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,

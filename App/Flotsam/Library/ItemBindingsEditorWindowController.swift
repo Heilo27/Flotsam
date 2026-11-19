@@ -58,8 +58,9 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
     }
 }
 
-/// Window subclass for the keys a menu would normally supply: this is a menu-bar app with no main menu.
-private final class EditorWindow: NSWindow {
+/// Window subclass for the keys a menu would normally supply: this is a menu-bar app with no main menu. Shared by the
+/// small editor windows (shortcut and trigger, Add Clip).
+final class EditorWindow: NSWindow {
     override func cancelOperation(_ sender: Any?) { performClose(sender) }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {

@@ -40,6 +40,7 @@ extension IngestLimits {
         case .pasteboard: .capLim001
         case .screenshotFile: .sspLim001
         case .shelfDrop: .shfLim001
+        case .manual: .orgLim003
         }
     }
 

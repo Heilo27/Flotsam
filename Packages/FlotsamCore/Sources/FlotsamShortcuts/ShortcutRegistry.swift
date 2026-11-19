@@ -5,6 +5,7 @@ import FlotsamBase
 public enum ShortcutID: Sendable, Hashable {
     case openLibrary
     case saveClipboard
+    case addClip
     case toggleShelf
     case item(UUID)
 
@@ -101,7 +102,7 @@ public final class ShortcutRegistry {
         failed.remove(id)
     }
 
-    /// Loads the three global bindings from their settings (launch, and when a setting changes). A stored value that
+    /// Loads the four global bindings from their settings (launch, and when a setting changes). A stored value that
     /// no longer validates is left unbound and reported through the return value, never crashing the load. With the
     /// Shelf turned off in Settings, `toggleShelf` is unregistered (FR-005-07); its setting is kept.
     @discardableResult
@@ -110,6 +111,7 @@ public final class ShortcutRegistry {
         let wanted: [(ShortcutID, ChordBinding)] = [
             (.openLibrary, settings.value(SettingKeys.shortcutsOpenLibrary)),
             (.saveClipboard, settings.value(SettingKeys.shortcutsSaveClipboard)),
+            (.addClip, settings.value(SettingKeys.shortcutsAddClip)),
             (.toggleShelf, settings.value(SettingKeys.shortcutsToggleShelf)),
         ]
         for (id, binding) in wanted {

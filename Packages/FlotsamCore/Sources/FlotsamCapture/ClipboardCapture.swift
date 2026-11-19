@@ -347,6 +347,22 @@ public final class ClipboardCapture {
         }
     }
 
+    // MARK: Add Clip (FR-004-19)
+
+    /// Stores text the user typed as an ordinary text item: the same classifier, ingest actor, ceilings and
+    /// deduplication as a copy (so a clip equal to one already stored bumps it, FR-001-15), whatever the capture mode.
+    /// The pasteboard is not touched. The source is Unknown (nil). A rejection is returned for the caller to show
+    /// inline; it is not also raised as a Notice.
+    public func addManualClip(text: String) async -> FlotsamResult<Void> {
+        if let rejection = TextEntryRules.rejection(for: text) { return .failure(rejection) }
+        let payload = CapturedPayload(
+            representations: [PasteboardRepresentation(uti: PasteboardTypes.plainText, data: Data(text.utf8))],
+            source: nil, capturedAt: clock.now(), origin: .manual)
+        let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink, vault: vault)
+        if let error = await worker.handle(payload, reportingFailure: false) { return .failure(error) }
+        return .success(())
+    }
+
     // MARK: Source (FR-001-13, FR-001-14)
 
     private func resolveSource(types: [String]) -> SourceApp? {

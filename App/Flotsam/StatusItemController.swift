@@ -62,6 +62,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             switch entry {
             case .openLibrary(let chord): menu.addItem(row("ui.menu.openLibrary", chord: chord, run: container.actions.openLibrary))
             case .saveClipboard(let chord): menu.addItem(row("ui.menu.saveClipboard", chord: chord, run: container.actions.saveClipboard))
+            case .addClip(let chord): menu.addItem(row("ui.menu.addClip", chord: chord, run: container.actions.addClip))
             case .toggleShelf(let chord): menu.addItem(row("ui.menu.toggleShelf", chord: chord, run: container.actions.toggleShelf))
             case .separator: menu.addItem(.separator())
             case .captureToggle(let titleKey, let next):
