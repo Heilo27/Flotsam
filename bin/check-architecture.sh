@@ -431,6 +431,12 @@ hits=$(lint_hits LOGGER | grep -v "^$LOG_FILE:")
 hits=$(lint_hits LOGPRIVACY)
 [ -n "$hits" ] && fail "Logger interpolation without a privacy: qualifier in FlotsamLog.swift" "$hits"
 
+# FR-001-21: Secure Event Input has no effect on capture. Nothing that polls, gates or reads the pasteboard may consult it
+# (the Triggers module is the only reader, FRD-005), so a gate that silently drops a copy while a password field is focused
+# cannot be added. Checked on the Capture module and the App adapters of the capture ports (code lines only, not comments).
+hits=$(grep -rnE 'SecureEventInput|KeyboardEnvironment' "$SRC/FlotsamCapture" App/Platform/SystemPasteboard.swift App/Platform/SystemSourceApps.swift App/Platform/PasteboardAccess.swift 2>/dev/null | grep -vE '^[^:]*:[0-9]+:[[:space:]]*//')
+[ -n "$hits" ] && fail "capture consults Secure Event Input (FR-001-21: it must have no effect on capture)" "$hits"
+
 # Third-party packages: GRDB only (ADR-0010).
 hits=$(grep -hE '\.package\(url:' Packages/FlotsamCore/Package.swift | grep -v 'groue/GRDB.swift')
 [ -n "$hits" ] && fail "dependency outside the allowlist in Package.swift" "$hits"
