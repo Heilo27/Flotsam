@@ -38,12 +38,8 @@ public enum CaptureMode: String, SettingValue, CaseIterable {
     /// `screenshots.lastScanAt`, so nothing taken during the pause is imported on resume.
     public var importsScreenshots: Bool { self == .active }
 
-    /// What the menu-bar item "Pause Capture" / "Resume Capture" does (FR-007-12). Only Paused shows "Resume Capture",
-    /// which returns to Active; Active and Curated both show "Pause Capture", which pauses. Curated is chosen in
-    /// Settings only, so the menu never produces it. One definition: the menu label and the action both come from
-    /// here, so the label can never promise a different mode than the click sets.
-    public var isPaused: Bool { self == .paused }
-    public var afterMenuToggle: CaptureMode { isPaused ? .active : .paused }
+    // The menu-bar Pause/Resume Capture toggle (label and resulting mode) is defined once, in
+    // `MenuBarModel.captureToggle(for:)` (FR-008-16); it is deliberately not a property here (Rule 9).
 
     // Save Clipboard (FRD-005) and Shelf drops (FRD-006) work in every mode, so there is deliberately no property
     // for them: a gate that always answers "yes" would only invite someone to make it answer "no".
