@@ -31,7 +31,7 @@ struct Worf510StopEdgeTests {
     }
 
     /// OC-WORF510-02. given a press suspended inside its listing, when `stop()` runs and the listing then returns, then
-    /// the press resolves (it must not hang its caller) and, once stop() has returned, no import is left running.
+    /// the press resolves (it must not hang its caller) and, once stop() has returned, nothing is running or ingested.
     /// Red if stop() returns while the press's files are still being imported, or if the press never resolves.
     @Test("OC-WORF510-02 a press in flight across stop() resolves and leaves nothing running when stop() returned")
     func pressInFlightAcrossStop() async throws {
@@ -51,11 +51,7 @@ struct Worf510StopEdgeTests {
         #expect(await eventually(timeout: .seconds(20)) { resolved.value != nil }, "the press never resolved after stop()")
         #expect(await watcher.untilIdle(), "imports never ended")
         #expect(runningAtReturn == 0, "stop() returned with \(runningAtReturn) imports running")
-        // DEFECT (WORF-510 D1, Minor): a press already scanning when stop() ran goes on to ingest after stop() returned;
-        // `stop()` only gates new presses. Pinned until fixed; flip to a plain #expect when it is.
-        withKnownIssue("a press mid-scan across stop() still ingests after stop() returned (TASK-510 QA D1)") {
-            #expect(rig.ingest.names.isEmpty, "a press in flight across stop() ingested after stop returned: \(rig.ingest.names)")
-        }
+        #expect(rig.ingest.names.isEmpty, "a press in flight across stop() ingested after stop returned: \(rig.ingest.names)")
     }
 
     /// OC-WORF510-03. given a watcher never started, when stop() is called twice and then a start, then both return and

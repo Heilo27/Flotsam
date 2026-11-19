@@ -144,7 +144,7 @@ public actor ScreenshotWatcher {
     /// Ends this watcher for good: the owner is quitting or replacing it (TASK-510). New work stops at once: the watch is
     /// torn down (an event or scan already on its way is discarded), the poll timer is cancelled, and the watcher never
     /// starts pickup again whatever `start()`, `settingsDidChange()`, a wake or an event says; `importRecent()` fails as
-    /// paused. Imports already accepted then run to their end, so their watermark writes land (a quit that dropped them
+    /// paused, and so does a press already scanning when this runs (it queues nothing once its listing returns). Imports already accepted then run to their end, so their watermark writes land (a quit that dropped them
     /// would have the next launch select those files again), and finally pickup goes off as `deactivate` does (FR-002-05).
     /// When this returns the watcher has nothing running and writes nothing more. Nothing in the app calls it yet, so no
     /// product behaviour changes.
@@ -255,7 +255,11 @@ public actor ScreenshotWatcher {
             return .failure(Self.pausedError)
         }
         let files: [ScreenshotFile]
-        switch await Self.scan(scanner, folder: folder) {
+        let scanned = await Self.scan(scanner, folder: folder)
+        // `stop()` ran while the listing was out (TASK-517): the press is abandoned before it raises, queues or counts
+        // anything, and resolves as paused so its caller does not hang. `stop()` only waits on imports already started.
+        if stopped { return abandonPress(id) }
+        switch scanned {
         case .success(let listed): files = listed
         case .failure(let error):
             batches[id] = nil
@@ -289,6 +293,9 @@ public actor ScreenshotWatcher {
         // The press read the folder, so a refusal an earlier press raised while pickup was off has ended. Live pickup
         // clears its own refusal when its scan next succeeds (`reconcileScan`), and its watch is stopped until then.
         if !active { await markAccessGranted() }
+        // The clear above suspends, so `stop()` can land here too (TASK-517). Nothing suspends between this check and
+        // `enqueue`, so a press that passes it is an import accepted before `stop()`, which `stop()` then waits for.
+        if stopped { return abandonPress(id) }
         guard let batch = batches[id] else { return .success(0) }
         if batch.remaining == 0 {
             batches[id] = nil
@@ -298,6 +305,13 @@ public actor ScreenshotWatcher {
             batches[id]?.continuation = continuation
             enqueue(own, batch: id, bypassSeen: true)
         }
+    }
+
+    /// A press that `stop()` overtook: its batch is dropped (a job that joined stays accepted and ends on its own, and
+    /// `record` skips the missing batch) and it fails as paused, as a press made after `stop()` does.
+    private func abandonPress(_ id: UUID) -> FlotsamResult<Int> {
+        batches[id] = nil
+        return .failure(Self.pausedError)
     }
 
     // MARK: Activation
