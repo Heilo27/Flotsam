@@ -110,6 +110,12 @@ extension FlotsamDatabase {
             case .sourceApp(let identity):
                 clauses.append("\(FlotsamDatabase.sourceKeySQL) = ?")
                 arguments += [FlotsamDatabase.sourceKey(identity)]
+            case .hasNote: clauses.append("note IS NOT NULL")
+            case .hasShortcut: clauses.append("(hotkeyCode IS NOT NULL OR \"trigger\" IS NOT NULL)")
+            case .videos:
+                let patterns = VideoFileTypes.extensions.map { _ in "lower(path) LIKE ?" }.joined(separator: " OR ")
+                clauses.append("id IN (SELECT itemId FROM bundleMember WHERE isDirectory = 0 AND (\(patterns)))")
+                arguments += StatementArguments(VideoFileTypes.extensions.map { "%." + $0 })
             }
             // `searchText` is already normalised, and tokens go through the same normaliser (FR-003-09).
             for token in SearchNormalizer.tokens(from: text) {
@@ -349,6 +355,8 @@ extension FlotsamDatabase {
         ).map { row in
             SidebarCounts.AppCount(identity: sourceIdentity(fromKey: row["key"]), name: row["name"], count: row["n"])
         }
-        return SidebarCounts(all: try counted(.all), pinned: try counted(.pinned), kinds: kinds, tags: tags, apps: apps)
+        return SidebarCounts(
+            all: try counted(.all), pinned: try counted(.pinned), notes: try counted(.hasNote),
+            shortcuts: try counted(.hasShortcut), videos: try counted(.videos), kinds: kinds, tags: tags, apps: apps)
     }
 }

@@ -26,6 +26,20 @@ public enum LibraryFilter: Sendable, Equatable, Hashable {
     case kind(ItemKind)
     case tag(Int64)
     case sourceApp(SourceAppIdentity)
+    /// Items that carry a note (FR-004-06). A zero-length note removes the note, so a stored note always counts.
+    case hasNote
+    /// Items that carry a hotkey or a trigger (FRD-005), the two ways to paste an item without opening the Library.
+    case hasShortcut
+    /// File and bundle items with at least one member whose extension is a video one (`VideoFileTypes`).
+    case videos
+}
+
+/// What counts as a video (FRD-004 FR-004-10). A file or bundle member is a video when its extension is in this list;
+/// the query layer builds the `videos` filter and the sidebar's Videos count from it, so the two cannot disagree. A
+/// literal list, not a system type lookup, because the match runs inside SQLite over stored member paths.
+public enum VideoFileTypes {
+    /// Lower-case, no dot.
+    public static let extensions: [String] = ["mov", "mp4", "m4v", "avi", "mkv", "webm", "mpg", "mpeg", "3gp", "wmv", "flv"]
 }
 
 /// The sort model (FRD-004 FR-004-12). Every sort ends in the same stable tie-break, so repeated loads agree.
@@ -171,6 +185,12 @@ public struct SidebarCounts: Sendable, Equatable {
 
     public let all: Int
     public let pinned: Int
+    /// Items with a note (`LibraryFilter.hasNote`).
+    public let notes: Int
+    /// Items with a hotkey or trigger (`LibraryFilter.hasShortcut`).
+    public let shortcuts: Int
+    /// Items holding a video file (`LibraryFilter.videos`).
+    public let videos: Int
     /// Only kinds with at least one item are present (empty types are hidden).
     public let kinds: [ItemKind: Int]
     /// Alphabetical.
@@ -178,9 +198,15 @@ public struct SidebarCounts: Sendable, Equatable {
     /// Ordered by count, top 15.
     public let apps: [AppCount]
 
-    public init(all: Int, pinned: Int, kinds: [ItemKind: Int], tags: [TagCount], apps: [AppCount]) {
+    public init(
+        all: Int, pinned: Int, notes: Int = 0, shortcuts: Int = 0, videos: Int = 0, kinds: [ItemKind: Int],
+        tags: [TagCount], apps: [AppCount]
+    ) {
         self.all = all
         self.pinned = pinned
+        self.notes = notes
+        self.shortcuts = shortcuts
+        self.videos = videos
         self.kinds = kinds
         self.tags = tags
         self.apps = apps
