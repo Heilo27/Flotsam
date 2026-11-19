@@ -179,9 +179,9 @@ struct Frd008ContractStringsTests {
         #expect(settings.value(SettingKeys.shelfEnabled) == true)
         #expect(settings.value(SettingKeys.shortcutsOpenLibrary) == .chord(Chord(keyCode: 9, modifiers: [.control, .command])))
         // reading defaults persists nothing: a fresh reader's raw domain holds no registry key
-        let stored = UserDefaults(suiteName: defaults.name)?.dictionaryRepresentation().keys
+        let stored = defaults.suite.defaults.dictionaryRepresentation().keys
             .filter { SettingKeys.all.map(\.name).contains($0) }
-        #expect(stored?.isEmpty == true)
+        #expect(stored.isEmpty)
         // negative: a deliberate change is stored and read by a fresh instance
         settings.set(CaptureMode.paused, for: SettingKeys.captureMode)
         #expect(defaults.store().value(SettingKeys.captureMode) == .paused)

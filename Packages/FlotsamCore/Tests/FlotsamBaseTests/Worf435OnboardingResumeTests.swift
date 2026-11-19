@@ -10,16 +10,16 @@ import Testing
 
 /// One UserDefaults suite per test; `launch()` returns a brand-new store and progress reader, like a relaunch.
 private struct Relaunchable {
-    let name = "worf435-\(UUID().uuidString)"
+    let suite = TestDefaultsSuite("worf435")
     func launch() -> (progress: OnboardingProgress, settings: SettingsStore) {
-        let raw = UserDefaultsStore(defaults: UserDefaults(suiteName: name)!)
+        let raw = UserDefaultsStore(defaults: suite.defaults)
         return (OnboardingProgress(store: raw), SettingsStore(store: raw))
     }
     /// Writes an arbitrary string under the resume key, as a corrupted or foreign value would be.
     func poke(_ value: String) {
-        UserDefaults(suiteName: name)!.set(value, forKey: "onboarding.resumeStep")
+        suite.defaults.set(value, forKey: "onboarding.resumeStep")
     }
-    func wipe() { UserDefaults().removePersistentDomain(forName: name) }
+    func wipe() { suite.remove() }
 }
 
 @Suite("TASK-435: onboarding resume point")

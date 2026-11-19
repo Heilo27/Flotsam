@@ -1,0 +1,1 @@
+../FlotsamBaseTests/TestDefaultsSuite.swift

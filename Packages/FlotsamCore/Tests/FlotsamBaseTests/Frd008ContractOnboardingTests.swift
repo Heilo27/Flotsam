@@ -14,11 +14,11 @@ import Testing
 
 /// A UserDefaults suite unique to one test, so a second `SettingsStore` over the same suite is a fresh reader.
 struct Frd008Defaults {
-    let name = "frd008-contract-\(UUID().uuidString)"
+    let suite = TestDefaultsSuite("frd008.onboarding")
     func store() -> SettingsStore {
-        SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!))
+        SettingsStore(store: UserDefaultsStore(defaults: suite.defaults))
     }
-    func wipe() { UserDefaults().removePersistentDomain(forName: name) }
+    func wipe() { suite.remove() }
 }
 
 struct Frd008LoginService: LoginItemService, @unchecked Sendable {
@@ -188,7 +188,7 @@ struct Frd008ContractOnboardingTests {
         let defaults = Frd008Defaults()
         defer { defaults.wipe() }
         func launch() -> (OnboardingProgress, SettingsStore) {
-            let raw = UserDefaultsStore(defaults: UserDefaults(suiteName: defaults.name)!)
+            let raw = UserDefaultsStore(defaults: defaults.suite.defaults)
             return (OnboardingProgress(store: raw), SettingsStore(store: raw))
         }
         // given steps 1-3 finished (advance x3, saved on each move) and the app quit without closing the window
