@@ -57,6 +57,10 @@ public final class ShelfModel {
     public private(set) var kindFilter: ItemKind?
     /// The kinds that have an item and are shown in Settings, Types, in that order: the pills after All.
     public private(set) var availableKinds: [ItemKind] = []
+    /// Bumped by the relative-time watch so the cards are formatted again against a fresh `now` (FR-006-48).
+    public private(set) var timeRevision = 0
+    /// Incremented whenever the cards are replaced; part of `relativeTimeWatchKey`.
+    public private(set) var rowsRevision = 0
 
     // MARK: Collaborators
 
@@ -66,6 +70,7 @@ public final class ShelfModel {
     @ObservationIgnored private let host: any ShelfPasteHost
     @ObservationIgnored private let events: ItemEventBus
     @ObservationIgnored private let effects: ShelfEffects
+    @ObservationIgnored private let clock: any ShelfClock
     /// The spinner's 150 ms one-shot delay (FR-006-32); the Library's logic and constant.
     public let busy: BusyIndicator
 
@@ -77,6 +82,7 @@ public final class ShelfModel {
     @ObservationIgnored private var target: FrontmostApp?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var relativeTimeTask: Task<Void, Never>?
     @ObservationIgnored private var unsubscribe: (@Sendable () -> Void)?
     /// The latest paste and the latest pin or delete, kept so tests can await them.
     @ObservationIgnored public private(set) var pasteTask: Task<Void, Never>?
@@ -93,6 +99,7 @@ public final class ShelfModel {
         self.events = events
         self.details = details
         self.effects = effects
+        self.clock = clock
         busy = BusyIndicator { await clock.sleep(for: $0.timeInterval) }
     }
 
@@ -114,7 +121,10 @@ public final class ShelfModel {
     public var cursorID: UUID? { cursor }
 
     /// The sections to draw: a section with no cards is hidden (FR-006-06). With none, the view shows the empty state.
+    /// Every card is formatted against one `now` read here, so no two cards' VoiceOver ages disagree. Reading
+    /// `timeRevision` subscribes the view to `watchRelativeTimes` (FR-006-48).
     public func sections() -> [ShelfSection] {
+        _ = timeRevision
         let now = effects.now()
         func cards(_ rows: [ItemRow]) -> [ShelfCardPresentation] {
             rows.map { ShelfCardPresentation(row: $0, text: texts[$0.id], isMissing: $0.isMissing, now: now) }
@@ -136,6 +146,36 @@ public final class ShelfModel {
         await actionTask?.value
         // A paste or action may have started a reload of its own.
         await loadTask?.value
+    }
+
+    // MARK: Relative times (FR-006-48)
+
+    /// What `watchRelativeTimes` depends on: restart it when the Shelf opens or hides, or when the cards change.
+    public struct RelativeTimeWatchKey: Hashable, Sendable {
+        let isOpen: Bool
+        let rowsRevision: Int
+    }
+
+    public var relativeTimeWatchKey: RelativeTimeWatchKey {
+        RelativeTimeWatchKey(isOpen: isOpen, rowsRevision: rowsRevision)
+    }
+
+    /// Keeps the cards' VoiceOver ages current while the Shelf is open: the Library's loop and step rule
+    /// (`RelativeTimeWatch`, FR-003-24) on the Shelf's own clock and cards. A hidden Shelf schedules nothing.
+    public func watchRelativeTimes() async {
+        await RelativeTimeWatch.run(
+            dates: { orderedRows.map(\.lastCopiedAt) }, isShown: { isOpen }, now: { effects.now() },
+            sleep: { await clock.sleep(for: $0) }, refresh: { timeRevision += 1 })
+    }
+
+    /// Runs `watchRelativeTimes` as a task the model owns, replacing any earlier one. The view calls this from
+    /// `.task(id: relativeTimeWatchKey)`; `didHide` cancels the owned task directly, so the watch stops on a hide even
+    /// if SwiftUI never re-evaluates the hidden view. Cancelling the caller cancels the watch too.
+    public func runRelativeTimeWatch() async {
+        relativeTimeTask?.cancel()
+        let task = Task { await watchRelativeTimes() }
+        relativeTimeTask = task
+        await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
     }
 
     // MARK: Open and hide
@@ -173,6 +213,8 @@ public final class ShelfModel {
         unsubscribe?()
         unsubscribe = nil
         loadTask?.cancel()
+        relativeTimeTask?.cancel()
+        relativeTimeTask = nil
         busy.end()
         generation += 1
     }
@@ -296,6 +338,7 @@ public final class ShelfModel {
     private func apply(pinned: [ItemRow], recent: [ItemRow], texts: [UUID: String], selection policy: SelectionPolicy) {
         pinnedRows = pinned
         recentRows = recent
+        rowsRevision += 1
         self.texts = texts
         loadState = .loaded
         applySelection(policy, rows: pinned + recent)
