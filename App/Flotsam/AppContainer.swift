@@ -52,6 +52,10 @@ final class AppContainer {
     /// it; the bindings are applied once the Library exists (`startLibrary`).
     let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
     private var unsubscribeShortcuts: (@Sendable () -> Void)?
+    /// Retention sweep and reconcile (FR-007-09, FR-007-13). Nil until the database has opened. Retained: their loops run
+    /// until `stopMaintenance()`.
+    private var retentionScheduler: RetentionScheduler?
+    private var reconcileScheduler: ReconcileScheduler?
     private var unsubscribeItemEvents: (@Sendable () -> Void)?
     private var itemHotkeyAction: ItemHotkeyAction?
     /// FR-007-23: reads the text in stored images for search. Event-driven, no timer (ADR-0004 S5).
@@ -229,6 +233,7 @@ final class AppContainer {
             startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
             startTextRecognition(database: opened)
+            startMaintenance(database: opened)
         case .failure(let error):
             await reporter.report(error, origin: .background)
             // No library means nothing can be imported: a click that was waiting, and every later one, shows why.
@@ -279,6 +284,45 @@ final class AppContainer {
             },
         ]
         capture.start()
+    }
+
+    /// FR-007-09 and FR-007-13 (ADR-0004): the retention sweep (30 s after launch, hourly, and on wake) and reconcile
+    /// (15 s after launch, then weekly). Both own their one sleep on the injected clock, not a timer of this app and not
+    /// `PollTick`, so S5's idle budget is the one ADR-0004 already lists for them. The retention setting is read at each
+    /// sweep, and the sweep deletes only through the one deletion path (FR-007-15). The sweep's budget Notice
+    /// (`STO-LIM-001`, already throttled to once per 24 h) goes to the reporter like any background error.
+    private func startMaintenance(database: FlotsamDatabase) {
+        let reporter = reporter
+        let retention = RetentionScheduler(database: database, settings: settings) { notice in
+            Task { await reporter.report(notice, origin: .background) }
+        }
+        let reconcile = ReconcileScheduler(database: database)
+        retentionScheduler = retention
+        reconcileScheduler = reconcile
+        // Storage does not import AppKit, so the wake notification is observed here (RetentionScheduler's contract).
+        observers.append(
+            NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+            ) { _ in
+                Task { await retention.sweepNow() }
+            })
+        Task {
+            await retention.start()
+            await reconcile.start()
+        }
+    }
+
+    /// Quit: cancels the two schedulers' loops (ADR-0004: every long-running actor loop is cancelled at quit). A pass
+    /// already running finishes or dies with the process; both are transactional.
+    func stopMaintenance() {
+        let retention = retentionScheduler
+        let reconcile = reconcileScheduler
+        retentionScheduler = nil
+        reconcileScheduler = nil
+        Task {
+            await retention?.stop()
+            await reconcile?.stop()
+        }
     }
 
     /// FRD-002: wires screenshot pickup. The watcher itself reads `screenshots.enabled`, so with the setting off it
