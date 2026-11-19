@@ -3997,16 +3997,6 @@
         }
       }
     },
-    "ui.shelf.secureUnavailable" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unavailable"
-          }
-        }
-      }
-    },
     "ui.shortcuts.notSavedConcealed" : {
       "localizations" : {
         "en" : {

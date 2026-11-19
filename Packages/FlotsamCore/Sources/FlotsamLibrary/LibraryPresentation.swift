@@ -24,6 +24,10 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
     public let isMissing: Bool
     /// The badge's text (`ui.library.missing`), nil when the item is not missing.
     public let missingBadge: String?
+    /// A secure clip: `primaryText` is the fixed mask (FR-003-07).
+    public let isSecure: Bool
+    /// The "Unavailable" badge of a secure item whose Keychain key cannot be read, nil otherwise.
+    public let unavailableBadge: String?
     /// The "⌘1" to "⌘9" badge: only the first nine visible rows have one.
     public let shortcutBadge: String?
     public let accessibilityLabel: String
@@ -31,7 +35,11 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
     public init(row: ItemRow, position: Int, now: Date) {
         id = row.id
         kind = row.kind
-        primaryText = row.primaryLine
+        // A secure row always shows the mask here: when its key is gone `primaryLine` holds the unavailable label, which
+        // the badge below says instead.
+        primaryText = row.isSecure ? SecureClip.mask : row.primaryLine
+        isSecure = row.isSecure
+        unavailableBadge = row.isSecure && row.isUnavailable ? LibraryText.string("ui.library.secureUnavailable") : nil
         isPinned = row.isPinned
         hasTrigger = row.hasTrigger
         hasShortcut = row.hasShortcut

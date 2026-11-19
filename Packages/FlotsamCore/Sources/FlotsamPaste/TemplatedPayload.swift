@@ -6,12 +6,17 @@ import Foundation
 /// template variables expanded (FR-005-14 step 1, FR-005-17, FR-005-18). Library paste does not come through here; it
 /// writes the stored text literally.
 public enum TemplatedPayload {
-    /// Failure codes: `LIB-DAT-001` (every file of a file item is gone), `TRG-OS-002` (rich text could not be decoded or
+    /// Failure codes: `TRG-VAL-006` (a secure item, FR-005-23: never a trigger or hotkey payload, and it is refused before anything
+    /// is revealed, so no prompt appears and a password is never run through variable expansion), `LIB-DAT-001`
+    /// (every file of a file item is gone), `TRG-OS-002` (rich text could not be decoded or
     /// encoded). Nothing has been written to the pasteboard when this fails, so the caller's failure path is FR-005-15's.
     public static func representations(
         for content: ItemContent, itemId: UUID, context: TemplateContext, codec: any RichTextCodec,
         files: any FileSystemPort
     ) -> FlotsamResult<[PasteboardRepresentation]> {
+        guard !content.isSecure else {
+            return .failure(FlotsamError(.trgVal006, "A secure item cannot be pasted by a trigger", context: [.itemId: .id(itemId)]))
+        }
         let stored: [PasteboardRepresentation]
         switch PastePayload.representations(for: content, mode: .paste, itemId: itemId, files: files) {
         case .success(let built): stored = built
