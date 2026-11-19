@@ -212,11 +212,19 @@ private func within<T: Sendable>(_ seconds: Double, _ operation: @escaping @Send
 
     // Writes queue behind the open writer and apply in submission order. Red if a second writer is allowed in while the first
     // transaction is open (B would finish during the hold), or if the queued writes apply out of order (final note would be "B").
+    // TASK-501 (OC-7002 flake): the order is read from the database, not from the order the two awaiting tasks resume in. Both
+    // resume together once the writer is released, and under load the pool ran C's continuation before B's (`finished` came
+    // back ["C", "B"] with the final note correctly "C"): the writes had applied in order, the observation had not.
     @Test("OC-7002 given writer A holding its transaction, when B then C (a later submission) set the note, then neither finishes during the hold and the final note is C")
     func writesQueueInSubmissionOrder() async throws {
         let store = try await Store.make()
         defer { store.cleanUp() }
         try await store.insert([Spec(n: 1, ageMs: 1000)])
+        try await store.database.pool.write { db in
+            try db.execute(sql: "CREATE TABLE applied (seq INTEGER PRIMARY KEY AUTOINCREMENT, note TEXT)")
+            try db.execute(
+                sql: "CREATE TRIGGER applied_log AFTER UPDATE OF note ON item BEGIN INSERT INTO applied (note) VALUES (NEW.note); END")
+        }
         let (writerA, gate) = holdWriter(store, setting: "A")
         await gate.waitUntilReached()
         let database = store.database
@@ -235,7 +243,8 @@ private func within<T: Sendable>(_ seconds: Double, _ operation: @escaping @Send
 
         #expect(duringHold == [], "writes must wait for the open writer")
         #expect(noteDuringHold == [nil], "A is uncommitted and B, C are queued")
-        #expect(finished.all == ["B", "C"])
+        #expect(finished.all.sorted() == ["B", "C"], "both queued writes finished after the release")
+        #expect(try store.text("SELECT note FROM applied ORDER BY seq") == ["A", "B", "C"], "the writes applied in submission order")
         #expect(try store.text("SELECT note FROM item") == ["C"])
     }
 

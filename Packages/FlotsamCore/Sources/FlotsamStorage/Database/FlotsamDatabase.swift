@@ -89,12 +89,43 @@ public final class FlotsamDatabase: Sendable {
     /// ADR-0011 seam for the check on the migrated file (FR-007-13): nil runs the real `quick_check`, so production
     /// behaviour is unchanged; a test passes a closure to fail that one check on a file that is otherwise healthy.
     /// It never replaces the pre-open probe.
+    ///
+    /// WHY (TASK-501): every step of an open is synchronous and SQLite's busy handler blocks its thread for up to
+    /// `busyTimeout` (5 s) while another connection holds the file. Run on the caller's cooperative-pool thread that
+    /// parks one of the few threads every `await` in the process needs, so a launch behind a lock could starve the
+    /// concurrency pool. The work runs on a thread of its own and the caller suspends; the shared GCD pool is not used
+    /// either, because the rest of a busy process keeps it full of blocked workers (TASK-496 measured releases 2 to 9 s
+    /// late there).
     static func open(
         folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(),
         logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil, migrations: [Migration],
         postMigrationCheck: ((Database) throws -> Bool)? = nil,
         busyTimeout: TimeInterval = busyTimeoutSeconds
     ) async -> FlotsamResult<FlotsamDatabase> {
+        // The closure is called once, on the thread below, and nowhere else; `postMigrationCheck` is the only part of
+        // it that is not Sendable.
+        let job = BlockingOpen {
+            openBlocking(
+                folder: root, fileSystem: fileSystem, clock: clock, logSink: logSink, secureVault: secureVault,
+                migrations: migrations, postMigrationCheck: postMigrationCheck, busyTimeout: busyTimeout)
+        }
+        return await withCheckedContinuation { continuation in
+            let thread = Thread { continuation.resume(returning: job.run()) }
+            thread.name = "flotsam.database.open"
+            thread.start()
+        }
+    }
+
+    private struct BlockingOpen: @unchecked Sendable {
+        let run: () -> FlotsamResult<FlotsamDatabase>
+        init(_ run: @escaping () -> FlotsamResult<FlotsamDatabase>) { self.run = run }
+    }
+
+    private static func openBlocking(
+        folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock, logSink: any LogSink,
+        secureVault: (any SecureClipVaulting)?, migrations: [Migration],
+        postMigrationCheck: ((Database) throws -> Bool)?, busyTimeout: TimeInterval
+    ) -> FlotsamResult<FlotsamDatabase> {
         let layout = DataFolder(root: root)
         if case .failure(let error) = layout.prepare(fileSystem: fileSystem) { return .failure(error) }
 
