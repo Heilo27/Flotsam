@@ -129,7 +129,7 @@ Marks: PARITY, GAP, BETTER, DIFFERENT-FORM, CUT. "Ours" cites FRD or DESIGN. Ver
 | FF-12 | Panel background Default, Light, Dark | System appearance only (FR-003-21) | GAP | KEEP, low |
 | FF-13 | Footer with settings, layout, search, add, close buttons | Footer hint bar of keys (FR-003-18) | DIFFERENT-FORM | KEEP ours (keyboard truth P1); add optional buttons later |
 | FF-14 | Option to stay open after paste | Always hides (FR-003-15 step 5) | GAP | KEEP, low |
-| FF-15 | Searching spinner and empty-tag state | Loading not designed (DESIGN states matrix) | GAP | KEEP, small (state polish) |
+| FF-15 | Searching spinner and empty-tag state | Spinner after 150 ms, empty-tag state (DESIGN states matrix, FR-003-50, FR-006-32; TASK-546) | PARITY | KEEP, small (state polish); built |
 | FF-16 | Island hangs from top edge or notch, horizontal card row | Shelf on left, right, bottom or under menu icon (FR-006-05) | DIFFERENT-FORM | KEEP: add a top-centre placement; Shelf keeps its edges |
 | FF-17 | Island opens by hover on collapsed pill (0.4 s) or menu item | Drag dwell 300 ms, optional edge hover 500 ms, hotkey (FR-006-03) | DIFFERENT-FORM | KEEP: top edge hover zone is a small addition |
 | FF-18 | Always-visible collapsed pill / notch shoulder | Nothing visible when idle (FR-006-02) | GAP | ESCALATE: conflicts with S5 "invisible on the machine"; recommend opt-in, default off |
