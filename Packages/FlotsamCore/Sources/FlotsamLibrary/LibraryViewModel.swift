@@ -434,13 +434,19 @@ public final class LibraryViewModel {
 
     // MARK: Keyboard
 
-    /// Resolves and runs a key. False means the Library does not own the key and it belongs to the search field
-    /// (FR-003-08). `searchHasSelection` is true while the search field holds a non-empty text selection; the panel reads
-    /// it from the field editor, since the model does not own the caret.
+    /// What the key map needs from the panel. `searchHasSelection` is true while the search field holds a non-empty text
+    /// selection; the panel reads it from the field editor, since the model does not own the caret.
+    public func keyContext(searchHasSelection: Bool = false) -> LibraryKeyMap.Context {
+        LibraryKeyMap.Context(searchIsEmpty: searchText.isEmpty, viewMode: viewMode, searchHasSelection: searchHasSelection)
+    }
+
+    /// Resolves and runs a key with no overlay open. False means the Library does not own the key and it belongs to the
+    /// search field (FR-003-08). The panel itself routes through `LibraryKeyRouting` (overlay first) and calls `perform`.
     @discardableResult
     public func handle(_ stroke: LibraryKeyStroke, searchHasSelection: Bool = false) -> Bool {
-        let context = LibraryKeyMap.Context(searchIsEmpty: searchText.isEmpty, viewMode: viewMode, searchHasSelection: searchHasSelection)
-        guard let command = LibraryKeyMap.command(for: stroke, in: context) else { return false }
+        guard case .library(let command) = LibraryKeyRouting.route(
+            stroke, overlayIsOpen: false, context: keyContext(searchHasSelection: searchHasSelection))
+        else { return false }
         perform(command)
         return true
     }
