@@ -188,7 +188,9 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         guard let stroke = LibraryKeyTranslator.stroke(for: event) else { return event }
         // An open Organize overlay owns the keyboard: the Library's key map must not see typing meant for its fields.
         if organize.isOverlayOpen { return organize.handle(stroke) ? nil : event }
-        return model.handle(stroke) ? nil : event
+        // ⌘C copies the field's own selected text, not the row, when there is one (FR-003-08).
+        let selectionLength = (panel.firstResponder as? NSTextView)?.selectedRange().length ?? 0
+        return model.handle(stroke, searchHasSelection: selectionLength > 0) ? nil : event
     }
 }
 

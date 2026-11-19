@@ -166,8 +166,9 @@ import FlotsamBase
     /// was killed before a checkpoint), when a release adds migration 2 and the database opens, then
     /// pre-migration/flotsam-v1.sqlite on its own holds all three items at user_version 1, and the live database still
     /// has the three items at version 2. The fixture is proven WAL-resident: the main file alone does not hold the items.
-    /// Goes red if the copy is taken without first checkpointing the WAL into the main file (the copy would be missing
-    /// every row that lives only in the WAL).
+    /// Goes red only for a naive copy of the main file alone, with no checkpoint at all (the copy would be missing every
+    /// row that lives only in the WAL). It does not guard the TASK-497 bug, a checkpoint that a reader can leave
+    /// incomplete: that is OC-497-01 (Task497PreMigrationCopyTests) and OC-WORF497-01 (Worf497PreMigrationCopyTests).
     @Test("OC-7134 the pre-migration copy contains committed rows that were still only in the WAL")
     func oc7134_copyIncludesWalResidentRows() async throws {
         let source = tempRoot()
