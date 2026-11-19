@@ -138,6 +138,15 @@ struct ShelfView: View {
     }
 
     @ViewBuilder private var content: some View {
+        if model.orderedRows.isEmpty, model.loadState == .loading {
+            // Blank until the load has run for 150 ms (FR-006-32): neither the empty text nor "No matches" is true yet.
+            BusyView(isVisible: model.busy.isVisible, isSearching: model.isFiltering)
+        } else {
+            cardsOrState.busyBadge(isVisible: model.busy.isVisible, isSearching: model.isFiltering)
+        }
+    }
+
+    @ViewBuilder private var cardsOrState: some View {
         let sections = model.sections()
         if sections.isEmpty && model.isFiltering {
             // A search or type filter that matches nothing; the empty-history text would be wrong here (FR-006-22).

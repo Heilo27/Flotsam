@@ -49,6 +49,10 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private var pointerMonitors: [Any] = []
     private var hoverMonitor: Any?
     private var lastRegion: ShelfRevealMachine.Pointer?
+    /// The collapsed edge bars, one per screen, built only while `shelf.edgeBar` is on (FR-006-37). `barsShown` is true
+    /// only while the Shelf is hidden: a visible Shelf covers the edge, so the bars step aside.
+    private var edgeBars: [ShelfEdgeBar] = []
+    private var barsShown = false
     /// The panel's final frame (or where it is sliding to) and the frame of its screen. `panel.frame` is mid-animation or
     /// off-screen right after a reveal, so the pointer is tested against this (`ShelfPointerClassifier`).
     private var shown: (panel: NSRect, screen: NSRect)?
@@ -112,6 +116,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         subscribeToSettings()
         updateMonitors()
         send(.configure(enabled: enabled, placement: placement, revealOnEdgeHover: settings.value(SettingKeys.shelfRevealOnEdgeHover)))
+        refreshEdgeBars()
     }
 
     deinit {
@@ -212,7 +217,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         })
         // The machine last heard `.edgeZone` (or the icon) from the dwell that revealed the Shelf. A pointer that has not
         // moved since sits on the panel now, and no further event would say so: tell the machine, or it hides the Shelf
-        // 600 ms after it appeared (FR-006-04).
+        // 600 ms after it appeared (FR-006-04). The collapsed bars step aside first (FR-006-37).
+        refreshEdgeBars()
         lastRegion = nil
         reportPointer()
     }
@@ -223,7 +229,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         shown = nil
         removeKeyMonitor()
         model.didHide()
-        guard panel.isVisible else { return }
+        guard panel.isVisible else { refreshEdgeBars(); return }
         let transition = ShelfLayout.transition(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = transition.hideDuration
@@ -239,6 +245,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
                 guard let self, !self.machine.isVisible else { return }
                 self.panel.orderOut(nil)
                 self.panel.alphaValue = 1
+                self.refreshEdgeBars()
             }
         })
     }
@@ -339,6 +346,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             MainActor.assumeIsolated {
                 self?.lastRegion = nil
                 self?.send(.screensChanged)
+                self?.refreshEdgeBars()
             }
         })
     }
@@ -350,6 +358,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private func subscribeToSettings() {
         let watched: Set<String> = [
             SettingKeys.shelfEnabled.name, SettingKeys.shelfPlacement.name, SettingKeys.shelfRevealOnEdgeHover.name,
+            SettingKeys.shelfEdgeBar.name,
         ]
         unsubscribeSettings = settings.subscribe { [weak self] change in
             guard watched.contains(change.name) else { return }
@@ -366,6 +375,39 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         // Turning hover off changes the pointer area of a visible top-centre row (the menu-bar strip stops counting), and
         // nothing else would report the pointer that already sits there.
         if machine.isVisible { reportPointer() }
+        refreshEdgeBars()
+    }
+
+    // MARK: Collapsed edge bar (FR-006-37)
+
+    /// The bar exists while the Shelf is enabled, the setting is on, and the placement has an edge (not the menu bar).
+    private var wantsEdgeBar: Bool {
+        enabled && settings.value(SettingKeys.shelfEdgeBar) && placement != .menuBar
+    }
+
+    /// Brings the bars in line with the setting, the placement, the screens and whether the Shelf is visible. Called only
+    /// from the events that change one of those, never on a schedule (FR-006-17). Shown bars re-report the pointer, so a
+    /// pointer already resting where a bar appears starts its dwell without needing to move.
+    private func refreshEdgeBars() {
+        let frames = wantsEdgeBar
+            ? NSScreen.screens.compactMap { ShelfLayout.edgeBar(for: placement, in: $0.visibleFrame) } : []
+        while edgeBars.count > frames.count { edgeBars.removeLast().hide() }
+        while edgeBars.count < frames.count {
+            edgeBars.append(ShelfEdgeBar(onPointerMoved: { [weak self] in self?.reportPointer() }))
+        }
+        let show = !frames.isEmpty && !machine.isVisible
+        for (bar, frame) in zip(edgeBars, frames) {
+            bar.place(frame)
+            if show { bar.show() } else { bar.hide() }
+        }
+        let wasShown = barsShown
+        barsShown = show
+        // A pointer the machine last heard as `.onBar` must hear it left when the bars go away; one that sits where a bar
+        // appears must hear it arrived.
+        if show || wasShown {
+            lastRegion = nil
+            reportPointer()
+        }
     }
 
     // MARK: Pointer, button and drag monitors (FR-006-03, FR-006-04)
@@ -498,7 +540,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         ShelfPointerClassifier.region(
             at: NSEvent.mouseLocation, placement: placement, isVisible: machine.isVisible,
             panelFrame: shown?.panel ?? panel.frame, screenFrame: shown?.screen, hoverMonitored: hoverMonitor != nil,
-            screens: NSScreen.screens.map(\.frame), menuBarIcon: menuBarIconFrame?())
+            screens: NSScreen.screens.map(\.frame), menuBarIcon: menuBarIconFrame?(),
+            edgeBars: barsShown ? edgeBars.map(\.frame) : [])
     }
 
     // MARK: Keys (sticky only, FR-006-08)

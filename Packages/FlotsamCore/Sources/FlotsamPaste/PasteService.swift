@@ -78,14 +78,15 @@ public final class PasteService {
         if case .failure(let error) = ownWrites.write(representations, to: pasteboard) { return .failure(error) }
         // Step 4. The item is on the pasteboard already, so a bookkeeping failure is logged, not shown.
         if case .failure(let error) = await store.recordPaste(of: itemId) { FlotsamLog.log(error, category: .library) }
-        // Step 5.
-        host.hidePanel()
+        // Step 5. A host that stays open after a paste (`library.closeAfterPaste` off) skips the hide and the wait below.
+        let closes = host.closesAfterPaste
+        if closes { host.hidePanel() }
 
         guard mode != .copyOnly else { return .success(.copied) }
         guard PasteGate.isAllowed(probe: accessibility) else { return accessibilityDenied() }
 
         // Step 6.
-        await waitUntilHidden(host)
+        if closes { await waitUntilHidden(host) }
         await clock.sleep(for: PasteTiming.settle)
         switch await postPaste(target: target) {
         case .success: return .success(.pasted)

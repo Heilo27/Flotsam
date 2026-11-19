@@ -23,6 +23,7 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
         weak var target: LibraryPanelController?
         var isPanelVisible: Bool { target?.isPanelVisible ?? false }
         func hidePanel() { target?.hidePanel() }
+        var closesAfterPaste: Bool { target?.closesAfterPaste ?? true }
     }
 
     /// `NSEvent.mouseLocation` and `NSScreen`, as the driver's `LibraryScreenProvider`.
@@ -30,6 +31,26 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
         var pointerLocation: CGPoint { NSEvent.mouseLocation }
         var screens: [LibraryScreen] { NSScreen.screens.map(Self.snapshot) }
         var mainScreen: LibraryScreen? { (NSScreen.main ?? NSScreen.screens.first).map(Self.snapshot) }
+        /// The topmost ordinary window of `processId`, from the window server's on-screen list (front to back). Bounds and
+        /// owner need no permission. Window-server coordinates have their origin at the top left of the primary display;
+        /// AppKit's are bottom left, so y is flipped against the primary screen's height.
+        func focusedWindowCenter(ofProcess processId: Int32) -> CGPoint? {
+            guard let primary = NSScreen.screens.first,
+                let windows = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+                    as? [[String: Any]]
+            else { return nil }
+            for window in windows {
+                guard (window[kCGWindowOwnerPID as String] as? Int32) == processId,
+                    (window[kCGWindowLayer as String] as? Int) == 0,
+                    let boundsDictionary = window[kCGWindowBounds as String] as? NSDictionary,
+                    let bounds = CGRect(dictionaryRepresentation: boundsDictionary),
+                    bounds.width > 1, bounds.height > 1
+                else { continue }
+                return CGPoint(x: bounds.midX, y: primary.frame.height - bounds.midY)
+            }
+            return nil
+        }
+
         private static func snapshot(_ screen: NSScreen) -> LibraryScreen {
             LibraryScreen(frame: screen.frame, visibleFrame: screen.visibleFrame)
         }
@@ -83,6 +104,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
 
     func hidePanel() { driver.hidePanel() }
 
+    var closesAfterPaste: Bool { preferences.closeAfterPaste }
+
     // MARK: Show and hide
 
     /// The hotkey and the menu item both call this: it toggles (FR-003-02).
@@ -96,9 +119,20 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
 
     func show(at frame: CGRect, minimumSize: PanelSize) {
         panel.contentMinSize = NSSize(width: minimumSize.width, height: minimumSize.height)
+        panel.appearance = Self.appearance(for: preferences.background)
         panel.setFrame(frame, display: false)
         installKeyMonitor()
         panel.makeKeyAndOrderFront(nil)
+    }
+
+    /// `library.background` (FR-003-21): nil follows the system appearance; Light and Dark pin the panel, vibrancy and
+    /// content alike, because both inherit the window's appearance.
+    private static func appearance(for background: LibraryBackground) -> NSAppearance? {
+        switch background {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
     }
 
     func hide() {

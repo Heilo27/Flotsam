@@ -45,6 +45,8 @@ public final class ClipboardCapture {
     /// rejected `CAP-POL-001`, the same as a missing key (fails closed).
     private let vault: (any SecureClipVaulting)?
     private let pollTick: PollTick
+    /// The quiet capture cue (FR-001-30); nil shows none.
+    private let cue: CaptureCue?
 
     private let scheduleTimer: TimerScheduler
     /// Cancels the one scheduled timer source; nil when none is scheduled.
@@ -80,11 +82,12 @@ public final class ClipboardCapture {
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
         access: any PasteboardAccessPort,
-        vault: (any SecureClipVaulting)? = nil,
+        vault: (any SecureClipVaulting)? = nil, cue: CaptureCue? = nil,
         clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick(),
         scheduleTimer: @escaping TimerScheduler = ClipboardCapture.systemTimer
     ) {
         self.vault = vault
+        self.cue = cue
         self.scheduleTimer = scheduleTimer
         self.pasteboard = pasteboard
         self.access = access
@@ -104,7 +107,7 @@ public final class ClipboardCapture {
         let settings = settings
         return IngestWorker(
             ingest: ingest, reporter: reporter, sink: sink, vault: vault,
-            autoBundle: { settings.value(SettingKeys.captureAutoBundle) })
+            autoBundle: { settings.value(SettingKeys.captureAutoBundle) }, cue: cue)
     }
 
     // MARK: Lifecycle
@@ -350,7 +353,8 @@ public final class ClipboardCapture {
             return .rejected(FlotsamError(code, "Save Clipboard: pasteboard reads return no data"))
         case .success(let payload):
             let worker = makeWorker()
-            if let error = await worker.handle(payload, reportingFailure: false) { return .rejected(error) }
+            // FR-001-30: Save Clipboard answers with its own HUD, so no cue on top of it.
+            if let error = await worker.handle(payload, reportingFailure: false, cueing: false) { return .rejected(error) }
             return .saved
         }
     }

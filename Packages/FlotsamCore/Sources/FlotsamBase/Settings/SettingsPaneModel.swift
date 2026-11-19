@@ -6,9 +6,11 @@ extension SettingsPane {
         switch self {
         case .general: .paneGeneral
         case .shortcuts: .paneShortcuts
+        case .types: .paneTypes
         case .triggers: .paneTriggers
         case .privacy: .panePrivacy
         case .storage: .paneStorage
+        case .tips: .paneTips
         case .about: .paneAbout
         }
     }
@@ -18,9 +20,11 @@ extension SettingsPane {
         switch self {
         case .general: "gearshape"
         case .shortcuts: "keyboard"
+        case .types: "square.grid.2x2"
         case .triggers: "bolt"
         case .privacy: "hand.raised"
         case .storage: "internaldrive"
+        case .tips: "lightbulb"
         case .about: "info.circle"
         }
     }
@@ -39,7 +43,8 @@ extension SettingsPane {
 // MARK: - General
 
 public enum ShelfRevealRule {
-    /// "Reveal when the pointer rests at the edge" is disabled when the Shelf is off or placed in the menu bar (FR-008-04).
+    /// "Reveal when the pointer rests at the edge" and "Show a small bar at the edge" are disabled when the Shelf is off or
+    /// placed in the menu bar (FR-008-04); both need an edge to sit at.
     public static func isEnabled(shelfEnabled: Bool, placement: ShelfPlacement) -> Bool {
         shelfEnabled && placement != .menuBar
     }
@@ -69,6 +74,35 @@ extension LibraryLayoutMode {
         switch self {
         case .standard: .layoutStandard
         case .compact: .layoutCompact
+        }
+    }
+}
+
+extension LibraryBackground {
+    public var label: SettingsString {
+        switch self {
+        case .system: .backgroundSystem
+        case .light: .backgroundLight
+        case .dark: .backgroundDark
+        }
+    }
+}
+
+extension LibraryPreviewPreset {
+    public var label: SettingsString {
+        switch self {
+        case .closed: .presetClosed
+        case .open: .presetOpen
+        case .roomy: .presetRoomy
+        }
+    }
+}
+
+extension LibraryDisplay {
+    public var label: SettingsString {
+        switch self {
+        case .pointer: .displayPointer
+        case .focus: .displayFocus
         }
     }
 }

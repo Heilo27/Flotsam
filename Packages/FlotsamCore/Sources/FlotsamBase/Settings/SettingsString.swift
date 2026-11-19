@@ -6,7 +6,7 @@ import Foundation
 public enum SettingsString: String, CaseIterable, Sendable {
     // Window and panes
     case window
-    case paneGeneral, paneShortcuts, paneTriggers, panePrivacy, paneStorage, paneAbout
+    case paneGeneral, paneShortcuts, paneTypes, paneTriggers, panePrivacy, paneStorage, paneTips, paneAbout
 
     // General
     case launchAtLogin, loginApprovalCaption, openLoginItems
@@ -14,11 +14,27 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// The always-available backfill button (FR-002-12).
     case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
-    case revealAtEdge, showSetupGuide, historyHelp
+    case revealAtEdge, edgeBar, showSetupGuide, historyHelp
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
     /// The auto-bundle row (FR-001-12, FR-008-04): label and caption.
     case autoBundle, autoBundleHelp
+    /// The capture-cue row (FR-001-30, FR-008-04): label and caption.
+    case captureCue, captureCueHelp
+
+    /// The Library's look and behaviour rows (FR-008-04, FR-008-25), and the restore-defaults confirmation.
+    case libraryBackground, backgroundSystem, backgroundLight, backgroundDark
+    case previewPreset, presetClosed, presetOpen, presetRoomy, previewPresetHelp
+    case closeAfterPaste, closeAfterPasteHelp, resumeOnReopen, resumeOnReopenHelp
+    case libraryDisplay, displayPointer, displayFocus
+    case resetLibraryDefaults, resetLibraryTitle, resetLibraryMessage, resetLibraryConfirm
+
+    // Types (FR-008-26)
+    case typesHelp, typeMoveUp, typeMoveDown
+
+    // Tips (FR-008-27)
+    case tipRecallTitle, tipRecallBody, tipPasteTitle, tipPasteBody, tipPreviewTitle, tipPreviewBody
+    case tipMoveTitle, tipMoveBody, tipSnippetTitle, tipSnippetBody, tipShelfTitle, tipShelfBody
 
     // Shortcuts
     case shortcutOpenLibrary, shortcutSaveClipboard, shortcutAddClip, shortcutToggleShelf, shortcutPasteQueue

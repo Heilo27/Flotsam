@@ -531,6 +531,26 @@
         }
       }
     },
+    "ui.cue.clip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captured"
+          }
+        }
+      }
+    },
+    "ui.cue.screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot captured"
+          }
+        }
+      }
+    },
     "ui.fatal.quit" : {
       "localizations" : {
         "en" : {
@@ -717,6 +737,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copy something and it appears here. Press ⌃⌘V any time to open this panel."
+          }
+        }
+      }
+    },
+    "ui.library.emptyTagBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag a clip from its context menu, or choose All to see everything."
+          }
+        }
+      }
+    },
+    "ui.library.emptyTagTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing tagged “%@” yet"
           }
         }
       }
@@ -949,6 +989,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Space"
+          }
+        }
+      }
+    },
+    "ui.library.loading" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
           }
         }
       }
@@ -1219,6 +1269,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Search clipboard history"
+          }
+        }
+      }
+    },
+    "ui.library.searching" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Searching…"
           }
         }
       }
@@ -2869,6 +2929,26 @@
         }
       }
     },
+    "ui.settings.captureCue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show a cue when something is captured"
+          }
+        }
+      }
+    },
+    "ui.settings.captureCueHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A small label appears briefly. It never takes focus and makes no sound."
+          }
+        }
+      }
+    },
     "ui.settings.captureMode" : {
       "localizations" : {
         "en" : {
@@ -3977,6 +4057,16 @@
         }
       }
     },
+    "ui.settings.edgeBar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show a small bar at the edge"
+          }
+        }
+      }
+    },
     "ui.settings.libraryLayout" : {
       "localizations" : {
         "en" : {
@@ -4297,6 +4387,16 @@
         }
       }
     },
+    "ui.shelf.edgeBar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shelf edge bar. Rest the pointer here to open the Shelf."
+          }
+        }
+      }
+    },
     "ui.shelf.empty" : {
       "localizations" : {
         "en" : {
@@ -4483,6 +4583,376 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Set a Paste Queue shortcut in Settings first"
+          }
+        }
+      }
+    },
+    "ui.settings.paneTypes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Types"
+          }
+        }
+      }
+    },
+    "ui.settings.paneTips" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tips"
+          }
+        }
+      }
+    },
+    "ui.settings.libraryBackground" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel background"
+          }
+        }
+      }
+    },
+    "ui.settings.backgroundSystem" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Match System"
+          }
+        }
+      }
+    },
+    "ui.settings.backgroundLight" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "ui.settings.backgroundDark" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "ui.settings.previewPreset" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview on open"
+          }
+        }
+      }
+    },
+    "ui.settings.presetClosed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed"
+          }
+        }
+      }
+    },
+    "ui.settings.presetOpen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open"
+          }
+        }
+      }
+    },
+    "ui.settings.presetRoomy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open, larger panel"
+          }
+        }
+      }
+    },
+    "ui.settings.previewPresetHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard layout only. The larger panel opens at least 960 by 600 points and leaves your remembered size alone."
+          }
+        }
+      }
+    },
+    "ui.settings.closeAfterPaste" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close after paste"
+          }
+        }
+      }
+    },
+    "ui.settings.closeAfterPasteHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off keeps the Library open after a paste, so you can paste several items in a row."
+          }
+        }
+      }
+    },
+    "ui.settings.resumeOnReopen" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resume where I left off"
+          }
+        }
+      }
+    },
+    "ui.settings.resumeOnReopenHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reopening within 10 seconds keeps the same search, filter and selected item. Otherwise the Library starts fresh."
+          }
+        }
+      }
+    },
+    "ui.settings.libraryDisplay" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open on display"
+          }
+        }
+      }
+    },
+    "ui.settings.displayPointer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Under the pointer"
+          }
+        }
+      }
+    },
+    "ui.settings.displayFocus" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "With the focused window"
+          }
+        }
+      }
+    },
+    "ui.settings.resetLibraryDefaults" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore Library Defaults…"
+          }
+        }
+      }
+    },
+    "ui.settings.resetLibraryTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore the Library defaults?"
+          }
+        }
+      }
+    },
+    "ui.settings.resetLibraryMessage" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Layout, view, sort, size, background, preview, display, close after paste, resume and the type list return to their original values. History, privacy, storage and shortcuts are not changed."
+          }
+        }
+      }
+    },
+    "ui.settings.resetLibraryConfirm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore Defaults"
+          }
+        }
+      }
+    },
+    "ui.settings.typesHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose which types appear as Library rows and Shelf pills, and in what order. A hidden type stays in All and in search."
+          }
+        }
+      }
+    },
+    "ui.settings.typeMoveUp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move up"
+          }
+        }
+      }
+    },
+    "ui.settings.typeMoveDown" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move down"
+          }
+        }
+      }
+    },
+    "ui.settings.tipRecallTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recall without switching"
+          }
+        }
+      }
+    },
+    "ui.settings.tipRecallBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press the Open Library shortcut (see Shortcuts) to search your history while the app you are in stays in front."
+          }
+        }
+      }
+    },
+    "ui.settings.tipPasteTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste by number"
+          }
+        }
+      }
+    },
+    "ui.settings.tipPasteBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘1 to ⌘9 paste the numbered row. Return pastes the selected item and ⇧Return only copies it."
+          }
+        }
+      }
+    },
+    "ui.settings.tipPreviewTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview"
+          }
+        }
+      }
+    },
+    "ui.settings.tipPreviewBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press Space with an empty search, or ⌘Y, to preview the selected item."
+          }
+        }
+      }
+    },
+    "ui.settings.tipMoveTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sort, view and filters"
+          }
+        }
+      }
+    },
+    "ui.settings.tipMoveBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘S cycles the sort, ⌘G switches between list and grid, and ⌥↑ and ⌥↓ move between sidebar filters."
+          }
+        }
+      }
+    },
+    "ui.settings.tipSnippetTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts and triggers"
+          }
+        }
+      }
+    },
+    "ui.settings.tipSnippetBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press ⌘K on an item to give it its own shortcut or a typed trigger."
+          }
+        }
+      }
+    },
+    "ui.settings.tipShelfTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shelf"
+          }
+        }
+      }
+    },
+    "ui.settings.tipShelfBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drag a card from the Shelf into any app, or drop files, text and images on it to save them."
           }
         }
       }

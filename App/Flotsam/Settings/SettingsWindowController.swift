@@ -115,9 +115,11 @@ private struct PaneView: View {
         switch pane {
         case .general: GeneralPane(model: model)
         case .shortcuts: ShortcutsPane(model: model)
+        case .types: TypesPane(model: model)
         case .triggers: TriggersPane(model: model)
         case .privacy: PrivacyPane(model: model)
         case .storage: StoragePane(model: model)
+        case .tips: TipsPane(model: model)
         case .about: AboutPane(model: model)
         }
     }

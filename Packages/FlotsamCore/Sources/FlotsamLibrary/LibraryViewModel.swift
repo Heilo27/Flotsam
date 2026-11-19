@@ -20,6 +20,9 @@ public final class LibraryViewModel {
     /// Rows held in memory on open and added per scroll step (FR-003-05).
     public static let rowsPerStep = 50
 
+    /// How long after a hide a reopen may resume where the user left off (FR-003-04, `library.resumeOnReopen`).
+    public static let resumeWindow: TimeInterval = 10
+
     // MARK: Observable state
 
     public private(set) var loadState: LoadState = .loading
@@ -71,6 +74,8 @@ public final class LibraryViewModel {
     /// The one time source for every row's relative time and its VoiceOver label (FR-003-07, FR-003-21).
     @ObservationIgnored private let clock: any WallClock
     @ObservationIgnored private var unsubscribeEvents: (@Sendable () -> Void)?
+    /// The spinner's 150 ms one-shot delay (FR-003-50); shared logic and constant with the Shelf.
+    public let busy: BusyIndicator
     /// A reload is running; a change that arrives meanwhile is queued, never allowed to cancel it, so an Organize
     /// command's own `refresh(selecting:)` keeps the selection it asked for.
     @ObservationIgnored private var reloadInFlight = false
@@ -81,6 +86,8 @@ public final class LibraryViewModel {
     /// Observed on purpose: `footer()` reads it, so the footer view re-renders on every ⌘S (FR-004-12).
     private var sort: LibrarySort
     @ObservationIgnored private var lastAccessibilityTrusted: Bool?
+    /// When the panel last hid; `open` compares it with `resumeWindow` (FR-003-04). A stamp, not a timer (ADR-0004).
+    @ObservationIgnored private var lastHiddenAt: Date?
     @ObservationIgnored private var cursor: UUID?
     @ObservationIgnored private var anchor: UUID?
     @ObservationIgnored private var target: FrontmostApp?
@@ -112,6 +119,7 @@ public final class LibraryViewModel {
         self.organizer = organizer
         self.events = events
         self.clock = clock
+        busy = BusyIndicator { await clock.sleep(for: $0) }
         viewMode = preferences.viewMode
         layout = preferences.layout
         sort = preferences.sort
@@ -127,7 +135,10 @@ public final class LibraryViewModel {
         LibraryColumns.resolve(layout: layout, previewOpen: isPreviewOpen, hasPreviewableRow: loadState == .loaded && selectedRow != nil)
     }
 
-    public var sidebarEntries: [SidebarEntry] { sidebar.map(SidebarEntry.entries(from:)) ?? [] }
+    public var sidebarEntries: [SidebarEntry] {
+        let order = preferences.typeOrder
+        return sidebar.map { SidebarEntry.entries(from: $0, typeOrder: order) } ?? []
+    }
 
     /// Selected rows in list order.
     public var selectedRows: [ItemRow] { visibleRows.filter { selection.contains($0.id) } }
@@ -157,31 +168,55 @@ public final class LibraryViewModel {
     /// The empty history state, as opposed to "no matches" (FR-003-11): nothing stored at all.
     public var isHistoryEmpty: Bool { loadState == .loaded && loadedRows.isEmpty && searchText.isEmpty && filter == .all }
 
-    public var isNoResults: Bool { loadState == .loaded && loadedRows.isEmpty && !isHistoryEmpty }
+    public var isNoResults: Bool { loadState == .loaded && loadedRows.isEmpty && !isHistoryEmpty && emptyTagName == nil }
+
+    /// The name of the tag chosen in the sidebar when it has no items and no search narrows it (FR-003-50); nil otherwise.
+    /// Such a tag is not "no matches": nothing was searched for.
+    public var emptyTagName: String? {
+        guard loadState == .loaded, loadedRows.isEmpty, searchText.isEmpty, case .tag = filter else { return nil }
+        return sidebarEntries.first { $0.filter == filter }?.title
+    }
 
     // MARK: Lifecycle
 
-    /// The panel is about to show (FR-003-04): empty search, All, newest selected, top of the list, preview closed.
-    /// `target` is the app that was frontmost before the panel, recorded by the caller (FR-003-02).
+    /// The panel is about to show (FR-003-04): empty search, All, newest selected, top of the list, and the preview closed
+    /// unless the preview preset opens it. With `library.resumeOnReopen` on, an open within `resumeWindow` of the last hide
+    /// instead keeps the search, filter, preview and selected item. `target` is the app that was frontmost before the
+    /// panel, recorded by the caller (FR-003-02).
     public func open(target: FrontmostApp?) async {
         self.target = target
         isShown = true
         refreshAccessibility()
+        viewMode = preferences.viewMode
+        layout = preferences.layout
+        sort = preferences.sort
+        let resuming = shouldResume()
+        lastHiddenAt = nil
+        if resuming {
+            // Everything the user left is still in place; the reload below refreshes it and keeps the selection.
+            subscribeToChanges()
+            startReload(interval: .libraryOpen, selection: .keep(selection))
+            await loadTask?.value
+            return
+        }
         searchText = ""
         filter = .all
-        isPreviewOpen = false
+        isPreviewOpen = preferences.previewPreset.opensPreview(in: layout)
         preview = nil
         clearHover()
         selection = []
         cursor = nil
         anchor = nil
-        viewMode = preferences.viewMode
-        layout = preferences.layout
-        sort = preferences.sort
         scrollResetToken += 1
         subscribeToChanges()
         startReload(interval: .libraryOpen)
         await loadTask?.value
+    }
+
+    /// FR-003-04: the last hide was within `resumeWindow` and the setting is on.
+    private func shouldResume() -> Bool {
+        guard preferences.resumeOnReopen, let hidden = lastHiddenAt else { return false }
+        return clock.now().timeIntervalSince(hidden) <= Self.resumeWindow
     }
 
     /// FR-004-13: counts and footer follow every commit and every capture while the panel is shown. The bus calls
@@ -273,11 +308,13 @@ public final class LibraryViewModel {
     /// (FR-003-13).
     public func panelDidHide() {
         isShown = false
+        lastHiddenAt = clock.now()
         unsubscribeEvents?()
         unsubscribeEvents = nil
         reloadInFlight = false
         reloadQueued = false
         loadTask?.cancel()
+        busy.end()
         previewTask?.cancel()
         clearHover()
         relativeTimeTask?.cancel()
@@ -351,6 +388,7 @@ public final class LibraryViewModel {
         let generation = generation
         let query = LibraryQuery(filter: filter, text: searchText, sort: sort, page: 0)
         if loadedRows.isEmpty { loadState = .loading }
+        busy.begin()
         loadTask = Task { [weak self] in
             guard let self else { return }
             let span = interval.map { Signposts.begin($0) }
@@ -359,6 +397,7 @@ public final class LibraryViewModel {
             let (page, counts) = await (pageResult, countsResult)
             span?.end()
             guard !Task.isCancelled, generation == self.generation else { return }
+            busy.end()
             applyFirstPage(page, counts: counts, selection: policy)
             reloadInFlight = false
             // A change that landed while this load ran may postdate its reads: load again.

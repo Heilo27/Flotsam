@@ -35,12 +35,16 @@ public enum SettingKeys {
     public static let captureMode = SettingKey("capture.mode", default: CaptureMode.active, owner: "FR-007-12")
     /// Whether a copy of several files becomes one bundle (FR-001-12); off keeps one item per file.
     public static let captureAutoBundle = SettingKey("capture.autoBundle", default: true, owner: "FR-001-12")
+    /// Whether a stored clip or screenshot shows the quiet capture cue (FR-001-30).
+    public static let captureCue = SettingKey("capture.cue", default: true, owner: "FR-001-30")
     public static let screenshotsEnabled = SettingKey("screenshots.enabled", default: true, owner: "FR-002-05")
     public static let screenshotsFolderOverride = SettingKey(
         "screenshots.folderOverride", default: FolderOverride.none, owner: "FR-002-01", validator: { $0.isUsable })
     public static let shelfEnabled = SettingKey("shelf.enabled", default: true, owner: "FR-006-01")
     public static let shelfPlacement = SettingKey("shelf.placement", default: ShelfPlacement.rightEdge, owner: "FR-006-01")
     public static let shelfRevealOnEdgeHover = SettingKey("shelf.revealOnEdgeHover", default: false, owner: "FR-006-01")
+    /// The collapsed bar at the Shelf's edge: opt-in, off by default (FR-006-37).
+    public static let shelfEdgeBar = SettingKey("shelf.edgeBar", default: false, owner: "FR-006-37")
     /// Open Library defaults to ⌃⌘V (key code 9 is V).
     public static let shortcutsOpenLibrary = SettingKey(
         "shortcuts.openLibrary", default: ChordBinding.chord(Chord(keyCode: 9, modifiers: [.control, .command])),
@@ -70,20 +74,38 @@ public enum SettingKeys {
         "library.panelSize", default: PanelSize(width: 760, height: 480), owner: "FR-003-03", validator: { $0.isUsable })
     public static let libraryCompactPanelSize = SettingKey(
         "library.compactPanelSize", default: PanelSize(width: 520, height: 520), owner: "FR-003-03", validator: { $0.isUsable })
+    public static let libraryBackground = SettingKey("library.background", default: LibraryBackground.system, owner: "FR-003-21")
+    public static let libraryPreviewPreset = SettingKey("library.previewPreset", default: LibraryPreviewPreset.closed, owner: "FR-003-04")
+    public static let libraryCloseAfterPaste = SettingKey("library.closeAfterPaste", default: true, owner: "FR-003-15")
+    public static let libraryResumeOnReopen = SettingKey("library.resumeOnReopen", default: false, owner: "FR-003-04")
+    public static let libraryDisplay = SettingKey("library.display", default: LibraryDisplay.pointer, owner: "FR-003-03")
+    public static let libraryTypes = SettingKey("library.types", default: TypeOrder.default, owner: "FR-003-12")
     public static let onboardingCompleted = SettingKey("onboarding.completed", default: false, owner: "FR-008-12")
     public static let settingsLastPane = SettingKey("settings.lastPane", default: SettingsPane.general, owner: "FR-008-03")
 
     /// Every row, in the order of the FR-008-01 table. A test pins this list to the table and to the source.
     public static let all: [SettingDescriptor] = [
-        captureMode.descriptor, captureAutoBundle.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
+        captureMode.descriptor, captureAutoBundle.descriptor, captureCue.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
         shelfEnabled.descriptor, shelfPlacement.descriptor, shelfRevealOnEdgeHover.descriptor,
+        shelfEdgeBar.descriptor,
         shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsAddClip.descriptor,
         shortcutsToggleShelf.descriptor, shortcutsPasteQueue.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,
         libraryCompactPanelSize.descriptor,
+        libraryBackground.descriptor, libraryPreviewPreset.descriptor, libraryCloseAfterPaste.descriptor,
+        libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
         onboardingCompleted.descriptor, settingsLastPane.descriptor,
+    ]
+
+    /// What "Restore Library Defaults" resets (FR-008-25): how the Library looks, opens and behaves. Deliberately not
+    /// capture, privacy, storage (retention prunes history), shortcuts, triggers, the Shelf or setup state: a reset must
+    /// never delete data, loosen a privacy rule or unbind a hotkey.
+    public static let resettable: [SettingDescriptor] = [
+        libraryLayout.descriptor, libraryViewMode.descriptor, librarySort.descriptor, libraryPanelSize.descriptor,
+        libraryCompactPanelSize.descriptor, libraryBackground.descriptor, libraryPreviewPreset.descriptor,
+        libraryCloseAfterPaste.descriptor, libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
     ]
 }
 
@@ -142,8 +164,18 @@ public struct SettingsStore: Sendable {
     /// Stores `value` and delivers the change. The caller is the settings control that made the change; a failed apply
     /// must not call this (FR-008-02: the control reverts). Writing never reads, so it does not count as a read of the key.
     public func set<Value: SettingValue>(_ value: Value, for key: SettingKey<Value>) {
-        store.setString(value.persisted, forKey: key.name)
-        let change = SettingChange(name: key.name, persisted: value.persisted)
+        write(persisted: value.persisted, name: key.name)
+    }
+
+    /// Writes every `SettingKeys.resettable` row back to its default and delivers each change, so open windows and
+    /// panels follow (FR-008-25).
+    public func resetToDefaults() {
+        for descriptor in SettingKeys.resettable { write(persisted: descriptor.defaultPersisted, name: descriptor.name) }
+    }
+
+    private func write(persisted: String, name: String) {
+        store.setString(persisted, forKey: name)
+        let change = SettingChange(name: name, persisted: persisted)
         // Snapshot under the lock, call outside it: a handler may subscribe or unsubscribe without deadlocking.
         let handlers = hub.withLock { Array($0.handlers.values) }
         for handler in handlers { handler(change) }
