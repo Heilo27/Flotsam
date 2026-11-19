@@ -71,6 +71,12 @@ final class AppContainer {
     private var observers: [any NSObjectProtocol] = []
     private var permissionLogger: PermissionTransitionLogger?
     private var permissionObserver: (any NSObjectProtocol)?
+    /// The quiet capture cue (FR-001-30): one panel, one gate (`capture.cue`), shared by clipboard capture and live
+    /// screenshot pickup so the two cannot disagree. The panel is built at the first cue.
+    private let captureCuePanel = CaptureCuePanel()
+    private lazy var captureCue = CaptureCue(settings: settings) { [captureCuePanel] kind in
+        Task { @MainActor in captureCuePanel.show(kind) }
+    }
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
     /// Seals and opens secure items with the Keychain key (ADR-0011). Capture seals with it, the database asks it whether
@@ -236,7 +242,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
-            access: SystemPasteboardAccess(), vault: secureVault, pollTick: pollTick)
+            access: SystemPasteboardAccess(), vault: secureVault, cue: captureCue, pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
         let presenter = presenter
@@ -276,7 +282,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings),
             watermarkStore: DatabaseWatermarkStore(database: database),
             report: { error in await reporter.report(error, origin: .background) },
-            clear: { code in await reporter.clearNotices(code: code) }, pollTick: pollTick)
+            clear: { code in await reporter.clearNotices(code: code) }, pollTick: pollTick, cue: captureCue)
         screenshots = watcher
 
         let watched: Set<String> = [

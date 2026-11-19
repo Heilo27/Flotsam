@@ -531,6 +531,26 @@
         }
       }
     },
+    "ui.cue.clip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Captured"
+          }
+        }
+      }
+    },
+    "ui.cue.screenshot" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshot captured"
+          }
+        }
+      }
+    },
     "ui.fatal.quit" : {
       "localizations" : {
         "en" : {
@@ -2905,6 +2925,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "ui.settings.captureCue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show a cue when something is captured"
+          }
+        }
+      }
+    },
+    "ui.settings.captureCueHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A small label appears briefly. It never takes focus and makes no sound."
           }
         }
       }
