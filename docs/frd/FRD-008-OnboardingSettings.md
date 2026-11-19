@@ -183,7 +183,7 @@ Get a new user from "just installed" to "capturing and recoverable" without read
 
 ## 9. Assumptions and open items (flagged for Friday)
 1. Flotsam is a menu-bar agent app with no Dock icon (`LSUIElement`); the PRD says "menu-bar icon" and never mentions a Dock presence. If a Dock icon is wanted, FR-008-16 changes.
-2. Default ignored-apps list (FR-008-11) uses bundle identifiers recalled from memory, not verified against installed apps (1Password 7 and 8, Bitwarden, KeePassXC, Keychain Access, Passwords). They must be checked against real installs before release; a wrong identifier silently fails to protect that app.
+2. The default ignored-apps list (FR-008-11) is empty since secure clips (FRD-001 FR-001-25); a password manager's concealed copy is stored encrypted rather than dropped. The six identifiers the old default held (1Password 7 and 8, Bitwarden, KeePassXC, Keychain Access, Passwords) were recalled from memory and are used only to recognise an untouched old list in the one-time migration (FR-008-11a). An identifier a user adds is theirs; a wrong one fails silently for that app.
 3. Launch at login is on by default in onboarding step 7 (applied only on Continue). The PRD lists "launch at login" in first-run without a default; a clipboard history that is not running loses history, so the default favours P1. Ryan may prefer off.
 4. Onboarding closing early counts as complete (no nagging). Re-offer exists via General › "Show Setup Guide…".
 5. Settings live in `UserDefaults`, not the database, so a damaged database (`STO-DB-002`) never loses preferences.
