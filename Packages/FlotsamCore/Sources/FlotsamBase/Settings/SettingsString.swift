@@ -50,7 +50,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case captureMode, modeActive, modePaused, modeCurated, modeActiveHelp, modePausedHelp, modeCuratedHelp
     case usageItems, usageImages, usageDatabase, usageUnavailable
     case clearHistory, clearRange, rangeLastHour, rangeLast24Hours, rangeAllTime
-    case clearIncludeExempt, clearNothing, clearCount, clearDelete, clearDeleting, clearDone, cancel
+    case clearIncludeExempt, clearCounting, clearNothing, clearCount, clearDelete, clearDeleting, clearDone, cancel
     case confirmShortenTitle, confirmShorten, confirmBudgetTitle, confirmBudget
     case revealDataFolder
 

@@ -5,7 +5,8 @@ import Observation
 
 /// The state and decisions of the Clear History sheet (FR-007-11), lifted out of the SwiftUI view so `swift test` can
 /// drive it (compiled into FlotsamAppModelTests by symlink): a range, an "include pinned and shortcut items" option
-/// that starts off, the count that would go, and a Delete that stays disabled while nothing would be deleted.
+/// that starts off, the count that would go, and a Delete that stays disabled while nothing would be deleted or while
+/// the count on screen is not the count for the range and option on screen.
 @MainActor
 @Observable
 final class ClearHistoryModel {
@@ -13,8 +14,12 @@ final class ClearHistoryModel {
     let ranges = ClearRange.allCases
     var range: ClearRange = .lastHour
     var includeExempt = false
+    /// The last preview that landed and the (range, option) it was computed for. A preview only counts while its key
+    /// is still the current one, so a count for an earlier choice is never shown or acted on.
     private(set) var preview: FlotsamResult<DeletionPreview>?
+    private(set) var previewKey: PreviewKey?
     private(set) var deleting = false
+    @ObservationIgnored private var latestRequest = 0
     @ObservationIgnored private let storage: SettingsStorage
     @ObservationIgnored private let report: @MainActor @Sendable (FlotsamError) -> Void
     @ObservationIgnored private let hud: @MainActor @Sendable (String) -> Void
@@ -30,18 +35,37 @@ final class ClearHistoryModel {
         self.onClose = onClose
     }
 
-    /// What Delete would remove, from the last preview; 0 until one has loaded or when it failed.
-    var count: Int { (try? preview?.get())?.count ?? 0 }
+    /// The range and option the sheet shows right now. The view keys its preview task on this.
+    var key: PreviewKey { PreviewKey(range: range, includeExempt: includeExempt) }
+
+    /// True until a preview for the current range and option has landed (the sheet just opened, or the user changed a
+    /// choice). While true there is no count to show and nothing to delete.
+    var isCounting: Bool { previewKey != key }
+
+    /// What Delete would remove, from the preview for the current range and option; 0 while counting or when the
+    /// preview failed.
+    var count: Int { isCounting ? 0 : ((try? preview?.get())?.count ?? 0) }
 
     var countText: String {
-        count > 0 ? SettingsString.clearCount.text([.count(count)]) : SettingsString.clearNothing.text
+        if isCounting { return SettingsString.clearCounting.text }
+        return count > 0 ? SettingsString.clearCount.text([.count(count)]) : SettingsString.clearNothing.text
     }
 
     var canDelete: Bool { count > 0 && !deleting }
     var deleteTitle: SettingsString { deleting ? .clearDeleting : .clearDelete }
 
-    /// Re-reads the count for the current range and option. The view runs it whenever either changes.
-    func refreshPreview() async { preview = await storage.clearPreview(range, includeExempt) }
+    /// Re-reads the count for the current range and option. The view runs it whenever either changes. A result that
+    /// arrives after the choice moved on, or after a newer request started, is dropped: only the newest request for
+    /// the key still on screen may land, so a slow answer for an earlier choice cannot overwrite a newer one.
+    func refreshPreview() async {
+        latestRequest += 1
+        let request = latestRequest
+        let asked = key
+        let result = await storage.clearPreview(asked.range, asked.includeExempt)
+        guard request == latestRequest, asked == key else { return }
+        preview = result
+        previewKey = asked
+    }
 
     /// The Cancel button: closes the sheet and calls nothing that deletes.
     func cancel() { onClose() }
@@ -65,6 +89,12 @@ final class ClearHistoryModel {
             onClose()
         }
     }
+}
+
+/// The choices a preview is computed for.
+struct PreviewKey: Hashable, Sendable {
+    let range: ClearRange
+    let includeExempt: Bool
 }
 
 extension ClearRange {

@@ -62,6 +62,13 @@ private actor Gate {
     }
 }
 
+/// One scripted answer of the fake count preview: the count it returns and, optionally, a gate it waits on first, so a
+/// test can make an earlier question answer after a later one.
+private struct PreviewStep: Sendable {
+    let count: Int
+    var gate: Gate?
+}
+
 /// Lets any work a button press left running on the main actor finish, so "nothing happened" is checked after it could have.
 @MainActor private func settle() async { for _ in 0..<30 { await Task.yield() } }
 
@@ -289,14 +296,22 @@ private let gib: Int64 = 1024 * 1024 * 1024
 
         /// `previewCount` answers every preview; `deleted` is what the clear reports having removed (it differs from
         /// the preview on purpose, as it can in life); `hold` makes the clear wait on `gate`.
-        init(previewCount: Int, deleted: Int = 0, clearFails: Bool = false, hold: Bool = false) {
+        /// `script` answers the count previews in the order they are asked (the first question gets `script[0]`, and so
+        /// on); any question past the script gets `previewCount`.
+        init(
+            previewCount: Int, deleted: Int = 0, clearFails: Bool = false, hold: Bool = false,
+            script: [PreviewStep] = []
+        ) {
             let calls = calls
             let gate = hold ? Gate() : nil
             self.gate = gate
             var storage = SettingsStorage(database: { nil })
             storage.clearPreview = { range, exempt in
+                let index = calls.snapshot.clearPreviews.count
                 calls.update { $0.clearPreviews.append("\(range)/\(exempt)") }
-                return .success(DeletionPreview(count: previewCount, bytes: 0))
+                let step = index < script.count ? script[index] : PreviewStep(count: previewCount)
+                if let gate = step.gate { await gate.wait() }
+                return .success(DeletionPreview(count: step.count, bytes: 0))
             }
             storage.clear = { range, exempt in
                 calls.update { $0.clears.append("\(range)/\(exempt)") }
@@ -329,6 +344,8 @@ private let gib: Int64 = 1024 * 1024 * 1024
         #expect(model.range == .lastHour)
         #expect(model.includeExempt == false)
         #expect(model.count == 0)
+        #expect(model.isCounting)
+        #expect(model.countText == "Counting items\u{2026}")
         #expect(model.canDelete == false)
         #expect(model.deleteTitle == .clearDelete)
         #expect(rig.calls.snapshot.clears.isEmpty)
@@ -415,6 +432,132 @@ private let gib: Int64 = 1024 * 1024 * 1024
         #expect(rig.calls.snapshot.clears.count == 1)
         #expect(model.deleting == false)
         #expect(model.deleteTitle == .clearDelete)
+    }
+
+    /// A count that arrives late for an earlier choice must not replace the count for the choice now on screen. Here
+    /// Last hour (200 items) is slow, the user moves to All time (60 items), All time lands, then the Last hour answer
+    /// arrives. The sheet must still say 60, and Delete must clear All time.
+    /// Red if the late answer overwrites the newer one (the sheet would say 200 for a scope that holds 60).
+    @Test("OC-7088 a late count for an earlier range never overwrites the count for the current one")
+    func oc7088_staleCountIsDropped() async {
+        let gate = Gate()
+        let rig = Rig(previewCount: 0, deleted: 60, script: [PreviewStep(count: 200, gate: gate), PreviewStep(count: 60)])
+        let model = rig.model
+        let slow = Task { await model.refreshPreview() }
+        await settle()
+        model.range = .allTime
+        await model.refreshPreview()
+        #expect(model.count == 60)
+        await gate.open()
+        await slow.value
+        #expect(rig.calls.snapshot.clearPreviews == ["lastHour/false", "allTime/false"])
+        #expect(model.count == 60)
+        #expect(model.countText == "This permanently deletes 60 items. This can\u{2019}t be undone.")
+        #expect(model.canDelete)
+        await model.delete().value
+        #expect(rig.calls.snapshot.clears == ["allTime/false"])
+        #expect(rig.calls.snapshot.huds == ["60 items deleted"])
+    }
+
+    /// The same, when the user returns to the first choice: two questions for Last hour are out, the second (5 items)
+    /// answers first and the first (200 items, older) answers last. Only the newest question may land.
+    /// Red if an older answer for the same choice overwrites a newer one.
+    @Test("OC-7088 an older count for the same range never overwrites a newer one")
+    func oc7088_olderSameKeyCountIsDropped() async {
+        let gate = Gate()
+        let rig = Rig(
+            previewCount: 0,
+            script: [PreviewStep(count: 200, gate: gate), PreviewStep(count: 60), PreviewStep(count: 5)])
+        let model = rig.model
+        let oldest = Task { await model.refreshPreview() }
+        await settle()
+        model.range = .allTime
+        await model.refreshPreview()
+        model.range = .lastHour
+        await model.refreshPreview()
+        #expect(model.count == 5)
+        await gate.open()
+        await oldest.value
+        #expect(model.count == 5)
+    }
+
+    /// An answer for a choice the user has already left is thrown away, not kept: Last hour (200 items) is slow, the
+    /// user moves to All time and back to Last hour, and only then does the first answer arrive while the new question
+    /// for Last hour is still out. The 200 must not be shown as if it were that new answer.
+    /// Red if a late answer is kept under (or treated as belonging to) the choice now on screen.
+    @Test("OC-7088 a count for a range the user left is not shown when they return before the new count lands")
+    func oc7088_leftChoiceCountIsNotKept() async {
+        let gate = Gate()
+        let hold = Gate()
+        let rig = Rig(
+            previewCount: 0,
+            script: [PreviewStep(count: 200, gate: gate), PreviewStep(count: 3, gate: hold)])
+        let model = rig.model
+        let first = Task { await model.refreshPreview() }
+        await settle()
+        model.range = .allTime
+        await gate.open()
+        await first.value
+        #expect(model.isCounting)
+        #expect(model.count == 0)
+        #expect(model.canDelete == false)
+        model.range = .lastHour
+        let second = Task { await model.refreshPreview() }
+        await settle()
+        #expect(model.isCounting)
+        #expect(model.canDelete == false)
+        #expect(model.countText == "Counting items\u{2026}")
+        await hold.open()
+        await second.value
+        #expect(model.count == 3)
+    }
+
+    /// Delete stays off, and the count reads as pending, from the moment the range or the option changes until the
+    /// count for the new choice has landed; a press in that window deletes nothing. When it lands, Delete turns on
+    /// for that count.
+    /// Red if Delete (or the old count) stays live while the new count is still loading, for either control.
+    @Test("OC-7088 Delete is disabled and the count pending while the current choice's count is loading")
+    func oc7088_deleteDisabledWhileCountInFlight() async {
+        let gateRange = Gate()
+        let gateOption = Gate()
+        let rig = Rig(
+            previewCount: 0, deleted: 7,
+            script: [
+                PreviewStep(count: 12), PreviewStep(count: 7, gate: gateRange), PreviewStep(count: 9, gate: gateOption),
+            ])
+        let model = rig.model
+        await model.refreshPreview()
+        #expect(model.canDelete)
+        #expect(model.count == 12)
+
+        model.range = .last24Hours
+        #expect(model.isCounting)
+        #expect(model.canDelete == false)
+        #expect(model.count == 0)
+        #expect(model.countText == "Counting items\u{2026}")
+        let inFlight = Task { await model.refreshPreview() }
+        await settle()
+        #expect(model.canDelete == false)
+        model.delete()
+        await settle()
+        #expect(rig.calls.snapshot.clears.isEmpty)
+        await gateRange.open()
+        await inFlight.value
+        #expect(model.canDelete)
+        #expect(model.count == 7)
+
+        model.includeExempt = true
+        #expect(model.isCounting)
+        #expect(model.canDelete == false)
+        let optionInFlight = Task { await model.refreshPreview() }
+        await settle()
+        model.delete()
+        await settle()
+        #expect(rig.calls.snapshot.clears.isEmpty)
+        await gateOption.open()
+        await optionInFlight.value
+        #expect(model.canDelete)
+        #expect(model.count == 9)
     }
 
     /// With nothing to delete, Delete does nothing at all.

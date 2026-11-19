@@ -201,20 +201,26 @@ import FlotsamBase
         #expect(try store.presentIds() == Set(1...7))
     }
 
-    /// OC-7088 (strings). FR-007-11 names the destructive button "Delete {n} Items" and the option "Also delete pinned
-    /// and shortcut items"; the shipped catalogue has "Delete" (the count sits in the sentence above it) and "Also
-    /// delete pinned items and items with a shortcut". FRD-008 FR-008-08 hands both to FRD-007, so FRD-007 is the
-    /// owner and the product differs from it.
-    /// Product defect, Minor. Repro: Settings > Storage > Clear History..., read the button and the checkbox.
-    @Test("OC-7088 the Delete button reads 'Delete {n} Items' and the option reads 'Also delete pinned and shortcut items'")
-    func oc7088_clearSheetStrings() {
-        // Red if the catalogue gains the count placeholder and the option wording (then this known issue must go).
-        withKnownIssue("OC-7088 product defect: ui.settings.clearDelete is 'Delete' and clearIncludeExempt is reworded vs FR-007-11") {
+    /// OC-7088 (checkbox string). FR-007-11 names the option "Also delete pinned and shortcut items".
+    /// Red if the catalogue rewords it.
+    @Test("OC-7088 the option reads 'Also delete pinned and shortcut items'")
+    func oc7088_clearSheetCheckboxString() {
+        #expect(SettingsString.clearIncludeExempt.text == "Also delete pinned and shortcut items")
+    }
+
+    /// OC-7088 (button string). FR-007-11 names the destructive button "Delete {n} Items"; the shipped catalogue has
+    /// "Delete" (the count sits in the sentence above it). FRD-008 does not word the button (FR-008-08 hands it to
+    /// FRD-007); docs/DESIGN.md section 10 records a deliberate deviation (`btn.deleteN` becomes "Delete Items" for
+    /// the 15-character button limit) that the product does not follow either. Spec conflict, left for the owner.
+    /// Product defect, Minor. Repro: Settings > Storage > Clear History..., read the button.
+    @Test("OC-7088 the Delete button reads 'Delete {n} Items'")
+    func oc7088_clearSheetButtonString() {
+        // Red if the catalogue gains the count placeholder (then this known issue must go).
+        withKnownIssue("OC-7088 product defect: ui.settings.clearDelete is 'Delete' vs FR-007-11 'Delete {n} Items'") {
             // given the sheet shows 12 items
-            // when the button and checkbox text are built
-            // then they read as FR-007-11 states
+            // when the button text is built
+            // then it reads as FR-007-11 states
             #expect(SettingsString.clearDelete.text([.count(12)]) == "Delete 12 Items")
-            #expect(SettingsString.clearIncludeExempt.text == "Also delete pinned and shortcut items")
         }
     }
 

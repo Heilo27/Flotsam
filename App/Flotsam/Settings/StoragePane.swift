@@ -117,14 +117,9 @@ private struct ClearHistorySheet: View {
         .formStyle(.grouped)
         .frame(width: 420)
         .fixedSize(horizontal: false, vertical: true)
-        .task(id: PreviewKey(range: clear.range, includeExempt: clear.includeExempt)) {
+        .task(id: clear.key) {
             await clear.refreshPreview()
         }
-    }
-
-    private struct PreviewKey: Hashable {
-        let range: ClearRange
-        let includeExempt: Bool
     }
 }
 

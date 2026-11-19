@@ -63,7 +63,7 @@ import Testing
     // needs the login-item, permission and shortcut objects. What the code guarantees by construction: every caller
     // (menu row, Library Cmd-comma, a Notice) goes through the one `actions.openSettings` closure, which calls
     // `SettingsWindowController.openSettings()`, which reuses its single `window` and calls `makeKeyAndOrderFront`.
-    // Still a live-app check (TASK-505).
+    // Still a live-app check (TASK-518, the real-OS matrix).
 
     // OC-8026. Turning the Shelf off is stored at once with no Apply step and survives relaunch.
     @Test func oc8026_changeAppliesWithoutCommitAndSurvivesRelaunch() {

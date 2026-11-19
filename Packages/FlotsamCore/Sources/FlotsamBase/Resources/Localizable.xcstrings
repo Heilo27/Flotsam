@@ -2701,6 +2701,16 @@
         }
       }
     },
+    "ui.settings.clearCounting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Counting items…"
+          }
+        }
+      }
+    },
     "ui.settings.clearDelete" : {
       "localizations" : {
         "en" : {
@@ -2768,7 +2778,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Also delete pinned items and items with a shortcut"
+            "value" : "Also delete pinned and shortcut items"
           }
         }
       }
