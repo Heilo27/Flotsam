@@ -982,9 +982,9 @@ struct Adversarial000KillCheckPins {
         #expect(try await status("log.debugger(\"x\")") == 0)
     }
 
-    // MARK: known issues, still present
+    // MARK: TASK-367 / TASK-368 (fixed; the withKnownIssue wrappers are removed)
 
-    // OC: FR-000-02. TASK-368. Defect: a line-start regex after a line ending in `}`, `)`, a string, a regex or a `#if` line is read as
+    // OC: FR-000-02. TASK-368. Was a defect: a line-start regex after a line ending in `}`, `)`, a string, a regex or a `#if` line is read as
     // division (judged by the previous code line), so its text is linted as code. New since 2ed68a4; RegexBuilder is the real shape.
     @Test("KNOWN TASK-368: a statement-position regex literal after a code line is linted as code")
     func statementPositionRegexAfterCodeLine() async throws {
@@ -997,27 +997,21 @@ struct Adversarial000KillCheckPins {
         // control: the same regex after `let r =` is a regex and passes
         #expect(try await status("let r =\n    /fatalError(x)/") == 0)
         for shape in shapes {
-            // given a regex literal on its own line after a code line, when linted, then it should pass (today it exits 1)
-            let code = try await status(shape)
-            withKnownIssue("line-start / after a code line is division: \(shape.debugDescription)") {
-                #expect(code == 0)
-            }
+            // given a regex literal on its own line after a code line, when linted, then it passes
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
         }
     }
 
-    // OC: FR-000-02. TASK-368. Defect: a previous line ending in `?` makes the next line-start / a regex, hiding a banned call (pre-existing).
+    // OC: FR-000-02. TASK-368. Was a defect: a previous line ending in `?` makes the next line-start / a regex, hiding a banned call (pre-existing).
     @Test("KNOWN TASK-368: a division continued after a line ending in ? hides a banned call")
     func divisionAfterQuestionMark() async throws {
         // control: the same continuation after a plain identifier fails
         #expect(try await status("let r = total\n    /n + g(fatalError(\"x\"))/2") == 1)
-        // given optional-chaining then a continued division, when linted, then it should fail (today it exits 0)
-        let code = try await status("let r = total?\n    /n + g(fatalError(\"x\"))/2")
-        withKnownIssue("`?` at line end reads the next line-start / as a regex") {
-            #expect(code == 1)
-        }
+        // given optional-chaining then a continued division, when linted, then it fails
+        #expect(try await status("let r = total?\n    /n + g(fatalError(\"x\"))/2") == 1)
     }
 
-    // OC: FR-000-05 / FR-000-04. Defect: USTRING view names have no left identifier boundary, and NETWORK is a bare substring match,
+    // OC: FR-000-05 / FR-000-04. TASK-367. Was a defect: USTRING view names have no left identifier boundary, and NETWORK is a bare substring match,
     // so a type that merely contains Text/Button/URLSession fails the lint. False positives only; no violation can pass because of it.
     @Test("KNOWN: identifiers that contain a view or network name fail the lint")
     func missingLeftBoundaryFalsePositives() async throws {
@@ -1026,11 +1020,8 @@ struct Adversarial000KillCheckPins {
         #expect(try await status("let v = Text(\"hello\")") == 1)
         #expect(try await status("let s = URLSession.shared") == 1)
         for shape in shapes {
-            // given an identifier that only contains the banned name, when linted, then it should pass (today it exits 1)
-            let code = try await status(shape)
-            withKnownIssue("no left boundary on this rule: \(shape.debugDescription)") {
-                #expect(code == 0)
-            }
+            // given an identifier that only contains the banned name, when linted, then it passes
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
         }
     }
 }
