@@ -903,16 +903,6 @@
         }
       }
     },
-    "ui.library.keyShiftReturn" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "⇧Return"
-          }
-        }
-      }
-    },
     "ui.library.keySpace" : {
       "localizations" : {
         "en" : {
