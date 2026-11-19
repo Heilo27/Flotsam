@@ -2009,3 +2009,13 @@ Setup: a Debug build on macOS 27.3. The app ran isolated (CFFIXED_USER_HOME, a f
 - **Defect: the Shelf sometimes stays visible after a transient reveal.** This happened in R2 run 5 and R5 run 1. It needed 1–5 extra pointer moves to dismiss. Repro rate is low (2 of 25 reveals).
 - **Signpost coverage:** log retention kept only the final process, so R3 and most of R4 have no signposts.
 - **Snapshot identity:** the real data dir, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was empty before and after, and the suite plist was removed.
+
+## TASK-525/526 real-OS rows: main @ 5bbe312 (2026-11-19): BLOCKED, screen locked
+
+- **Not run: all five rows (R-525a, R-525b, R-526a, R-526b, R-526c).** The Mac's screen was locked: the session reported ScreenIsLocked and the front app was loginwindow. The synthetic-input guard therefore sent no keys or clicks. They will be re-run once the screen is unlocked.
+- **Done:** the build at 5bbe312 succeeded, and the isolated launch ran with a fresh DB at schema 2.
+- **Specs mapped for the rerun:**
+  - FR-003-24 / AC-003-20 (R-525a, R-525b).
+  - FR-005-09 / AC-005-08a, with FR-003-22 and FR-003-02 (R-526a to R-526c).
+- **Secure item route for R-526a:** a real copy carrying org.nspasteboard.ConcealedType. A direct insert can't create one, because the DB triggers require secureCiphertext.
+- **Snapshot identity:** the real data and the prefs hashes are identical before and after. The real Flotsam never ran. The pasteboard is unchanged, and cleanup is done.
