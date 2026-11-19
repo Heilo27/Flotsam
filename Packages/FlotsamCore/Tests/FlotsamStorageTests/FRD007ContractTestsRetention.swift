@@ -6,16 +6,17 @@ import FlotsamBase
 
 // FRD-007 8T contract tests, slice S1: the confirm/cancel halves of the destructive Settings > Storage changes
 // (OC-7062, OC-7063, OC-7080, OC-7081), the Clear History sheet's core half (OC-7088), screenshot originals (OC-7125)
-// and the storage usage figures (OC-7151). The popup, alert and sheet widgets are App-target SwiftUI (no test
-// target); each of those halves is a disabled stub in FRD007ContractTestsGaps.swift. What is asserted here is what
-// the widgets are built from: the preview count, the settings value, the rows and files that remain, read back
-// through a FRESH read-only connection and a FRESH SettingsStore over the same key-value store. Expected values are
-// literals.
+// and the storage usage figures (OC-7151). The popup, alert and sheet widgets are App-target SwiftUI; their
+// decisions (ask first, write and sweep only after the answer, what Delete passes and announces) are tested in
+// FlotsamAppModelTests/FRD007ContractTestsStorageConfirm.swift against StorageChangeModel and ClearHistoryModel.
+// What is asserted here is what the widgets are built from: the preview count, the settings value, the rows and files
+// that remain, read back through a FRESH read-only connection and a FRESH SettingsStore over the same key-value
+// store. Expected values are literals.
 
 @Suite struct FRD007ContractRetentionTests {
-    /// What `StoragePane.confirm` does for a reducing change: write the setting, then sweep with the settings' values.
-    /// It lives in the App target, so this mirror is the seam gap recorded in the Gaps file; everything it calls is the
-    /// real core.
+    /// What `StorageChangeModel.confirm` does for a reducing change: write the setting, then sweep with the settings'
+    /// values. The model lives in the App target (its own sequence is tested in FlotsamAppModelTests against a fake
+    /// storage); this mirror runs the same two steps against the real core, so the rows that go and stay are checked.
     private func confirmChange(_ store: Store, _ settings: SettingsStore) async throws -> SweepOutcome {
         try await store.database.runRetentionSweep(
             preset: settings.value(SettingKeys.storageRetention), budget: settings.value(SettingKeys.storageImageBudget)
