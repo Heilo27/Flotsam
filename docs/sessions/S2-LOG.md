@@ -1834,3 +1834,22 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 **Snapshot identity:** the real Flotsam was not running. The 16 real data files (sha1), the prefs plist and the `defaults read` hash were identical before and after. The pasteboard was empty throughout and never written to. The isolated instance was stopped, and its suite plist (written under ~/Library/Preferences despite CFFIXED_USER_HOME) was deleted. No TextEdit document was opened.
 
 **Harness notes for the rerun:** call `/usr/bin/log` explicitly, because zsh's `log` builtin hides it. `CFFIXED_USER_HOME` does not redirect `cfprefsd` suite writes.
+
+## Real-OS matrix, priority 1 rerun (TASK-521): PASS, a–g (2026-11-19)
+
+**OS:** macOS 27.3 (26C5035r). **SHA:** obrien-521 @ 1f20a8c. Debug build via `bin/build.sh`, launched isolated per docs/AGENT-LAUNCH.md. The screen was unlocked and `caffeinate -d` was running.
+
+**Results:**
+- **Rows a–e:** PASS. Row d's partial from the last run is now a full pass: no Dock icon and no focus steal.
+- **Row f:** PASS.
+  - With a switch to Finder inside the 200 ms grace (at +60 ms and +120 ms, 3 runs each), Finder stayed frontmost 6/6 and Flotsam never took front.
+  - The no-switch control brought Flotsam forward 3/3.
+  - Caveat: the +120 ms switches landed 175–191 ms after the key, near the edge of the grace. Flotsam's own request time was not measured.
+  - Two earlier invalid runs were discarded: in one the Library wasn't open; in the other the harness printed nothing.
+- **Row g:** PASS 3/3. A miniaturized Settings deminiaturizes and comes on screen, Flotsam is front, and Settings is key. The f56197f code-read defect is fixed.
+
+**Observation, not a defect:** with Settings miniaturized and the Library open, ⌘, leaves the Library panel open above Settings. With Settings closed, the Library closes 3/3. Whether FRD-008 requires it to close was not checked.
+
+**Snapshot identity:** the real Flotsam never ran. The 16 real data files (sha1, including the DB, -wal and -shm), the prefs plist and the `defaults read` hash were identical before and after. The pasteboard was empty at start and left empty. The TextEdit scratch document was deleted unsaved. Only own PIDs were killed. The suite plist and temp data dir were removed.
+
+**Priority 2** (origin/main 669e1e1) is next.
