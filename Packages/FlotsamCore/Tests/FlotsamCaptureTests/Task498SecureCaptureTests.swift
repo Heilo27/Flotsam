@@ -16,23 +16,6 @@ private let concealed = PasteboardMarkers.concealed
 private let marker = "SECRET-MARKER-498-hunter2-QX7"
 private let controlMarker = "CONTROL-MARKER-498-visible-ZP3"
 
-private final class MemoryKeychain: SecureKeyStore, @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored: Data?
-    private let unreadable: Bool
-    init(unreadable: Bool = false) { self.unreadable = unreadable }
-    var key: Data? { lock.withLock { stored } }
-    func readKey() -> FlotsamResult<Data?> {
-        lock.withLock { unreadable ? .failure(FlotsamError(.libDat002, "keychain locked")) : .success(stored) }
-    }
-    func storeKeyIfAbsent(_ key: Data) -> FlotsamResult<Data> {
-        lock.withLock {
-            if stored == nil { stored = key }
-            return .success(stored!)
-        }
-    }
-}
-
 /// The columns of a secure row the tests look at (`Row` is not Sendable, so it cannot leave the read).
 private struct SecureRow: Sendable {
     let isSecure: Int

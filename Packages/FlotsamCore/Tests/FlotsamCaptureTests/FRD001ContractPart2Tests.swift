@@ -219,19 +219,29 @@ struct FRD001SourceContractTests {
         }
     }
 
-    @Test("OC-1066: a remote clipboard copy that is also Concealed is rejected with CAP-POL-001")
+    /// OC-1066 (FR-001-14 as amended in TASK-503). Mutation: restore the old drop for a concealed remote copy (or let
+    /// the remote marker reject it): the secure-row count stays 0 and a CAP-POL-001 is logged.
+    @Test("OC-1066: a remote clipboard copy that is also Concealed is stored as a secure item from Another device")
     func oc1066() async throws {
-        // given remote + ConcealedType + text K; then no item for K, one CAP-POL-001.
-        try await withRig { rig in
+        // given remote + ConcealedType + text K; then one secure item, no plain text K anywhere, no POL-001.
+        try await withRig(withVault: true) { rig in
             let text = uid("K")
             rig.pasteboard.copy([
                 (PB.text, PB.data(text)), (PasteboardMarkers.remoteClipboard, Data()),
                 (PasteboardMarkers.concealed, Data("1".utf8)),
             ])
             await rig.process()
+            try #expect(await rig.itemCount() == 1)
+            let rows = try await rig.secureRows()
+            #expect(rows.count == 1)
+            #expect(rows.first?.sourceName == "Another device")
+            #expect(rows.first?.plainText == nil)
+            // the search text holds the source app (FR-003-09), never the content
+            #expect(rows.first?.searchText?.contains(text) != true)
             try #expect(await rig.item(withText: text).isEmpty)
-            try #expect(await rig.itemCount() == 0)
-            #expect(rig.sink.logged(.capPol001).count == 1)
+            try #expect(await rig.searchCount(text) == 0)
+            #expect(rig.allDataBytes().range(of: Data(text.utf8)) == nil)
+            #expect(rig.sink.logged(.capPol001).isEmpty)
             #expect(!rig.sink.everything.contains(text))
         }
     }
@@ -891,10 +901,11 @@ struct FRD001RobustnessContractTests {
         }
     }
 
-    @Test("OC-1097: after stored, deduped, concealed, ignored-app, paused and over-limit copies the pasteboard is untouched")
+    /// OC-1097. Mutation: restore the old drop for Concealed: the final count is 1, not 2, and no secure row exists.
+    @Test("OC-1097: after stored, deduped, secure (concealed), ignored-app, paused and over-limit copies the pasteboard is untouched")
     func oc1097() async throws {
         // given six outcomes; after each the changeCount equals the user's own copy and Flotsam wrote nothing.
-        try await withRig { rig in
+        try await withRig(withVault: true) { rig in
             @MainActor func check(_ label: String, expectedTypes: [String], _ copy: () -> Void) async {
                 copy()
                 let mine = rig.pasteboard.changeCount
@@ -916,7 +927,9 @@ struct FRD001RobustnessContractTests {
             await check("paused", expectedTypes: [PB.text]) { rig.pasteboard.copyText(uid("paused")) }
             rig.settings.set(.active, for: SettingKeys.captureMode)
             await check("over limit", expectedTypes: [PB.text]) { rig.pasteboard.copyText(String(repeating: "c", count: tenMiB + 1)) }
-            try #expect(await rig.itemCount() == 1)
+            // stored text + the concealed copy kept as one secure item; the rejected three left nothing
+            try #expect(await rig.itemCount() == 2)
+            try #expect(await rig.secureRows().count == 1)
         }
     }
 
@@ -933,9 +946,22 @@ struct FRD001RobustnessContractTests {
         }
     }
 
-    @Test("OC-1101: a ConcealedType copy logs CAP-POL-001 at info only")
+    /// OC-1101. Mutation: log CAP-POL-001 above info or raise a HUD/Notice for it: expectInfoOnly goes red.
+    @Test("OC-1101: a TransientType copy logs CAP-POL-001 at info only")
     func oc1101() async throws {
         try await withRig { rig in
+            rig.pasteboard.copy([(PB.text, PB.data("s")), (PasteboardMarkers.transient, Data())])
+            await rig.process()
+            try #expect(await rig.itemCount() == 0)
+            expectInfoOnly(rig, .capPol001)
+        }
+    }
+
+    /// FR-001-04 gate 3 / CAP-POL-001: a concealed copy with no secure vault fails closed, still info only. This is the
+    /// path the old concealed tests ran by accident (the rig had no vault); here it is the stated case.
+    @Test("CAP-POL-001: a ConcealedType copy with no secure vault is skipped, at info only")
+    func concealedWithoutVaultLogsInfoOnly() async throws {
+        try await withRig(withVault: false) { rig in
             rig.pasteboard.copy([(PB.text, PB.data("s")), (PasteboardMarkers.concealed, Data())])
             await rig.process()
             try #expect(await rig.itemCount() == 0)
@@ -1022,7 +1048,8 @@ struct FRD001RobustnessContractTests {
 // OC-1084                    no seam: nothing raises CAP-PRM-001 at launch when the system access behaviour is not Allow
 //                            (PasteboardAccess feeds onboarding only). Reported as a defect from the code, not a test.
 // OC-1085 / OC-1086 (save)   the Save Clipboard action (AppContainer.saveClipboard) is a UI entry point; only the Curated
-//                            half of OC-1085 is covered above.
+//                            half of OC-1085 is covered above. The Save Clipboard of a concealed copy (a secure item
+//                            since TASK-498) is asserted in FRD005ContractTestsSaveClipboard (OC-5036).
 // OC-1096                    needs a network monitor on a live process.
 // OC-1093 (log show)         only the sink half and the diagnostics ring are reachable; `log show` is an app-process check.
 // OC-1059/1064/1069/1070 and OC-1100..OC-1107 UI halves (rows, preview, menu-bar icon rendering, HUD drawing): the
