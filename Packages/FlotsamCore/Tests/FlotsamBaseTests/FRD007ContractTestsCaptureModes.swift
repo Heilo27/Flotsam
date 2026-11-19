@@ -74,10 +74,8 @@ import Testing
     /// OC-7108. In every mode the menu has exactly one capture-mode row, it is Pause or Resume Capture, and no number
     /// of presses reaches Curated; Curated is reachable only by writing the setting (Storage), which persists.
     /// Red if a mode gains a second or a Curated row, a toggle's `next` becomes `.curated`, or the title is not Pause/Resume Capture.
-    /// [Spec Drift] FR-007-12 vs FR-008-16: for Curated, FR-007-12 says the menu item reads "Pause Capture" (and pauses);
-    /// FR-008-16 says it reads "Resume Capture" (and sets active). The title check below accepts either wording, so this
-    /// test takes neither side for Curated; the FR-008-16 side is pinned by Frd008ContractMenuTests, and the two copies
-    /// of the toggle rule are the known issue there. Surfaced to Friday; no FRD edited here.
+    /// FR-007-12 and FR-008-16 now agree: Pause Capture only in Active, Resume Capture (back to Active) in Paused and
+    /// Curated. Pinned for every mode by Frd008ContractMenuTests and the captureToggle(for:) test in this suite.
     @Test("OC-7108 the menu offers only Pause or Resume Capture in every mode and no press selects Curated")
     func oc7108_menuNeverOffersCurated() {
         let titles = ["Pause Capture", "Resume Capture"]

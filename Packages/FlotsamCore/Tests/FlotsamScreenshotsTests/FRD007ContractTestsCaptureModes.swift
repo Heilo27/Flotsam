@@ -79,4 +79,43 @@ struct FRD007ContractCaptureModeScreenshotTests {
         #expect(rig.ingest.candidates.isEmpty)
         #expect(FileManager.default.fileExists(atPath: shot.path))
     }
+
+    /// FR-007-12 / AC-007-10 (screenshot pickup, the persisted half). Paused and Curated both let the reconcile scan advance
+    /// `screenshots.lastScanAt` without importing, so the persisted watermark ends up past a screenshot taken in the
+    /// mode (what keeps it from being imported after a relaunch or a resume). Asserted on the persisted watermark
+    /// itself, not on a later import. Red if a non-importing scan stops advancing the watermark (the empty-list
+    /// checks above are then carried by the mode-change advance alone).
+    @Test("FR-007-12 Paused and Curated: a reconcile scan advances lastScanAt past the screenshot and imports nothing",
+          arguments: [CaptureMode.paused, CaptureMode.curated])
+    func pickupAdvancesWatermarkWithoutImporting(mode: CaptureMode) async throws {
+        // given the mode set before launch, the watermark 10 s back, and a screenshot taken now
+        let rig = try WatcherRig(watermark: earlierLaunch())
+        defer { rig.cleanUp() }
+        rig.settings.set(mode, for: SettingKeys.captureMode)
+        await rig.watcher.start()
+        let shot = try rig.shot(in: rig.desktop)
+        let shotTime = rig.clock.now()
+        let before = try #require(rig.marks.value)
+
+        // when 60 s pass and the app becomes active (a reconcile scan; not the 30 s tick, which advances the watermark
+        // in every mode and would hide a scan that does not)
+        rig.clock.advance(by: 60)
+        await rig.watcher.didBecomeActive()
+        await letItSettle()
+
+        // then the persisted watermark moved past the screenshot, nothing was imported, the file is on disk
+        let after = try #require(rig.marks.value)
+        #expect(after > before, "\(mode): the watermark did not move")
+        #expect(after >= shotTime.addingTimeInterval(59), "\(mode): the watermark did not pass the screenshot")
+        #expect(rig.ingest.candidates.isEmpty, "\(mode): nothing is imported")
+        #expect(FileManager.default.fileExists(atPath: shot.path))
+
+        // control: Active over the same sequence imports the screenshot, so the empty list above is the mode
+        let live = try WatcherRig(watermark: earlierLaunch())
+        defer { live.cleanUp() }
+        await live.watcher.start()
+        let liveShot = try live.shot(in: live.desktop)
+        live.event(liveShot)
+        #expect(await eventually { live.ingest.names == [liveShot.lastPathComponent] })
+    }
 }
