@@ -117,4 +117,12 @@ enum Schema {
             END;
             """)
     }
+
+    /// A bundle's own name (FRD-007 FR-007-03, FRD-004 FR-004-15). NULL is "no name": the row shows the default
+    /// primary line. Existing rows take NULL, so there is nothing to backfill.
+    static func createVersion3(_ db: Database) throws {
+        try db.execute(sql: """
+            ALTER TABLE item ADD COLUMN name TEXT CHECK (name IS NULL OR length(name) BETWEEN 1 AND 100);
+            """)
+    }
 }

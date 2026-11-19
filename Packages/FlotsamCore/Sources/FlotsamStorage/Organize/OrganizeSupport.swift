@@ -14,6 +14,8 @@ public enum OrganizeLimits {
     public static let maxTagNameCharacters = 32
     public static let maxTags = 100
     public static let maxTagsPerItem = 10
+    /// FR-004-15: a bundle's name, in characters.
+    public static let maxBundleNameCharacters = 100
 }
 
 extension FlotsamDatabase {

@@ -161,6 +161,26 @@
         }
       }
     },
+    "error.ORG-VAL-004" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose 2 to 500 files or folders to group."
+          }
+        }
+      }
+    },
+    "error.ORG-VAL-005" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle names can be up to 100 characters."
+          }
+        }
+      }
+    },
     "error.SET-DAT-001" : {
       "localizations" : {
         "en" : {
@@ -2193,6 +2213,16 @@
         }
       }
     },
+    "ui.organize.buttonGroup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group"
+          }
+        }
+      }
+    },
     "ui.organize.buttonRemove" : {
       "localizations" : {
         "en" : {
@@ -2377,6 +2407,16 @@
         }
       }
     },
+    "ui.organize.confirmGroup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group these items into a bundle? Their notes, pins, triggers and hotkeys are not carried over to the bundle."
+          }
+        }
+      }
+    },
     "ui.organize.confirmUngroup" : {
       "localizations" : {
         "en" : {
@@ -2433,6 +2473,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Edit…"
+          }
+        }
+      }
+    },
+    "ui.organize.menuGroup" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group into Bundle"
           }
         }
       }
@@ -2695,6 +2745,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Adds the common password managers to this list. Flotsam then stores nothing copied from them, not even encrypted."
+          }
+        }
+      }
+    },
+    "ui.settings.autoBundle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Group copied files into a bundle"
+          }
+        }
+      }
+    },
+    "ui.settings.autoBundleHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copying several files at once keeps them together as one bundle. Off, each file is its own item."
           }
         }
       }

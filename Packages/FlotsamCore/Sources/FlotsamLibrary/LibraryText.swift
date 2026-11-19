@@ -56,6 +56,7 @@ public enum LibraryText {
     }
 
     public static let confirmUngroup = "ui.organize.confirmUngroup"
+    public static let confirmGroup = "ui.organize.confirmGroup"
 
     public static let tagFieldPlaceholder = "ui.organize.tagFieldPlaceholder"
     public static let tagsTitle = "ui.organize.tagsTitle"
@@ -67,6 +68,7 @@ public enum LibraryText {
     public static let menuNote = "ui.organize.menuNote"
     public static let menuEdit = "ui.organize.menuEdit"
     public static let menuUngroup = "ui.organize.menuUngroup"
+    public static let menuGroup = "ui.organize.menuGroup"
     public static let menuDelete = "ui.organize.menuDelete"
     public static let menuRename = "ui.organize.menuRename"
     public static let menuColor = "ui.organize.menuColor"
@@ -75,6 +77,7 @@ public enum LibraryText {
     public static let buttonDelete = "ui.organize.buttonDelete"
     public static let buttonRemove = "ui.organize.buttonRemove"
     public static let buttonUngroup = "ui.organize.buttonUngroup"
+    public static let buttonGroup = "ui.organize.buttonGroup"
 
     public static func colorName(_ color: TagColor) -> String {
         string("ui.organize.color" + color.rawValue.prefix(1).uppercased() + color.rawValue.dropFirst())

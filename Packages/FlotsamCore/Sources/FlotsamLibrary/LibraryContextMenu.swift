@@ -32,7 +32,11 @@ public enum LibraryContextMenu {
             if kind.isTextEditable, !isSecure { entries.append(plain(LibraryText.menuEdit, .external(.edit))) }
         }
         if ShortcutEditorRule.allows(isSingleItem: singleTarget, isSecure: isSecure) { entries.append(plain(LibraryText.menuShortcutAndTrigger, .external(.shortcutAndTrigger))) }
-        if singleTarget, kind == .bundle { entries.append(plain(LibraryText.menuUngroup, .external(.ungroup))) }
+        if singleTarget, kind == .bundle {
+            entries.append(plain(LibraryText.menuRename, .external(.renameBundle)))
+            entries.append(plain(LibraryText.menuUngroup, .external(.ungroup)))
+        }
+        if !singleTarget, kind.referencesFiles { entries.append(plain(LibraryText.menuGroup, .external(.group))) }
         entries.append(.separator)
         if kind.referencesFiles {
             entries.append(plain(LibraryText.menuReveal, .revealInFinder))

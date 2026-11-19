@@ -59,6 +59,10 @@ struct GeneralPane: View {
                 Text(.libraryLayoutHelp).settingsCaption()
             }
             Section {
+                Toggle(isOn: model.binding(SettingKeys.captureAutoBundle)) { Text(.autoBundle) }
+                Text(.autoBundleHelp).settingsCaption()
+            }
+            Section {
                 Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
             }
         }

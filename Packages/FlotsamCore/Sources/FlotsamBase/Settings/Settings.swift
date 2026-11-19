@@ -33,6 +33,8 @@ public struct SettingDescriptor: Sendable, Equatable {
 /// The settings registry (FR-008-01): the single list of every setting key, type and default.
 public enum SettingKeys {
     public static let captureMode = SettingKey("capture.mode", default: CaptureMode.active, owner: "FR-007-12")
+    /// Whether a copy of several files becomes one bundle (FR-001-12); off keeps one item per file.
+    public static let captureAutoBundle = SettingKey("capture.autoBundle", default: true, owner: "FR-001-12")
     public static let screenshotsEnabled = SettingKey("screenshots.enabled", default: true, owner: "FR-002-05")
     public static let screenshotsFolderOverride = SettingKey(
         "screenshots.folderOverride", default: FolderOverride.none, owner: "FR-002-01", validator: { $0.isUsable })
@@ -71,7 +73,7 @@ public enum SettingKeys {
 
     /// Every row, in the order of the FR-008-01 table. A test pins this list to the table and to the source.
     public static let all: [SettingDescriptor] = [
-        captureMode.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
+        captureMode.descriptor, captureAutoBundle.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
         shelfEnabled.descriptor, shelfPlacement.descriptor, shelfRevealOnEdgeHover.descriptor,
         shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsToggleShelf.descriptor,
         shortcutsPasteQueue.descriptor,

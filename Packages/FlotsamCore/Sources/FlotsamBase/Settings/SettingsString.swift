@@ -17,6 +17,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case revealAtEdge, showSetupGuide, historyHelp
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
+    /// The auto-bundle row (FR-001-12, FR-008-04): label and caption.
+    case autoBundle, autoBundleHelp
 
     // Shortcuts
     case shortcutOpenLibrary, shortcutSaveClipboard, shortcutToggleShelf, shortcutPasteQueue

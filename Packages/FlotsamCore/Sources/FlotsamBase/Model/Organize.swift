@@ -44,13 +44,18 @@ public struct ItemClassifiers: Sendable {
     public let editedText: @Sendable (String) -> ItemClassification
     /// Kind and key of one bundle member split out by Ungroup: path and whether it is a directory.
     public let fileMember: @Sendable (String, Bool) -> ItemClassification
+    /// Kind and key of the bundle Group builds from these member paths, in order (FR-004-15): what a copy of the same
+    /// files would be (FR-001-12). Nil on a value built without it, which cannot group.
+    public let fileSet: (@Sendable ([String]) -> ItemClassification)?
 
     public init(
         editedText: @escaping @Sendable (String) -> ItemClassification,
-        fileMember: @escaping @Sendable (String, Bool) -> ItemClassification
+        fileMember: @escaping @Sendable (String, Bool) -> ItemClassification,
+        fileSet: (@Sendable ([String]) -> ItemClassification)? = nil
     ) {
         self.editedText = editedText
         self.fileMember = fileMember
+        self.fileSet = fileSet
     }
 }
 

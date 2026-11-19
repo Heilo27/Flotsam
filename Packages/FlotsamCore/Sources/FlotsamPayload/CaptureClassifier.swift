@@ -88,16 +88,28 @@ public enum CaptureClassifier {
         guard seenAny else { return .failure(FlotsamError(.capDat001, "copied files no longer exist")) }
 
         let paths = members.map(\.path)
-        let kind: ItemKind
+        let keyed: ItemClassification
         if members.count > 1 {
-            kind = .bundle
+            keyed = classifyFileSet(paths: paths)
         } else if let only = members.first {
-            kind = memberKind(path: only.path, isDirectory: only.isDirectory)
+            keyed = classifyMember(path: only.path, isDirectory: only.isDirectory)
         } else {
-            kind = .file
+            keyed = ItemClassification(kind: .file, contentKey: ContentKey.files(paths: paths))
         }
         return .success(Classification(
-            kind: kind, contentKey: ContentKey.files(paths: paths), plainText: nil,
+            kind: keyed.kind, contentKey: keyed.contentKey, plainText: nil,
             representations: [], members: members))
+    }
+
+    /// FR-001-12: with auto-bundling off, a copy of several files is one item per file, in pasteboard order. Each
+    /// member is classified exactly as a copy of that one file would be, so it dedupes against one. Anything that is
+    /// not a multi-member file set comes back as it is.
+    public static func splitIntoMembers(_ classification: Classification) -> [Classification] {
+        guard classification.kind == .bundle, classification.members.count > 1 else { return [classification] }
+        return classification.members.map { member in
+            let keyed = classifyMember(path: member.path, isDirectory: member.isDirectory)
+            return Classification(
+                kind: keyed.kind, contentKey: keyed.contentKey, plainText: nil, representations: [], members: [member])
+        }
     }
 }

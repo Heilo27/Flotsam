@@ -16,7 +16,7 @@ enum SearchIndex {
         guard let row = try Row.fetchOne(
             db,
             sql: """
-                SELECT kind, substr(plainText, 1, ?) AS text, note, sourceName, originalPath, isSecure
+                SELECT kind, substr(plainText, 1, ?) AS text, note, name, sourceName, originalPath, isSecure
                 FROM item WHERE id = ?
                 """,
             arguments: [plainTextCharacterLimit, itemId])
@@ -28,6 +28,7 @@ enum SearchIndex {
         let isSecure: Bool = row["isSecure"]
         if !isSecure, let text: String = row["text"] { fields.append(text) }
         if let note: String = row["note"] { fields.append(note) }
+        if let name: String = row["name"] { fields.append(name) }
         fields += try String.fetchAll(
             db,
             sql: "SELECT tag.name FROM itemTag JOIN tag ON tag.id = itemTag.tagId WHERE itemTag.itemId = ? ORDER BY tag.name",

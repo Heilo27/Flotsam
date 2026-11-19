@@ -273,7 +273,7 @@ extension FlotsamDatabase {
         let rows = try Row.fetchAll(
             db,
             sql: """
-                SELECT id, kind, lastCopiedAt, pasteCount, substr(plainText, 1, ?) AS text, sourceName, pinned,
+                SELECT id, kind, lastCopiedAt, pasteCount, substr(plainText, 1, ?) AS text, name, sourceName, pinned,
                        "trigger" IS NOT NULL AS hasTrigger, hotkeyCode IS NOT NULL AS hasShortcut,
                        isSecure, pixelWidth, pixelHeight, byteSize,
                        (SELECT COUNT(*) FROM bundleMember WHERE bundleMember.itemId = item.id) AS memberCount
@@ -307,7 +307,8 @@ extension FlotsamDatabase {
                 // A secure clip shows the mask and nothing of its text, in rows, search results and the sort.
                 primaryLine: isSecure ? SecureClip.mask : PrimaryLine.text(
                     kind: ItemKind(rawValue: kind) ?? .text, plainText: row["text"], pixelWidth: row["pixelWidth"],
-                    pixelHeight: row["pixelHeight"], memberCount: memberCount, memberNames: names[id] ?? []),
+                    pixelHeight: row["pixelHeight"], memberCount: memberCount, memberNames: names[id] ?? [],
+                    bundleName: row["name"]),
                 sourceName: row["sourceName"], isPinned: row["pinned"] == 1, hasTrigger: row["hasTrigger"],
                 hasShortcut: row["hasShortcut"], isSecure: isSecure, pixelWidth: row["pixelWidth"],
                 pixelHeight: row["pixelHeight"], memberCount: memberCount, byteSize: row["byteSize"])

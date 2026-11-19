@@ -99,6 +99,14 @@ public final class ClipboardCapture {
         self.pollTick = pollTick
     }
 
+    /// The ingest worker, reading `capture.autoBundle` at each payload so a change applies to the next copy (FR-001-12).
+    private func makeWorker() -> IngestWorker {
+        let settings = settings
+        return IngestWorker(
+            ingest: ingest, reporter: reporter, sink: sink, vault: vault,
+            autoBundle: { settings.value(SettingKeys.captureAutoBundle) })
+    }
+
     // MARK: Lifecycle
 
     /// Starts the poll and the ingest consumer, then runs the launch check (FR-001-02 d). When the system reports an
@@ -108,7 +116,7 @@ public final class ClipboardCapture {
         isStarted = true
         let (stream, continuation) = AsyncStream<CapturedPayload>.makeStream()
         self.continuation = continuation
-        let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink, vault: vault)
+        let worker = makeWorker()
         consumer = Task.detached(priority: .utility) {
             for await payload in stream { await worker.handle(payload) }
         }
@@ -341,7 +349,7 @@ public final class ClipboardCapture {
         case .failure(.silent(let code)):
             return .rejected(FlotsamError(code, "Save Clipboard: pasteboard reads return no data"))
         case .success(let payload):
-            let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink, vault: vault)
+            let worker = makeWorker()
             if let error = await worker.handle(payload, reportingFailure: false) { return .rejected(error) }
             return .saved
         }
