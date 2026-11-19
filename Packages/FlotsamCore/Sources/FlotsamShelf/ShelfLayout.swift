@@ -61,8 +61,9 @@ public enum ShelfLayout {
 
     // MARK: Hot zone
 
-    /// True for the placements that lay the cards in one horizontal row.
-    public static func isHorizontal(_ placement: ShelfPlacement) -> Bool { placement == .bottomEdge }
+    /// True for the placements that lay the cards in one horizontal row (FR-006-07): the bottom strip and the top-centre
+    /// row hung from the menu bar. They share one height, one width rule and one card size.
+    public static func isHorizontal(_ placement: ShelfPlacement) -> Bool { placement == .bottomEdge || placement == .topCenter }
 
     /// The strip of `screenFrame` (the whole screen, not the visible frame, because the pointer rests at the physical
     /// edge) that reveals the Shelf: 4 pt thick over the middle 60 % of the edge. `nil` for the menu-bar placement,
@@ -75,21 +76,31 @@ public enum ShelfLayout {
             let originY = screenFrame.midY - length / 2
             let originX = placement == .rightEdge ? screenFrame.maxX - thickness : screenFrame.minX
             return CGRect(x: originX, y: originY, width: thickness, height: length)
-        case .bottomEdge:
+        case .bottomEdge, .topCenter:
             let length = screenFrame.width * edgeZoneLengthFraction
-            return CGRect(x: screenFrame.midX - length / 2, y: screenFrame.minY, width: length, height: thickness)
+            let originY = placement == .topCenter ? screenFrame.maxY - thickness : screenFrame.minY
+            return CGRect(x: screenFrame.midX - length / 2, y: originY, width: length, height: thickness)
         case .menuBar:
             return nil
         }
     }
 
-    /// The index of the first screen whose edge zone holds `point`, or `nil`. A point on the far border of the
-    /// zone counts as inside, because the pointer's position on the last pixel of a screen is its maxX or maxY.
+    /// The index of the screen whose edge zone holds `point`, or `nil`. The screen is the one `screenIndex(containing:in:)`
+    /// names, so a point on a seam between two screens is never offered the zone of the screen it just left.
     public static func screenIndex(of point: CGPoint, placement: ShelfPlacement, screens: [CGRect]) -> Int? {
-        screens.firstIndex { screen in
-            guard let zone = edgeZone(for: placement, in: screen) else { return false }
-            return point.x >= zone.minX && point.x <= zone.maxX && point.y >= zone.minY && point.y <= zone.maxY
-        }
+        guard let index = screenIndex(containing: point, in: screens),
+            let zone = edgeZone(for: placement, in: screens[index]), contains(zone, point)
+        else { return nil }
+        return index
+    }
+
+    /// The one answer to "which screen is this point on" (the reveal's screen, the icon's screen, the edge zone's
+    /// screen). Containment is half-open, so the seam column or row between two screens belongs to exactly one of
+    /// them (the one whose min edge it is). The pointer's position on the physical last column or row of the desktop is
+    /// the screen's maxX or maxY, which no screen contains half-open: that point falls back to the first screen that
+    /// holds it with its borders, so the top row of a screen with nothing above it still resolves to that screen.
+    public static func screenIndex(containing point: CGPoint, in screens: [CGRect]) -> Int? {
+        screens.firstIndex { $0.contains(point) } ?? screens.firstIndex { contains($0, point) }
     }
 
     // MARK: Frame
@@ -127,10 +138,12 @@ public enum ShelfLayout {
             let height = verticalHeight(contentExtent, in: visibleFrame)
             let originX = placement == .rightEdge ? visibleFrame.maxX - width : visibleFrame.minX
             return CGRect(x: originX, y: visibleFrame.midY - height / 2, width: width, height: height)
-        case .bottomEdge:
+        case .bottomEdge, .topCenter:
             let width = min(max(contentExtent, panelWidth), visibleFrame.width * bottomMaxWidthFraction)
             let height = min(bottomHeight, visibleFrame.height)
-            return CGRect(x: visibleFrame.midX - width / 2, y: visibleFrame.minY, width: width, height: height)
+            // The top-centre row hangs from the top of the visible frame, which is the bottom edge of the menu bar.
+            let originY = placement == .topCenter ? visibleFrame.maxY - height : visibleFrame.minY
+            return CGRect(x: visibleFrame.midX - width / 2, y: originY, width: width, height: height)
         case .menuBar:
             let width = min(panelWidth, visibleFrame.width)
             let anchorX = menuBarIcon?.midX ?? visibleFrame.maxX
@@ -147,6 +160,40 @@ public enum ShelfLayout {
             return CGSize(width: bottomCardWidth, height: bottomHeight - contentPadding * 2)
         }
         return CGSize(width: panelWidth - contentPadding * 2, height: cardHeight)
+    }
+
+    /// Where a slide starts and ends (FR-006-05): `frame` moved out past its own edge of `visibleFrame`. The top-centre
+    /// row slides down from, and back up under, the menu bar.
+    public static func offscreenFrame(_ frame: CGRect, placement: ShelfPlacement, in visibleFrame: CGRect) -> CGRect {
+        var moved = frame
+        switch placement {
+        case .rightEdge: moved.origin.x = visibleFrame.maxX
+        case .leftEdge: moved.origin.x = visibleFrame.minX - frame.width
+        case .bottomEdge: moved.origin.y = visibleFrame.minY - frame.height
+        case .menuBar, .topCenter: moved.origin.y = visibleFrame.maxY
+        }
+        return moved
+    }
+
+    /// The area in which the pointer counts as being on a visible Shelf (FR-006-04): the panel, and for the top-centre
+    /// row, while `menuBarStripCounts`, also the strip between the panel and the physical top of the screen, which is
+    /// the menu bar. With hover reveal on, the pointer that revealed the row rests at that top edge, so without the
+    /// strip it would count as having left the Shelf and the row would hide 600 ms after it appeared. The strip counts
+    /// only while the mouse-moved monitor is installed (hover on): without it nothing reports a pointer moving
+    /// sideways inside the strip, so the leave would never be seen and the Shelf would stay (TASK-557 class).
+    public static func pointerArea(
+        for placement: ShelfPlacement, panelFrame: CGRect, screenFrame: CGRect, menuBarStripCounts: Bool
+    ) -> CGRect {
+        guard placement == .topCenter, menuBarStripCounts, screenFrame.maxY > panelFrame.maxY else { return panelFrame }
+        return CGRect(x: panelFrame.minX, y: panelFrame.minY, width: panelFrame.width, height: screenFrame.maxY - panelFrame.minY)
+    }
+
+    /// True when `point` is inside `area`, borders included: the pointer on the last pixel of a screen sits at its
+    /// maxX or maxY, which `CGRect.contains` would call outside. For the panel and its pointer area only; which screen
+    /// a point is on goes through `screenIndex(containing:in:)`. An empty area contains nothing.
+    public static func contains(_ area: CGRect, _ point: CGPoint) -> Bool {
+        guard !area.isEmpty else { return false }
+        return point.x >= area.minX && point.x <= area.maxX && point.y >= area.minY && point.y <= area.maxY
     }
 
     private static func verticalHeight(_ contentHeight: CGFloat, in visibleFrame: CGRect) -> CGFloat {

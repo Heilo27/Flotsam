@@ -13,7 +13,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case pickUpScreenshots, screenshotFolder, folderSystemDefault, chooseFolder, useSystemDefault
     /// The always-available backfill button (FR-002-12).
     case importRecentScreenshots
-    case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar
+    case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
     case revealAtEdge, showSetupGuide, historyHelp
 
     // Shortcuts

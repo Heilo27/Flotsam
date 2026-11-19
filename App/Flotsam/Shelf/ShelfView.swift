@@ -6,7 +6,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// The Shelf's contents (FR-006-06, FR-006-07, FR-006-09, FR-006-19): the Pinned and Recent sections as a vertical list,
-/// or one horizontal strip for the bottom placement, the empty state, and a close button. What a card shows is decided
+/// or one horizontal strip for the bottom and top-centre placements, the empty state, and a close button. What a card shows is decided
 /// by `ShelfCardPresentation` and what a click does by `ShelfModel`; this only draws and forwards.
 struct ShelfView: View {
     let model: ShelfModel

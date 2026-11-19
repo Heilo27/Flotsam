@@ -32,7 +32,7 @@ Get a new user from "just installed" to "capturing and recoverable" without read
   | `screenshots.enabled` | bool | true | FRD-002 FR-002-05 | General |
   | `screenshots.folderOverride` | security-scoped bookmark, or none | none | FRD-002 FR-002-01 | General |
   | `shelf.enabled` | bool | true | FRD-006 FR-006-01 | General |
-  | `shelf.placement` | enum `rightEdge`, `leftEdge`, `bottomEdge`, `menuBar` | `rightEdge` | FRD-006 FR-006-01 | General |
+  | `shelf.placement` | enum `rightEdge`, `leftEdge`, `bottomEdge`, `menuBar`, `topCenter` | `rightEdge` | FRD-006 FR-006-01 | General |
   | `shelf.revealOnEdgeHover` | bool | false | FRD-006 FR-006-01 | General |
   | `shortcuts.openLibrary` | chord (key code and modifiers) or none | ⌃⌘V | FRD-005 FR-005-01 | Shortcuts |
   | `shortcuts.saveClipboard` | chord or none | none | FRD-005 FR-005-01 | Shortcuts |
@@ -138,7 +138,7 @@ Get a new user from "just installed" to "capturing and recoverable" without read
 | Pick up screenshots | switch | General | `screenshots.enabled` |
 | Screenshot folder | label, "Choose…" button, "Use System Default" button, inline error | General | FR-008-10 |
 | Shelf | switch | General | `shelf.enabled` |
-| Shelf placement | popup (Right Edge, Left Edge, Bottom Edge, Menu Bar) | General | `shelf.placement` |
+| Shelf placement | popup (Right Edge, Left Edge, Bottom Edge, Menu Bar, Top Center) | General | `shelf.placement` |
 | Reveal at edge | switch | General | `shelf.revealOnEdgeHover` |
 | Import Recent Screenshots | button | General | FRD-002 FR-002-12; HUD "Imported {n}" |
 | Show Setup Guide… | button | General | reopens onboarding |

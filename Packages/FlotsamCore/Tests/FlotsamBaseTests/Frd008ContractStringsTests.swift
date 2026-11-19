@@ -72,6 +72,7 @@ struct Frd008ContractStringsTests {
         "ui.settings.showSetupGuide": "button", "ui.settings.useSystemDefault": "button", "ui.settings.viewLicence": "button",
         "ui.settings.placementRightEdge": "popup value", "ui.settings.placementLeftEdge": "popup value",
         "ui.settings.placementBottomEdge": "popup value", "ui.settings.placementMenuBar": "popup value",
+        "ui.settings.placementTopCenter": "popup value",
         "ui.settings.shortcutOpenLibrary": "menu item name", "ui.settings.shortcutSaveClipboard": "menu item name",
         "ui.settings.shortcutToggleShelf": "menu item name",
         "ui.settings.editorWindow": "window title",

@@ -74,9 +74,9 @@ import Testing
                 "no Settings string is an Apply, Save or OK button (the shortcut editor's Save is FR-005, not a pane)")
     }
 
-    // OC-8030. General's popup and buttons: four placements in order and the stated button texts.
+    // OC-8030. General's popup and buttons: five placements in order (Top Center added by TASK-533, FRD-008 AC-008-04) and the stated button texts.
     @Test func oc8030_generalPaneLabelsAndPlacementItems() {
-        #expect(ShelfPlacement.allCases.map { $0.label.text } == ["Right Edge", "Left Edge", "Bottom Edge", "Menu Bar"])
+        #expect(ShelfPlacement.allCases.map { $0.label.text } == ["Right Edge", "Left Edge", "Bottom Edge", "Menu Bar", "Top Center"])
         #expect(SettingsString.chooseFolder.text == "Choose…")
         #expect(SettingsString.useSystemDefault.text == "Use System Default")
         #expect(SettingsString.showSetupGuide.text == "Show Setup Guide…")
