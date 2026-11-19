@@ -247,6 +247,15 @@ private final class PipelineRig: @unchecked Sendable {
 
     func waitForCount(_ expected: Int) async -> Bool { await pipelineEventually { await count() == expected } }
 
+    /// Waits until the watcher itself has finished `expected` imports (it logs `screenshot.imported` once an import's
+    /// bookkeeping is done: no longer pending, remembered as ingested live). The Library count (`waitForCount`) turns
+    /// over a moment earlier, while the watcher still holds the file as in flight, and a press that lands in that
+    /// moment joins the file and counts it as its own (FR-002-12), so a test that presses right after live imports
+    /// waits on this first (TASK-496).
+    func waitForWatcherImports(_ expected: Int) async -> Bool {
+        await pipelineEventually { sink.records.filter { $0.headline == "screenshot.imported" }.count == expected }
+    }
+
     /// Rows read through a fresh instance.
     func freshRows(_ query: LibraryQuery = LibraryQuery()) async throws -> [ItemRow] {
         try await fresh().items(matching: query).get().rows
@@ -644,6 +653,8 @@ struct FRD002PipelineSessionTests {
         rig.event(copy)
         let id0 = try #require(await rig.rows().first { $0.pixelWidth == shots[0].width }?.id)
         #expect(await pipelineEventually { ((try? await rig.database.content(of: id0).get())?.copyCount ?? 0) >= 2 })
+        // The watcher's own bookkeeping for all 11 pickups (10 imports, the dedupe) is done before the press scans W.
+        #expect(await rig.waitForWatcherImports(11), "the watcher never finished its 11 live pickups")
         let old = try (0..<2).map { try rig.shot(born: rig.clock.now().addingTimeInterval(-7_200 - Double($0))) }
         for shot in old { expected[shot.name] = pipelineSnapshot(shot.url) }
         shots += old
