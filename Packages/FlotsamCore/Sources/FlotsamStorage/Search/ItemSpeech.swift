@@ -50,7 +50,8 @@ public enum ItemSpeech {
     /// than 7 days old). The label's finest step is the one the formatter shows for the copy's age: seconds under a
     /// minute ("5s ago"), then minutes, then hours, each cut off (never rounded) at its step. From the first calendar day
     /// on, the formatter counts days on `calendar`, not 86,400 s units, so the next change is the next calendar day after
-    /// the copy's time of day; that is 23 or 25 hours away across a daylight-saving change. A copy dated ahead of `now`
+    /// the copy's time of day, which is 23 or 25 hours away across a daylight-saving change, but never later than the second
+    /// the copy passes the 7-day cutoff (the last day label turns into a date on time, FR-003-24). A copy dated ahead of `now`
     /// reads "now" until a second after its date. This is the one rule for how often a visible label needs a fresh `now`
     /// (FR-003-24).
     public static func secondsUntilRelativeTimeChanges(
@@ -61,11 +62,14 @@ public enum ItemSpeech {
         if age > relativeWindow { return nil }
         let firstDay = calendar.date(byAdding: .day, value: 1, to: date)
         if let firstDay, now >= firstDay {
+            // The cutoff is an absolute 604,800 s, not calendar days, so a day step that would land past it (a
+            // daylight-saving week is 23 h short or 25 h long) is cut back to the second the copy turns a date.
+            let untilCutoff = date.addingTimeInterval(relativeWindow + 1).timeIntervalSince(now)
             let days = max(calendar.dateComponents([.day], from: date, to: now).day ?? 1, 1)
             if let next = calendar.date(byAdding: .day, value: days + 1, to: date), next > now {
-                return next.timeIntervalSince(now)
+                return min(next.timeIntervalSince(now), untilCutoff)
             }
-            return 3_600  // the calendar could not name the next day: poll hourly rather than guess
+            return min(3_600, untilCutoff)  // the calendar could not name the next day: poll hourly rather than guess
         }
         let step: TimeInterval = age < 60 ? 1 : age < 3_600 ? 60 : 3_600
         let untilStep = step - age.truncatingRemainder(dividingBy: step)
