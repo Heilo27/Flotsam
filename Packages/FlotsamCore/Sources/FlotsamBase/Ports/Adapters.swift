@@ -137,21 +137,32 @@ public struct LocalFileSystem: FileSystemPort {
     }
 }
 
-/// `UserDefaults`-backed `KeyValueStore` (UserDefaults is thread-safe).
+/// `UserDefaults`-backed `KeyValueStore` (UserDefaults is thread-safe). The one place the standard domain and the
+/// suite initialiser are spelled; callers get a store through `LaunchIsolation.settingsStore()` below (TASK-519).
 public struct UserDefaultsStore: KeyValueStore {
     // Allowed unsafe-sendability exception (c), ADR-0004: Apple documents UserDefaults as thread-safe.
     private nonisolated(unsafe) let defaults: UserDefaults
 
-    public init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    public init(defaults: UserDefaults) { self.defaults = defaults }
+
+    /// The app's own domain when `suiteName` is nil, otherwise that suite. nil when the system refuses the name.
+    public init?(suiteName: String?) {
+        guard let suiteName else {
+            self.init(defaults: .standard)
+            return
+        }
+        guard let suite = UserDefaults(suiteName: suiteName) else { return nil }
+        self.init(defaults: suite)
+    }
 
     public func string(forKey key: String) -> String? { defaults.string(forKey: key) }
     public func setString(_ value: String, forKey key: String) { defaults.set(value, forKey: key) }
     public func removeValue(forKey key: String) { defaults.removeObject(forKey: key) }
 }
 
-extension KeyValueStore where Self == UserDefaultsStore {
-    /// The app's settings store, named so callers outside this file never spell the UserDefaults type (ADR-0009).
-    public static var standard: UserDefaultsStore { UserDefaultsStore() }
+extension LaunchIsolation {
+    /// The settings store over this launch's defaults domain. nil only when the system refuses the suite name.
+    public func settingsStore() -> (any KeyValueStore)? { UserDefaultsStore(suiteName: defaultsSuite) }
 }
 
 /// `com.apple.screencapture` read through CFPreferences. Synchronises before each read so a `defaults write` made

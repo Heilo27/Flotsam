@@ -24,7 +24,9 @@ final class AppContainer {
     /// (no HUD), via `reporter`.
     let settings: SettingsStore
     /// The resume point of an unfinished onboarding; progress, not a preference, so it is not in the registry.
-    let onboardingProgress = OnboardingProgress(store: .standard)
+    let onboardingProgress: OnboardingProgress
+    /// The data folder, the settings store and the secure-item services this launch uses (TASK-519).
+    private let environment: AppEnvironment
     let permissions: any PermissionProbe
     let loginItem: LoginItemController
     /// What the menu and onboarding can trigger. Each owning FRD fills its own closure; a nil one disables its menu row.
@@ -83,22 +85,25 @@ final class AppContainer {
     private var itemEditor: ItemBindingsEditorWindowController?
 
     init() {
-        let presenter = ErrorPresenterAdapter(dataFolder: Self.dataFolder)
+        let environment = AppEnvironment.launch()
+        self.environment = environment
+        onboardingProgress = OnboardingProgress(store: environment.settingsStore)
+        let presenter = ErrorPresenterAdapter(dataFolder: environment.dataFolder)
         let reporter = ErrorReporter(presenter: presenter)
         self.presenter = presenter
         self.reporter = reporter
         importRecent = ImportRecentCoordinator(hud: { message in presenter.showHUD(message: message) })
         // FR-008-11: before anything reads the list, so a never-customised old default does not keep the password managers
         // ignored.
-        IgnoredAppsMigration.run(on: .standard)
-        settings = SettingsStore(store: .standard) { _ in
+        IgnoredAppsMigration.run(on: environment.settingsStore)
+        settings = SettingsStore(store: environment.settingsStore) { _ in
             let error = FlotsamError(.setDat001, "A stored setting was invalid and was reset to its default")
             Task { await reporter.report(error, origin: .background) }
         }
         permissions = SystemPermissionProbe()
-        let vault = SecureClipVault(store: KeychainSecureKeyStore())
+        let vault = SecureClipVault(store: environment.secureKeys)
         secureVault = vault
-        secureAccess = SecureClipAccess(vault: vault, authenticator: LocalAuthenticator())
+        secureAccess = SecureClipAccess(vault: vault, authenticator: environment.authenticator)
         loginItem = LoginItemController(service: SMLoginItemService())
         // FR-002-12 / FR-008-04: the action exists from construction, so a click before pickup is wired is never a no-op.
         actions.importRecentScreenshots = { [weak self] in self?.importRecent.request() }
@@ -135,11 +140,12 @@ final class AppContainer {
         let permissions = permissions
         let storage = SettingsStorage(database: { [weak self] in self?.database })
         let loginItem = loginItem
-        let environment = SettingsEnvironment(
+        let dataFolder = environment.dataFolder
+        let settingsEnvironment = SettingsEnvironment(
             settings: settings, login: loginItem,
             openLoginItems: { loginItem.openLoginItemsSettings() },
-            permissions: permissions, shortcuts: shortcuts, storage: storage, dataFolder: Self.dataFolder,
-            revealDataFolder: { NSWorkspace.shared.open(Self.dataFolder) },
+            permissions: permissions, shortcuts: shortcuts, storage: storage, dataFolder: dataFolder,
+            revealDataFolder: { NSWorkspace.shared.open(dataFolder) },
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             hud: { message in presenter.showHUD(message: message) },
             showSetupGuide: showSetupGuide,
@@ -147,20 +153,13 @@ final class AppContainer {
             copyDiagnostics: {
                 await SettingsDiagnostics.copy(settings: settings, probe: permissions, storage: storage, reporter: reporter)
             })
-        let window = SettingsWindowController(env: environment)
+        let window = SettingsWindowController(env: settingsEnvironment)
         settingsWindow = window
         actions.openSettings = { [weak window] in window?.openSettings() }
     }
 
-    /// The data folder, also what the Fatal alert reveals. One definition so "reveal" always opens the folder the
-    /// database was attempted in.
-    static var dataFolder: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Flotsam", isDirectory: true)
-    }
-
     private func openDatabase() async {
-        switch await FlotsamDatabase.open(folder: Self.dataFolder, secureVault: secureVault) {
+        switch await FlotsamDatabase.open(folder: environment.dataFolder, secureVault: secureVault) {
         case .success(let opened):
             database = opened
             startCapture(database: opened)
