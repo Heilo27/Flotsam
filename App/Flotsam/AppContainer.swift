@@ -501,12 +501,23 @@ final class AppContainer {
 
         // The Library reaches the shortcut-and-trigger editor through `actions` (FR-005-09) with the one item it
         // resolved (`LibraryExternalCommand.shortcutEditorTarget`: exactly one, and not a secure item), so the app
-        // opens the editor for the id it is handed and decides nothing itself. The Library hides first, as for every
+        // opens the editor for the id it is handed. The App still gates it itself (`ShortcutEditorRule.target`: exactly
+        // one id, not a secure item), so a caller other than the Library cannot open the first of several ids or reach
+        // the failed editor for a secure one; a refused request hides nothing. The Library hides first, as for every
         // Flotsam window that opens from it (TASK-524).
         actions.editShortcutAndTrigger = { [weak self, weak editor] ids in
-            guard let id = ids.first else { return }
-            self?.hideLibraryBeforeWindowOpens()
-            editor?.open(itemId: id)
+            Task { @MainActor in
+                let resolved = await ShortcutEditorRule.target(ids: ids) { id in
+                    await database.content(of: id).map(\.isSecure)
+                }
+                switch resolved {
+                case .success(let id?):
+                    self?.hideLibraryBeforeWindowOpens()
+                    editor?.open(itemId: id)
+                case .success(nil): return
+                case .failure(let error): await reporter.report(error, origin: .userInitiated)
+                }
+            }
         }
         startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })
         startItemHotkeys(database: database, paster: paster, expansion: expansion, frontmost: frontmost)

@@ -102,7 +102,8 @@ final class OrganizeCoordinator {
     }
 
     private func openNote(_ model: LibraryViewModel) {
-        guard let id = model.selectedRow?.id, let organizer else { return }
+        let rows = model.selectedRows
+        guard LibraryOrganizer.canNote(rows), let id = rows.first?.id, let organizer else { return }
         Task {
             draft = await organizer.note(of: id) ?? ""
             validation = nil

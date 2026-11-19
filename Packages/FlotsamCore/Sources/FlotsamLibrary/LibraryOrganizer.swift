@@ -61,14 +61,19 @@ public final class LibraryOrganizer {
 
     // MARK: Which actions a selection allows (FR-004-07, -09, -11)
 
-    /// Edit text: exactly one item, of a text-like kind, and not a secure one (its text is never shown).
+    /// Note: exactly one item (`ItemActionRule`, the rule the context menu reads too).
+    public nonisolated static func canNote(_ rows: [ItemRow]) -> Bool { ItemActionRule.note(isSingleItem: rows.count == 1) }
+
+    /// Edit text (`ItemActionRule.edit`).
     public nonisolated static func canEdit(_ rows: [ItemRow]) -> Bool {
-        rows.count == 1 && rows[0].kind.isTextEditable && !rows[0].isSecure
+        guard let row = rows.first else { return false }
+        return ItemActionRule.edit(kind: row.kind, isSingleItem: rows.count == 1, isSecure: row.isSecure)
     }
 
-    /// Ungroup: exactly one item, a bundle.
+    /// Ungroup (`ItemActionRule.ungroup`).
     public nonisolated static func canUngroup(_ rows: [ItemRow]) -> Bool {
-        rows.count == 1 && rows[0].kind == .bundle
+        guard let row = rows.first else { return false }
+        return ItemActionRule.ungroup(kind: row.kind, isSingleItem: rows.count == 1)
     }
 
     /// Group (FR-004-15): two or more items that all reference files (file, folder, bundle), at most `BundleLimits.maxMembers`
