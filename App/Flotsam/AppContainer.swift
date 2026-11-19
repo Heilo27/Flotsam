@@ -131,8 +131,9 @@ final class AppContainer {
     }
 
     /// Builds the Settings window over this container's objects and points `actions.openSettings` at it, so every
-    /// "Open Settings" caller (the menu row, the Library, a Notice) takes the one path (FR-008-03). The window is
-    /// created at first use; the database it reads is asked for on each call, because it opens after launch.
+    /// "Open Settings" caller (the menu row, the Library) takes the one path (FR-008-03). No Notice or alert has an
+    /// "Open Settings" action today (a `Notice` carries a code and a message only); one added later must call
+    /// `actions.openSettings`. The window is created at first use; the database it reads is asked for on each call, because it opens after launch.
     func installSettings(showSetupGuide: @escaping @MainActor @Sendable () -> Void) {
         let reporter = reporter
         let presenter = presenter
@@ -155,8 +156,18 @@ final class AppContainer {
             })
         let window = SettingsWindowController(env: settingsEnvironment)
         settingsWindow = window
-        actions.openSettings = { [weak window] in window?.openSettings() }
+        actions.openSettings = { [weak self, weak window] in
+            self?.hideLibraryBeforeWindowOpens()
+            window?.openSettings()
+        }
     }
+
+    /// The App-side home of "a Flotsam window opens, so the Library hides" (FR-003-02, TASK-524). Every opener of the
+    /// Settings window, the item editor and the setup guide runs it before fronting the window: the Library's own ⌘, and
+    /// ⌘K, the menu-bar "Settings…" row, and "Show Setup Guide…" (AppDelegate). A no-op when the Library is already
+    /// hidden or not built yet. The Library's `perform` also hides first (LibraryViewModel.perform), for the
+    /// package-level guarantee that holds without the App; both end at the same idempotent `hidePanel`.
+    func hideLibraryBeforeWindowOpens() { library?.hidePanel() }
 
     private func openDatabase() async {
         switch await FlotsamDatabase.open(folder: environment.dataFolder, secureVault: secureVault) {
@@ -355,8 +366,9 @@ final class AppContainer {
 
         // ⌘K reaches the shortcut-and-trigger editor through `actions` (FR-005-09); a selection that is not exactly one
         // item opens nothing.
-        actions.editShortcutAndTrigger = { [weak editor] ids in
+        actions.editShortcutAndTrigger = { [weak self, weak editor] ids in
             guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: ids) else { return }
+            self?.hideLibraryBeforeWindowOpens()
             editor?.open(itemId: id)
         }
         startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })

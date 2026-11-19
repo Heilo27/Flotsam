@@ -438,10 +438,14 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
         let delegate = try frd008Code("App/Flotsam/AppDelegate.swift")
         let shows = count(of: #"onboarding\.show\("#, in: delegate)
         let resuming = count(of: #"onboarding\.show\(resuming:\s*true\)"#, in: delegate)
-        let userClosures = count(of: #"showSetupGuide:\s*\{\s*onboarding\.show\(\)\s*\}"#, in: delegate)
-        #expect(shows == 3)
+        // TASK-524: the two user entry points (Settings button, menu-bar row) share ONE closure, which hides the Library
+        // and then shows the guide. One definition, handed to both consumers.
+        let userClosures = count(of: #"let showSetupGuide[^=]*=\s*\{[^}]*onboarding\.show\(\)\s*\}"#, in: delegate)
+        let consumers = count(of: #"showSetupGuide:\s*showSetupGuide\)"#, in: delegate)
+        #expect(shows == 2)
         #expect(resuming == 1)
-        #expect(userClosures == 2, "the Settings button and the menu-bar row")
+        #expect(userClosures == 1, "the one user closure: hide the Library, then show")
+        #expect(consumers == 2, "the Settings button and the menu-bar row both take it")
         #expect(delegate.contains("if OnboardingFlow.shouldShowAutomatically(settings: container.settings) { onboarding.show(resuming: true) }"))
         // nothing else can reach OnboardingWindowController.show
         #expect(try occurrences(of: #"OnboardingWindowController\("#, under: "App") == ["App/Flotsam/AppDelegate.swift": 1])
