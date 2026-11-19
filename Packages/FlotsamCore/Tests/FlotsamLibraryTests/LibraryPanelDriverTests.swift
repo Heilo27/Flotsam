@@ -28,7 +28,9 @@ private final class PanelRecorder: LibraryPanelPresenter {
     var isVisible = false
     /// Runs inside `show`, once the window reports visible, where the real panel resigns key as key moves to it.
     var duringShow: () -> Void = {}
-    func show(at frame: CGRect) {
+    var minimumSizes: [PanelSize] = []
+    func show(at frame: CGRect, minimumSize: PanelSize) {
+        minimumSizes.append(minimumSize)
         events.append(.show(frame))
         isVisible = true
         duringShow()

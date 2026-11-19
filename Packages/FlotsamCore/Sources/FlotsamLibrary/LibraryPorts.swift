@@ -24,13 +24,34 @@ public protocol PastePerforming {
 
 extension PasteService: PastePerforming {}
 
-/// The two settings the Library owns (FR-003-03, FR-003-07), behind one seam so the Settings UI (FRD-008) and the panel
-/// read and write the same keys.
+/// The settings the Library owns (FR-003-03, FR-003-06, FR-003-07), behind one seam so the Settings UI (FRD-008) and the
+/// panel read and write the same keys.
 public protocol LibraryPreferences: Sendable {
     var viewMode: LibraryViewMode { get nonmutating set }
+    /// The Standard layout's remembered size.
     var panelSize: PanelSize { get nonmutating set }
+    /// The Compact layout's remembered size, kept apart so switching layouts never overwrites the other one.
+    var compactPanelSize: PanelSize { get nonmutating set }
+    var layout: LibraryLayoutMode { get nonmutating set }
     /// The sort FR-004-12 remembers: ⌘S writes it, the panel reads it on open.
     var sort: LibrarySort { get nonmutating set }
+}
+
+extension LibraryPreferences {
+    /// The remembered size for `layout`; the one place that picks between the two size keys.
+    public func panelSize(for layout: LibraryLayoutMode) -> PanelSize {
+        switch layout {
+        case .standard: panelSize
+        case .compact: compactPanelSize
+        }
+    }
+
+    public func setPanelSize(_ size: PanelSize, for layout: LibraryLayoutMode) {
+        switch layout {
+        case .standard: panelSize = size
+        case .compact: compactPanelSize = size
+        }
+    }
 }
 
 public struct SettingsLibraryPreferences: LibraryPreferences {
@@ -46,6 +67,16 @@ public struct SettingsLibraryPreferences: LibraryPreferences {
     public var panelSize: PanelSize {
         get { settings.value(SettingKeys.libraryPanelSize) }
         nonmutating set { settings.set(newValue, for: SettingKeys.libraryPanelSize) }
+    }
+
+    public var compactPanelSize: PanelSize {
+        get { settings.value(SettingKeys.libraryCompactPanelSize) }
+        nonmutating set { settings.set(newValue, for: SettingKeys.libraryCompactPanelSize) }
+    }
+
+    public var layout: LibraryLayoutMode {
+        get { settings.value(SettingKeys.libraryLayout) }
+        nonmutating set { settings.set(newValue, for: SettingKeys.libraryLayout) }
     }
 
     public var sort: LibrarySort {

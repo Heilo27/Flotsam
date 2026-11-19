@@ -411,7 +411,7 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
 
         // then they are exactly the rows of the FR-008-01 table
         #expect(names.sorted() == [
-            "capture.mode", "library.panelSize", "library.sort", "library.viewMode", "onboarding.completed",
+            "capture.mode", "library.compactPanelSize", "library.layout", "library.panelSize", "library.sort", "library.viewMode", "onboarding.completed",
             "privacy.ignoredApps", "screenshots.enabled", "screenshots.folderOverride", "settings.lastPane",
             "shelf.enabled", "shelf.placement", "shelf.revealOnEdgeHover", "shortcuts.openLibrary",
             "shortcuts.saveClipboard", "shortcuts.toggleShelf", "storage.imageBudget", "storage.imageQuality",

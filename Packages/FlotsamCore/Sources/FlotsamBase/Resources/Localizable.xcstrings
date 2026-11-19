@@ -3717,6 +3717,46 @@
         }
       }
     },
+    "ui.settings.libraryLayout" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library layout"
+          }
+        }
+      }
+    },
+    "ui.settings.layoutStandard" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standard"
+          }
+        }
+      }
+    },
+    "ui.settings.layoutCompact" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compact"
+          }
+        }
+      }
+    },
+    "ui.settings.libraryLayoutHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compact shows only the sidebar and the list in a nearly square window. Space shows the preview in place of the list."
+          }
+        }
+      }
+    },
     "ui.settings.revealDataFolder" : {
       "localizations" : {
         "en" : {
