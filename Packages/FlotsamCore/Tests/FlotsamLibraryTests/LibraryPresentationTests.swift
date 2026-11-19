@@ -82,6 +82,18 @@ import Testing
         #expect(footer.hints.contains { $0.label == "Close" })
     }
 
+    /// FR-003-18 / TASK-507: the copy-only hint names ⌘C while Accessibility is denied; trusted keeps ⌥Return Plain text.
+    @Test func footerSecondHintIsCommandCCopyWhenUntrustedAndPlainTextWhenTrusted() {
+        for preview in [false, true] {
+            let untrusted = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: preview, isAccessibilityTrusted: false, sort: .recent)
+            #expect(untrusted.hints.count == 3)
+            #expect(untrusted.hints[1] == LibraryFooter.Hint(key: "⌘C", label: "Copy"), "preview \(preview)")
+            let trusted = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: preview, isAccessibilityTrusted: true, sort: .recent)
+            #expect(trusted.hints.count == 3)
+            #expect(trusted.hints[1] == LibraryFooter.Hint(key: "⌥Return", label: "Plain text"), "preview \(preview)")
+        }
+    }
+
     @Test func footerForAMultiSelectionCountsAndDisablesPaste() {
         let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
         #expect(footer.countText == "3 selected")
