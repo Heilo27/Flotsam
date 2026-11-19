@@ -108,7 +108,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | CAP-PRM-001 | Warning | macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings. | capture suspended; Notice; retry on app activation |
 | CAP-OS-001 | Warning | Flotsam couldn't read the clipboard just now. It will keep trying. | skip tick, retry next poll |
 | CAP-OS-002 | Info | — | source app recorded as Unknown |
-| CAP-POL-001 | Info | — | skipped: transient or auto-generated pasteboard marker, or a concealed copy that cannot be kept securely (no plain text, or no secure vault) |
+| CAP-POL-001 | Info | — | skipped: transient or auto-generated pasteboard marker, or a concealed copy that cannot be kept securely (empty or whitespace-only plain text, or no secure vault) |
 | CAP-POL-002 | Info | — | skipped: source app is on the ignored list |
 | CAP-POL-003 | Info | — | skipped: capture paused, or curated mode without explicit save |
 | CAP-POL-004 | Info | — | skipped: Flotsam's own pasteboard write |
