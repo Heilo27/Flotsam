@@ -93,18 +93,19 @@ struct LaunchReconcileGapTests {
         await rig.watcher.start()
         #expect(await rig.waitForItems(20))
         let before = try await rig.itemIds()
+        // TASK-501 (OC-2040 flake): `waitForItems` returns when the 20th item is stored, but an import's settle (its
+        // watermark write) follows the store, so writes of the first launch can still be in flight here. A mark1 read
+        // now caught one part-way, and the write that landed before the fresh handle's read made it differ from mark1.
+        // The imports' stability waits step the stepped clock, and each settle writes the clock's time (the files are
+        // more than the 60 s hold window old), so the watermark has reached the clock's present value once the last
+        // settle's write has landed. The store keeps whole milliseconds.
+        let settledAt = Date(epochMillis: rig.clock.now().epochMillis) // the store keeps whole milliseconds
+        #expect(await waitForWatermark(rig, atLeast: settledAt), "all 20 imports settled: the watermark reached the clock")
         let mark1 = try #require(try await rig.watermark())
         let copiesBefore = try await rig.copyCounts()
         #expect(copiesBefore.count == 20 && copiesBefore.values.allSatisfy { $0 == 1 })
         #expect(mark1 > mark, "the launch advanced the persisted watermark")
         // when Flotsam relaunches with no new files
-        // TASK-501 (OC-2040 flake): a relaunch is a new process, so the first launch has to be gone first. Its last imports
-        // are still settling at this point, and a settle reads the clock when it runs: one that ran after the clock step
-        // below wrote the later time over the watermark under test (the persisted value was then 60 s past mark1).
-        // Switching pickup off ends the first launch (its settles stop at the `active` guard); it is back on for the next.
-        rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
-        await rig.watcher.settingsDidChange()
-        rig.settings.set(true, for: SettingKeys.screenshotsEnabled)
         try await rig.relaunch()
         rig.clock.advance(by: 60)
         #expect(try await rig.watermark() == mark1, "the fresh handle reads back the watermark the first launch persisted")
@@ -223,4 +224,14 @@ struct StoredCopyGapTests {
         #expect(try Data(contentsOf: blob) == stored)
         #expect(try await shot.rig.blobURLs(of: shot.id) == [blob])
     }
+}
+
+/// Waits (real time, up to 5 s) until the persisted watermark is at least `target`; returns whether it is.
+private func waitForWatermark(_ rig: RealIngestRig, atLeast target: Date) async -> Bool {
+    let deadline = ContinuousClock.now + .seconds(5)
+    while ContinuousClock.now < deadline {
+        if let mark = try? await rig.watermark(), mark >= target { return true }
+        try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
 }
