@@ -1932,3 +1932,22 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 - **Blank concealed: PASS.** ConcealedType was copied as both an empty string and whitespace only, 3 runs each. Nothing was stored, with no secure or blank rows. The app stayed alive, and CAP-POL-001 was logged 6 times (FR-001-04 gate 3).
 - **Defects:** none.
 - **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored, TextEdit was closed unsaved, and the suite plist was removed.
+
+## TASK-525 relative-time label: obrien-525 @ fbe850f (2026-11-19)
+
+**Setup.** macOS 27.3 (26C5035r). Fresh Debug builds of fbe850f and of its merge base with main, 7482269, used as the baseline. Isolated launch.
+
+- **Row 1, the label advances while the panel stays open: PASS** (FR-003-24, AC-003-20). With the Library held open, the row read "11s ago", then "1m ago", "2m ago" and "3m ago" at about 10, 70, 130 and 190 s. Older rows advanced in step.
+- **Row 2, the VoiceOver/AX label advances: needs Ryan.** Reading it requires a TCC grant. The visible label does advance.
+- **Row 3, idle cost with the panel hidden** (45 s settle, then a 45 s window): **PASS**, no worse than the baseline.
+
+  | Build | Wake-ups/s | CPU | Footprint |
+  |---|---|---|---|
+  | fbe850f | 2.00 | 0.0% | 24 MB |
+  | 7482269 | 2.02 | 0.0% | 24 MB |
+
+  Wake-ups are interrupt wake-ups from proc_pid_rusage deltas, not top's rounded IDLEW column.
+- **Row 4, panel open with a row under 1 min old: recorded, acceptable.** fbe850f: 3.44 wake-ups/s, 0.28 ms/s CPU. Baseline: 2.09 wake-ups/s, 0.02 ms/s. That is about +1.35/s against the roughly +1/s expected; RSS is +0.5 MB.
+- **Spec.** FRD-003 adds FR-003-24 and AC-003-20 in the same commit. The FRD says a hidden panel schedules nothing, which agrees with FR-001-20. No drift.
+- **Defects:** none.
+- **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored, the suite plists were removed and TextEdit was closed unsaved.
