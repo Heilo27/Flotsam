@@ -114,13 +114,14 @@
     },
     {
       "id": "OC-1012",
-      "requirement": "AC-001-04",
-      "given": "Capture mode Active, Flotsam running, source app not on the ignored list",
+      "requirement": "AC-001-25,FR-001-25",
+      "given": "Capture mode Active, Flotsam running, source app not on the ignored list, the secure vault available",
       "when": "a script writes text 'secret-marker-Concealed-<uuid>' with the type org.nspasteboard.ConcealedType",
-      "then": "the Library item count is unchanged (delta 0), searching the Library for 'secret-marker-Concealed' returns no item, the app's log (subsystem = bundle id) records CAP-POL-001 for that event, and the marker string has zero matches in `log show` output for the subsystem and in the diagnostics report",
-      "class": "error",
+      "then": "one secure item is stored (Library item count delta +1); the database file, its WAL and the app's log (subsystem = bundle id) contain zero occurrences of the marker string; the row's primary line is the mask `••••••••` with the source app; searching the Library for 'secret-marker-Concealed' returns no item; the item has no plain text, no other representation, no hotkey and no trigger; the marker has zero matches in the diagnostics report",
+      "class": "create",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): FR-001-25 / AC-001-25: a concealed copy is a secure item, no longer rejected"
     },
     {
       "id": "OC-1013",
@@ -144,13 +145,14 @@
     },
     {
       "id": "OC-1015",
-      "requirement": "FR-001-04",
-      "given": "Capture mode Active, Flotsam running, source app not on the ignored list",
+      "requirement": "FR-001-04,FR-001-25",
+      "given": "Capture mode Active, Flotsam running, source app not on the ignored list, the secure vault available",
       "when": "a script writes text S plus org.nspasteboard.ConcealedType carrying EMPTY data",
-      "then": "presence alone rejects: no item with text S exists and the app's log (subsystem = bundle id) records CAP-POL-001 for that event",
-      "class": "error",
+      "then": "one secure item is stored (count +1), the row shows the mask `••••••••`, no item has plain text S, searching for S finds nothing, and the log records no CAP-POL-001 for that event",
+      "class": "create",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): FR-001-04 gate 3: the marker alone makes a secure item; its data is not inspected"
     },
     {
       "id": "OC-1016",
@@ -180,7 +182,8 @@
       "then": "the gate order holds: the log records CAP-POL-003 (gate 1) and NOT CAP-POL-001 for that change; the Library item count is unchanged (delta 0)",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): still valid (gate 1 precedes gate 3); the then clause is unchanged, noted so the Concealed given is read as the secure path being skipped, not rejected"
     },
     {
       "id": "OC-1019",
@@ -206,11 +209,12 @@
       "id": "OC-1021",
       "requirement": "FR-001-04",
       "given": "Capture mode Active, Flotsam running, source app not on the ignored list",
-      "when": "a pasteboard is written with org.nspasteboard.ConcealedType plus a text representation whose data provider fails when read",
+      "when": "a pasteboard is written with org.nspasteboard.TransientType plus a text representation whose data provider fails when read",
       "then": "the change is rejected with CAP-POL-001, not CAP-OS-001, showing payload data was never read for a rejected change; the Library item count is unchanged (delta 0)",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): a concealed copy now reads its plain text (FR-001-25); the never-read-on-rejection check is made with TransientType"
     },
     {
       "id": "OC-1022",
@@ -660,7 +664,8 @@
       "then": "no item with text K exists and the app's log (subsystem = bundle id) records CAP-POL-001 for that event",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): SPEC CONFLICT, not edited: FR-001-14 still ends 'Concealed and transient markers still reject it' while FR-001-04 gate 3 and FR-001-25 make any concealed copy a secure item (production does not special-case remote). Friday to resolve in FRD-001 FR-001-14, then this `then` follows."
     },
     {
       "id": "OC-1067",
@@ -860,7 +865,8 @@
       "then": "nothing is stored at either step; Save Clipboard logs CAP-POL-001 (gates 2 to 5 run on save)",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): SPEC CONFLICT, not edited: FR-005-06 / AC-005-06 still say Save Clipboard never saves Concealed content, while FR-005-06 runs gates 2 to 5 and FR-001-04 gate 3 makes a concealed copy a secure item (production saves it). Friday to resolve in FRD-005 FR-005-06, then this `then` follows."
     },
     {
       "id": "OC-1087",
@@ -966,11 +972,12 @@
       "id": "OC-1097",
       "requirement": "BR-001-05",
       "given": "Capture mode Active, Flotsam running, source app not on the ignored list",
-      "when": "copies are made that end stored, deduped, rejected (concealed, ignored app, paused) and over-limit",
+      "when": "copies are made that end stored, deduped, stored as a secure item (concealed), rejected (ignored app, paused) and over-limit",
       "then": "after each, the general pasteboard still holds the user's content with its types intact and Flotsam made no write to it (changeCount unchanged by Flotsam)",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the concealed outcome now ends as a stored secure item; the pasteboard is still left untouched"
     },
     {
       "id": "OC-1098",
@@ -1006,11 +1013,12 @@
       "id": "OC-1101",
       "requirement": "CAP-POL-001",
       "given": "Capture mode Active, Flotsam running, source app not on the ignored list",
-      "when": "a ConcealedType copy is processed",
+      "when": "a TransientType copy is processed",
       "then": "log records CAP-POL-001 at info level only; no Notices entry is added, no HUD appears and the menu-bar icon shows no warning dot",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): CAP-POL-001 now fires for Transient, AutoGenerated, concealed-with-no-plain-text and concealed-without-vault"
     },
     {
       "id": "OC-1102",
@@ -1101,6 +1109,72 @@
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true
+    },
+    {
+      "id": "OC-1111",
+      "requirement": "AC-001-04,FR-001-04",
+      "given": "Capture mode Active, Flotsam running, source app not on the ignored list, the secure vault unavailable (no Keychain key can be made)",
+      "when": "a script writes text 'secret-marker-NoVault-<uuid>' with the type org.nspasteboard.ConcealedType",
+      "then": "the Library item count is unchanged (delta 0), no item holds the marker, the app's log records CAP-POL-001 for that event, and the marker string has zero matches in `log show` output and in the diagnostics report (fails closed)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-1112",
+      "requirement": "FR-001-04,FR-001-25",
+      "given": "Capture mode Active, Flotsam running, source app not on the ignored list, the secure vault available",
+      "when": "a script writes org.nspasteboard.ConcealedType with NO plain-text representation (an image only)",
+      "then": "the Library item count is unchanged (delta 0) and the app's log records CAP-POL-001 for that event",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-1113",
+      "requirement": "FR-001-04,FR-001-25",
+      "given": "Capture mode Active, Flotsam running, the secure vault available; app X (a password manager) is on the ignored list",
+      "when": "app X copies text with org.nspasteboard.ConcealedType",
+      "then": "nothing is stored (delta 0) and the log records CAP-POL-002 (gate 4 applies to a concealed copy)",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-1114",
+      "requirement": "AC-001-26,FR-001-25",
+      "given": "A secure item exists, with a tag and a note",
+      "when": "the user tries Edit, assigns a hotkey, assigns a trigger, and uses a trigger variable that would take its value",
+      "then": "Edit is refused with ORG-VAL-003, the hotkey and trigger assignments are refused with TRG-VAL-006, no trigger variable takes its value, and the item is unchanged",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-1115",
+      "requirement": "AC-001-26,FR-001-25",
+      "given": "Three items: a normal item N, a secure item S1 with a pin, and a secure item S2; retention is 30 days and S2 is 31 days old",
+      "when": "retention runs, then S1 is deleted, then Clear History is run",
+      "then": "retention removes S2 and its ciphertext (S1 and N stay); deleting S1 removes its ciphertext with the row (the database file and WAL hold no ciphertext of S1); Clear History removes the remaining secure and unpinned items; a Reconcile pass never deletes a secure item for lacking plain text",
+      "class": "destructive",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-1116",
+      "requirement": "AC-001-27,FR-001-25",
+      "given": "A secure item exists and its Keychain key is then removed",
+      "when": "Flotsam is launched and the Library is opened",
+      "then": "the row reads 'Unavailable', nothing crashes, and no error is raised at launch",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
     }
   ]
 }

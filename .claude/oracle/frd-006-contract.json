@@ -851,7 +851,8 @@
       "then": "no highlight; refused; no item contains 'secret-x'",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): unchanged: FR-006-13b / AC-006-13 still refuse a Concealed drop with SHF-VAL-001 (an explicit drop never defeats the marker); noted so this is not read as stale"
     },
     {
       "id": "OC-6086",
@@ -1234,6 +1235,50 @@
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
+    },
+    {
+      "id": "OC-6124",
+      "requirement": "AC-006-25,FR-006-21",
+      "given": "The Shelf shows a secure card and, in a second run, the same card with its Keychain key removed",
+      "when": "the Shelf is revealed",
+      "then": "the card shows a lock and the mask `••••••••`, never the text; with the key removed it also shows an 'Unavailable' badge",
+      "class": "layout",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-6125",
+      "requirement": "AC-006-25,FR-006-21",
+      "given": "A sticky Shelf with one secure card",
+      "when": "the card is dragged and the owner-authentication prompt is cancelled, then (second run) the key is removed and the card is dragged",
+      "then": "cancelled: no drag starts and LIB-OS-002 shows; key removed: no prompt appears, no drag starts and LIB-DAT-002 shows; nothing was written to any pasteboard",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-6126",
+      "requirement": "AC-006-25,FR-006-21",
+      "given": "A sticky Shelf with a plain card A and a secure card B, both selected",
+      "when": "A is dragged with B in the selection and B's prompt is cancelled, then (second run) B's prompt succeeds and the drag is dropped in TextEdit",
+      "then": "cancelled: A drags alone and TextEdit receives A's text; succeeded: the drop yields B's secret as plain text with org.nspasteboard.ConcealedType on the drag pasteboard; the prompt appears on every drag of B",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-6127",
+      "requirement": "AC-006-25,FR-006-21",
+      "given": "A sticky Shelf with one secure card",
+      "when": "the mouse button is pressed on the card, the prompt appears, and the button is released while the prompt is up",
+      "then": "no drag starts and no secret is written to any pasteboard",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
     }
   ]
 }

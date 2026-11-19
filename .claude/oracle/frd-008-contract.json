@@ -684,23 +684,25 @@
     },
     {
       "id": "OC-8070",
-      "requirement": "CAP-POL-002",
-      "given": "Fresh install; 1Password is frontmost",
+      "requirement": "CAP-POL-002,AC-008-06",
+      "given": "1Password is on the user's own ignored list; 1Password is frontmost",
       "when": "user copies the text 'oracle-pw' in 1Password, then opens the Library and Notices",
       "then": "Library count delta 0; no row contains 'oracle-pw'; no HUD and no Notice for this skip (Info code)",
       "class": "state",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the default ignored list is empty (FR-008-11): the skip needs 1Password on the user's own list"
     },
     {
       "id": "OC-8071",
       "requirement": "FR-008-11",
-      "given": "Fresh install; Passwords app frontmost",
+      "given": "Passwords is on the user's own ignored list; Passwords app frontmost",
       "when": "user copies 'oracle-pw2' in Passwords",
       "then": "Library count delta 0",
       "class": "state",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the default ignored list is empty (FR-008-11): the skip needs Passwords on the user's own list"
     },
     {
       "id": "OC-8072",
@@ -1295,12 +1297,13 @@
     {
       "id": "OC-8132",
       "requirement": "FR-008-16",
-      "given": "No Notices exist",
+      "given": "No Notices exist; 1Password is on the user's own ignored list",
       "when": "user copies in 1Password (CAP-POL-002, Info)",
       "then": "the icon shows no warning dot",
       "class": "state",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the CAP-POL-002 skip needs 1Password on the user's own ignored list"
     },
     {
       "id": "OC-8133",

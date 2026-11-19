@@ -54,11 +54,11 @@
       "requirement": "FR-000-03",
       "given": "The full set of ErrorCode raw values and the FRD-000 §7 table",
       "when": "Each raw value is matched against ^(SYS|CAP|SSP|LIB|ORG|TRG|SHF|STO|SET)-(PRM|IO|DB|VAL|LIM|OS|POL|DAT|INT)-[0-9]{3}$",
-      "then": "Non-matching count is 0 AND duplicate raw value count is 0 AND the ErrorCode set equals exactly the 60 live (non-retired) codes in FRD-000 §7 (none missing, none extra); §7 still lists 62 rows, exactly 2 of them marked retired (ORG-VAL-004, ORG-VAL-005); neither retired raw value is an ErrorCode member, and no live code reuses either raw value",
+      "then": "Non-matching count is 0 AND duplicate raw value count is 0 AND the ErrorCode set equals exactly the 63 live (non-retired) codes in FRD-000 §7 (none missing, none extra); §7 still lists 65 rows, exactly 2 of them marked retired (ORG-VAL-004, ORG-VAL-005); neither retired raw value is an ErrorCode member, and no live code reuses either raw value",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-16 ORG-VAL-004/005 retired (FR-000-03, §7): live set is 60 of the 62 §7 rows; retired raw values are not members and never reused"
+      "amended": "2026-11-16 ORG-VAL-004/005 retired (FR-000-03, §7): live set is 60 of the 62 §7 rows; retired raw values are not members and never reused | 2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): §7 gained LIB-OS-002, LIB-DAT-002, TRG-VAL-006: 63 live codes of 65 rows"
     },
     {
       "id": "OC-0006",
@@ -76,11 +76,11 @@
       "requirement": "FR-000-04",
       "given": "The ErrorCode enum",
       "when": "Codes are grouped by severity",
-      "then": "Exactly 2 codes are Fatal: STO-IO-002 and STO-DB-003 (no other); 20 Warning, 24 Error, 14 Info; total 60 live codes; ORG-VAL-004 and ORG-VAL-005 carry none of the four severities (retired, not raisable)",
+      "then": "Exactly 2 codes are Fatal: STO-IO-002 and STO-DB-003 (no other); 22 Warning, 25 Error, 14 Info; total 63 live codes; ORG-VAL-004 and ORG-VAL-005 carry none of the four severities (retired, not raisable)",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-16 ORG-VAL-004/005 retired: Error count 26 -> 24, live total 62 -> 60"
+      "amended": "2026-11-16 ORG-VAL-004/005 retired: Error count 26 -> 24, live total 62 -> 60 | 2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): LIB-OS-002 (Warning), LIB-DAT-002 (Warning), TRG-VAL-006 (Error): Warning 20 -> 22, Error 24 -> 25, live total 60 -> 63"
     },
     {
       "id": "OC-0008",
@@ -147,11 +147,12 @@
       "id": "OC-0014",
       "requirement": "FR-000-04,FR-000-08",
       "given": "Flotsam is running; Notices list empty; no badge",
-      "when": "A concealed pasteboard item (org.nspasteboard.ConcealedType) is copied",
+      "when": "A transient pasteboard item (org.nspasteboard.TransientType) is copied",
       "then": "`log show` has an Info entry with CAP-POL-001; no HUD appears; Notices count stays 0; the menu-bar badge dot does not appear; item count delta 0",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): a concealed copy with a vault is now stored (FR-001-25); the Info-only no-HUD/no-Notice skip is exercised with TransientType"
     },
     {
       "id": "OC-0015",
@@ -168,11 +169,11 @@
       "requirement": "FR-000-05",
       "given": "The shipped Localizable.xcstrings",
       "when": "Its keys are listed",
-      "then": "Source language is en; for each of the 46 Warning/Error/Fatal codes a key 'error.<code>' exists (e.g. 'error.SET-PRM-001'); no 'error.<code>' key exists for any of the 14 Info codes or for the 2 retired codes ORG-VAL-004 and ORG-VAL-005",
+      "then": "Source language is en; for each of the 49 Warning/Error/Fatal codes a key 'error.<code>' exists (e.g. 'error.SET-PRM-001'); no 'error.<code>' key exists for any of the 14 Info codes or for the 2 retired codes ORG-VAL-004 and ORG-VAL-005",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-16 ORG-VAL-004/005 retired with no catalogue text: keyed codes 48 -> 46"
+      "amended": "2026-11-16 ORG-VAL-004/005 retired with no catalogue text: keyed codes 48 -> 46 | 2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): three new non-Info codes: keyed codes 46 -> 49"
     },
     {
       "id": "OC-0017",
@@ -209,11 +210,11 @@
       "requirement": "FR-000-07,AC-000-02",
       "given": "The unmodified code enum and catalogue",
       "when": "The catalogue unit test runs",
-      "then": "It passes: the set of codes with messages equals the set of 46 Warning/Error/Fatal codes, every message <= 140 chars, no Info code and no retired code (ORG-VAL-004, ORG-VAL-005) has a message",
+      "then": "It passes: the set of codes with messages equals the set of 49 Warning/Error/Fatal codes, every message <= 140 chars, no Info code and no retired code (ORG-VAL-004, ORG-VAL-005) has a message",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-16 ORG-VAL-004/005 retired: 46 keyed codes; retired codes carry no message"
+      "amended": "2026-11-16 ORG-VAL-004/005 retired: 46 keyed codes; retired codes carry no message | 2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): keyed codes 46 -> 49"
     },
     {
       "id": "OC-0021",
@@ -380,11 +381,12 @@
       "id": "OC-0037",
       "requirement": "FR-000-11",
       "given": "Scripted session",
-      "when": "A new text is copied, the same text is copied again, and a concealed item is copied",
+      "when": "A new text is copied, the same text is copied again, and a transient item is copied",
       "then": "`log show` contains 3 'pasteboard change processed' entries with outcomes stored, deduped, and skipped + CAP-POL-001 respectively, each with kind and byte size and no content",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the skipped outcome is exercised with a transient copy; a concealed copy now ends stored (secure item)"
     },
     {
       "id": "OC-0038",
@@ -543,11 +545,11 @@
       "requirement": "FRD-000 §5 BR code-with-catalogue",
       "given": "The catalogue and code enum",
       "when": "Every Warning/Error/Fatal code is checked for a catalogue entry",
-      "then": "46 of 46 have one; the only codes without a catalogue entry are the 14 Info codes and the 2 retired codes ORG-VAL-004 and ORG-VAL-005",
+      "then": "49 of 49 have one; the only codes without a catalogue entry are the 14 Info codes and the 2 retired codes ORG-VAL-004 and ORG-VAL-005",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-16 ORG-VAL-004/005 retired with no catalogue text: 48 -> 46; retired codes join Info as the only codes without an entry"
+      "amended": "2026-11-16 ORG-VAL-004/005 retired with no catalogue text: 48 -> 46; retired codes join Info as the only codes without an entry | 2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): three new non-Info codes: keyed codes 46 -> 49"
     },
     {
       "id": "OC-0054",
@@ -612,13 +614,14 @@
     },
     {
       "id": "OC-0060",
-      "requirement": "FRD-000 §7 LIB,LIB-OS-001,LIB-IO-001,LIB-DAT-001",
+      "requirement": "FRD-000 §7 LIB,LIB-OS-001,LIB-IO-001,LIB-DAT-001,LIB-OS-002,LIB-DAT-002",
       "given": "The shipped ErrorCode enum and Localizable.xcstrings",
       "when": "The LIB codes are enumerated",
-      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: LIB-OS-001:Error, LIB-IO-001:Error, LIB-DAT-001:Warning (exactly 3 LIB codes, no others)",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: LIB-OS-001:Error, LIB-IO-001:Error, LIB-DAT-001:Warning, LIB-OS-002:Warning, LIB-DAT-002:Warning (exactly 5 LIB codes, no others)",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): LIB gains LIB-OS-002:Warning (not authorised) and LIB-DAT-002:Warning (key missing or bytes do not open): 5 LIB codes"
     },
     {
       "id": "OC-0061",
@@ -633,13 +636,14 @@
     },
     {
       "id": "OC-0062",
-      "requirement": "FRD-000 §7 TRG,TRG-VAL-001,TRG-VAL-002,TRG-VAL-003,TRG-VAL-004,TRG-VAL-005,TRG-OS-001,TRG-OS-002,TRG-OS-003,TRG-POL-001,TRG-POL-002",
+      "requirement": "FRD-000 §7 TRG,TRG-VAL-001,TRG-VAL-002,TRG-VAL-003,TRG-VAL-004,TRG-VAL-005,TRG-VAL-006,TRG-OS-001,TRG-OS-002,TRG-OS-003,TRG-POL-001,TRG-POL-002",
       "given": "The shipped ErrorCode enum and Localizable.xcstrings",
       "when": "The TRG codes are enumerated",
-      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: TRG-VAL-001:Error, TRG-VAL-002:Error, TRG-VAL-003:Error, TRG-VAL-004:Error, TRG-VAL-005:Warning, TRG-OS-001:Error, TRG-OS-002:Error, TRG-OS-003:Warning, TRG-POL-001:Info, TRG-POL-002:Info (exactly 10 TRG codes, no others)",
+      "then": "For each listed code, the enum severity equals the listed severity; for each Warning/Error/Fatal code the catalogue text for error.<code> equals the FRD-000 §7 'User message' cell verbatim; each Info code has no catalogue text. Codes: TRG-VAL-001:Error, TRG-VAL-002:Error, TRG-VAL-003:Error, TRG-VAL-004:Error, TRG-VAL-005:Warning, TRG-VAL-006:Error, TRG-OS-001:Error, TRG-OS-002:Error, TRG-OS-003:Warning, TRG-POL-001:Info, TRG-POL-002:Info (exactly 11 TRG codes, no others)",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): TRG gains TRG-VAL-006:Error (a secure item cannot carry a shortcut or trigger): 11 TRG codes"
     },
     {
       "id": "OC-0063",
@@ -675,31 +679,34 @@
       "id": "OC-0066",
       "requirement": "FR-000-04,FR-000-13",
       "given": "A fresh launch; one Warning W (CAP-LIM-001, an over-limit copy) has been raised",
-      "when": "150 concealed pasteboard items (org.nspasteboard.ConcealedType) are copied, raising 150 CAP-POL-001 Info skips, then one Error E is raised, then Copy Diagnostics is clicked",
+      "when": "150 transient pasteboard items (org.nspasteboard.TransientType) are copied, raising 150 CAP-POL-001 Info skips, then one Error E is raised, then Copy Diagnostics is clicked",
       "then": "The ring-buffer section lists exactly 2 entries, W then E by code and timestamp; it contains 0 entries of severity Info and 0 occurrences of CAP-POL-001; `log show` for the subsystem still contains 150 CAP-POL-001 entries at Info level (Info is logged, never recorded)",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the 150 Info skips are transient copies; concealed copies are stored (FR-001-25)"
     },
     {
       "id": "OC-0067",
       "requirement": "FR-000-13",
       "given": "A fresh launch; 100 Warning/Error occurrences R1..R100 have been raised (none throttle-suppressed)",
-      "when": "500 Info skips are raised (concealed copies -> CAP-POL-001, and keystrokes in a secure input field -> TRG-POL-001), then Copy Diagnostics is clicked",
+      "when": "500 Info skips are raised (transient copies -> CAP-POL-001, and keystrokes in a secure input field -> TRG-POL-001), then Copy Diagnostics is clicked",
       "then": "The ring-buffer section lists exactly 100 entries and they are R1..R100 by code and timestamp (0 of R1..R100 evicted); 0 entries are CAP-POL-001, TRG-POL-001 or any other Info code",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the Info skips are transient copies and secure-input keystrokes"
     },
     {
       "id": "OC-0068",
       "requirement": "FR-000-04,FR-000-13",
-      "given": "A fresh launch in which only Info events have occurred (20 concealed copies, 1 copy from an ignored app, 1 empty copy)",
+      "given": "A fresh launch in which only Info events have occurred (20 transient copies, 1 copy from an ignored app, 1 empty copy)",
       "when": "Copy Diagnostics is clicked",
       "then": "The report's ring-buffer section is present and has 0 entries",
       "class": "empty",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the Info events are transient copies; concealed copies are stored"
     },
     {
       "id": "OC-0069",

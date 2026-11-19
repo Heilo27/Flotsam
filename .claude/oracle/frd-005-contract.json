@@ -360,7 +360,8 @@
       "then": "count stays N; no item contains the content; the matching CAP-* HUD (concealed) appears",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): SPEC CONFLICT, not edited: AC-005-06 / FR-005-06 still say Save Clipboard saves nothing for Concealed content, but FR-005-06 runs capture gates 2 to 5 and FR-001-04 gate 3 now makes a concealed copy a secure item (production saves it). Friday to resolve in FRD-005 FR-005-06, then this `then` follows."
     },
     {
       "id": "OC-5037",
@@ -375,12 +376,13 @@
     {
       "id": "OC-5038",
       "requirement": "FR-005-06",
-      "given": "Text copied from an app on the ignored-apps list (e.g. Keychain Access); count N",
+      "given": "Text copied from an app on the user's own ignored-apps list (e.g. Keychain Access added by the user); count N",
       "when": "user presses the Save Clipboard chord",
       "then": "count stays N; the CAP-POL-002 (ignored app) HUD appears",
       "class": "error",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): the ignored-apps list is empty by default (FR-008-11); the app named in the given is on the user's own list"
     },
     {
       "id": "OC-5039",
@@ -1451,6 +1453,28 @@
       "class": "create",
       "source_verdict": "CONFIRMED",
       "must_verify": true
+    },
+    {
+      "id": "OC-5146",
+      "requirement": "AC-005-23,FR-005-23",
+      "given": "A secure item S that somehow carries a hotkey H and a trigger ';pw' (set before it was captured as secure)",
+      "when": "the user presses H, then types ';pw' Space in TextEdit",
+      "then": "TRG-VAL-006 is reported each time, no authentication prompt appears, the pasteboard changeCount is unchanged, nothing is pasted, and the TextEdit text is exactly the typed characters",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-5147",
+      "requirement": "AC-005-23,FR-005-23,FR-005-16",
+      "given": "A secure item S was just copied by Flotsam after owner authentication; a trigger ';c' expands to the text '{clipboard}'",
+      "when": "the user types ';c' Space in TextEdit",
+      "then": "the expansion inserts an empty string (the Concealed clipboard is read as empty) and S's secret appears nowhere in TextEdit, the history or the log",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
     }
   ]
 }
