@@ -223,7 +223,7 @@ private final class PerfPickupRig: @unchecked Sendable {
     func arrive(named name: String) throws -> URL {
         let hidden = watched.appendingPathComponent(".\(UUID().uuidString).tmp")
         try perfPNG().write(to: hidden)
-        try TempFolder.setScreenCaptureAttribute(true, on: hidden)
+        try perfMarkScreenCapture(hidden)
         let final = watched.appendingPathComponent(name)
         try FileManager.default.moveItem(at: hidden, to: final)
         source.deliver(final)
@@ -249,6 +249,25 @@ private final class PerfPickupRig: @unchecked Sendable {
         }
         return nil
     }
+}
+
+/// Polls until `condition` holds or `timeout` passes.
+private func perfEventually(timeout: Duration, _ condition: @Sendable () -> Bool) async -> Bool {
+    let deadline = ContinuousClock.now + timeout
+    while ContinuousClock.now < deadline {
+        if condition() { return true }
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+    return condition()
+}
+
+/// Writes the screen-capture attribute the way macOS does: a binary property list holding `true`.
+private func perfMarkScreenCapture(_ url: URL) throws {
+    let data = try PropertyListSerialization.data(fromPropertyList: true, format: .binary, options: 0)
+    let result = data.withUnsafeBytes { buffer in
+        setxattr(url.path, "com.apple.metadata:kMDItemIsScreenCapture", buffer.baseAddress, data.count, 0, 0)
+    }
+    if result != 0 { throw CocoaError(.fileWriteUnknown) }
 }
 
 /// Nearest-rank percentile: the smallest value with at least `fraction` of the samples at or below it.
@@ -351,7 +370,7 @@ struct Oc2067Oc2068PerformanceTests {
 
         // when: six files land at once
         for index in 1...6 { try rig.arrive(named: "Screenshot oc-cap-\(index)-\(UUID().uuidString).png") }
-        let reachedTwo = await eventually(timeout: .seconds(10)) { rig.ingest.current == 2 }
+        let reachedTwo = await perfEventually(timeout: .seconds(10)) { rig.ingest.current == 2 }
         try? await Task.sleep(for: .milliseconds(1_500))
 
         // then: the ceiling held at exactly 2 while the rest waited
@@ -362,7 +381,7 @@ struct Oc2067Oc2068PerformanceTests {
 
         // and: released, the queue drains and all six are stored
         rig.ingest.release()
-        let drained = await eventually(timeout: .seconds(15)) { rig.ingest.finished == 6 }
+        let drained = await perfEventually(timeout: .seconds(15)) { rig.ingest.finished == 6 }
         #expect(drained, "all six imports complete after release; finished \(rig.ingest.finished)")
         #expect(await rig.libraryCount() == 6, "six items, each file once")
         #expect(rig.ingest.peak == 2, "the ceiling held through the drain; peak \(rig.ingest.peak)")
