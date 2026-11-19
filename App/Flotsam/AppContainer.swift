@@ -344,6 +344,7 @@ final class AppContainer {
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
             effects: effects, organizer: organizer, organize: organize, frontmost: frontmost,
+            events: database.events,
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller

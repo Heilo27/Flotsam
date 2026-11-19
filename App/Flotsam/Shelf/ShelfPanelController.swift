@@ -9,8 +9,8 @@ import SwiftUI
 /// item, a Space change, a display change, the Library opening, a paste, a settings change) and acts on the commands
 /// that come back. Behaviour of the cards lives in `ShelfModel`.
 ///
-/// Timers (FR-006-17): none while idle. The machine exposes `nextDeadline`; one one-shot task is armed for it only
-/// while it is non-nil and cancelled and re-armed after every event.
+/// Timers (FR-006-17): none while idle. `ShelfRevealDriver` arms one one-shot task for the machine's `nextDeadline` only
+/// while it is non-nil; `ShelfHighlightTimer` clears the drop highlight. Both run on the injected `ShelfClock`.
 ///
 /// Drops (FR-006-12 to FR-006-15) arrive through `ShelfDropView`; the controller decides acceptance and hands the
 /// pasteboard to `ShelfDropService`.
@@ -38,11 +38,12 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private let frontmost: any FrontmostAppProvider
     private let settings: SettingsStore
     private let thumbnail: @Sendable (UUID) async -> Data?
-    private var machine = ShelfRevealMachine()
+    /// The reveal machine and its one deadline timer, on the injected clock (FR-006-17).
+    private let driver: ShelfRevealDriver
+    private let highlightTimer: ShelfHighlightTimer
+    private var machine: ShelfRevealMachine { driver.machine }
     private var placement: ShelfPlacement
-    private var deadlineTask: Task<Void, Never>?
     private var showTask: Task<Void, Never>?
-    private var highlightTask: Task<Void, Never>?
     private var keyMonitor: Any?
     /// Pointer, button and drag monitors (FR-006-03, FR-006-04); `hoverMonitor` only while edge hover is on.
     private var pointerMonitors: [Any] = []
@@ -76,7 +77,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// `makeModel` receives the box and returns the model wired to it.
     init(
         settings: SettingsStore, frontmost: any FrontmostAppProvider,
-        thumbnail: @escaping @Sendable (UUID) async -> Data?,
+        thumbnail: @escaping @Sendable (UUID) async -> Data?, clock: any ShelfClock = SystemShelfClock(),
         makeModel: (HostBox) -> ShelfModel
     ) {
         let hostBox = HostBox()
@@ -93,7 +94,10 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
         hosting = NSHostingView(
             rootView: ShelfView(model: model, placement: placement, thumbnail: thumbnail, dragOut: dragOut, close: {}))
+        driver = ShelfRevealDriver(clock: clock)
+        highlightTimer = ShelfHighlightTimer(model: model, clock: clock)
         super.init()
+        driver.perform = { [weak self] commands in self?.perform(commands) }
         hostBox.target = self
         dragOut.model = model
         // The machine must not hide a Shelf under its own drag (FR-006-03), and an accepted drop hides a transient one
@@ -141,11 +145,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// A drop was stored: a transient Shelf stays open for the hold (FR-006-15).
     func dropCompleted() { send(.dropCompleted) }
 
-    private func send(_ event: ShelfRevealMachine.Event) {
-        let commands = machine.send(event, at: Date())
-        perform(commands)
-        armDeadline()
-    }
+    private func send(_ event: ShelfRevealMachine.Event) { driver.send(event) }
 
     private func perform(_ commands: [ShelfRevealMachine.Command]) {
         for command in commands {
@@ -154,24 +154,6 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             case .hide: dismiss()
             }
         }
-    }
-
-    /// One one-shot task for the machine's next deadline, and none when it is idle (FR-006-17).
-    private func armDeadline() {
-        deadlineTask?.cancel()
-        deadlineTask = nil
-        guard let deadline = machine.nextDeadline else { return }
-        let delay = max(deadline.timeIntervalSinceNow, 0)
-        deadlineTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
-            self?.deadlineReached()
-        }
-    }
-
-    private func deadlineReached() {
-        deadlineTask = nil
-        perform(machine.advance(to: Date()))
-        armDeadline()
     }
 
     // MARK: Show and hide
@@ -344,14 +326,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     }
 
     /// The card a drop stored or bumped is highlighted for 600 ms and scrolled to the top of Recent (FR-006-15).
-    private func highlight(_ itemId: UUID) {
-        model.highlight(itemId)
-        highlightTask?.cancel()
-        highlightTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(ShelfLayout.dropHighlightDuration)) } catch { return }
-            self?.model.clearHighlight(of: itemId)
-        }
-    }
+    private func highlight(_ itemId: UUID) { highlightTimer.highlight(itemId) }
 
     // MARK: Feeds
 

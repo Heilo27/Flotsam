@@ -38,11 +38,12 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     init(
         source: any LibraryDataSource, paster: any PastePerforming, preferences: any LibraryPreferences,
         effects: LibraryEffects, organizer: LibraryOrganizer, organize: OrganizeCoordinator,
-        frontmost: any FrontmostAppProvider, captureNow: @escaping @MainActor () async -> Void
+        frontmost: any FrontmostAppProvider, events: ItemEventBus, captureNow: @escaping @MainActor () async -> Void
     ) {
         let hostBox = HostBox()
         model = LibraryViewModel(
-            source: source, paster: paster, host: hostBox, preferences: preferences, effects: effects, organizer: organizer)
+            source: source, paster: paster, host: hostBox, preferences: preferences, effects: effects, organizer: organizer,
+            events: events)
         organize.model = model
         self.organize = organize
         self.hostBox = hostBox

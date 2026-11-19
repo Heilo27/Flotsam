@@ -24,8 +24,9 @@ extension FlotsamDatabase: LibraryOrganizeStore {}
 
 /// The Library's Organize layer: which actions a selection allows, which need a confirmation, and the calls that carry
 /// them out. A failure is reported once through `report` (FR-004-14: `STO-DB-001`, UI unchanged) and the call returns
-/// nil or false, so the view never has to unwrap a result. Storage publishes `.itemsChanged` after each commit; the
-/// caller refreshes the list through `LibraryViewModel.refresh(selecting:)`.
+/// nil or false, so the view never has to unwrap a result. Storage publishes `.itemsChanged` after each commit, which
+/// the shown Library reloads on; the caller still refreshes through `LibraryViewModel.refresh(selecting:)` so its own
+/// await returns with the new list and the selection it names.
 @MainActor
 public final class LibraryOrganizer {
     private let store: any LibraryOrganizeStore

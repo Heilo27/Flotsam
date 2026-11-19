@@ -99,7 +99,8 @@ import Testing
     @Test("OC-4069 (undo UI) Command-Z does nothing and no trash view exists [no seam: manual]", .disabled("no seam: manual. the key and the absent view are App-target UI; the storage fact (no row, no table named trash, deleted or undo) is tested"))
     func oc4069_19() {}
 
-    // OC-4099. Seam needed: an App test target, or a storage change publisher the model subscribes to.
-    @Test("OC-4099 (timing and subscriber wiring) the sidebar and footer update within 200 ms of a command and of a capture arriving [no seam: manual]", .disabled("no seam: manual. the 200 ms is a wall-clock observation of the running panel; the model does not subscribe to storage, the App calls refresh() on a capture, so the arrival wiring is App-side. Every command's refresh is tested"))
+    // OC-4099. The arrival wiring and the no-timer path are tested in Task257LiveCountsTests.swift (the model subscribes
+    // to the storage change feed while shown). Only the wall-clock number is left.
+    @Test("OC-4099 (200 ms wall clock) the sidebar and footer update within 200 ms of a capture arriving, measured on the running panel [no seam: manual]", .disabled("no seam: manual. the 200 ms is a wall-clock observation of the running panel (TASK-505). The package asserts the parts that make it true: the change starts a reload at once with no timer on the path, and the reload applies the counts and footer with no further call"))
     func oc4099_20() {}
 }

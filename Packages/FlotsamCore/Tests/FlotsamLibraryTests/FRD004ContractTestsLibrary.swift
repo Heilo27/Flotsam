@@ -638,9 +638,10 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
     @Test("OC-4099 given 3 texts, a link and a 2-member bundle, when an item is pinned, tagged, edited, ungrouped, deleted and a new capture is refreshed in, then after each command the sidebar counts and footer count text are the new literals and the footer equals the rows listed")
     func oc4099SidebarAndFooterFollowEachCommand() async throws {
         // Red if: any organize command leaves the sidebar counts (all, pinned, kinds, tags) or the footer count text at their
-        // old value, or the footer count text stops equalling the rows under the active filter. The 200 ms bound is a
-        // scheduler matter the package cannot clock reliably (listed in FRD004ContractTestsGaps.swift); what is checked
-        // here is that each command's own await already leaves the new numbers in place, with no second refresh.
+        // old value, or the footer count text stops equalling the rows under the active filter. The capture-arrival
+        // wiring and the no-timer path to the 200 ms bound are in Task257LiveCountsTests.swift; the wall-clock number is
+        // listed in FRD004ContractTestsGaps.swift. What is checked here is that each command's own await already leaves
+        // the new numbers in place, with no second refresh.
         let rig = try await OrganizeRig.make()
         defer { rig.cleanUp() }
         let t1 = try await rig.add(.text, key: "t1", text: "one", secondsAgo: 5)

@@ -52,6 +52,14 @@ public final class LibraryViewModel {
     @ObservationIgnored private let preferences: any LibraryPreferences
     @ObservationIgnored private let effects: LibraryEffects
     @ObservationIgnored private let organizer: LibraryOrganizer?
+    /// Storage's change feed (FR-004-13): while the panel is shown, a capture or any commit reloads the list and the
+    /// sidebar counts at once. Nil in tests that do not exercise it.
+    @ObservationIgnored private let events: ItemEventBus?
+    @ObservationIgnored private var unsubscribeEvents: (@Sendable () -> Void)?
+    /// A reload is running; a change that arrives meanwhile is queued, never allowed to cancel it, so an Organize
+    /// command's own `refresh(selecting:)` keeps the selection it asked for.
+    @ObservationIgnored private var reloadInFlight = false
+    @ObservationIgnored private var reloadQueued = false
 
     // MARK: Private state
 
@@ -74,7 +82,7 @@ public final class LibraryViewModel {
     public init(
         source: any LibraryDataSource, paster: any PastePerforming, host: any PasteHost,
         preferences: any LibraryPreferences, effects: LibraryEffects = LibraryEffects(),
-        organizer: LibraryOrganizer? = nil
+        organizer: LibraryOrganizer? = nil, events: ItemEventBus? = nil
     ) {
         self.source = source
         self.paster = paster
@@ -82,6 +90,7 @@ public final class LibraryViewModel {
         self.preferences = preferences
         self.effects = effects
         self.organizer = organizer
+        self.events = events
         viewMode = preferences.viewMode
         sort = preferences.sort
     }
@@ -137,8 +146,28 @@ public final class LibraryViewModel {
         viewMode = preferences.viewMode
         sort = preferences.sort
         scrollResetToken += 1
+        subscribeToChanges()
         startReload(interval: .libraryOpen)
         await loadTask?.value
+    }
+
+    /// FR-004-13: counts and footer follow every commit and every capture while the panel is shown. The bus calls
+    /// handlers inline on the publisher's executor, so the handler only hops to the main actor. Nothing is subscribed
+    /// while the panel is hidden (FR-003-13).
+    private func subscribeToChanges() {
+        guard let events, unsubscribeEvents == nil else { return }
+        unsubscribeEvents = events.subscribe { [weak self] _ in
+            Task { @MainActor [weak self] in self?.storedItemsChanged() }
+        }
+    }
+
+    private func storedItemsChanged() {
+        guard isShown else { return }
+        if reloadInFlight {
+            reloadQueued = true
+            return
+        }
+        startReload(interval: nil, selection: .keep(selection))
     }
 
     /// Reads Accessibility fresh (never cached, FR-008-13 rule b) and bumps `accessibilityRevision` when it changed
@@ -171,6 +200,10 @@ public final class LibraryViewModel {
     /// (FR-003-13).
     public func panelDidHide() {
         isShown = false
+        unsubscribeEvents?()
+        unsubscribeEvents = nil
+        reloadInFlight = false
+        reloadQueued = false
         loadTask?.cancel()
         previewTask?.cancel()
         generation += 1
@@ -210,8 +243,9 @@ public final class LibraryViewModel {
         case keep(Set<UUID>)
     }
 
-    /// Reloads the list after an Organize command changed it (storage publishes `.itemsChanged`, but this model does not
-    /// subscribe to it). The scroll position stays. `selecting` names the rows to select afterwards; nil keeps the
+    /// Reloads the list after an Organize command changed it, so the command's own await already leaves the new rows,
+    /// counts and selection in place (storage's `.itemsChanged` also reaches `storedItemsChanged()` while shown; a
+    /// reload already running makes that one queue behind it). The scroll position stays. `selecting` names the rows to select afterwards; nil keeps the
     /// current selection. Rows no longer listed drop out of it (FR-004-13).
     public func refresh(selecting ids: [UUID]? = nil) async {
         startReload(interval: nil, selection: .keep(ids.map(Set.init) ?? selection))
@@ -236,6 +270,8 @@ public final class LibraryViewModel {
         loadTask?.cancel()
         generation += 1
         isFetchingPage = false
+        reloadInFlight = true
+        reloadQueued = false
         let generation = generation
         let query = LibraryQuery(filter: filter, text: searchText, sort: sort, page: 0)
         if loadedRows.isEmpty { loadState = .loading }
@@ -248,6 +284,9 @@ public final class LibraryViewModel {
             span?.end()
             guard !Task.isCancelled, generation == self.generation else { return }
             applyFirstPage(page, counts: counts, selection: policy)
+            reloadInFlight = false
+            // A change that landed while this load ran may postdate its reads: load again.
+            if reloadQueued { storedItemsChanged() }
         }
     }
 
