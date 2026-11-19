@@ -7,13 +7,14 @@ struct Migration {
     let apply: @Sendable (Database) throws -> Void
 }
 
-/// All migrations, in order. Version 1 is the FR-007-03 schema; version 2 adds secure clips (`Schema.createVersion2`); version 3 adds the bundle name (`Schema.createVersion3`).
+/// All migrations, in order. Version 1 is the FR-007-03 schema; version 2 adds secure clips (`Schema.createVersion2`); version 3 adds the bundle name (`Schema.createVersion3`); version 4 adds recognised image text (`Schema.createVersion4`).
 /// A later release appends; it never edits an earlier entry.
 enum Migrations {
     static let all: [Migration] = [
         Migration(version: 1, apply: Schema.createVersion1),
         Migration(version: 2, apply: Schema.createVersion2),
         Migration(version: 3, apply: Schema.createVersion3),
+        Migration(version: 4, apply: Schema.createVersion4),
     ]
 
     /// The newest version this build understands. A database above it came from a newer app (FR-007-17).

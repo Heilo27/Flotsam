@@ -114,7 +114,7 @@ Schema sketch (FRD-007 FR-007-03 is the single definition; this is the architect
 | `itemTag` | `itemId`, `tagId` (cascade, unique pair) |
 | `meta` | `key` PK; `value` (`schemaVersion`, `screenshots.lastScanAt`, `retention.lastSweepAt`, `budget.lastNoticeAt`) |
 
-Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-migration file copy (FR-007-17). Migration 1 is the full FRD-007 schema (item, representation, bundleMember, tag, itemTag, meta); the copy is `pre-migration/flotsam-v<from>.sqlite` (`flotsam-v<from>-<n>.sqlite` if a non-file entry holds that name), latest only, deleted by the first later launch that opens the migrated database cleanly (no waiting period; kept while a newer quarantine stands) or by Clear History; `corrupt-<timestamp>/` lives 30 days (FR-007-11, -13, -17). The rules live in `FlotsamStorage/Folder/PlaintextCopies.swift`.
+Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-migration file copy (FR-007-17). Migration 1 is the full FRD-007 schema (item, representation, bundleMember, tag, itemTag, meta); migration 4 (TASK-552) is additive only: `item.ocrText`, `item.ocrAt` and the `item_ocrPending` partial index; the copy is `pre-migration/flotsam-v<from>.sqlite` (`flotsam-v<from>-<n>.sqlite` if a non-file entry holds that name), latest only, deleted by the first later launch that opens the migrated database cleanly (no waiting period; kept while a newer quarantine stands) or by Clear History; `corrupt-<timestamp>/` lives 30 days (FR-007-11, -13, -17). The rules live in `FlotsamStorage/Folder/PlaintextCopies.swift`.
 
 **Search default** ([ADR-0003](adr/0003-search-strategy.md)): an in-database `instr(searchText, token) > 0` scan per token, AND-ed, tokens normalised by `SearchNormalizer`, pages of 200 rows plus a count, no resident index copy. If it exceeds 100 ms p95 at 10k items (2k images) in spike S-1, migration 2 adds an FTS5 trigram index kept in sync in the same transaction, used for tokens of 3 or more characters, with `instr` for shorter ones and an equivalence test against the scan either way.
 
@@ -146,6 +146,7 @@ Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-mig
 | Hotkeys | `HotkeyRegistrar` | Carbon `RegisterEventHotKey` | 0006 |
 | Keystrokes | `KeyEventSource`, `KeyEventPoster` | `CGEventTap` thread, `CGEvent` poster | 0007, 0005 |
 | Screenshot folder events | `FolderEventSource` | FSEvents stream, 5 s polling fallback | 0008 |
+| Image text recognition (search only) | `TextRecognitionPort` | Vision `VNRecognizeTextRequest`, on-device (`VisionTextRecognizer`) | 0004 |
 | Frontmost app, permissions | `FrontmostAppProvider`, `PermissionProbe` | `NSWorkspace`, `AXIsProcessTrusted` | 0005, 0007 |
 
 Ports marked after Base are declared when the owning FRD is built, not before (no premature abstraction).

@@ -54,6 +54,8 @@ final class AppContainer {
     private var unsubscribeShortcuts: (@Sendable () -> Void)?
     private var unsubscribeItemEvents: (@Sendable () -> Void)?
     private var itemHotkeyAction: ItemHotkeyAction?
+    /// FR-007-23: reads the text in stored images for search. Event-driven, no timer (ADR-0004 S5).
+    private var textRecognition: TextRecognitionIndexer?
     /// The typed-trigger engine (FR-005-10). Nil until the database has opened. Retained: its loops run until `stop()`.
     private(set) var triggerEngine: TriggerEngine?
     /// Asks the tap thread to clear the typed word (FR-005-11): shared by the tap adapter and the engine, whose
@@ -220,11 +222,20 @@ final class AppContainer {
             startShelf(database: opened, paster: paster, frontmost: frontmost)
             startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
+            startTextRecognition(database: opened)
         case .failure(let error):
             await reporter.report(error, origin: .background)
             // No library means nothing can be imported: a click that was waiting, and every later one, shows why.
             importRecent.unavailable(error)
         }
+    }
+
+    /// FR-007-23: starts the background reader of image text. It runs once now (the bounded backfill) and again when an
+    /// item arrives; it never schedules itself.
+    private func startTextRecognition(database: FlotsamDatabase) {
+        let indexer = TextRecognitionIndexer(database: database, recognizer: VisionTextRecognizer())
+        textRecognition = indexer
+        Task { await indexer.start() }
     }
 
     /// FRD-001: wires capture to the database and starts the poll. Wake and activation each force one immediate

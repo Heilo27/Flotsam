@@ -125,4 +125,26 @@ enum Schema {
             ALTER TABLE item ADD COLUMN name TEXT CHECK (name IS NULL OR length(name) BETWEEN 1 AND 100);
             """)
     }
+
+    /// Recognised text for image search (FRD-007 FR-007-23, FRD-003 FR-003-55). Additive only: two nullable columns and a
+    /// partial index, so no existing row is rewritten and nothing is dropped.
+    ///
+    /// - `ocrText` is what on-device text recognition read from an image or screenshot: NULL when nothing has been read
+    ///   or nothing was found, never an empty string. It lives on the item row, so every deletion path that removes the
+    ///   row removes the text with it. It is read only by `SearchIndex`, which folds it into `searchText`.
+    /// - `ocrAt` is when recognition last finished for the item (UTC ms), whether or not it found text, so an image with
+    ///   no text is not read again. NULL means not attempted yet: every row that exists before this migration, which is
+    ///   the backfill queue.
+    /// - The CHECK is the last line of defence for two rules the code also enforces: a secure clip never carries
+    ///   recognised text, and the text is bounded (`SearchIndex.recognizedTextCharacterLimit`, the same 10,000).
+    /// - `item_ocrPending` serves "the newest items still waiting for recognition" and holds only those rows, so it is
+    ///   empty once the backfill has finished. Its WHERE terms are spelt exactly as `FlotsamDatabase.itemsAwaitingRecognition`
+    ///   spells them, which is what lets SQLite use it.
+    static func createVersion4(_ db: Database) throws {
+        try db.execute(sql: """
+            ALTER TABLE item ADD COLUMN ocrText TEXT CHECK (ocrText IS NULL OR (isSecure = 0 AND length(ocrText) BETWEEN 1 AND 10000));
+            ALTER TABLE item ADD COLUMN ocrAt INTEGER;
+            CREATE INDEX item_ocrPending ON item(lastCopiedAt) WHERE ocrAt IS NULL AND isSecure = 0 AND kind IN ('image', 'screenshot');
+            """)
+    }
 }
