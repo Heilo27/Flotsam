@@ -56,7 +56,9 @@ public final class TriggerMatcher {
     /// The word typed so far. Its length is always `buffer.count` (graphemes): there is no second counter to drift from
     /// it. A combining mark that arrives as its own key event joins the previous character and adds none.
     private var buffer = ""
-    /// A word that can no longer match until the next boundary or reset (FR-005-11). Its buffer is always empty.
+    /// A word that can no longer match until the next boundary or reset (FR-005-11): it grew past 24 characters, it had
+    /// a Backspace on an empty buffer, or it took a non-ASCII character (which stays fatal even after Backspace).
+    /// Its buffer is always empty.
     private var isDead = false
     private var lastEventAt: Date?
     /// The frontmost application when the current word got its first character (FR-005-11: a change of frontmost
@@ -130,6 +132,15 @@ public final class TriggerMatcher {
 
     private func append(_ characters: String) {
         guard !isDead else { return }
+        // FR-005-11: a non-ASCII character (a Thai mark, an accent, any letter outside ASCII) kills the word until the
+        // next boundary or reset, and Backspacing it away does not bring the word back. A text field may delete one
+        // scalar where the buffer would delete a whole grapheme cluster, so after such input the buffer cannot know
+        // what the field holds; a trigger is ASCII (FR-005-08), so the word could never match anyway.
+        guard characters.utf8.allSatisfy({ $0 < 0x80 }) else {
+            clearWord()
+            isDead = true
+            return
+        }
         if wordApp == nil {
             let app = environment.frontmostApp()
             wordApp = .some(app)

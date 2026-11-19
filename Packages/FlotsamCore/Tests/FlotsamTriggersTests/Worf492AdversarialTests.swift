@@ -7,9 +7,13 @@ import Testing
 /// grapheme count of the buffer itself. Cap, empty-buffer Backspace and `triggerLength` must agree with it for every
 /// key-event sequence, and no sequence may trap.
 ///
-/// The fuzz model below is deliberately independent of the implementation: it keeps its own list of clusters, built from
-/// tokens whose grapheme behaviour is fixed by construction (an ASCII or Thai base starts a cluster, a nonspacing mark
-/// joins the previous cluster, a flag or ZWJ family is one cluster). Expected values are literals.
+/// TASK-493 (Ryan's ruling, 2026-11-18): a non-ASCII character typed into a word kills the word until the next
+/// boundary, even if it is Backspaced away. The buffer therefore only ever holds ASCII, and the tests that used to
+/// build and Backspace combining clusters now assert that such input kills the word at once.
+///
+/// The fuzz model below is deliberately independent of the implementation: it keeps its own list of characters, and
+/// any token carrying a non-ASCII scalar (a Thai or accented base, a mark, a flag, a ZWJ family) kills the word.
+/// Expected values are literals.
 @Suite struct Worf492AdversarialTests {
     private let sig = UUID()
     private let long = UUID()
@@ -27,9 +31,9 @@ import Testing
     // MARK: Fuzz model
 
     private enum Token: CustomStringConvertible {
-        case base(String)  // one event, exactly one new cluster
-        case multi(String, Int)  // one event delivering this many new clusters
-        case mark(String)  // one event, joins the previous cluster (or is its own cluster when none)
+        case base(String)  // one event, exactly one new cluster (non-ASCII kills the word)
+        case multi(String, Int)  // one event delivering this many new ASCII clusters
+        case mark(String)  // one event carrying a combining mark (non-ASCII: kills the word)
         case backspace
         case boundary
         case clearing(String)  // a control-character event: not printable, so it ends the word
@@ -67,7 +71,8 @@ import Testing
         case .base(let s):
             _ = h.down(0, s)
             if !model.dead {
-                if model.clusters.count + 1 > cap { model.clear(); model.dead = true; model.cap25Deaths += 1 } else { model.clusters.append(s) }
+                if !s.allSatisfy(\.isASCII) { model.clear(); model.dead = true }  // FR-005-11: non-ASCII kills the word
+                else if model.clusters.count + 1 > cap { model.clear(); model.dead = true; model.cap25Deaths += 1 } else { model.clusters.append(s) }
             }
         case .multi(let s, let n):
             _ = h.down(0, s)
@@ -80,9 +85,7 @@ import Testing
             }
         case .mark(let s):
             _ = h.down(0, s)
-            if !model.dead {
-                if model.clusters.isEmpty { model.clusters.append(s) } else { model.clusters[model.clusters.count - 1] += s }
-            }
+            if !model.dead { model.clear(); model.dead = true }  // a mark is non-ASCII: the word is dead
         case .backspace:
             let r = h.down(TriggerKeys.backspace)
             if r != .pass { return "Backspace returned \(r)" }
@@ -165,11 +168,11 @@ import Testing
                 else if roll < 40 { out.append(.base(sigChars.randomElement(using: &rng)!)) }
                 else if roll < 52 { out.append(.boundary) }
                 else { out.append(noise.randomElement(using: &rng)!) }
-            case 2:  // marks and Backspace storms around the cap
-                if roll < 50 { out.append(.base("a")) }
-                else if roll < 70 { out.append(.mark(Self.acute)) }
-                else if roll < 88 { out.append(.backspace) }
-                else if roll < 94 { out.append(.base(";")) }
+            case 2:  // Backspace storms around the cap, with the odd mark (a mark kills the word, TASK-493)
+                if roll < 80 { out.append(.base("a")) }
+                else if roll < 82 { out.append(.mark(Self.acute)) }
+                else if roll < 92 { out.append(.backspace) }
+                else if roll < 96 { out.append(.base(";")) }
                 else { out.append(.boundary) }
             default:  // types the 24-grapheme trigger with marks and Backspaces interleaved
                 if roll < 6 { out += [Token.base(";")] + Array(repeating: Token.base("a"), count: 23) }
@@ -182,9 +185,10 @@ import Testing
         return out
     }
 
-    // OC-WORF492-01: given random key-event sequences (combining marks, flags, ZWJ, CRLF, Backspace storms, over-cap
-    // events), when each is replayed, then nothing traps, the matcher holds exactly what the model holds after every
-    // event, every match has the literal trigger length, and that length is the number of Backspaces that empty the word.
+    // OC-WORF492-01 (updated for TASK-493): given random key-event sequences (combining marks, flags, ZWJ, CRLF,
+    // Backspace storms, over-cap events), when each is replayed, then nothing traps, the matcher holds exactly what the
+    // model holds after every event, every match has the literal trigger length, and that length is the number of
+    // Backspaces that empty the word; any non-ASCII input kills the word whatever follows.
     @Test(arguments: [0, 1, 2, 3])
     func fuzzedSequencesNeverTrapAndTriggerLengthEqualsBackspacesNeeded(mode: Int) {
         var rng = SplitMix(state: UInt64(0xF492_0000 + mode))
@@ -223,8 +227,8 @@ import Testing
     // OC-WORF492-02: the fuzz must be able to see a match (guards against a fuzz that only ever passes).
     @Test func theFuzzGeneratorReachesRealMatchesWithBackspaceNoise() throws {
         let h = harness()
-        for ch in [";", "s", "x", "\u{0301}"] { _ = h.down(0, ch) }
-        _ = h.down(TriggerKeys.backspace)  // removes "x" plus its mark
+        for ch in [";", "s", "x"] { _ = h.down(0, ch) }
+        _ = h.down(TriggerKeys.backspace)  // removes "x"
         for ch in ["i", "g"] { _ = h.down(0, ch) }
         let m = try #require(h.space().match)
         #expect(m.typedText == ";sig")
@@ -256,16 +260,18 @@ import Testing
         #expect(h.space().match?.triggerLength == 24)  // the boundary revived it
     }
 
-    // OC-WORF492-04: a mark at the cap joins the 24th grapheme: still live, and Backspace removes the whole cluster.
-    @Test func markAt24StaysLiveAndOneBackspaceDropsTheClusterNotTwo() throws {
+    // OC-WORF492-04 (updated for TASK-493): a mark at the cap is non-ASCII, so it kills the 24-character word; Backspace
+    // and retyping do not bring it back.
+    @Test func markAt24KillsTheWordAndBackspaceDoesNotReviveIt() {
         let h = harness()
         h.type(Self.longTrigger)
-        for _ in 0..<10 { _ = h.down(0, Self.acute) }
-        #expect(!h.matcher.holdsNoCharacters)
+        _ = h.down(0, Self.acute)
+        #expect(h.matcher.holdsNoCharacters)
         _ = h.down(TriggerKeys.backspace)
         h.type("a")
-        let m = try #require(h.space().match)
-        #expect(m.triggerLength == 24)
+        #expect(h.space() == .pass)
+        h.type(Self.longTrigger)
+        #expect(h.space().match?.triggerLength == 24)  // the next word, after the boundary, matches
     }
 
     // OC-WORF492-05: a single event over the cap, from empty and from a partly typed word.
@@ -303,17 +309,19 @@ import Testing
         #expect(h.space() == .pass)
     }
 
-    // OC-WORF492-06: 24 emoji clusters (many scalars each) are within the cap; 25 are not. Cap counts graphemes.
-    @Test func capCountsGraphemesNotScalarsForFlagsAndZwjFamilies() {
-        let live = harness()
-        for _ in 0..<24 { _ = live.down(0, Self.family) }
-        #expect(!live.matcher.holdsNoCharacters)
-        for _ in 0..<24 { _ = live.down(TriggerKeys.backspace) }
-        #expect(live.matcher.holdsNoCharacters)
-
-        let dead = harness()
-        for _ in 0..<25 { _ = dead.down(0, Self.flag) }
-        #expect(dead.matcher.holdsNoCharacters)
+    // OC-WORF492-06 (updated for TASK-493): a flag or ZWJ family is non-ASCII, so the first one kills the word and
+    // nothing is held, however many follow and however many Backspaces come after.
+    @Test func flagsAndZwjFamiliesKillTheWordAtOnce() {
+        for cluster in [Self.family, Self.flag] {
+            let h = harness()
+            _ = h.down(0, cluster)
+            #expect(h.matcher.holdsNoCharacters)
+            for _ in 0..<24 { _ = h.down(0, cluster) }
+            for _ in 0..<30 { #expect(h.down(TriggerKeys.backspace) == .pass) }
+            #expect(h.matcher.holdsNoCharacters)
+            h.type(";sig")
+            #expect(h.space() == .pass)
+        }
     }
 
     // MARK: The reported trap and its neighbours
@@ -331,13 +339,14 @@ import Testing
         #expect(h.space().match?.triggerLength == 4)
     }
 
-    @Test func aLoneMarkOnAnEmptyWordIsOneCharacterAndOneBackspaceEmptiesIt() {
+    // (updated for TASK-493) A lone mark on an empty word is non-ASCII: it kills the word and nothing is held.
+    @Test func aLoneMarkOnAnEmptyWordKillsTheWordAndBackspacesDoNotTrap() {
         let h = harness()
         _ = h.down(0, Self.thaiMark)
-        #expect(!h.matcher.holdsNoCharacters)
+        #expect(h.matcher.holdsNoCharacters)
         _ = h.down(TriggerKeys.backspace)
         #expect(h.matcher.holdsNoCharacters)
-        _ = h.down(TriggerKeys.backspace)  // empty buffer: must not trap, kills the word
+        _ = h.down(TriggerKeys.backspace)  // must not trap
         h.type(";sig")
         #expect(h.space() == .pass)
     }
@@ -378,17 +387,17 @@ import Testing
         #expect(h.space().match?.triggerLength == 4)
     }
 
-    // OC-WORF492-10: Backspace removes exactly one cluster for each event shape, so N events of one cluster take N Backspaces.
+    // OC-WORF492-10 (updated for TASK-493): every non-ASCII event shape kills the word at once, so N events of one
+    // cluster hold nothing and any number of Backspaces neither trap nor bring the word back.
     @Test(arguments: [Self.flag, Self.family, "e\u{0301}", "\u{0E01}\u{0E31}\u{0E49}", "\u{1F600}"])
-    func nClustersTakeExactlyNBackspacesToEmpty(cluster: String) {
+    func nonAsciiClustersKillTheWordAndBackspacesNeverRevive(cluster: String) {
         for n in [1, 2, 7, 24] {
             let h = harness()
             for _ in 0..<n { _ = h.down(0, cluster) }
-            for step in 0..<n {
-                #expect(!h.matcher.holdsNoCharacters, "n=\(n) emptied after \(step) Backspaces")
-                _ = h.down(TriggerKeys.backspace)
-            }
-            #expect(h.matcher.holdsNoCharacters)
+            #expect(h.matcher.holdsNoCharacters, "n=\(n) held characters")
+            for _ in 0..<(n + 2) { #expect(h.down(TriggerKeys.backspace) == .pass) }
+            h.type(";sig")
+            #expect(h.space() == .pass, "n=\(n) matched after Backspaces")
         }
     }
 }
