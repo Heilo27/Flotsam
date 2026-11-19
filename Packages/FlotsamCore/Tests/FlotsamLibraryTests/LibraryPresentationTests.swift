@@ -94,6 +94,17 @@ import Testing
         }
     }
 
+    /// FR-003-18 / FR-003-08 / TASK-507 (Worf). given two or more rows selected with Accessibility denied, then the footer offers
+    /// only "Esc Clear selection": no ⌘C hint (copy is disabled with several rows), and the copy-only notice stays replaced
+    /// by the multi-select notice. Red if the ⌘C hint leaks into the multi-select branch.
+    @Test func footerMultiSelectUntrustedOffersNoCommandCHint() {
+        for selected in [2, 3] {
+            let footer = LibraryFooter(totalCount: 5, selectionCount: selected, isPreviewOpen: false, isAccessibilityTrusted: false, sort: .recent)
+            #expect(footer.hints == [LibraryFooter.Hint(key: "Esc", label: "Clear selection")], "selected \(selected)")
+            #expect(footer.notice == "Select one item to paste", "selected \(selected)")
+        }
+    }
+
     @Test func footerForAMultiSelectionCountsAndDisablesPaste() {
         let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
         #expect(footer.countText == "3 selected")

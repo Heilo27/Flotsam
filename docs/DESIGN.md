@@ -180,6 +180,7 @@ Empty (images 02, 05), no results (02), inline error with Retry (02, STO-DB-004)
 | Return | paste |
 | ⌥Return | paste as plain text |
 | ⇧Return | copy only |
+| ⌘C | copy the selected item only (same as ⇧Return); copies the search field's text instead when it has a selection |
 | ⌘1 to ⌘9 | quick paste row n |
 | Space (empty search) or ⌘Y | preview |
 | Esc | first press that applies: clear search if non-empty; else close preview if open; else, with several rows selected, reduce to one row; else close panel |
