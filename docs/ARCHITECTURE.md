@@ -125,7 +125,7 @@ Migrations are our own ~40-line runner over `PRAGMA user_version` with a pre-mig
 | Error codes, severity, `FlotsamError` | Base `ErrorCode` / `FlotsamError` |
 | User-facing strings | Base `Localizable.xcstrings`, via `FlotsamStrings`, keys `error.<code>` and `ui.<screen>.<name>` |
 | Settings keys, defaults, validation | Base `SettingKeys` / `SettingsStore` |
-| Ingest limits | Storage `IngestLimits` |
+| Ingest limits | Storage `IngestLimits` (bundle member ceiling: Base `BundleLimits`, re-exposed by `IngestLimits`) |
 | Kinds, payload, chord, search normalisation | Base `ItemKind`, `CapturedPayload`, `Chord`, `SearchNormalizer` |
 | Does a file, folder or bundle member still exist (paste, Library and Shelf Missing state, Shelf drag-out) | Base `FileMemberLocator`, `ItemKind.referencesFiles`; the "none of the members exist" aggregate is Storage `Collection<ItemMember>.anyExists` |
 | Classification and `contentKey` | Payload |

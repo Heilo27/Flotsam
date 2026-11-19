@@ -2,11 +2,13 @@ import FlotsamBase
 import Foundation
 
 /// Ingest limits (FRD-007 FR-007-06). The one home; Payload and Capture read these, never restate them (ADR-0009).
+/// The bundle ceiling's number lives in Base (`BundleLimits`, which Payload can reach and Storage cannot be imported
+/// by); it is re-exposed here so every Storage call site reads it from this one place.
 public enum IngestLimits {
     public static let maxTextBytes = 10 * 1024 * 1024
     public static let maxRichRepresentationBytes = 5 * 1024 * 1024
     public static let maxImageBytes = 100 * 1024 * 1024
-    public static let maxBundleMembers = 500
+    public static let maxBundleMembers = BundleLimits.maxMembers
     public static let maxNoteCharacters = 2000
     /// A secure clip's stored ciphertext (FR-001-04 gate 3). A password or token is a few hundred bytes; this leaves
     /// room for a long passphrase or a pasted key without letting a concealed copy of a document fill the database.

@@ -139,6 +139,35 @@ final class BundleCeilingWorfTests: XCTestCase {
         XCTAssertEqual(limitNotices().count, 1)
     }
 
+    // TASK-402, FR-001-12 + FR-007-06, end to end through the real IngestWorker and a fresh read of the database.
+    // given a 501-file copy (capture bookmarks only the first 500; member 501 is kept by path alone); when ingested;
+    // then item count +1, exactly 500 members stored (the first 500 in pasteboard order, member 501 absent, every
+    // stored member with a bookmark), and exactly one CAP-LIM-003 raise whose count is 501. Red if capture drops the
+    // 501st member (the raise would say 500 or not fire), if the ceiling moves out of ingest (stored 501), or if the
+    // bookmark cap is applied so low that a stored member loses its bookmark.
+    func testA501PathCaptureStoresFiveHundredMembersAndRaisesWithCount501() async throws {
+        let expected = names(0..<501).map { files.appendingPathComponent($0).standardizedFileURL.path }
+
+        await worker.handle(try payload(names(0..<501)))
+
+        let stored = try await database.pool.read { db -> [(path: String, hasBookmark: Bool)] in
+            try Row.fetchAll(db, sql: "SELECT path, bookmark FROM bundleMember ORDER BY ordinal")
+                .map { ($0["path"] as String, ($0["bookmark"] as Data?) != nil) }
+        }
+        let paths = stored.map(\.path)
+        let bookmarkless = stored.filter { !$0.hasBookmark }.count
+        let itemCount = try await database.pool.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item") }
+        XCTAssertEqual(itemCount, 1)
+        XCTAssertEqual(stored.count, 500)
+        XCTAssertEqual(paths, Array(expected.prefix(500)))
+        XCTAssertFalse(paths.contains(expected[500]))
+        XCTAssertEqual(bookmarkless, 0)
+
+        let raises = await reporter.recentErrors().filter { $0.code == .capLim003 }
+        XCTAssertEqual(raises.count, 1)
+        XCTAssertTrue(limitNotices().first?.message.contains("501") == true, limitNotices().first?.message ?? "none")
+    }
+
     // OC-0019: no file name leaks into the notice text.
     func testTheNoticeNeverContainsAFileName() async throws {
         await worker.handle(try payload(names(0..<501, last: "FLOTSAM-MARK-6B.txt")))
