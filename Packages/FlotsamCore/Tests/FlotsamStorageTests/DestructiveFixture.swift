@@ -201,9 +201,15 @@ struct Store {
         return try DatabaseQueue(path: root.appendingPathComponent("flotsam.sqlite").path, configuration: configuration)
     }
 
+    /// The fixture numbers (`Store.id(n)`) of the rows present. Rows a test inserted with a random UUID
+    /// are not fixture rows and are skipped, so they cannot trap the parse or collide with a number.
     func presentIds() throws -> Set<Int> {
         let ids = try reader().read { try String.fetchAll($0, sql: "SELECT id FROM item") }
-        return Set(ids.map { Int(String($0.suffix(12)))! })
+        let fixtureNumbers = ids.compactMap { id -> Int? in
+            guard let n = Int(id.suffix(12)), Store.id(n).uuidString == id else { return nil }
+            return n
+        }
+        return Set(fixtureNumbers)
     }
 
     func count(_ table: String) throws -> Int {
