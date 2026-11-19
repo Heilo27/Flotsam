@@ -1818,3 +1818,19 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
   - ScreenshotImportSignpostTests: added a bounded wait for in-window intervals to end. This fixes a flake that predates this branch (another suite's held import could end after collect's fixed settle).
 - Gates: arch OK. 3 consecutive clean full runs under `yes` ×10 load, each 3038 tests / 0 failures / 19 known issues; 1-minute load at start 44.3 / 88.1 / 95.5. An earlier set was restarted after 2 failures; both were diagnosed and fixed as above. build.sh Debug: 0 warnings. Load killed.
 - Report-only: pre-existing "no async operations" warnings at `await RaceHUDLog()` in the test files.
+
+## Real-OS matrix, priority 1 (TASK-521 / OC-8024): BLOCKED, screen locked (2026-11-19)
+
+**OS:** macOS 27.3 (26C5035r), not 26. **SHA:** obrien-521 @ f56197f (also the branch tip), Debug build via `bin/build.sh`, build succeeded. Launched isolated per docs/AGENT-LAUNCH.md.
+
+**Blocked:** this Mac's session is locked. `CGSSessionScreenIsLocked` is 1, the frontmost app is `loginwindow` and `screencapture` returns a black frame, so synthetic input reaches no window. The lock was not bypassed. Rows a, b, c, e, f and g need Ryan to unlock the Mac and keep it awake, then a rerun. Priority 2 (origin/main) is not started for the same reason.
+
+**Row d is a partial pass.** No Dock icon: the activation policy is accessory and `lsappinfo` reports the type as UIElement. "No focus steal" is unproven, because `loginwindow` was frontmost before and after launch.
+
+**Probable defects (code read, not run):**
+- **g:** nothing deminiaturizes Settings. `WindowFrontAdapter.swift:27-30` (App) calls only `orderFrontRegardless` and `makeKeyAndOrderFront`. `SettingsWindowDriver.open` (FlotsamBase/Settings/SettingsWindowDriver.swift:51-59) calls only `bringToFront`. The window is `.miniaturizable` (SettingsWindowController.swift:29). Repro: open Settings, press ⌘M, then press ⌘, or choose the status-item "Settings…" row. Settings probably stays in the Dock.
+- **f:** the follow-up check at FlotsamBase/Ports/WindowFronting.swift:55 forces activation whenever the window is open and Flotsam is not frontmost after 200 ms. It cannot tell a refused activation from the user switching to another app inside the grace period.
+
+**Snapshot identity:** the real Flotsam was not running. The 16 real data files (sha1), the prefs plist and the `defaults read` hash were identical before and after. The pasteboard was empty throughout and never written to. The isolated instance was stopped, and its suite plist (written under ~/Library/Preferences despite CFFIXED_USER_HOME) was deleted. No TextEdit document was opened.
+
+**Harness notes for the rerun:** call `/usr/bin/log` explicitly, because zsh's `log` builtin hides it. `CFFIXED_USER_HOME` does not redirect `cfprefsd` suite writes.
