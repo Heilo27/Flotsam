@@ -12,8 +12,11 @@ final class WindowFrontAdapter: FrontableWindow {
         self.window = window
     }
 
-    /// Brings the window in front of the app the user was in and makes it key (FR-008-03).
-    func bringToFront() { fronting.bringToFront(self) }
+    /// Brings the window in front of the app the user was in and makes it key (FR-008-03). `forcing: false` for a show
+    /// the user did not ask for (the setup guide at launch): the plain request only, never the system activation.
+    func bringToFront(forcing: Bool = true) { fronting.bringToFront(self, forcing: forcing) }
+
+    var windowIsOpen: Bool { window.isVisible }
 
     var appIsActive: Bool {
         NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier

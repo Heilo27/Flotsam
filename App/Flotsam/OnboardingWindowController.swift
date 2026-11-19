@@ -35,7 +35,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         // An agent app has no active window of its own, so it must activate to bring this one forward.
         let front = WindowFrontAdapter(window: window)
         self.front = front
-        front.bringToFront()
+        // The launch-time show is Flotsam's own, not the user's: it may ask for activation but never force it.
+        front.bringToFront(forcing: !resuming)
     }
 
     func windowWillClose(_ notification: Notification) {

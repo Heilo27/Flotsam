@@ -14,6 +14,8 @@ public protocol FrontableWindow: AnyObject {
     /// Whether Flotsam is the frontmost application right now (what the system says, not what AppKit believes: a
     /// non-activating panel can make `NSApp.isActive` true while another app is still frontmost).
     var appIsActive: Bool { get }
+    /// Whether the window is still on screen. A window closed during the grace period must not pull Flotsam forward.
+    var windowIsOpen: Bool { get }
     /// The ordinary, cooperative request that Flotsam become the active application (`NSApp.activate()`).
     func requestAppActivation()
     /// Orders the window in front of every other window, even while Flotsam is not yet active, and makes it key.
@@ -37,13 +39,17 @@ public final class WindowFronting {
     }
 
     /// Every "show this window" call goes here: request activation first, then show, then check it took.
-    public func bringToFront(_ window: any FrontableWindow) {
+    /// `forcing` is true for a window the user asked for (⌘, the menu-bar row, a Notice action, ⌘K, "Show Setup Guide…"):
+    /// only then may a refused request be escalated to the system's activation. The setup guide shown by Flotsam itself at
+    /// launch passes false, so a login-item start never takes the keyboard from the app the user is working in.
+    public func bringToFront(_ window: any FrontableWindow, forcing: Bool = true) {
         followUp?.cancel()
         window.requestAppActivation()
         window.orderFrontAndMakeKey()
+        guard forcing else { return }
         followUp = Task { [clock] in
             await clock.sleep(for: Self.activationGrace)
-            guard !Task.isCancelled, !window.appIsActive else { return }
+            guard !Task.isCancelled, window.windowIsOpen, !window.appIsActive else { return }
             window.forceAppActivation()
             window.orderFrontAndMakeKey()
         }

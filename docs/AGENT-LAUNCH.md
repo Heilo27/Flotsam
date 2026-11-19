@@ -75,6 +75,13 @@ Isolation covers the data folder, the settings domain and the secure store. An i
   but a longer session or a moved window could write there. Compare the real domain before and after if it matters.
 - **Shows the first-launch onboarding window**, because the fresh suite has no resume point.
 
+## Verifying window fronting (OC-8024)
+
+When a window is refused plain activation, Flotsam has LaunchServices activate its own bundle (`WindowFrontAdapter`).
+LaunchServices matches a running app by bundle id, so with the real Flotsam also running it can activate that one
+instead of the isolated build. Quit the real Flotsam (not by killing a PID you did not start: ask) before running the
+OC-8024 check.
+
 ## Release check
 
 A Release build must contain none of this:

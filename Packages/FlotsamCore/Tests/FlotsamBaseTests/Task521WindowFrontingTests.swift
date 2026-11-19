@@ -36,6 +36,9 @@ private final class FakeFrontable: FrontableWindow {
     /// What `appIsActive` answers; a test flips it to model the system accepting or refusing the request.
     var active = false
     var appIsActive: Bool { active }
+    /// What `windowIsOpen` answers; a test flips it to model the window closing during the grace period.
+    var open = true
+    var windowIsOpen: Bool { open }
     func requestAppActivation() { log.append("request") }
     func orderFrontAndMakeKey() { log.append("front") }
     func forceAppActivation() { log.append("force") }
@@ -82,6 +85,26 @@ private func settle(_ condition: () -> Bool) async {
         #expect(clock.requested == [WindowFronting.activationGrace])
     }
 
+    @Test("a window closed during the grace period is not forced")
+    func closedWindowIsNotForced() async {
+        let clock = ParkedClock(), window = FakeFrontable()
+        WindowFronting(clock: clock).bringToFront(window)
+        await settle { clock.parked == 1 }
+        window.open = false
+        clock.releaseAll()
+        for _ in 0..<50 { await Task.yield() }
+        #expect(window.log == ["request", "front"])
+    }
+
+    @Test("a show the user did not ask for (forcing: false) asks and shows but never schedules or forces")
+    func unrequestedShowIsNeverForced() async {
+        let clock = ParkedClock(), window = FakeFrontable()
+        WindowFronting(clock: clock).bringToFront(window, forcing: false)
+        for _ in 0..<50 { await Task.yield() }
+        #expect(window.log == ["request", "front"])
+        #expect(clock.requested.isEmpty, "no follow-up is scheduled")
+    }
+
     @Test("opening again while the first follow-up waits cancels it: one force, not two")
     func reopenCancelsEarlierFollowUp() async {
         let clock = ParkedClock(), window = FakeFrontable()
@@ -111,6 +134,9 @@ private func settle(_ condition: () -> Bool) async {
             #expect(!code.contains("makeKeyAndOrderFront"), "\(path) must not order a window front itself")
             #expect(!code.contains(".activate("), "\(path) must not activate the app itself")
         }
+        // The launch-time setup guide is Flotsam's own show, so it must not force activation (a login-item start).
+        let onboarding = try frd008Code("App/Flotsam/OnboardingWindowController.swift")
+        #expect(onboarding.contains("front.bringToFront(forcing: !resuming)"))
         let adapter = try frd008Code("App/Flotsam/WindowFrontAdapter.swift")
         #expect(adapter.contains("WindowFronting(clock: SystemClock())"))
         #expect(adapter.contains("func requestAppActivation() { NSApp.activate() }"))
@@ -145,13 +171,16 @@ private func settle(_ condition: () -> Bool) async {
         ]
         var offenders: [String] = []
         let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
-        while let url = files?.nextObject() as? URL, url.pathExtension == "swift" {
-            guard !allowed.contains(url.lastPathComponent) else { continue }
+        var scanned = 0
+        while let url = files?.nextObject() as? URL {
+            guard url.pathExtension == "swift", !allowed.contains(url.lastPathComponent) else { continue }
+            scanned += 1
             let code = try frd008Code("App/Flotsam/" + url.path.replacingOccurrences(of: root.path + "/", with: ""))
             if code.contains("makeKeyAndOrderFront") || code.contains("NSApp.activate(") || code.contains("NSApplication.shared.activate(") {
                 offenders.append(url.lastPathComponent)
             }
         }
+        #expect(scanned > 20, "the scan walked the App sources (a non-Swift file must not end it)")
         #expect(offenders == [], "window fronting has one home, WindowFrontAdapter")
     }
 }
