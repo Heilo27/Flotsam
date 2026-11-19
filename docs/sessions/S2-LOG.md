@@ -2019,3 +2019,34 @@ Setup: a Debug build on macOS 27.3. The app ran isolated (CFFIXED_USER_HOME, a f
   - FR-005-09 / AC-005-08a, with FR-003-22 and FR-003-02 (R-526a to R-526c).
 - **Secure item route for R-526a:** a real copy carrying org.nspasteboard.ConcealedType. A direct insert can't create one, because the DB triggers require secureCiphertext.
 - **Snapshot identity:** the real data and the prefs hashes are identical before and after. The real Flotsam never ran. The pasteboard is unchanged, and cleanup is done.
+
+## TASK-525/526 real-OS rows, rerun: main @ 5bbe312 (2026-11-19)
+
+The screen was unlocked for the whole run. Each verdict below was read from AX trees and screenshots.
+
+**Input method caveat.** Synthetic HID input and postToPid events never reached Flotsam, so the run used a workaround:
+- The Library was opened from the status-item menu.
+- Keys were sent through System Events with Flotsam frontmost.
+- Right-clicks were HID clicks with Flotsam frontmost.
+- Menu rows were pressed with AXPress.
+
+This means the panel ran activated rather than as a non-activating panel, so the real ⌘K and right-click path is only approximated. The synthetic ⌃⌘V also failed to open the Library. That is a lead, not a confirmed defect, and needs Ryan to try the hotkey by hand.
+
+- **R-525a (AC-003-20): PASS.** With the Library open the whole time, both the visible label and the AX label advanced:
+  - 58s → 1m → 2m → 3m
+  - 58m → 59m → 1h
+
+  The two rows (now-1m20s and now-58m50s) were seeded by SQL into the isolated DB.
+- **R-525b (AC-003-20, "given the panel is hidden, then no refresh is scheduled"): PASS.**
+  - Hidden for 122 s: CPU time grew 0.01 s per 8 s, the same as the open baseline, and interrupt wake-ups went from 11 to 12.
+  - On show, the labels read 5m / 7m / 1h, matching the DB (5.8 / 7.1 / 64.6 min).
+  - The watch cancelling on hide was inferred from those numbers, not observed directly.
+- **R-526a (AC-005-08a): PASS.** The secure item came from a real ConcealedType copy and showed as a locked row.
+  - ⌘K opened nothing and the Library stayed up.
+  - The context menu had no "Shortcut and Trigger…" row.
+- **R-526b (AC-005-08a): PASS.**
+  - Two ordinary items selected: ⌘K opened nothing and the menu had no row.
+  - One ordinary item selected: ⌘K and the menu row each opened the Shortcut and Trigger window and hid the Library.
+- **R-526c (probe, no verdict):** with the Note overlay open on an ordinary item, ⌘K did nothing. The Library and the overlay both stayed, and no editor opened.
+- **Defects:** none confirmed. **Spec drift:** none.
+- **Snapshot identity:** the real data and the prefs hashes are identical before and after. The real Flotsam never ran. The pasteboard was restored, and cleanup is done.
