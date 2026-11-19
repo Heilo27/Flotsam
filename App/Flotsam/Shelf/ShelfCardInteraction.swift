@@ -2,7 +2,7 @@ import AppKit
 import FlotsamBase
 import SwiftUI
 
-/// The mouse behaviour of one Shelf card (FR-006-09, FR-006-10): a click selects, a double-click pastes, and a drag past
+/// The mouse behaviour of one Shelf card (FR-006-09, FR-006-10) or Library row (FR-003-09, FR-003-45): a click selects, a double-click pastes, and a drag past
 /// a few points starts a drag-out. SwiftUI's tap and drag gestures cannot start an AppKit drag session, so this is an
 /// AppKit view laid over the card.
 ///

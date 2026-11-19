@@ -8,6 +8,7 @@ import SwiftUI
 /// cursor are the model's; this only draws them and forwards pointer input.
 struct LibraryItemsView: View {
     let model: LibraryViewModel
+    let dragOut: ShelfDragOut
     private static let cellWidth: CGFloat = 130
     private static let cellSpacing: CGFloat = 10
 
@@ -19,7 +20,7 @@ struct LibraryItemsView: View {
                     if model.viewMode == .list {
                         LazyVStack(spacing: 2) {
                             ForEach(rows) { row in
-                                LibraryListRow(model: model, row: row).onAppear { pageIfLast(row, in: rows) }
+                                LibraryListRow(model: model, row: row, dragOut: dragOut).onAppear { pageIfLast(row, in: rows) }
                             }
                         }
                         .padding(8)
@@ -30,7 +31,7 @@ struct LibraryItemsView: View {
                             spacing: Self.cellSpacing
                         ) {
                             ForEach(rows) { row in
-                                LibraryGridCell(model: model, row: row).onAppear { pageIfLast(row, in: rows) }
+                                LibraryGridCell(model: model, row: row, dragOut: dragOut).onAppear { pageIfLast(row, in: rows) }
                             }
                         }
                         .padding(10)
@@ -60,23 +61,35 @@ struct LibraryItemsView: View {
     }
 }
 
-/// Click selects, ⌘-click toggles, ⇧-click extends, double-click pastes (FR-003-09); the context menu is FR-003-22.
+/// Click selects, ⌘-click toggles, ⇧-click extends, double-click pastes (FR-003-09), a drag past the system threshold
+/// drags the row out (FR-003-45); the context menu is FR-003-22. The mouse is `ShelfCardInteraction`, the one AppKit
+/// view that tells a click from a drag (SwiftUI gestures cannot start a drag session).
 private struct RowInteraction: ViewModifier {
     let model: LibraryViewModel
     let row: LibraryRowPresentation
+    let dragOut: ShelfDragOut
 
     func body(content: Content) -> some View {
         content
             .contentShape(Rectangle())
-            .onTapGesture(count: 2) {
-                model.select(id: row.id)
-                model.perform(.paste(.paste))
-            }
-            .onTapGesture {
-                let flags = NSEvent.modifierFlags
-                if flags.contains(.command) { model.toggle(id: row.id) }
-                else if flags.contains(.shift) { model.extend(to: row.id) }
-                else { model.select(id: row.id) }
+            .overlay {
+                ShelfCardInteraction(
+                    onClick: { modifiers in
+                        if modifiers.contains(.command) { model.toggle(id: row.id) }
+                        else if modifiers.contains(.shift) { model.extend(to: row.id) }
+                        else { model.select(id: row.id) }
+                    },
+                    onDoubleClick: {
+                        model.select(id: row.id)
+                        model.perform(.paste(.paste))
+                    },
+                    // A press is usually a click, and a click on a secure row must not ask the owner to authenticate
+                    // (FR-003-45): nothing is read at mouse-down. The drag reads, and authenticates, when it starts.
+                    prepareDrag: {},
+                    beginDrag: { view, event in
+                        dragOut.prepare(cardId: row.id)
+                        await dragOut.begin(from: view, event: event)
+                    })
             }
             .contextMenu { contextMenu }
             .id(row.id)
@@ -111,8 +124,8 @@ private struct RowInteraction: ViewModifier {
 }
 
 private extension View {
-    func rowInteraction(model: LibraryViewModel, row: LibraryRowPresentation) -> some View {
-        modifier(RowInteraction(model: model, row: row))
+    func rowInteraction(model: LibraryViewModel, row: LibraryRowPresentation, dragOut: ShelfDragOut) -> some View {
+        modifier(RowInteraction(model: model, row: row, dragOut: dragOut))
     }
 }
 
@@ -171,6 +184,7 @@ private struct TagChips: View {
 struct LibraryListRow: View {
     let model: LibraryViewModel
     let row: LibraryRowPresentation
+    let dragOut: ShelfDragOut
 
     var body: some View {
         HStack(spacing: 10) {
@@ -192,7 +206,7 @@ struct LibraryListRow: View {
             rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
             in: RoundedRectangle(cornerRadius: 6)
         )
-        .rowInteraction(model: model, row: row)
+        .rowInteraction(model: model, row: row, dragOut: dragOut)
     }
 }
 
@@ -228,6 +242,7 @@ private struct LibraryRowLead: View {
 struct LibraryGridCell: View {
     let model: LibraryViewModel
     let row: LibraryRowPresentation
+    let dragOut: ShelfDragOut
     @State private var thumbnail: NSImage?
 
     var body: some View {
@@ -257,6 +272,6 @@ struct LibraryGridCell: View {
             guard row.kind == .image || row.kind == .screenshot else { return }
             if let data = await model.thumbnail(for: row.id, size: .grid) { thumbnail = NSImage(data: data) }
         }
-        .rowInteraction(model: model, row: row)
+        .rowInteraction(model: model, row: row, dragOut: dragOut)
     }
 }

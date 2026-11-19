@@ -256,6 +256,15 @@ final class AppContainer {
         Task { await watcher.start() }
     }
 
+    /// What a drag-out session needs, for the Shelf (FR-006-10) and the Library's rows (FR-003-45): the cards' content,
+    /// a paste counted per accepted card, the file system, the secure-item gate and the error report. One home, so the
+    /// two surfaces cannot drift.
+    private func dragOutPorts(database: FlotsamDatabase, report: @escaping @MainActor (FlotsamError) -> Void) -> ShelfDragOut.Ports {
+        .init(
+            content: { await database.content(of: $0) }, recordPaste: { _ = await database.recordPaste(of: $0) },
+            files: LocalFileSystem(), secureAccess: secureAccess, report: report)
+    }
+
     /// FRD-006: builds the Shelf over the opened database and points `actions.toggleShelf` at it (FR-006-03c). The Shelf
     /// pastes through the Library's `PasteService` (FR-006-08) and reads Missing from the same row flag (FR-006-14).
     private func startShelf(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
@@ -275,9 +284,7 @@ final class AppContainer {
         shelf = controller
         controller.menuBarIconFrame = { [weak self] in self?.menuBarIconFrame?() }
         // FR-006-10: drag-out reads the cards' content and counts a paste per accepted card.
-        controller.dragOut.ports = .init(
-            content: { await database.content(of: $0) }, recordPaste: { _ = await database.recordPaste(of: $0) },
-            files: LocalFileSystem(), secureAccess: secureAccess, report: effects.report)
+        controller.dragOut.ports = dragOutPorts(database: database, report: effects.report)
         // FR-006-13: a drop is an ingest path. It goes through the same classifier and ingest actor as clipboard
         // capture; the controller reads the drag pasteboard and calls this.
         controller.dropService = ShelfDropService(
@@ -358,6 +365,8 @@ final class AppContainer {
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller
+        // FR-003-45: dragging a row out reads the same content and counts a paste per accepted row.
+        controller.dragOut.ports = dragOutPorts(database: database, report: { error in Task { await reporter.report(error, origin: .userInitiated) } })
         // Only one Flotsam panel is open at a time: opening the Library hides the Shelf (FR-006-04).
         actions.openLibrary = { [weak controller, weak self] in
             self?.shelf?.libraryOpened()

@@ -3,9 +3,11 @@ import FlotsamBase
 import FlotsamShelf
 import FlotsamStorage
 
-/// Drag-out from the Shelf (FR-006-10, FR-006-11): turns the dragged cards into a drag session whose pasteboard items
-/// are provided lazily, and does the accounting when a drop target accepts them. What a card provides is decided by
-/// `ShelfDragPlanner`; which cards are dragged by `ShelfModel.covered(by:)`; this is the AppKit session between them.
+/// Drag-out from the Shelf (FR-006-10, FR-006-11) and from Library rows (FR-003-45): turns the dragged cards into a
+/// drag session whose pasteboard items are provided lazily, and does the accounting when a drop target accepts them.
+/// What a card provides is decided by `ShelfDragPlanner`; which cards are dragged by the owner's selection rule
+/// (`coveredIds`: `ShelfModel.covered(by:)` or `LibraryViewModel.coveredIDs(by:)`); this is the AppKit session between
+/// them. Each surface owns one instance.
 ///
 /// The drag pasteboard is the only one written: the general pasteboard is never touched, so nothing here is an own
 /// write for clipboard capture to skip. The operation is `.copy` whatever modifier keys are held.
@@ -23,12 +25,16 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     }
 
     var ports: Ports?
-    weak var model: ShelfModel?
+    /// The cards a drag from card `id` carries, in on-screen order (the owner's selection rule).
+    var coveredIds: (@MainActor (UUID) -> [UUID])?
     /// A drag session began (`true`) or ended (`false`): the reveal machine must not hide a Shelf under its own drag.
     var onSession: (@MainActor (Bool) -> Void)?
     /// A drop target accepted the drag (FR-006-11): a transient Shelf hides.
     var onAccepted: (@MainActor () -> Void)?
 
+    /// True from `prepare` until its reads, and any authentication prompt, are done. The Library panel must not treat the
+    /// prompt taking key as a click outside while this is set (FR-003-45).
+    private(set) var isPreparing = false
     private var prepared: Task<FlotsamResult<ShelfDragPlan>, Never>?
     /// The owner authenticated for this drag, which may have taken longer than the pointer held the button.
     private var authenticated = false
@@ -43,14 +49,16 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     /// authenticate here, every time (FR-006-21): its text exists only after that, and a card whose check fails
     /// provides nothing.
     func prepare(cardId: UUID) {
-        guard let ports, let model else { return }
-        let rows = model.covered(by: cardId)
+        guard let ports, let coveredIds else { return }
+        let ids = coveredIds(cardId)
         authenticated = false
+        isPreparing = true
         prepared = Task {
+            defer { isPreparing = false }
             var candidates: [ShelfDragCandidate] = []
             var declined: FlotsamError?
-            for row in rows {
-                switch await ports.content(row.id) {
+            for id in ids {
+                switch await ports.content(id) {
                 case .failure(let error):
                     ports.report(error)
                 case .success(let content):
@@ -62,7 +70,7 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
                         }
                         authenticated = true
                     }
-                    candidates.append(ShelfDragCandidate(itemId: row.id, content: content, revealedSecureText: revealed))
+                    candidates.append(ShelfDragCandidate(itemId: id, content: content, revealedSecureText: revealed))
                 }
             }
             // A declined check is the one thing reported about a drag that has nothing else to give, so the cancel
