@@ -61,6 +61,8 @@ public final class ShelfModel {
     @ObservationIgnored private let host: any ShelfPasteHost
     @ObservationIgnored private let events: ItemEventBus
     @ObservationIgnored private let effects: ShelfEffects
+    /// The spinner's 150 ms one-shot delay (FR-006-32); the Library's logic and constant.
+    public let busy: BusyIndicator
 
     // MARK: Private state
 
@@ -77,7 +79,8 @@ public final class ShelfModel {
 
     public init(
         source: any ShelfDataSource, paster: any ShelfPasting, host: any ShelfPasteHost, events: ItemEventBus,
-        details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects()
+        details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects(),
+        clock: any ShelfClock = SystemShelfClock()
     ) {
         self.source = source
         self.paster = paster
@@ -85,6 +88,7 @@ public final class ShelfModel {
         self.events = events
         self.details = details
         self.effects = effects
+        busy = BusyIndicator { await clock.sleep(for: $0.timeInterval) }
     }
 
     // MARK: Derived
@@ -162,6 +166,7 @@ public final class ShelfModel {
         unsubscribe?()
         unsubscribe = nil
         loadTask?.cancel()
+        busy.end()
         generation += 1
     }
 
@@ -226,6 +231,7 @@ public final class ShelfModel {
         generation += 1
         let generation = generation
         if orderedRows.isEmpty { loadState = .loading }
+        busy.begin()
         let filtering = isFiltering
         let allQuery = LibraryQuery(filter: kindFilter.map(LibraryFilter.kind) ?? .all, text: searchText, sort: .recent, page: 0)
         let pinnedQuery = filtering ? nil : LibraryQuery(filter: .pinned, text: "", sort: .recent, page: 0)
@@ -240,6 +246,7 @@ public final class ShelfModel {
             switch (pinnedPage ?? .success(ItemPage(rows: [], totalCount: 0, page: 0)), allPage) {
             case (.failure(let error), _), (_, .failure(let error)):
                 // The previous cards stay on screen.
+                busy.end()
                 loadState = .failed(error)
                 effects.report(error)
             case (.success(let pinned), .success(let all)):
@@ -257,6 +264,7 @@ public final class ShelfModel {
                 // The cards still show, on their primary line; the failure is reported like the list's own.
                 case .failure(let error): effects.report(error)
                 }
+                busy.end()
                 apply(pinned: pinnedRows, recent: recentRows, texts: loadedTexts, selection: policy)
             }
         }

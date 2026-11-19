@@ -71,6 +71,8 @@ public final class LibraryViewModel {
     /// The one time source for every row's relative time and its VoiceOver label (FR-003-07, FR-003-21).
     @ObservationIgnored private let clock: any WallClock
     @ObservationIgnored private var unsubscribeEvents: (@Sendable () -> Void)?
+    /// The spinner's 150 ms one-shot delay (FR-003-50); shared logic and constant with the Shelf.
+    public let busy: BusyIndicator
     /// A reload is running; a change that arrives meanwhile is queued, never allowed to cancel it, so an Organize
     /// command's own `refresh(selecting:)` keeps the selection it asked for.
     @ObservationIgnored private var reloadInFlight = false
@@ -112,6 +114,7 @@ public final class LibraryViewModel {
         self.organizer = organizer
         self.events = events
         self.clock = clock
+        busy = BusyIndicator { await clock.sleep(for: $0) }
         viewMode = preferences.viewMode
         layout = preferences.layout
         sort = preferences.sort
@@ -157,7 +160,14 @@ public final class LibraryViewModel {
     /// The empty history state, as opposed to "no matches" (FR-003-11): nothing stored at all.
     public var isHistoryEmpty: Bool { loadState == .loaded && loadedRows.isEmpty && searchText.isEmpty && filter == .all }
 
-    public var isNoResults: Bool { loadState == .loaded && loadedRows.isEmpty && !isHistoryEmpty }
+    public var isNoResults: Bool { loadState == .loaded && loadedRows.isEmpty && !isHistoryEmpty && emptyTagName == nil }
+
+    /// The name of the tag chosen in the sidebar when it has no items and no search narrows it (FR-003-50); nil otherwise.
+    /// Such a tag is not "no matches": nothing was searched for.
+    public var emptyTagName: String? {
+        guard loadState == .loaded, loadedRows.isEmpty, searchText.isEmpty, case .tag = filter else { return nil }
+        return sidebarEntries.first { $0.filter == filter }?.title
+    }
 
     // MARK: Lifecycle
 
@@ -278,6 +288,7 @@ public final class LibraryViewModel {
         reloadInFlight = false
         reloadQueued = false
         loadTask?.cancel()
+        busy.end()
         previewTask?.cancel()
         clearHover()
         relativeTimeTask?.cancel()
@@ -351,6 +362,7 @@ public final class LibraryViewModel {
         let generation = generation
         let query = LibraryQuery(filter: filter, text: searchText, sort: sort, page: 0)
         if loadedRows.isEmpty { loadState = .loading }
+        busy.begin()
         loadTask = Task { [weak self] in
             guard let self else { return }
             let span = interval.map { Signposts.begin($0) }
@@ -359,6 +371,7 @@ public final class LibraryViewModel {
             let (page, counts) = await (pageResult, countsResult)
             span?.end()
             guard !Task.isCancelled, generation == self.generation else { return }
+            busy.end()
             applyFirstPage(page, counts: counts, selection: policy)
             reloadInFlight = false
             // A change that landed while this load ran may postdate its reads: load again.

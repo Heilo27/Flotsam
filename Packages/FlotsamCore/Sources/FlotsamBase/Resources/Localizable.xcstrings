@@ -701,6 +701,26 @@
         }
       }
     },
+    "ui.library.emptyTagBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag a clip from its context menu, or choose All to see everything."
+          }
+        }
+      }
+    },
+    "ui.library.emptyTagTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing tagged “%@” yet"
+          }
+        }
+      }
+    },
     "ui.library.emptyTitle" : {
       "localizations" : {
         "en" : {
@@ -929,6 +949,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Space"
+          }
+        }
+      }
+    },
+    "ui.library.loading" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
           }
         }
       }
@@ -1199,6 +1229,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Search clipboard history"
+          }
+        }
+      }
+    },
+    "ui.library.searching" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Searching…"
           }
         }
       }

@@ -22,6 +22,7 @@ public enum LibraryText {
     public static let clearSearchButton = "ui.btn.clearSearch"
     public static let retryButton = "ui.btn.retry"
     public static let errorTitle = "ui.library.errorTitle"
+    public static let emptyTagBody = "ui.library.emptyTagBody"
     public static let previewShowMore = "ui.library.previewShowMore"
     public static let previewUnavailable = "ui.library.previewUnavailable"
     public static let menuPaste = "ui.library.menuPaste"
@@ -35,6 +36,9 @@ public enum LibraryText {
     public static let sectionApps = "ui.library.sectionApps"
 
     public static func noResultsTitle(query: String) -> String { format("ui.library.noResultsTitle", query) }
+
+    /// "Nothing tagged “Work” yet": a tag chosen in the sidebar that has no items (FR-003-50).
+    public static func emptyTagTitle(name: String) -> String { format("ui.library.emptyTagTitle", name) }
 
     public static func itemCount(_ count: Int) -> String {
         format("ui.library.footerItems", count)

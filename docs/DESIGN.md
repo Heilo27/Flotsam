@@ -169,7 +169,15 @@ Popovers (tags, note, shortcut and trigger editor) anchor to the selected row, c
 
 ## 5. States matrix
 
-Empty (images 02, 05), no results (02), inline error with Retry (02, STO-DB-004), copy-only (02), multi-select (02), over-limit note (03), shortcut conflict (03), Missing item (01 grid), drop highlight (05), Pause (08), warning dot (08), fatal alert (08). Loading is not designed: all reads are local and under 50 ms; a read that takes longer shows the inline error.
+Empty (images 02, 05), no results (02), inline error with Retry (02, STO-DB-004), copy-only (02), multi-select (02), over-limit note (03), shortcut conflict (03), Missing item (01 grid), drop highlight (05), Pause (08), warning dot (08), fatal alert (08). Loading and searching (Library FR-003-50, Shelf FR-006-32) and empty tag (Library FR-003-50) complete the matrix.
+
+| State | Where | Shown | Never shown |
+|---|---|---|---|
+| Loading | Library results area, Shelf panel | blank for the first 150 ms; from 150 ms a small spinner and `ui.library.loading`, centred, until the read ends | for a read under 150 ms; the empty or no-matches text while the read runs |
+| Searching | same | as Loading with `ui.library.searching` while the search field has text or a Shelf pill is chosen; over rows already on screen the rows stay and the spinner is a badge at the top | for a search under 150 ms |
+| Empty tag | Library results area | a tag chosen in the sidebar with no items and an empty search: `ui.library.emptyTagTitle` (the tag's name) and `ui.library.emptyTagBody` | with text in the search field (that is no results); in the Shelf, which has no tag filter |
+
+The 150 ms is one constant (`BusyIndicator.delay`) shared by both panels, run as a single one-shot task cancelled when the read ends: no repeating timer and nothing armed while idle (truth S5). A read that fails shows the inline error with Retry, not the spinner.
 
 ## 6. Keyboard map (FR-003-08)
 
@@ -319,6 +327,10 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.emptyBody` | Copy something and it appears here. Press ⌃⌘V any time to open this panel. | (74/150) |
 | `ui.library.noResultsTitle` | No matches for “%@” | (24/40) |
 | `ui.library.noResultsBody` | Check the spelling, or clear the search to see everything. | (58/150) |
+| `ui.library.emptyTagTitle` | Nothing tagged “%@” yet | (23/40) |
+| `ui.library.emptyTagBody` | Tag a clip from its context menu, or choose All to see everything. | (66/150) |
+| `ui.library.loading` | Loading… | (8/15) |
+| `ui.library.searching` | Searching… | (10/15) |
 | `ui.library.errorTitle` | History unavailable | (19/40) |
 | `ui.library.footerCopyOnly` | Press ⌘V to paste | (17/40) |
 | `ui.library.footerMultiDisabled` | Select one item to paste | (24/40) |

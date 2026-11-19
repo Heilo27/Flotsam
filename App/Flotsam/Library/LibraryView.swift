@@ -76,7 +76,8 @@ struct LibraryView: View {
     private var content: some View {
         switch model.loadState {
         case .loading:
-            ProgressView().controlSize(.small).frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Blank until the load has run for 150 ms (FR-003-50), so a fast load never flashes a spinner.
+            BusyView(isVisible: model.busy.isVisible, isSearching: !model.searchText.isEmpty)
         case .failed(let error):
             LibraryStateView(
                 title: LibraryText.string(LibraryText.errorTitle), message: FlotsamStrings.message(for: error),
@@ -87,6 +88,10 @@ struct LibraryView: View {
                 LibraryStateView(
                     title: LibraryText.string(LibraryText.emptyTitle), message: LibraryText.string(LibraryText.emptyBody),
                     buttonTitle: nil, action: {})
+            } else if let tagName = model.emptyTagName {
+                LibraryStateView(
+                    title: LibraryText.emptyTagTitle(name: tagName), message: LibraryText.string(LibraryText.emptyTagBody),
+                    buttonTitle: nil, action: {})
             } else if model.isNoResults {
                 LibraryStateView(
                     title: LibraryText.noResultsTitle(query: model.searchText),
@@ -95,6 +100,8 @@ struct LibraryView: View {
                 ) { model.setSearchText(String()) }
             } else {
                 LibraryItemsView(model: model)
+                    // A search or filter over rows already on screen: the rows stay, the badge says it is working.
+                    .busyBadge(isVisible: model.busy.isVisible, isSearching: !model.searchText.isEmpty)
             }
         }
     }
