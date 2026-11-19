@@ -1,6 +1,18 @@
 import Foundation
 import FlotsamBase
 
+/// A display as the Library places itself: its full frame (pointer tests) and its visible frame (menu bar and Dock
+/// excluded). Coordinates are AppKit's, origin bottom left.
+public struct LibraryScreen: Sendable, Equatable {
+    public let frame: CGRect
+    public let visibleFrame: CGRect
+
+    public init(frame: CGRect, visibleFrame: CGRect) {
+        self.frame = frame
+        self.visibleFrame = visibleFrame
+    }
+}
+
 /// Panel geometry that does not need AppKit (FR-003-03, DESIGN section 3.1), so the placement rule is testable.
 public enum LibraryLayout {
     public static let minimumSize = PanelSize(width: 560, height: 360)
@@ -13,6 +25,15 @@ public enum LibraryLayout {
     /// The remembered size, raised to the minimum (FR-003-03).
     public static func clamped(_ size: PanelSize) -> PanelSize {
         PanelSize(width: max(size.width, minimumSize.width), height: max(size.height, minimumSize.height))
+    }
+
+    /// The visible frame used when the system reports no screen at all.
+    public static let fallbackVisibleFrame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+
+    /// The screen the panel opens on: the one whose frame contains the pointer (a full-screen app's display included),
+    /// else the main screen, else the first (FR-003-03).
+    public static func screen(containing pointer: CGPoint, in screens: [LibraryScreen], main: LibraryScreen?) -> LibraryScreen? {
+        screens.first { $0.frame.contains(pointer) } ?? main ?? screens.first
     }
 
     /// Where the panel opens: centred horizontally on `visibleFrame` (the pointer's screen, menu bar and Dock

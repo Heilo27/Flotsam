@@ -5,10 +5,12 @@ import FlotsamPaste
 import SwiftUI
 
 /// The Library's `NSPanel` (FR-003-01, FR-003-02, FR-003-03). One instance, created once and kept hidden between uses.
-/// It owns the view model, records the paste target, runs `captureNow`, places the panel on the pointer's screen, routes
-/// key events into the key map, and hides on every trigger the FRD lists. Behaviour lives in `LibraryViewModel`.
+/// It owns the view model and the window. What to do on each hotkey press and system event (toggle, record the paste
+/// target, run `captureNow`, pick the pointer's screen, hide on every trigger the FRD lists) is `LibraryPanelDriver`'s,
+/// in FlotsamLibrary, where it is tested; this class adapts the screens and the `NSPanel` to the driver's ports and
+/// routes key events into the key map. Behaviour of the list lives in `LibraryViewModel`.
 @MainActor
-final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
+final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, LibraryPanelPresenter {
     /// A key-capable panel that never activates the app (FR-003-01): the previous app stays frontmost.
     private final class Panel: NSPanel {
         override var canBecomeKey: Bool { true }
@@ -23,16 +25,24 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         func hidePanel() { target?.hidePanel() }
     }
 
+    /// `NSEvent.mouseLocation` and `NSScreen`, as the driver's `LibraryScreenProvider`.
+    private struct SystemScreens: LibraryScreenProvider {
+        var pointerLocation: CGPoint { NSEvent.mouseLocation }
+        var screens: [LibraryScreen] { NSScreen.screens.map(Self.snapshot) }
+        var mainScreen: LibraryScreen? { (NSScreen.main ?? NSScreen.screens.first).map(Self.snapshot) }
+        private static func snapshot(_ screen: NSScreen) -> LibraryScreen {
+            LibraryScreen(frame: screen.frame, visibleFrame: screen.visibleFrame)
+        }
+    }
+
     let model: LibraryViewModel
+    private let driver: LibraryPanelDriver
     private let organize: OrganizeCoordinator
     private let hostBox: HostBox
     private let panel: Panel
-    private let frontmost: any FrontmostAppProvider
     private let preferences: any LibraryPreferences
-    private let captureNow: @MainActor () async -> Void
     private var keyMonitor: Any?
     private var observers: [NSObjectProtocol] = []
-    private var isOpening = false
 
     /// The model needs its host and the host needs the model, so the controller builds the model with itself as host.
     init(
@@ -47,15 +57,16 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         organize.model = model
         self.organize = organize
         self.hostBox = hostBox
-        self.frontmost = frontmost
         self.preferences = preferences
-        self.captureNow = captureNow
+        driver = LibraryPanelDriver(
+            model: model, frontmost: frontmost, screens: SystemScreens(), preferences: preferences, captureNow: captureNow)
         let size = LibraryLayout.clamped(preferences.panelSize)
         panel = Panel(
             contentRect: NSRect(x: 0, y: 0, width: size.width, height: size.height),
-            styleMask: [.nonactivatingPanel, .titled, .resizable, .fullSizeContentView],
+            styleMask: LibraryPanelDriver.windowSpec.styleMask(adding: [.titled, .fullSizeContentView]),
             backing: .buffered, defer: true)
         super.init()
+        driver.presenter = self
         hostBox.target = self
         configurePanel()
         observeHideTriggers()
@@ -63,55 +74,41 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
 
     // MARK: PasteHost
 
-    var isPanelVisible: Bool { panel.isVisible }
+    var isPanelVisible: Bool { driver.isPanelVisible }
 
-    func hidePanel() {
-        guard panel.isVisible else { return }
-        removeKeyMonitor()
-        organize.close()
-        panel.orderOut(nil)
-        model.panelDidHide()
-    }
+    func hidePanel() { driver.hidePanel() }
 
     // MARK: Show and hide
 
     /// The hotkey and the menu item both call this: it toggles (FR-003-02).
-    func toggle() {
-        if panel.isVisible { hidePanel() } else { Task { await show() } }
-    }
+    func toggle() { driver.toggle() }
 
-    /// Records the target app, runs `captureNow`, loads the open state, then shows (FR-003-02, FR-003-04).
-    func show() async {
-        guard !isOpening, !panel.isVisible else { return }
-        isOpening = true
-        defer { isOpening = false }
-        let target = frontmost.frontmost()
-        await captureNow()
-        await model.open(target: target)
-        panel.setFrame(Self.frame(for: preferences.panelSize), display: false)
+    func show() async { await driver.show() }
+
+    // MARK: LibraryPanelPresenter
+
+    var isVisible: Bool { panel.isVisible }
+
+    func show(at frame: CGRect) {
+        panel.setFrame(frame, display: false)
         installKeyMonitor()
         panel.makeKeyAndOrderFront(nil)
     }
 
-    private static func frame(for size: PanelSize) -> NSRect {
-        let pointer = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { $0.frame.contains(pointer) } ?? NSScreen.main ?? NSScreen.screens.first
-        let visible = screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        return LibraryLayout.frame(in: visible, size: size)
+    func hide() {
+        removeKeyMonitor()
+        organize.close()
+        panel.orderOut(nil)
     }
 
     private func configurePanel() {
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.hidesOnDeactivate = false
+        LibraryPanelDriver.windowSpec.apply(to: panel)
         panel.isReleasedWhenClosed = false
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.isMovableByWindowBackground = true
         panel.contentMinSize = NSSize(width: LibraryLayout.minimumSize.width, height: LibraryLayout.minimumSize.height)
         panel.setAccessibilityLabel(LibraryText.string(LibraryText.panelTitle))
         panel.delegate = self
@@ -138,19 +135,18 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
     private func observeHideTriggers() {
         let workspace = NSWorkspace.shared.notificationCenter
         observers.append(workspace.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.hidePanel() }
+            MainActor.assumeIsolated { self?.driver.activeSpaceChanged() }
         })
         observers.append(workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
             let activated = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.processIdentifier
             MainActor.assumeIsolated {
-                // Flotsam's own activation (the menu bar item) is not "another app came forward".
-                if activated != ProcessInfo.processInfo.processIdentifier { self?.hidePanel() }
+                self?.driver.applicationActivated(processId: activated, ownProcessId: ProcessInfo.processInfo.processIdentifier)
             }
         })
     }
 
     func windowDidResignKey(_ notification: Notification) {
-        if !isOpening { hidePanel() }
+        driver.panelResignedKey()
     }
 
     /// The size is remembered when a live resize ends (FR-003-03).

@@ -91,7 +91,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         self.placement = placement
         panel = Panel(
             contentRect: NSRect(x: 0, y: 0, width: ShelfLayout.panelWidth, height: ShelfLayout.minimumHeight),
-            styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: true)
+            styleMask: ShelfWindowPolicy.windowSpec.styleMask(adding: [.borderless]), backing: .buffered, defer: true)
         hosting = NSHostingView(
             rootView: ShelfView(model: model, placement: placement, thumbnail: thumbnail, dragOut: dragOut, close: {}))
         driver = ShelfRevealDriver(clock: clock)
@@ -180,7 +180,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         let frame = ShelfLayout.frame(
             for: placement, in: visible, contentExtent: contentExtent(), menuBarIcon: menuBarIconFrame?())
         let transition = ShelfLayout.transition(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
-        panel.allowsKey = sticky
+        let ordering = ShelfWindowPolicy.ordering(for: trigger.mode)
+        panel.allowsKey = ordering == .keyAndFront
         hosting.rootView = makeView()
         shownFrame = frame
         switch transition.style {
@@ -191,10 +192,11 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             panel.setFrame(Self.offscreen(frame, placement: placement, in: visible), display: false)
             panel.alphaValue = 1
         }
-        if sticky {
+        switch ordering {
+        case .keyAndFront:
             installKeyMonitor()
             panel.makeKeyAndOrderFront(nil)
-        } else {
+        case .frontWithoutKey:
             panel.orderFrontRegardless()
         }
         NSAnimationContext.runAnimationGroup({ context in
@@ -286,10 +288,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     }
 
     private func configurePanel() {
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
+        ShelfWindowPolicy.windowSpec.apply(to: panel)
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear

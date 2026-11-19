@@ -11,7 +11,8 @@ import Testing
 // a seam below the AppKit layer. Same arrangement as Frd003ContractSupport.swift (real FlotsamDatabase in a temp folder,
 // shipping PasteService, fakes only at the OS edges); expected values are literals from the oracle (blind).
 //
-// What these cannot see, and why (reported as "no seam: manual"): the hotkey itself, TextEdit's document text, the
+// What these cannot see, and why (reported as "no seam: manual"): the hotkey press itself (what the app does on it is
+// LibraryPanelDriverTests), TextEdit's document text, the
 // target app's rendering of the paste, the HUD's placement and 2.5 s timing, VoiceOver's actions menu, the SwiftUI
 // context menu's order, and the network. Each test names the half it covers.
 
@@ -156,7 +157,7 @@ struct GapRig {
 
     // MARK: Open and close (OC-3002 Esc half, OC-3007)
 
-    // OC-3002 (Esc half; the hotkey-again half is the AppKit panel controller, no seam: manual). Also the model half of
+    // OC-3002 (Esc half; the hotkey-again half is LibraryPanelDriverTests, through the panel driver). Also the model half of
     // OC-3001: opening writes nothing. Mutation: Esc with nothing to clear writes the pasteboard, posts ⌘V, or fails to hide.
     @Test("OC-3002 Esc with an empty query and preview closed closes the panel and leaves the pasteboard alone; Esc with a query only clears it")
     func oc3002_escapeCloses() async throws {

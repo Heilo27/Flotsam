@@ -9,7 +9,8 @@ import Testing
 //
 // Everything else in the FRD-006 oracle either already has a citing test elsewhere (OC-6032..6036, 6083..6088,
 // 6090..6095, 6097..6107, 6109, 6110, 6117, 6118, 6120) or has no seam below AppKit and is marked "no seam: manual"
-// in the report: OC-6007, 6010, 6011, 6037 (panel, animation and focus behaviour), OC-6077 (private gesture
+// in the report: OC-6007, 6010, 6011, 6037 (the window flags are asserted in ShelfWindowPolicyTests; the real panel's
+// focus, Spaces and full-screen behaviour stay manual, TASK-518), OC-6077 (private gesture
 // threshold in the app target), OC-6081 (NSDraggingSource callback), OC-6089 (panel hit-testing), OC-6108 (general
 // pasteboard, no port in FlotsamCore), OC-6111..6114 (Finder, permissions, multi-display), OC-6121 (appearance).
 
