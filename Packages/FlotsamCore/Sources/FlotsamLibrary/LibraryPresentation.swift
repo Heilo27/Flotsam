@@ -91,25 +91,8 @@ public struct SidebarEntry: Equatable, Identifiable {
         return entries
     }
 
-    /// The Types rows in FR-003-12's order. The one home of that order: `ItemKind` itself stays in storage order, so
-    /// nothing that persists or counts by kind is affected. The exhaustive switch makes a new kind a compile error here.
-    static let typeOrder: [ItemKind] = ItemKind.allCases.sorted { typeRank($0) < typeRank($1) }
-
-    private static func typeRank(_ kind: ItemKind) -> Int {
-        switch kind {
-        case .text: 0
-        case .richText: 1
-        case .link: 2
-        case .color: 3
-        case .phone: 4
-        case .email: 5
-        case .image: 6
-        case .screenshot: 7
-        case .file: 8
-        case .folder: 9
-        case .bundle: 10
-        }
-    }
+    /// The Types rows in FR-003-12's order; the order itself lives in `ItemKind.displayOrder`, shared with the Shelf's pills.
+    static let typeOrder: [ItemKind] = ItemKind.displayOrder
 
     private static func appTitle(_ app: SidebarCounts.AppCount) -> String {
         switch app.identity {
