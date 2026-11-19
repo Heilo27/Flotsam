@@ -79,9 +79,13 @@ let package = Package(
         .testTarget(name: "FlotsamShelfTests", dependencies: ["FlotsamShelf", "FlotsamBase", "FlotsamStorage", "FlotsamPayload"]),
         // S2 perf harnesses (opt-in, measurement only): every test is gated on FLOTSAM_PERF=1, so a plain `swift test`
         // skips them. Sources symlink the storage fixture and the App's SystemPasteboard so nothing is copied; see bin/perf.sh.
+        // Exception: Oc2067Oc2068PerformanceTests (OC-2067 / OC-2068 / AC-002-11) is NOT gated; it asserts the screenshot
+        // pickup contracts on every `swift test`. It lives here, not in FlotsamScreenshotsTests, because it runs the real
+        // importer for minutes and that target's signpost tests read process-wide `screenshot.import` intervals: in one
+        // process the two interfere. A test target is its own process.
         .testTarget(
             name: "FlotsamPerfTests",
-            dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload", "FlotsamCapture"]
+            dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload", "FlotsamCapture", "FlotsamScreenshots"]
         ),
         // Worf (TASK-318): compiles the App-target editor model and its recorder (symlinked sources) so the editor's
         // save and validation rules run under `swift test` with no app launch.
