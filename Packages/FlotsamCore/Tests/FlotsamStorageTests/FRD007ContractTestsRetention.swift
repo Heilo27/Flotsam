@@ -262,8 +262,8 @@ import FlotsamBase
 
     // MARK: Storage usage (FR-007 section 8)
 
-    /// OC-7151. An empty library reads 0 items and 0 image bytes. Then 5 items arrive (4 texts of 3 KB, one 2 MiB
-    /// image); reopening Storage (a new `storageUsage` call) reads total + 5, image bytes 2 MiB, and a database size
+    /// OC-7151. A library of 3 small texts reads 3 items and 0 image bytes. Then 5 items arrive (4 texts of 3 KB, one
+    /// 2 MiB image); reopening Storage (a new `storageUsage` call) reads total + 5, image bytes 2 MiB, and a database size
     /// that grew. The database size is the page counters, so it grows while the rows are still in the WAL.
     /// Red if the total is cached, image bytes counts non-images, or the size is the length of `flotsam.sqlite` (it
     /// does not move until a checkpoint).

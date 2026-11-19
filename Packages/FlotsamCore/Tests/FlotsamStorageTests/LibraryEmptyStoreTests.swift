@@ -4,8 +4,9 @@ import FlotsamBase
 @testable import FlotsamStorage
 
 // FRD-007 8T gap batch, the query layer on an empty store (FR-007-05, FR-007-18). Read through the public query API.
-// Gap: "Settings > Storage shows total items 0" is a view of the Settings FRD; no Storage usage API exists in this
-// package yet, so only the item count behind it is asserted here (GAP-journey for the Settings view itself).
+// The Storage half of OC-7035 ("Storage usage shows total items 0") is asserted through `storageUsage()` in
+// Oc7035StorageUsageEmptyStoreTests; the Settings view itself is App-target SwiftUI (GAP-journey). This file asserts
+// the Library half.
 
 @Suite struct LibraryEmptyStoreTests {
     /// OC-7035. Given a fresh install, when the Library is queried, then it has 0 rows and 0 total under every filter,

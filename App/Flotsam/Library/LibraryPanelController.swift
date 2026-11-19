@@ -186,11 +186,18 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate {
         // An input method composing text owns every key until it commits.
         if let editor = panel.firstResponder as? NSTextView, editor.hasMarkedText() { return event }
         guard let stroke = LibraryKeyTranslator.stroke(for: event) else { return event }
-        // An open Organize overlay owns the keyboard: the Library's key map must not see typing meant for its fields.
-        if organize.isOverlayOpen { return organize.handle(stroke) ? nil : event }
+        // The routing order lives in FlotsamLibrary (tested there): overlay first, then the key map, then the field.
         // ⌘C copies the field's own selected text, not the row, when there is one (FR-003-08).
         let selectionLength = (panel.firstResponder as? NSTextView)?.selectedRange().length ?? 0
-        return model.handle(stroke, searchHasSelection: selectionLength > 0) ? nil : event
+        switch LibraryKeyRouting.route(
+            stroke, overlayIsOpen: organize.isOverlayOpen, context: model.keyContext(searchHasSelection: selectionLength > 0))
+        {
+        case .overlay: return organize.handle(stroke) ? nil : event
+        case .library(let command):
+            model.perform(command)
+            return nil
+        case .passToField: return event
+        }
     }
 }
 
