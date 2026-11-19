@@ -4,12 +4,14 @@ import FlotsamBase
 /// FR-005-08: what a typed trigger may look like, and how two triggers are compared.
 ///
 /// A trigger is a leading ASCII punctuation or symbol character followed by 1-23 ASCII letters, digits, `-` or `_`
-/// (2-24 characters in all). The leading character is what keeps ordinary words from being triggers; the ASCII-only
-/// body is what lets the matcher compare raw key characters without Unicode normalisation.
+/// (2-24 characters in all). The leading character is what keeps ordinary words from being triggers. Only a stored
+/// trigger has to be ASCII; the matcher compares what was typed as a Swift `String`, which is equal under canonical
+/// equivalence, so a typed character that normalises to an ASCII one matches (the Greek question mark U+037E types a
+/// `;` trigger). That is intended: it is the same character to the user.
 ///
-/// Comparison is ASCII case-folding only. That is deliberate: it is the same fold as the `item.trigger` column's
-/// `COLLATE NOCASE` index, so "is this a duplicate" has one answer in the editor, the matcher snapshot and the
-/// database. Full Unicode folding would disagree with SQLite and could never apply anyway (the grammar is ASCII).
+/// Case folding is ASCII only. That is deliberate: it is the same fold as the `item.trigger` column's `COLLATE NOCASE`
+/// index, so "is this a duplicate" has one answer in the editor, the matcher snapshot and the database. Full Unicode
+/// case folding would disagree with SQLite and could never apply anyway (the grammar is ASCII).
 public enum TriggerGrammar {
     public static let minimumLength = 2
     public static let maximumLength = 24

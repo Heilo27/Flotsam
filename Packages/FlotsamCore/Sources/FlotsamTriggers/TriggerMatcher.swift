@@ -65,7 +65,8 @@ public final class TriggerMatcher {
     /// application clears the word). Compared at the boundary key; the engine's `frontmostApplicationDidChange()`
     /// signal clears the word sooner. Set once per word, so it survives Backspace to an empty buffer.
     private var wordApp: FrontmostApp??
-    /// True when the current word began in an excluded application (FR-005-13 b), decided once with `wordApp`. Such a
+    /// True when the current word began in an excluded application (FR-005-13 b) or with no identifiable application
+    /// (FR-005-13 e), decided once with `wordApp`. Such a
     /// word is kept only while it is still the start of some trigger (FR-005-20, security F-04): the buffer exists
     /// there only so a whole trigger can be logged as `TRG-POL-002`, so ordinary typing holds nothing.
     private var keepsOnlyTriggerPrefixes = false
@@ -144,8 +145,12 @@ public final class TriggerMatcher {
         if wordApp == nil {
             let app = environment.frontmostApp()
             wordApp = .some(app)
+            // FR-005-13 e / FR-005-20: with no application, or one without a bundle identifier, the exclusion list cannot be
+            // checked and the boundary will be suppressed as `.unknownApp`; the word is limited like an excluded one's.
             if let bundleId = app?.bundleId {
                 keepsOnlyTriggerPrefixes = store.policy.excludes(bundleId: bundleId, ownBundleId: ownBundleId)
+            } else {
+                keepsOnlyTriggerPrefixes = true
             }
         }
         var grown = buffer

@@ -135,8 +135,9 @@ private let png16 = TestImage.make(width: 16, height: 16, format: .png)
         // when All time is confirmed
         // The 5 s budget is on the clear call alone (setup is excluded) and is load-normalized (TASK-475): the wall time
         // is scaled by the CPU share a spinning probe thread was given while the clear ran, so a machine running at
-        // load average 700 does not turn a 2 s clear into a 13 s failure, while a clear that really does more work or
-        // stalls (the share stays near 1) still reads its full wall time against 5 s.
+        // load average 700 does not turn a 2 s clear into a 13 s failure. A clear that really does more CPU work takes the
+        // same share as the probe and still reads over 5 s at any load; a stall (sleep or I/O) reads its full wall time
+        // only on a quiet machine, and is scaled down under load like everything else.
         let probe = CPUShareProbe()
         defer { _ = probe.stop() }  // a throwing clear must still end the spin thread; stop() is idempotent
         let started = DispatchTime.now().uptimeNanoseconds

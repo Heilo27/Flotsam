@@ -1478,6 +1478,17 @@
     },
     {
       "id": "OC-5148",
+      "requirement": "FR-005-13 e,FR-005-20,FR-005-11",
+      "given": "Trigger ';sig' exists; the frontmost application cannot be identified (no application, or one with no bundle identifier)",
+      "when": "user types ordinary prose of 30 characters, then ';s', then 'x', then ';sig' Space, then ';sig' Space again",
+      "then": "no expansion and no log entry at any step; the typed-word buffer holds nothing after the prose and after 'x' (it holds ';s' only while that is the start of a trigger); the first ';sig ' (typed after the mistyped character in the same word) is passed through untouched, and the second whole ';sig' is held to its boundary key and suppressed without logging",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-499 (FR-005-13 e / FR-005-20 amended: unknown app is limited like an excluded app)"
+    },
+    {
+      "id": "OC-5149",
       "requirement": "AC-005-10,FR-005-11",
       "given": "Trigger ':ab'; a Thai text field that deletes one mark per Backspace",
       "when": "user types ':ab', then the Thai letter ก followed by a Thai combining mark, presses Backspace once, then Space",
@@ -1488,7 +1499,7 @@
       "added": "2026-11-18 TASK-493 (Ryan's ruling: non-ASCII kills the word until the next boundary): new requirement text, FR-005-11 / AC-005-10"
     },
     {
-      "id": "OC-5149",
+      "id": "OC-5150",
       "requirement": "AC-005-10,FR-005-11",
       "given": "Trigger ':ab'",
       "when": "user types ':ab', then any non-ASCII character (an accent, a combining mark, a letter of another script, an emoji), then presses Backspace any number of times (including enough to leave only ':ab' or nothing in the field), then types ':ab' again and presses Space; and separately types a non-ASCII character first, then ':ab', with no Backspace, then Space",
@@ -1499,7 +1510,7 @@
       "added": "2026-11-18 TASK-493 (Ryan's ruling: non-ASCII kills the word until the next boundary): new requirement text, FR-005-11 / AC-005-10"
     },
     {
-      "id": "OC-5150",
+      "id": "OC-5151",
       "requirement": "AC-005-10,FR-005-11",
       "given": "Trigger ':ab'; a word killed by a non-ASCII character",
       "when": "the user ends that word with Space, Tab or Return (or Esc, an arrow key, a mouse click, a ⌘ chord, or 5 seconds idle), then types ':ab' and Space",

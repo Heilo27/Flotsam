@@ -5,7 +5,7 @@ import Testing
 
 /// Worf blind QA for TASK-493 (FR-005-11 / AC-005-10, Ryan's ruling 2026-11-18: non-ASCII kills the word).
 ///
-/// Oracle: OC-5148 (the Thai repro), OC-5149 (the word stays dead through Backspace), OC-5150 (the next word after a
+/// Oracle: OC-5149 (the Thai repro), OC-5150 (the word stays dead through Backspace), OC-5151 (the next word after a
 /// boundary matches). Every expectation below is a literal. Each test names the mutation of `TriggerMatcher.append`
 /// or `backspace` that turns it red.
 @Suite struct Worf493AdversarialTests {
@@ -18,13 +18,13 @@ import Testing
         MatcherHarness(triggers: [ab: ":ab"], excluded: excluded)
     }
 
-    // MARK: OC-5148 the Thai repro, through the engine
+    // MARK: OC-5149 the Thai repro, through the engine
 
-    // OC-5148: given trigger `:ab`, when `:ab`, ก, a Thai mark, Backspace, Space are typed through the tap, then every
+    // OC-5149: given trigger `:ab`, when `:ab`, ก, a Thai mark, Backspace, Space are typed through the tap, then every
     // key passes, nothing is pasted, nothing is posted (no Backspaces, no text) and the item is not counted; the next
     // `:ab` Space expands. Red if the dead flag is dropped, or Backspace revives the word.
     @MainActor
-    @Test func oc5148ThaiReproThroughTheEngineDeletesAndPostsNothing() async {
+    @Test func oc5149ThaiReproThroughTheEngineDeletesAndPostsNothing() async {
         let itemId = ExpanderHarness.itemId
         let h = EngineHarness(triggers: [itemId: ":ab"])
         await h.engine.start()
@@ -48,9 +48,9 @@ import Testing
         #expect(await eventually { h.base.store.recorded == [itemId] })
     }
 
-    // MARK: OC-5149 the word stays dead through Backspace
+    // MARK: OC-5150 the word stays dead through Backspace
 
-    // OC-5149: given ASCII text of every length 0...4 then one non-ASCII event, when 0...8 Backspaces and a retyped
+    // OC-5150: given ASCII text of every length 0...4 then one non-ASCII event, when 0...8 Backspaces and a retyped
     // `:ab` follow, then Space matches nothing. The retype is the point: the dead flag, not an empty buffer, is what
     // blocks it. Red if the non-ASCII branch only clears the word (live, empty) instead of killing it, or Backspace
     // clears the dead flag.
@@ -64,7 +64,7 @@ import Testing
         #expect(h.space() == .pass, "\(prefix) + mark + \(backspaces) Backspaces")
     }
 
-    // OC-5149: no Backspace at all. A word that was ":ab" typed after the non-ASCII character, with the field
+    // OC-5150: no Backspace at all. A word that was ":ab" typed after the non-ASCII character, with the field
     // untouched, must not match either: the buffer cannot know what the field holds. Red if the non-ASCII branch
     // returns without setting `isDead` (the empty buffer would then take ":ab" and match).
     @Test(arguments: ["\u{00E9}", "\u{0301}", "\u{0E01}", "\u{0E01}\u{0E31}", "\u{1F600}", "\u{4E2D}"])
@@ -81,7 +81,7 @@ import Testing
         #expect(mid.space() == .pass)
     }
 
-    // OC-5149: the dead flag survives key-ups, auto-repeats, Shift and Caps Lock typing, and Backspace auto-repeat.
+    // OC-5150: the dead flag survives key-ups, auto-repeats, Shift and Caps Lock typing, and Backspace auto-repeat.
     @Test func theDeadWordSurvivesKeyUpsAutoRepeatsAndShiftedTyping() {
         let h = harness()
         h.type(":ab")
@@ -94,7 +94,7 @@ import Testing
         #expect(h.space() == .pass)
     }
 
-    // OC-5149: a non-ASCII event that carries ASCII too. Whatever position the non-ASCII scalar has in one event, the
+    // OC-5150: a non-ASCII event that carries ASCII too. Whatever position the non-ASCII scalar has in one event, the
     // word dies. Red if only the first, or only the last, scalar of the event is checked.
     @Test(arguments: ["a\u{0301}", "\u{00E9}b", "ab\u{00E9}", "a\u{00E9}b", "a\u{0E01}", "\u{0E01}a", ":ab\u{1F600}"])
     func aSingleEventMixingAsciiAndNonAsciiKillsTheWord(event: String) {
@@ -106,7 +106,7 @@ import Testing
         #expect(h.space() == .pass)
     }
 
-    // OC-5149 boundary: the first non-ASCII scalars and a sweep across Latin-1 and Latin Extended kill the word. Red
+    // OC-5150 boundary: the first non-ASCII scalars and a sweep across Latin-1 and Latin Extended kill the word. Red
     // if the ASCII test is widened to `< 0xA0`, `< 0x100` or any other cut above 0x7F. (U+0080...U+009F are control
     // characters; the matcher already treats a key that types only those as a word reset, not as input.)
     @Test func everyPrintableScalarFromU00A0ToU024FKillsTheWord() {
@@ -122,7 +122,7 @@ import Testing
         }
     }
 
-    // OC-5149 boundary, sampled across the planes: 2-, 3- and 4-byte UTF-8 scalars all kill the word.
+    // OC-5150 boundary, sampled across the planes: 2-, 3- and 4-byte UTF-8 scalars all kill the word.
     @Test(arguments: [0x07FF, 0x0800, 0x20AC, 0xFFFD, 0x10000, 0x1F600, 0xE0001])
     func multiByteScalarsKillTheWord(value: Int) throws {
         let scalar = try #require(Unicode.Scalar(UInt32(value)))
@@ -134,7 +134,7 @@ import Testing
         #expect(h.space() == .pass)
     }
 
-    // OC-5149 boundary, the other side: every printable ASCII character, including ~ (0x7E) and the space-adjacent
+    // OC-5150 boundary, the other side: every printable ASCII character, including ~ (0x7E) and the space-adjacent
     // punctuation, is ordinary input. It keeps the word alive and a following trigger still matches after Backspaces
     // remove it. Red if the ASCII cut is lowered (`< 0x7E` kills `~`, `< 0x30` kills digits and letters) or the
     // non-ASCII branch is taken for ASCII.
@@ -164,9 +164,9 @@ import Testing
         #expect(try #require(h.space().match).triggerLength == 3)
     }
 
-    // MARK: OC-5150 the next word after a boundary matches
+    // MARK: OC-5151 the next word after a boundary matches
 
-    // OC-5150: given a dead word, when each boundary key ends it, then the next `:ab` matches with length 3, and the
+    // OC-5151: given a dead word, when each boundary key ends it, then the next `:ab` matches with length 3, and the
     // boundary that ended the dead word was passed through, not swallowed. Red if a boundary does not clear the flag.
     @Test(arguments: [
         (TriggerKeys.space, " "), (TriggerKeys.tab, "\t"), (TriggerKeys.returnKey, "\r"), (TriggerKeys.keypadEnter, "\r"),
@@ -183,7 +183,7 @@ import Testing
         #expect(match.triggerLength == 3)
     }
 
-    // OC-5150: the next word matches again and again; the kill does not leak across a second dead word.
+    // OC-5151: the next word matches again and again; the kill does not leak across a second dead word.
     @Test func eachDeadWordIsIndependentOfTheOnesBeforeIt() throws {
         let h = harness()
         for round in 1...3 {
@@ -195,7 +195,7 @@ import Testing
         }
     }
 
-    // OC-5150: every other way the word ends also revives matching. Each is a reset the matcher already had; none may
+    // OC-5151: every other way the word ends also revives matching. Each is a reset the matcher already had; none may
     // keep the dead flag. Red if `clearWord` stops clearing `isDead`.
     @Test func everyResetEndsTheDeadWordToo() throws {
         func deadHarness() -> MatcherHarness {
