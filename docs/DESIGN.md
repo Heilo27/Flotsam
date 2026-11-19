@@ -375,7 +375,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | Key | String | Count |
 |---|---|---|
 | `settings.confirm.resetIgnored.title` | Reset ignored apps? | (19/40) |
-| `settings.confirm.resetIgnored` | Replace your list with the default apps? | (40/150) |
+| `settings.confirm.resetIgnored` | Clear the ignored-apps list? Flotsam will store copies from every app, password managers included. | (98/150) |
 | `storage.confirm.shorten.title` | Shorten history? | (16/40) |
 | `ui.settings.confirmShorten` | This permanently deletes {n} item(s) older than {period}. Pinned items and items with a shortcut are kept. (plural: one, other) | (104/150) |
 | `storage.confirm.clear.title` | Clear all history? | (18/40) |

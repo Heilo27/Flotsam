@@ -532,7 +532,7 @@ import Testing
             "com.agilebits.onepassword7", "org.keepassxc.keepassxc", "com.apple.TextEdit",
         ])
         #expect(list != SettingKeys.privacyIgnoredApps.defaultValue.identifiers)
-        #expect(SettingsString.confirmResetIgnored.text == "Replace your list with the default apps?")
+        #expect(SettingsString.confirmResetIgnored.text == "Clear the ignored-apps list? Flotsam will store copies from every app, password managers included.")
     }
 
     // OC-8080, as changed by TASK-498 (FR-008-11). Confirming the reset yields the defaults, which are now empty: the

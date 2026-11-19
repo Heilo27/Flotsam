@@ -2840,7 +2840,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Replace your list with the default apps?"
+            "value" : "Clear the ignored-apps list? Flotsam will store copies from every app, password managers included."
           }
         }
       }
