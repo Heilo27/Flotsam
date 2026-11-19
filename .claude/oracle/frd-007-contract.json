@@ -945,7 +945,7 @@
       "requirement": "FR-007-11",
       "given": "Clear sheet open on 'All time' with 45 non-exempt and 5 exempt items",
       "when": "The user checks the option, then switches range to Last hour (with 2 items in that hour)",
-      "then": "Count label and button go 45 -> 50 when checked, then to the in-range number for Last hour; the button text always equals 'Delete {count} Items'",
+      "then": "Count label and button go 45 -> 50 when checked, then to the in-range number for Last hour; the button text always equals 'Delete Items' (the count is in the sheet text, DESIGN.md btn.deleteN)",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
