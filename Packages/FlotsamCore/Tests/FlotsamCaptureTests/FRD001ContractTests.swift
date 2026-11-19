@@ -287,10 +287,10 @@ struct FRD001GateContractTests {
         }
     }
 
-    /// FR-001-25 (Friday's ruling, TASK-503): a concealed copy whose plain-text provider fails is an unreadable copy,
+    /// OC-1117 (FR-001-25, Friday's ruling, TASK-503): a concealed copy whose plain-text provider fails is an unreadable copy,
     /// not a policy rejection: nothing stored, no plain text anywhere. Mutation: store the failed read as an empty or
     /// partial secure row, or restore the old drop (POL-001 instead of OS-001): the row count or the code goes red.
-    @Test("FR-001-25: a Concealed copy whose plain text cannot be read fails closed: OS-001, nothing stored")
+    @Test("OC-1117: a Concealed copy whose plain text cannot be read fails closed: CAP-OS-001, nothing stored")
     func concealedUnreadableFailsClosed() async throws {
         try await withRig(withVault: true) { rig in
             let secret = "never-readable-\(UUID().uuidString)"
