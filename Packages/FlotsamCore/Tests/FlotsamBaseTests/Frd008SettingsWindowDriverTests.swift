@@ -37,29 +37,29 @@ private final class FakePresenter: SettingsWindowPresenter {
 
 @MainActor
 private struct Rig {
-    let defaultsName = "flotsam.frd008.window.\(UUID().uuidString)"
+    let suite = TestDefaultsSuite("frd008.window")
     let presenter = FakePresenter()
     let driver: SettingsWindowDriver
 
     init() {
-        let driver = SettingsWindowDriver(settings: Rig.launch(defaultsName))
+        let driver = SettingsWindowDriver(settings: Rig.launch(suite))
         driver.presenter = presenter
         self.driver = driver
     }
 
     /// A fresh `SettingsStore` over the same defaults domain: what a relaunch sees.
-    static func launch(_ name: String) -> SettingsStore {
-        SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!))
+    static func launch(_ suite: TestDefaultsSuite) -> SettingsStore {
+        SettingsStore(store: UserDefaultsStore(defaults: suite.defaults))
     }
 
     func relaunched() -> (SettingsWindowDriver, FakePresenter) {
         let presenter = FakePresenter()
-        let driver = SettingsWindowDriver(settings: Rig.launch(defaultsName))
+        let driver = SettingsWindowDriver(settings: Rig.launch(suite))
         driver.presenter = presenter
         return (driver, presenter)
     }
 
-    func wipe() { UserDefaults(suiteName: defaultsName)?.removePersistentDomain(forName: defaultsName) }
+    func wipe() { suite.remove() }
 }
 
 @MainActor
@@ -151,19 +151,19 @@ private struct Rig {
         let (driver, presenter) = rig.relaunched()
         driver.open()
         #expect(presenter.log == ["make", "select:storage", "front"])
-        #expect(SettingsPane.lastOpened(in: Rig.launch(rig.defaultsName)) == .storage)
+        #expect(SettingsPane.lastOpened(in: Rig.launch(rig.suite)) == .storage)
     }
 
     // Closing with ⌘W or Escape only hides the window (it is not released), so the driver has no "closed" state: a
     // reopen after close is the same call and reuses the window (`singleWindowRefocused`).
     @Test("OC-8024: with no presenter set, open builds nothing and a selection is still remembered")
     func noPresenter() {
-        let name = "flotsam.frd008.window.none.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
-        let driver = SettingsWindowDriver(settings: Rig.launch(name))
-        driver.open()
-        driver.paneSelected(.about)
-        #expect(SettingsPane.lastOpened(in: Rig.launch(name)) == .about)
+        withTestDefaults("frd008.window.none") { suite in
+            let driver = SettingsWindowDriver(settings: Rig.launch(suite))
+            driver.open()
+            driver.paneSelected(.about)
+            #expect(SettingsPane.lastOpened(in: Rig.launch(suite)) == .about)
+        }
     }
 
     // FR-008-17 (VoiceOver, package side). The toolbar button and icon are read as the pane's title.

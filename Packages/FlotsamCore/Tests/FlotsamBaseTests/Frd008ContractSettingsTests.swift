@@ -16,11 +16,11 @@ import Testing
     }
 
     private func isolated() -> (SettingsStore, ReportedKeys, () -> Void) {
-        let name = "flotsam.frd008.settings.\(UUID().uuidString)"
+        let suite = TestDefaultsSuite("frd008.settings")
         let reported = ReportedKeys()
         let store = SettingsStore(
-            store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!), onInvalid: { reported.add($0) })
-        return (store, reported, { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) })
+            store: UserDefaultsStore(defaults: suite.defaults), onInvalid: { reported.add($0) })
+        return (store, reported, { suite.remove() })
     }
 
     private static let defaultIgnored: Set<String> = [
@@ -44,9 +44,9 @@ import Testing
 
     // OC-8025. Privacy selected, window closed, relaunch: Privacy is selected both times.
     @Test func oc8025_lastPaneSurvivesCloseAndRelaunch() {
-        let name = "flotsam.frd008.pane.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
-        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!)) }
+        let suite = TestDefaultsSuite("frd008.pane")
+        defer { suite.remove() }
+        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: suite.defaults)) }
 
         #expect(SettingsPane.lastOpened(in: launch()) == .general)
         SettingsPane.privacy.remember(in: launch())
@@ -61,9 +61,9 @@ import Testing
 
     // OC-8026. Turning the Shelf off is stored at once with no Apply step and survives relaunch.
     @Test func oc8026_changeAppliesWithoutCommitAndSurvivesRelaunch() {
-        let name = "flotsam.frd008.apply.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
-        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!)) }
+        let suite = TestDefaultsSuite("frd008.apply")
+        defer { suite.remove() }
+        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: suite.defaults)) }
         let window = launch()
         #expect(window.value(SettingKeys.shelfEnabled) == true)
 
@@ -132,9 +132,9 @@ import Testing
 
     // OC-8035. Clearing Open Library persists unbound, the menu row shows no chord, and a relaunch keeps it unbound.
     @Test func oc8035_clearedShortcutStaysClearedAndMenuShowsNoChord() {
-        let name = "flotsam.frd008.clear.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
-        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!)) }
+        let suite = TestDefaultsSuite("frd008.clear")
+        defer { suite.remove() }
+        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: suite.defaults)) }
         #expect(launch().value(SettingKeys.shortcutsOpenLibrary).persisted == "9:3")
 
         launch().set(.none, for: SettingKeys.shortcutsOpenLibrary)
@@ -465,9 +465,9 @@ import Testing
 
     // OC-8065 (settings half). A chosen folder survives a relaunch and still resolves to the same folder.
     @Test func oc8065_chosenFolderSurvivesRelaunch() throws {
-        let name = "flotsam.frd008.folder.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
-        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!)) }
+        let suite = TestDefaultsSuite("frd008.folder")
+        defer { suite.remove() }
+        func launch() -> SettingsStore { SettingsStore(store: UserDefaultsStore(defaults: suite.defaults)) }
         let dir = try makeDirectory(permissions: 0o755)
         defer { remove(dir) }
         guard case .success(let chosen) = FolderOverride.choosing(dir) else { Issue.record("folder must be accepted"); return }
@@ -521,10 +521,10 @@ import Testing
     // no reset is invoked (the Cancel outcome), then a FRESH store on the same defaults returns exactly that list.
     // Red if `set` drops/reorders entries, if `adding`/`removing` misbehave, or if reading falls back to the defaults.
     @Test func oc8079_editedListSurvivesWhenResetIsNotInvoked() {
-        let name = "flotsam.frd008.settings.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let suite = TestDefaultsSuite("frd008.settings")
+        defer { suite.remove() }
         func store() -> SettingsStore {
-            SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!), onInvalid: { _ in })
+            SettingsStore(store: UserDefaultsStore(defaults: suite.defaults), onInvalid: { _ in })
         }
         let edited = BundleIdentifierList.retiredIgnoredAppsDefault.removing("com.bitwarden.desktop").adding("com.apple.TextEdit")
         store().set(edited, for: SettingKeys.privacyIgnoredApps)
@@ -554,11 +554,11 @@ import Testing
 
     // OC-8081 (settings half). An emptied list persists as empty (not reset to the defaults) across a relaunch.
     @Test func oc8081_emptiedListStaysEmpty() {
-        let name = "flotsam.frd008.empty.\(UUID().uuidString)"
-        defer { UserDefaults(suiteName: name)?.removePersistentDomain(forName: name) }
+        let suite = TestDefaultsSuite("frd008.empty")
+        defer { suite.remove() }
         let reported = ReportedKeys()
         func launch() -> SettingsStore {
-            SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!), onInvalid: { reported.add($0) })
+            SettingsStore(store: UserDefaultsStore(defaults: suite.defaults), onInvalid: { reported.add($0) })
         }
         // Worf (TASK-498 QA): the default is now empty, so removing entries from it removed nothing. Start from a stored list of
         // the six retired defaults and empty it for real.

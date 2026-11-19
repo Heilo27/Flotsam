@@ -107,9 +107,9 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
     @Test("OC-7004 the retention preset survives a relaunch and the data folder gains no settings file")
     func oc7004_presetPersistsAndFolderGainsNoSettingsFile() async throws {
         // given a data folder listing L0, a 60 day old item, and settings kept in their own defaults suite
-        let suite = "flotsam-7004-\(UUID().uuidString)"
-        defer { UserDefaults().removePersistentDomain(forName: suite) }
-        let settings = SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: suite)!))
+        let suite = TestDefaultsSuite("oc7004")
+        defer { suite.remove() }
+        let settings = SettingsStore(store: UserDefaultsStore(defaults: suite.defaults))
         let store = try await Store.make()
         defer { store.cleanUp() }
         let rig = Rig(
@@ -126,7 +126,7 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
         _ = try await store.database.reconcile().get()
 
         // then after a "relaunch" (a new defaults object over the same suite) the preset still reads 90 days
-        let relaunched = SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: suite)!))
+        let relaunched = SettingsStore(store: UserDefaultsStore(defaults: suite.defaults))
         #expect(relaunched.value(SettingKeys.storageRetention) == .d90)
         // and it is the 90 day preset that governed the sweep: the 60 day old item survived (30 days would delete it)
         #expect(sweep.retentionDeleted == 0)

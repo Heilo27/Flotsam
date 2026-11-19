@@ -16,15 +16,12 @@ private final class Reported: @unchecked Sendable {
 @Suite struct Task454OnboardingNoticeTests {
     /// A real `UserDefaults` domain, so the test sees what the system really hands back, not a fake's strings.
     private func withDomain(_ body: (UserDefaults, SettingsStore, Reported) -> Void) {
-        let name = "flotsam.task454.\(UUID().uuidString)"
-        guard let defaults = UserDefaults(suiteName: name) else {
-            Issue.record("could not create a scratch defaults domain")
-            return
+        withTestDefaults("task454") { suite in
+            let defaults = suite.defaults
+            let reported = Reported()
+            let settings = SettingsStore(store: UserDefaultsStore(defaults: defaults)) { reported.record($0) }
+            body(defaults, settings, reported)
         }
-        defer { defaults.removePersistentDomain(forName: name) }
-        let reported = Reported()
-        let settings = SettingsStore(store: UserDefaultsStore(defaults: defaults)) { reported.record($0) }
-        body(defaults, settings, reported)
     }
 
     /// AC "a normal first launch raises no SET-DAT-001": nothing stored, every registry key read, nothing reported.

@@ -11,9 +11,10 @@ import Testing
     /// One isolated preferences domain. `reopen()` builds a fresh `SettingsStore` over the same domain, which is what a
     /// relaunch is.
     struct Domain {
-        let name = "flotsam.frd008.contract.\(UUID().uuidString)"
+        let suite = TestDefaultsSuite("frd008.contract")
         let reported = ReportedKeys()
-        var defaults: UserDefaults { UserDefaults(suiteName: name)! }
+        var name: String { suite.name }
+        var defaults: UserDefaults { suite.defaults }
 
         func reopen() -> SettingsStore {
             let reported = self.reported
@@ -23,7 +24,7 @@ import Testing
         /// What `defaults read` would show for a key.
         func onDisk(_ key: String) -> String? { defaults.string(forKey: key) }
         func poke(_ value: String, _ key: String) { defaults.set(value, forKey: key) }
-        func remove() { defaults.removePersistentDomain(forName: name) }
+        func remove() { suite.remove() }
     }
 
     // MARK: - Defaults
