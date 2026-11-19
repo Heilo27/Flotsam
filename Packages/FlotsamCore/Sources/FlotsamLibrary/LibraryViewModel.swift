@@ -491,6 +491,9 @@ public final class LibraryViewModel {
     }
 
     public func perform(_ command: LibraryCommand) {
+        // Opening a Flotsam window hides the Library first, as an explicit step and not as a side effect of the window
+        // taking key: a window coming back from the Dock does not move key in time (FR-003-02, TASK-524).
+        if command.opensFlotsamWindow(selection: selectedRows.map(\.id)) { host.hidePanel() }
         switch command {
         case .move(let direction): move(direction, extending: false)
         case .extend(let direction): move(direction, extending: true)

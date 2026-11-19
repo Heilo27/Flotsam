@@ -36,6 +36,18 @@ public enum LibraryCommand: Sendable, Equatable {
     case revealInFinder
     case openSettings
     case external(LibraryExternalCommand)
+
+    /// The one rule for "this command opens a Flotsam window" (FR-003-02): Settings (⌘,) and the shortcut-and-trigger
+    /// editor (⌘K, the context-menu row) open an ordinary window, and the Library hides first so the window is never
+    /// covered, whatever state that window was in. The editor counts only when it will open: a selection that is not
+    /// exactly one item opens nothing (FR-005-09), so the Library stays.
+    public func opensFlotsamWindow(selection ids: [UUID]) -> Bool {
+        switch self {
+        case .openSettings: true
+        case .external(let command): command.shortcutEditorTarget(selection: ids) != nil
+        default: false
+        }
+    }
 }
 
 /// FR-003-08 as data: the one definition of what each key does. The panel, the footer hints and the tests read it here.
