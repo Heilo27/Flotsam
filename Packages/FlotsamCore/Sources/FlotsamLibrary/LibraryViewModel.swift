@@ -83,6 +83,8 @@ public final class LibraryViewModel {
     @ObservationIgnored private var isFetchingPage = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var previewTask: Task<Void, Never>?
+    /// The running relative-time watch (FR-003-24); `panelDidHide` cancels it so a hide never depends on the view.
+    @ObservationIgnored private var relativeTimeTask: Task<Void, Never>?
     /// The latest paste, kept so tests (and a future cancel) can await it.
     @ObservationIgnored public private(set) var pasteTask: Task<Void, Never>?
 
@@ -229,6 +231,16 @@ public final class LibraryViewModel {
         }
     }
 
+    /// Runs `watchRelativeTimes` as a task the model owns, replacing any earlier one. The view calls this from
+    /// `.task(id: relativeTimeWatchKey)`; `panelDidHide` cancels the owned task directly, so the watch stops on a hide
+    /// even if SwiftUI never re-evaluates the hidden view. Cancelling the caller cancels the watch too.
+    public func runRelativeTimeWatch() async {
+        relativeTimeTask?.cancel()
+        let task = Task { await watchRelativeTimes() }
+        relativeTimeTask = task
+        await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
+    }
+
     /// Added to each sleep so the wake lands just after a label's boundary, never just before it.
     static let relativeTimeSlack: TimeInterval = 0.05
 
@@ -248,6 +260,8 @@ public final class LibraryViewModel {
         reloadQueued = false
         loadTask?.cancel()
         previewTask?.cancel()
+        relativeTimeTask?.cancel()
+        relativeTimeTask = nil
         generation += 1
         let source = source
         Task { await source.releaseMemory() }

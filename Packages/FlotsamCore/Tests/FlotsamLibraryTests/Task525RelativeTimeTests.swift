@@ -237,7 +237,93 @@ final class Flag: @unchecked Sendable {
 
     @Test func aCopyTimeInTheFutureReadsAsNowAndAgesFromNow() {
         let now = Self.start
-        let delay = ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(500), now: now)
-        #expect(delay == 1)
+        // Reads "now" until the clock passes the copy's date, then "1s ago" a second later: 500 s + 1 s away.
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(500), now: now) == 501)
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(3_600), now: now) == 3_601)
+        #expect(ItemSpeech.relativeTime(now.addingTimeInterval(500), now: now) == "now")
+    }
+
+    // MARK: Daylight saving (F1): days are calendar days, not 86,400 s
+
+    private func newYork() -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        calendar.locale = Locale(identifier: "en_US")
+        return calendar
+    }
+
+    private func utc(_ iso: String) -> Date { ISO8601DateFormatter().date(from: iso)! }
+
+    /// Spring forward 2026-03-08 02:00 New York: a copy made 03-07 10:00 EST reads "Yesterday" from 03-08 10:00 EDT, 23 h on.
+    @Test func springForwardTheDayLabelChangesAtTheCalendarBoundaryNot86400sAfter() {
+        let calendar = newYork()
+        let copied = utc("2026-03-07T15:00:00Z")
+        // 2d ago from 03-09 10:00 EDT; the next change is 3d at 03-10 10:00 EDT = 255,600 s after the copy.
+        let now = copied.addingTimeInterval(172_801)
+        #expect(ItemSpeech.relativeTime(copied, now: now, calendar: calendar) == "2d ago")
+        let delay = ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: now, calendar: calendar)
+        #expect(delay == 82_799)
+        #expect(ItemSpeech.relativeTime(copied, now: now.addingTimeInterval(82_798), calendar: calendar) == "2d ago")
+        #expect(ItemSpeech.relativeTime(copied, now: now.addingTimeInterval(82_800), calendar: calendar) == "3d ago")
+    }
+
+    @Test func springForwardTheLastHourBeforeYesterdayWakesAtTheBoundary() {
+        let calendar = newYork()
+        let copied = utc("2026-03-07T15:00:00Z")
+        let now = copied.addingTimeInterval(22 * 3_600 + 1_800)  // 22h30m: "22h ago"
+        #expect(ItemSpeech.relativeTime(copied, now: now, calendar: calendar) == "22h ago")
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: now, calendar: calendar) == 1_800)
+        // 23 h after the copy it is already "Yesterday".
+        #expect(ItemSpeech.relativeTime(copied, now: copied.addingTimeInterval(23 * 3_600), calendar: calendar) == "Yesterday")
+    }
+
+    /// Fall back 2026-11-01 02:00 New York: a copy made 10-31 10:00 EDT still reads "24h ago" at 24 h; "Yesterday" comes at 25 h.
+    @Test func fallBackTheHourLabelRunsOnToTheCalendarBoundary() {
+        let calendar = newYork()
+        let copied = utc("2026-10-31T14:00:00Z")
+        let at24h = copied.addingTimeInterval(86_400)
+        #expect(ItemSpeech.relativeTime(copied, now: at24h, calendar: calendar) == "24h ago")
+        let delay = ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: at24h, calendar: calendar)
+        #expect(delay == 3_600)
+        #expect(ItemSpeech.relativeTime(copied, now: at24h.addingTimeInterval(3_599), calendar: calendar) == "24h ago")
+        #expect(ItemSpeech.relativeTime(copied, now: at24h.addingTimeInterval(3_600), calendar: calendar) == "Yesterday")
+    }
+
+    @Test func fallBackTheDayLabelChangesAtTheCalendarBoundary() {
+        let calendar = newYork()
+        let copied = utc("2026-10-31T14:00:00Z")
+        let now = copied.addingTimeInterval(90_000)  // 11-01 10:00 EST, 25 h after the copy: "Yesterday"
+        #expect(ItemSpeech.relativeTime(copied, now: now, calendar: calendar) == "Yesterday")
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: now, calendar: calendar) == 86_400)
+        // 2d at 11-02 10:00 EST = 176,400 s; the next day after that is 11-03 10:00 EST = 262,800 s.
+        let later = copied.addingTimeInterval(176_400)
+        #expect(ItemSpeech.relativeTime(copied, now: later, calendar: calendar) == "2d ago")
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: later, calendar: calendar) == 86_400)
+    }
+
+    // MARK: Hide cancels the model's own watch (F4)
+
+    @Test func hidingCancelsTheModelOwnedWatchWithoutAnyViewInvolved() async {
+        let (model, clock) = make(ages: [120])
+        await model.open(target: nil)
+        let watch = Task { await model.runRelativeTimeWatch() }
+        #expect(await waitFor { clock.parked == 1 })
+        model.panelDidHide()  // no clock release, no cancel of `watch`: the model cancels its own task
+        #expect(await returns(watch), "hide ends the watch at once, not at its next wake")
+        #expect(clock.sleeps.count == 1)
+        #expect(model.timeRevision == 0)
+    }
+
+    @Test func startingTheWatchAgainReplacesTheEarlierOne() async {
+        let (model, clock) = make(ages: [120])
+        await model.open(target: nil)
+        let first = Task { await model.runRelativeTimeWatch() }
+        #expect(await waitFor { clock.parked == 1 })
+        let second = Task { await model.runRelativeTimeWatch() }
+        #expect(await returns(first), "the earlier watch is cancelled when a new one starts")
+        #expect(await waitFor { clock.parked == 1 && clock.sleeps.count == 2 })
+        second.cancel()
+        #expect(await returns(second), "cancelling the caller cancels the owned watch")
+        #expect(model.timeRevision == 0)
     }
 }

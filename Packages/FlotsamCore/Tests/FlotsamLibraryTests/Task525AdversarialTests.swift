@@ -244,14 +244,11 @@ private final class TickingClock: WallClock, @unchecked Sendable {
         #expect(ticking.reads - readsBefore == 1, "one reading per pass")
     }
 
-    // MARK: Known gap (reported, not fixed here: source is read-only for this round)
+    // MARK: Future-dated rows (WORF-525-F2)
 
     @Test func aFutureDatedRowIsNotPolledEverySecondForNothing() {
         let now = Self.start
-        // +1 h in the future the label reads "now" until the clock passes the copy time, so the next change is ~3,601 s away.
-        let delay = ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(3_600), now: now)
-        withKnownIssue("WORF-525-F2: a future-dated row reports 1 s, so the panel re-renders every second for an hour") {
-            #expect((delay ?? 0) >= 3_600)
-        }
+        // +1 h in the future the label reads "now" until the clock passes the copy time, then "1s ago" a second later.
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(3_600), now: now) == 3_601)
     }
 }

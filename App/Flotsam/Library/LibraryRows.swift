@@ -46,9 +46,9 @@ struct LibraryItemsView: View {
                 }
             }
         }
-        // Ages the rows' relative times while the panel is shown (FR-003-07). The hosting view outlives every hide, so
-        // the key includes `isShown`: nothing runs while hidden, and the task restarts on the next open or row change.
-        .task(id: model.relativeTimeWatchKey) { await model.watchRelativeTimes() }
+        // Ages the rows' relative times while the panel is shown (FR-003-24). The model owns the watch task and cancels
+        // it on a hide; the key restarts it on the next open or row change.
+        .task(id: model.relativeTimeWatchKey) { await model.runRelativeTimeWatch() }
     }
 
     private func pageIfLast(_ row: LibraryRowPresentation, in rows: [LibraryRowPresentation]) {
