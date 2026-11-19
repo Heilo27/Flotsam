@@ -12,6 +12,9 @@ struct PrivacyPane: View {
             Section {
                 Text(.ignoredAppsHelp).settingsCaption()
                 AppListEditor(model: model, key: SettingKeys.privacyIgnoredApps, confirmsReset: true)
+                Button { addPasswordManagers() } label: { Text(.addPasswordManagers) }
+                    .accessibilityHint(SettingsString.addPasswordManagersHelp.text)
+                Text(.addPasswordManagersHelp).settingsCaption()
             } header: {
                 Text(.ignoredApps)
             }
@@ -22,6 +25,13 @@ struct PrivacyPane: View {
             }
         }
         .settingsPaneChrome()
+    }
+
+    /// One tap adds the known password managers (FR-008-11); the user's own entries stay and a duplicate is skipped.
+    private func addPasswordManagers() {
+        let key = SettingKeys.privacyIgnoredApps
+        let merged = model.env.settings.value(key).adding(contentsOf: BundleIdentifierList.passwordManagerPreset)
+        model.env.settings.set(merged, for: key)
     }
 }
 

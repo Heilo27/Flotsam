@@ -2579,6 +2579,26 @@
         }
       }
     },
+    "ui.settings.addPasswordManagers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Password Managers"
+          }
+        }
+      }
+    },
+    "ui.settings.addPasswordManagersHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds the common password managers to this list. Flotsam then stores nothing copied from them, not even encrypted."
+          }
+        }
+      }
+    },
     "ui.settings.budget10GB" : {
       "localizations" : {
         "en" : {

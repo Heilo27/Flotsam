@@ -120,6 +120,21 @@ public struct BundleIdentifierList: SettingValue {
         "com.agilebits.onepassword7", "com.bitwarden.desktop", "org.keepassxc.keepassxc",
     ])
 
+    /// FR-008-11: the "Add Password Managers" preset, the one home of the list. Static and never fetched. Every
+    /// identifier was checked against the vendor's or Homebrew's published bundle identifier, or the app's own
+    /// Info.plist (FRD-008 section 9 item 2). An app not listed here, or installed under another identifier, is added
+    /// by hand.
+    public static let passwordManagerPreset = BundleIdentifierList([
+        "com.apple.Passwords",  // Passwords (macOS 15+, /System/Applications)
+        "com.apple.keychainaccess",  // Keychain Access
+        "com.1password.1password",  // 1Password 8
+        "com.bitwarden.desktop",  // Bitwarden
+        "org.keepassxc.keepassxc",  // KeePassXC
+        "me.proton.pass.electron",  // Proton Pass
+        "com.nordsec.nordpass",  // NordPass
+        "com.keepersecurity.passwordmanager",  // Keeper
+    ])
+
     /// FR-005-13: typed triggers do not expand in these apps. FRD-005 owns the list; it is declared here because the
     /// registry holds every default (FR-008-01).
     public static let defaultTriggerExcludedApps = BundleIdentifierList([

@@ -36,6 +36,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
 
     // Lists (Triggers and Privacy)
     case addApp, removeApp, resetToDefaults, chooseApp, chooseAppPrompt, notInstalled
+    /// The one-tap password-manager preset on the ignored-apps list (FR-008-11).
+    case addPasswordManagers, addPasswordManagersHelp
     case confirmResetIgnoredTitle, confirmResetIgnored, resetAction
 
     // Privacy
