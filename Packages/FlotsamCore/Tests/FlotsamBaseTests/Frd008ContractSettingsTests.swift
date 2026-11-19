@@ -261,19 +261,18 @@ import Testing
 
     // OC-8044 (strings). The read-only statements and the 'Paste from Other Apps' row text.
     @Test func oc8044_privacyPaneStrings() {
-        #expect(SettingsString.neverStored.text == "Flotsam never stores concealed, transient or auto-generated clipboard content.")
+        #expect(SettingsString.neverStored.text == "Transient copies are never stored. Password manager copies are stored encrypted, shown as dots, and need your password or Touch ID.")
         #expect(SettingsString.noNetwork.text == "Flotsam makes no network connections.")
         #expect(SettingsString.pasteOtherApps.text == "Paste from Other Apps")
         #expect(SettingsString.ignoredApps.text == "Ignored apps")
     }
 
-    // OC-8069. The ignored list defaults to exactly the six.
+    // OC-8069, as changed by TASK-498 (FR-008-11, AC-008-06). The ignored list defaults to empty: password managers'
+    // concealed copies are stored encrypted, so nothing is ignored until the user says so.
     @Test func oc8069_ignoredAppsDefault() {
         let (settings, _, cleanup) = isolated(); defer { cleanup() }
-        let ids = settings.value(SettingKeys.privacyIgnoredApps).identifiers
-        #expect(ids.count == 6)
-        #expect(Set(ids) == Self.defaultIgnored)
-        #expect(Set(ids).isDisjoint(with: ["com.apple.TextEdit"]))
+        #expect(settings.value(SettingKeys.privacyIgnoredApps).identifiers.isEmpty)
+        #expect(SettingKeys.privacyIgnoredApps.defaultValue.persisted == "[]")
     }
 
     // MARK: - Storage pane (OC-8046, OC-8047 text, OC-8049...8054)
@@ -485,7 +484,7 @@ import Testing
     // OC-8075. An app with no identifier is refused with the oracle text; the list is unchanged. The oracle says the
     // button reads 'Add…'.
     @Test func oc8075_addWithoutIdentifierRefusedAndButtonLabel() {
-        let defaults = BundleIdentifierList.defaultIgnoredApps
+        let defaults = BundleIdentifierList.retiredIgnoredAppsDefault
         guard case .failure(let error) = BundleIdentifierList.validated(nil) else { Issue.record("nil id must be refused"); return }
 
         #expect(error.code == .setVal002)
@@ -496,7 +495,7 @@ import Testing
 
     // OC-8076. Adding 1Password 8 again changes nothing.
     @Test func oc8076_addingAnExistingAppIsIgnored() {
-        let defaults = BundleIdentifierList.defaultIgnoredApps
+        let defaults = BundleIdentifierList.retiredIgnoredAppsDefault
         let again = defaults.adding("com.1password.1password")
         #expect(again.identifiers.count == 6)
         #expect(again == defaults)
@@ -506,7 +505,7 @@ import Testing
     // OC-8077/8078 are App-target UI (open panel, icons): no seam. Logic half of 8078: an id with no app installed is
     // still a valid list entry, shown as its identifier.
     @Test func oc8078_uninstalledIdentifiersStayInTheList() {
-        let list = BundleIdentifierList.defaultIgnoredApps.adding("com.example.not-installed")
+        let list = BundleIdentifierList.retiredIgnoredAppsDefault.adding("com.example.not-installed")
         #expect(list.identifiers.last == "com.example.not-installed")
         #expect(SettingsString.notInstalled.text == "Not installed")
     }
@@ -524,7 +523,7 @@ import Testing
         func store() -> SettingsStore {
             SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!), onInvalid: { _ in })
         }
-        let edited = BundleIdentifierList.defaultIgnoredApps.removing("com.bitwarden.desktop").adding("com.apple.TextEdit")
+        let edited = BundleIdentifierList.retiredIgnoredAppsDefault.removing("com.bitwarden.desktop").adding("com.apple.TextEdit")
         store().set(edited, for: SettingKeys.privacyIgnoredApps)
 
         let list = store().value(SettingKeys.privacyIgnoredApps).identifiers
@@ -533,22 +532,21 @@ import Testing
             "com.agilebits.onepassword7", "org.keepassxc.keepassxc", "com.apple.TextEdit",
         ])
         #expect(list != SettingKeys.privacyIgnoredApps.defaultValue.identifiers)
-        #expect(SettingsString.confirmResetIgnored.text == "Replace your list with the default apps?")
+        #expect(SettingsString.confirmResetIgnored.text == "Clear the ignored-apps list? Flotsam will store copies from every app, password managers included.")
     }
 
-    // OC-8080. Confirming the reset yields exactly the six defaults.
-    @Test func oc8080_confirmedResetRestoresTheSix() {
+    // OC-8080, as changed by TASK-498 (FR-008-11). Confirming the reset yields the defaults, which are now empty: the
+    // user's list is gone, including the app they added and the password managers they kept.
+    @Test func oc8080_confirmedResetRestoresTheDefaults() {
         let (settings, _, cleanup) = isolated(); defer { cleanup() }
-        let edited = BundleIdentifierList.defaultIgnoredApps.removing("com.bitwarden.desktop").adding("com.apple.TextEdit")
+        let edited = BundleIdentifierList.retiredIgnoredAppsDefault.removing("com.bitwarden.desktop").adding("com.apple.TextEdit")
         settings.set(edited, for: SettingKeys.privacyIgnoredApps)
 
         settings.set(SettingKeys.privacyIgnoredApps.defaultValue, for: SettingKeys.privacyIgnoredApps)
 
         let list = settings.value(SettingKeys.privacyIgnoredApps).identifiers
-        #expect(list.count == 6)
-        #expect(Set(list) == Self.defaultIgnored)
+        #expect(list.isEmpty)
         #expect(!list.contains("com.apple.TextEdit"))
-        #expect(list.contains("com.bitwarden.desktop"))
     }
 
     // OC-8081 (settings half). An emptied list persists as empty (not reset to the defaults) across a relaunch.

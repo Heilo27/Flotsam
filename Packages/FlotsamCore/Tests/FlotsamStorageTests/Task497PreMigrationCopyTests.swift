@@ -97,11 +97,11 @@ private final class Task497FileSystem: FileSystemPort, @unchecked Sendable {
     private func arrange() async throws -> (root: URL, reader: HeldReader, writer: Store) {
         let root = tempRoot()
         do {
-            let first = try await Store.make(root: root)
+            let first = try await Store.make(root: root, migrations: Migrations.baseline)
             try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         }
         let reader = try HeldReader(path: root.appendingPathComponent(FlotsamDatabase.fileName).path)
-        let writer = try await Store.make(root: root)
+        let writer = try await Store.make(root: root, migrations: Migrations.baseline)
         try await writer.insert((4...5).map { Spec(n: $0, ageMs: hourMs) })
         let main = try itemIds(inFileAlone: root.appendingPathComponent(FlotsamDatabase.fileName))
         try #require(main.ids != [1, 2, 3, 4, 5], "fixture is not WAL-resident: the main file already holds items 4 and 5")
@@ -117,7 +117,7 @@ private final class Task497FileSystem: FileSystemPort, @unchecked Sendable {
         defer { try? FileManager.default.removeItem(at: root) }
 
         let upgraded = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe], busyTimeout: 0.3
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe], busyTimeout: 0.3
         ).get()
         reader.release()
 
@@ -138,7 +138,7 @@ private final class Task497FileSystem: FileSystemPort, @unchecked Sendable {
         let root = tempRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         do {
-            let first = try await Store.make(root: root)
+            let first = try await Store.make(root: root, migrations: Migrations.baseline)
             try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         }
         let folder = root.appendingPathComponent("pre-migration")
@@ -149,7 +149,7 @@ private final class Task497FileSystem: FileSystemPort, @unchecked Sendable {
         fileSystem.failPublish.value = true
 
         let result = await FlotsamDatabase.open(
-            folder: root, fileSystem: fileSystem, migrations: Migrations.all + [addProbe], busyTimeout: 0.3)
+            folder: root, fileSystem: fileSystem, migrations: Migrations.baseline + [addProbe], busyTimeout: 0.3)
 
         guard case .failure(let error) = result else { Issue.record("the open succeeded with no pre-migration copy"); return }
         #expect(error.code == .stoDb003)

@@ -8,10 +8,14 @@ import Foundation
 public struct ShelfDragCandidate: Sendable, Equatable {
     public let itemId: UUID
     public let content: ItemContent
+    /// A secure card's text, revealed by the app layer at mouse-down after the owner authenticated (FR-006-21). Nil for
+    /// every other card, and for a secure card whose authentication failed: it then provides nothing.
+    public let revealedSecureText: String?
 
-    public init(itemId: UUID, content: ItemContent) {
+    public init(itemId: UUID, content: ItemContent, revealedSecureText: String? = nil) {
         self.itemId = itemId
         self.content = content
+        self.revealedSecureText = revealedSecureText
     }
 }
 
@@ -63,7 +67,7 @@ public enum ShelfDragPlanner {
         var items: [ShelfDragItem] = []
         var contributing: [UUID] = []
         for candidate in candidates {
-            let payloads = payloads(of: candidate.content, files: files)
+            let payloads = payloads(of: candidate, files: files)
             guard !payloads.isEmpty else { continue }
             items += payloads.map { ShelfDragItem(itemId: candidate.itemId, payload: $0) }
             contributing.append(candidate.itemId)
@@ -74,7 +78,13 @@ public enum ShelfDragPlanner {
         return .success(ShelfDragPlan(items: items, draggedItemIds: contributing))
     }
 
-    private static func payloads(of content: ItemContent, files: any FileSystemPort) -> [ShelfDragPayload] {
+    private static func payloads(of candidate: ShelfDragCandidate, files: any FileSystemPort) -> [ShelfDragPayload] {
+        let content = candidate.content
+        // A secure card drags only what the owner revealed, as plain text with `ConcealedType`; unrevealed it gives
+        // nothing, so a stored secure item can never reach a drag without the authentication.
+        if content.isSecure {
+            return candidate.revealedSecureText.map { [.representations(SecureClip.pasteboardRepresentations(revealing: $0))] } ?? []
+        }
         if content.kind.referencesFiles {
             return content.existingMemberURLs(files: files).map { .representations([ItemContent.fileURLRepresentation(for: $0)]) }
         }

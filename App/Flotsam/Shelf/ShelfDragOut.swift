@@ -17,6 +17,8 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
         /// One paste counted for a card whose drag was accepted (FR-006-11).
         let recordPaste: @Sendable (UUID) async -> Void
         let files: any FileSystemPort
+        /// Authenticates, then decrypts a secure card (FR-006-21). Nil when no secure storage is wired.
+        let secureAccess: SecureClipAccess?
         let report: @MainActor (FlotsamError) -> Void
     }
 
@@ -28,6 +30,8 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     var onAccepted: (@MainActor () -> Void)?
 
     private var prepared: Task<FlotsamResult<ShelfDragPlan>, Never>?
+    /// The owner authenticated for this drag, which may have taken longer than the pointer held the button.
+    private var authenticated = false
     private var draggedItemIds: [UUID] = []
     /// `NSPasteboardItem` does not retain its data provider; these live until the session ends.
     private var providers: [Provider] = []
@@ -35,17 +39,37 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     // MARK: Before the drag
 
     /// Called on mouse-down on card `id`: reads what the drag will need while the pointer is still travelling the
-    /// drag threshold, so the session can start without a visible pause (FR-006-17).
+    /// drag threshold, so the session can start without a visible pause (FR-006-17). A secure card asks the owner to
+    /// authenticate here, every time (FR-006-21): its text exists only after that, and a card whose check fails
+    /// provides nothing.
     func prepare(cardId: UUID) {
         guard let ports, let model else { return }
         let rows = model.covered(by: cardId)
+        authenticated = false
         prepared = Task {
             var candidates: [ShelfDragCandidate] = []
+            var declined: FlotsamError?
             for row in rows {
                 switch await ports.content(row.id) {
-                case .success(let content): candidates.append(ShelfDragCandidate(itemId: row.id, content: content))
-                case .failure(let error): ports.report(error)
+                case .failure(let error):
+                    ports.report(error)
+                case .success(let content):
+                    var revealed: String?
+                    if let ciphertext = content.secureCiphertext {
+                        switch await ports.secureAccess.reveal(ciphertext: ciphertext) {
+                        case .success(let text): revealed = text
+                        case .failure(let error): declined = declined ?? error; continue
+                        }
+                        authenticated = true
+                    }
+                    candidates.append(ShelfDragCandidate(itemId: row.id, content: content, revealedSecureText: revealed))
                 }
+            }
+            // A declined check is the one thing reported about a drag that has nothing else to give, so the cancel
+            // is a single quiet HUD, not that plus "nothing to drag".
+            if let declined {
+                if candidates.isEmpty { return .failure(declined) }
+                ports.report(declined)
             }
             return ShelfDragPlanner.plan(candidates, files: ports.files)
         }
@@ -57,7 +81,10 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     func begin(from view: NSView, event: NSEvent?) async {
         guard let ports, let prepared else { return }
         self.prepared = nil
-        switch await prepared.value {
+        let plan = await prepared.value
+        // The authentication prompt can outlast the press: a session begun after the button is up would never end.
+        if authenticated, NSEvent.pressedMouseButtons & 1 == 0 { return }
+        switch plan {
         case .failure(let error):
             ports.report(error)
         case .success(let plan):

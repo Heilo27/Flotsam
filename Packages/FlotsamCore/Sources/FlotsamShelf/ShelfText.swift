@@ -22,6 +22,9 @@ public enum ShelfText {
     public static let menuUnpin = "ui.shelf.menuUnpin"
     public static let menuDelete = "ui.shelf.menuDelete"
     public static let missing = "ui.shelf.missing"
+    /// The badge of a secure card whose key is gone. The Library's key, by name: one string, one translation (the
+    /// reason `ui.shelf.secureUnavailable` was removed).
+    public static let secureUnavailable = "ui.library.secureUnavailable"
     /// The delete confirmation reuses FRD-004's catalogue keys (`ui.organize.confirmDelete*`, via
     /// `DeleteConfirmation.message(count:)`); the button's key is named here for the confirmation dialog.
     public static let buttonDelete = "ui.organize.buttonDelete"

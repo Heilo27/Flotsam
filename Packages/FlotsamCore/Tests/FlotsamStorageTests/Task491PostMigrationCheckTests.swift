@@ -41,10 +41,10 @@ import FlotsamBase
     /// confirm the migration and delete the copy.
     @Test func aFailingPostMigrationCheckOnAConfirmingLaunchQuarantinesAndKeepsTheCopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
-        let migrations = Migrations.all + [v2]
+        let migrations = Migrations.baseline + [v2]
         _ = try await FlotsamDatabase.open(
             folder: root, fileSystem: LocalFileSystem(), clock: clock, migrations: migrations).get()
         let copy = root.appendingPathComponent("pre-migration/\(DataFolder.preMigrationCopyName(fromVersion: 1))")
@@ -68,10 +68,10 @@ import FlotsamBase
     /// copy, so the copy surviving above is the failing check's doing and not an artefact of the arrangement.
     @Test func aPassingPostMigrationCheckOnAConfirmingLaunchDeletesTheCopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
-        let migrations = Migrations.all + [v2]
+        let migrations = Migrations.baseline + [v2]
         _ = try await FlotsamDatabase.open(
             folder: root, fileSystem: LocalFileSystem(), clock: clock, migrations: migrations).get()
         let copy = root.appendingPathComponent("pre-migration/\(DataFolder.preMigrationCopyName(fromVersion: 1))")

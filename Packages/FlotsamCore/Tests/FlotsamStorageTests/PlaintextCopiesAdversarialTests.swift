@@ -31,7 +31,7 @@ import FlotsamBase
     /// `existingQuarantineFolders` stops checking the entry kind or removal starts following links.
     @Test func linksNamedLikeCopiesNeverReachTheirTargets() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let victim = try outsideVictim()
@@ -42,7 +42,7 @@ import FlotsamBase
         let copyLink = root.appendingPathComponent("pre-migration/flotsam-v1.sqlite")
         try FileManager.default.createSymbolicLink(at: copyLink, withDestinationURL: victim.file)
 
-        let second = try await Store.make(root: root, clock: clock)
+        let second = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
         #expect(exists(victim.file), "launch expiry followed a link")
         #expect(isLink(quarantineLink), "a link named corrupt-<digits> is not a folder Flotsam made")
 
@@ -58,7 +58,7 @@ import FlotsamBase
     /// runs, then it is left alone: only files Flotsam wrote are removed. Red if the purge drops the regular-file check
     /// (`DataFolder.preMigrationCopyInfo`) and removeItem deletes the directory tree.
     @Test func aFolderNamedLikeACopyIsNotRemovedByClearHistory() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert([Spec(n: 1, ageMs: 60_000)])
         let inner = try s.plant("pre-migration/flotsam-v1.sqlite/user-notes.txt")
@@ -72,14 +72,14 @@ import FlotsamBase
     /// OC-422-W3. Same, at launch expiry, for an old directory named like a copy.
     @Test func aFolderNamedLikeACopyIsNotRemovedByLaunchExpiry() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let inner = try first.plant("pre-migration/flotsam-v1.sqlite/user-notes.txt")
         let folder = inner.deletingLastPathComponent()
         try age(folder, first, ms: 90 * dayMs)
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(exists(folder) && exists(inner))
     }
@@ -89,7 +89,7 @@ import FlotsamBase
     /// nothing; the copy then also predates the new quarantine, so it stays on the launch after too, FR-007-17). Red if the expiry hook runs on the second attempt.
     @Test func aQuarantinedLaunchDeletesNothing() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let oldCopy = try first.plant("pre-migration/flotsam-v1.sqlite", contents: "old-copy")
@@ -102,7 +102,7 @@ import FlotsamBase
         try Data(repeating: 0xAB, count: 8192).write(to: root.appendingPathComponent("flotsam.sqlite"))
         let before = first.names(in: root)
 
-        let reopened = try await Store.make(root: root, clock: clock)
+        let reopened = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         let fresh = reopened.names(in: root).subtracting(before)
         #expect(fresh.filter { $0.hasPrefix("corrupt-") }.count == 1, "the damaged file must have been quarantined: \(fresh)")
@@ -115,13 +115,13 @@ import FlotsamBase
     /// path.
     @Test func aFutureDatedCopyIsDeletedByAConfirmingLaunch() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let copy = try first.plant("pre-migration/flotsam-v1.sqlite")
         try age(copy, first, ms: -400 * dayMs)
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(!exists(copy))
     }
@@ -130,13 +130,13 @@ import FlotsamBase
     /// then nothing is removed and nothing traps.
     @Test func hugeQuarantineStampsAreNotJudged() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let huge = try first.plant("corrupt-99999999999999999999999/keep.txt")
         let future = try first.plant("corrupt-\(first.clock.millis + 400 * dayMs)/keep.txt")
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(exists(huge) && exists(future))
     }
@@ -144,7 +144,7 @@ import FlotsamBase
     /// OC-422-W7. Given pre-migration/ is itself a link to a folder holding a file named like a copy, when Clear History
     /// runs, then the target is left alone. Red if the purge starts listing through a link.
     @Test func aLinkedPreMigrationFolderIsNotPurgedThrough() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert([Spec(n: 1, ageMs: 60_000)])
         let victim = try outsideVictim()
@@ -165,7 +165,7 @@ import FlotsamBase
     /// quarantine and is kept. Red if the comparison uses the older date.
     @Test func theNewerOfTheTwoDatesDecidesWhetherAQuarantinePredatesACopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let quarantine = root.appendingPathComponent("corrupt-\(first.clock.millis - hourMs)")
@@ -183,7 +183,7 @@ import FlotsamBase
         let bothOld = try first.plant("pre-migration/flotsam-v3.sqlite")
         try FileManager.default.setAttributes([.creationDate: old, .modificationDate: old], ofItemAtPath: bothOld.path)
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(!exists(oldMtime) && !exists(oldBirth), "taken after the quarantine on its newest date: deleted")
         #expect(exists(bothOld), "taken before the quarantine on both dates: kept while the quarantine stands")

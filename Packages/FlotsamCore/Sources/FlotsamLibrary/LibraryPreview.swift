@@ -48,7 +48,8 @@ public struct LibraryPreview: Equatable {
     public init(row: ItemRow, content: ItemContent, imageData: Data?) {
         itemId = row.id
         kind = row.kind
-        fullText = content.plainText
+        // A secure item previews as its mask (or "Unavailable"), never its text: that stays behind authentication.
+        fullText = row.isSecure ? row.primaryLine : content.plainText
         self.imageData = imageData
         let paths = content.members.map(\.path)
         memberPaths = Array(paths.prefix(Self.memberLimit))

@@ -252,7 +252,7 @@ about=('<div style="display:flex;flex-direction:column;align-items:center;gap:6p
 sheetwin=lambda inner:f'<div class="msheet">{inner}</div>'
 clear=sheetwin('<h4>Clear all history?</h4><div class="help" style="font-size:12.5px">This permanently deletes 212 items. This can’t be undone.</div><div class="btnrow"><span class="btn">Cancel</span><span class="btn pri dst">Delete All</span></div>'.replace('btn pri dst','btn dst pri'))
 shorten=alert('Shorten history?','This permanently deletes 41 items older than 3 months. Pinned items and items with a shortcut are kept.',[('Delete Items','dst pri'),('Cancel','')])
-resetapps=alert('Reset ignored apps?','Replace your list with the default apps?',[('Replace','pri'),('Cancel','')])
+resetapps=alert('Reset ignored apps?','Clear the ignored-apps list? Flotsam will store copies from every app, password managers included.',[('Reset','pri'),('Cancel','')])
 licence=sheetwin('<h4>Licence</h4><div class="field area" style="min-height:120px;font:11px/1.45 var(--mono);color:var(--t2)">MIT License<br><br>Copyright (c) 2026 Flotsam contributors<br><br>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files…</div><div class="btnrow"><span class="btn pri">Done</span></div>')
 sheet('06-settings','Settings',[
  wrap('General',bd(win('General','General',general),pad=20)),

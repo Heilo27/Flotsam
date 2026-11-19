@@ -8,7 +8,8 @@ struct PlaintextCopyPurge: Equatable {
     var isComplete: Bool { failed == 0 }
 }
 
-/// The two places the data folder keeps full, unencrypted copies of the database beside the live one: the
+/// The two places the data folder keeps full copies of the database beside the live one (every ordinary clip's text in
+/// the clear; a secure clip only as its ciphertext, and its key is in the Keychain, never in a copy): the
 /// pre-migration backup (FR-007-17) and the corrupt-database quarantine (FR-007-13). Both outlive item deletion, so
 /// the rules that end their life live here, in one place: Clear History purges both (FR-007-11); at launch a
 /// pre-migration copy ends when a later launch confirms the migrated database is healthy (FR-007-17), and a quarantine

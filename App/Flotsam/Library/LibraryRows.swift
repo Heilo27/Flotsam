@@ -89,7 +89,7 @@ private struct RowInteraction: ViewModifier {
         let entries = LibraryContextMenu.entries(
             kind: row.kind,
             pinUnpins: model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned),
-            singleTarget: !model.selection.contains(row.id) || model.selection.count == 1)
+            singleTarget: !model.selection.contains(row.id) || model.selection.count == 1, isSecure: row.isSecure)
         ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
             switch entry {
             case .separator:
@@ -141,8 +141,9 @@ private struct StatusBadges: View {
             if row.isPinned { Image(systemName: "pin.fill") }
             if row.hasTrigger { Image(systemName: "text.cursor") }
             if row.hasShortcut { Image(systemName: "command") }
-            if let missing = row.missingBadge {
-                Text(verbatim: missing).font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
+            if row.isSecure { Image(systemName: "lock.fill") }
+            if let badge = row.missingBadge ?? row.unavailableBadge {
+                Text(verbatim: badge).font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
                     .background(.quaternary, in: Capsule())
             }
         }

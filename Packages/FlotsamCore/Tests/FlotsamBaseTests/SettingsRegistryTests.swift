@@ -17,7 +17,7 @@ import Testing
             ("shortcuts.toggleShelf", "ChordBinding", "none"),
             ("triggers.enabled", "Bool", "true"),
             ("triggers.excludedApps", "BundleIdentifierList", BundleIdentifierList.defaultTriggerExcludedApps.persisted),
-            ("privacy.ignoredApps", "BundleIdentifierList", BundleIdentifierList.defaultIgnoredApps.persisted),
+            ("privacy.ignoredApps", "BundleIdentifierList", "[]"),
             ("storage.retention", "RetentionPreset", "d30"),
             ("storage.imageBudget", "ImageBudget", "gib2"),
             ("storage.imageQuality", "ImageQuality", "original"),
@@ -34,8 +34,9 @@ import Testing
         #expect(SettingKeys.all.allSatisfy { !$0.owner.isEmpty })
     }
 
-    @Test func defaultIgnoredAppsAreTheSixFromFR00811() {
-        #expect(BundleIdentifierList.defaultIgnoredApps.identifiers == [
+    @Test func defaultIgnoredAppsAreEmptyAndTheRetiredSixArePinned() {
+        #expect(BundleIdentifierList.defaultIgnoredApps.identifiers.isEmpty)
+        #expect(BundleIdentifierList.retiredIgnoredAppsDefault.identifiers == [
             "com.apple.keychainaccess", "com.apple.Passwords", "com.1password.1password",
             "com.agilebits.onepassword7", "com.bitwarden.desktop", "org.keepassxc.keepassxc",
         ])

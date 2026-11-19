@@ -80,11 +80,18 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
     /// A file, folder or bundle item none of whose files exist any more (FRD-003 FR-003-07; `FileMemberLocator`). Always
     /// false for the other kinds. Set by the query layer when the page is read, so the Library and the Shelf agree.
     public let isMissing: Bool
+    /// A secure clip (a concealed copy, sealed at capture): `primaryLine` is the mask, never the text, and the row can
+    /// carry no hotkey or trigger. Stored on the row, so it is true however the key is doing.
+    public let isSecure: Bool
+    /// A secure row whose key cannot be read on this Mac now (or whose key store was never given). Its `primaryLine` is
+    /// the "Unavailable" label. Always false for a row that is not secure. Set by the query layer when the page is
+    /// read, like `isMissing`, because key availability is the Keychain's, not the database's.
+    public let isUnavailable: Bool
 
     public init(
         id: UUID, kind: ItemKind, lastCopiedAt: Date, pasteCount: Int, primaryLine: String, sourceName: String?,
         tagNames: [String], isPinned: Bool, hasTrigger: Bool, hasShortcut: Bool, pixelWidth: Int?, pixelHeight: Int?,
-        memberCount: Int, byteSize: Int64, isMissing: Bool = false
+        memberCount: Int, byteSize: Int64, isMissing: Bool = false, isSecure: Bool = false, isUnavailable: Bool = false
     ) {
         self.id = id
         self.kind = kind
@@ -101,15 +108,22 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
         self.memberCount = memberCount
         self.byteSize = byteSize
         self.isMissing = isMissing
+        self.isSecure = isSecure
+        self.isUnavailable = isUnavailable
     }
 
     /// The same row with its missing-file state set.
-    public func withMissing(_ missing: Bool) -> ItemRow {
+    public func withMissing(_ missing: Bool) -> ItemRow { copy(primaryLine: primaryLine, isMissing: missing, isUnavailable: isUnavailable) }
+
+    /// The same row marked unavailable, showing `label` as its primary line (a secure row whose key is gone).
+    public func withUnavailable(label: String) -> ItemRow { copy(primaryLine: label, isMissing: isMissing, isUnavailable: true) }
+
+    private func copy(primaryLine: String, isMissing: Bool, isUnavailable: Bool) -> ItemRow {
         ItemRow(
             id: id, kind: kind, lastCopiedAt: lastCopiedAt, pasteCount: pasteCount, primaryLine: primaryLine,
             sourceName: sourceName, tagNames: tagNames, isPinned: isPinned, hasTrigger: hasTrigger,
             hasShortcut: hasShortcut, pixelWidth: pixelWidth, pixelHeight: pixelHeight, memberCount: memberCount,
-            byteSize: byteSize, isMissing: missing)
+            byteSize: byteSize, isMissing: isMissing, isSecure: isSecure, isUnavailable: isUnavailable)
     }
 }
 

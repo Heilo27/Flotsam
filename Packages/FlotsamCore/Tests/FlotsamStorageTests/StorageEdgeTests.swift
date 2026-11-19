@@ -78,7 +78,7 @@ import FlotsamBase
     /// Goes red if the ordinal test accepts any text after the dot (`Int(parts[1]) != nil` made always true).
     @Test("OC-7114 reconcile never deletes a uuid file whose extension is not an integer")
     func oc7114_nonIntegerExtensionSurvives() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert(Spec(n: 1, ageMs: hourMs, blobs: 1, repBytes: 10))
         let old = 3 * hourMs
@@ -118,7 +118,7 @@ import FlotsamBase
     func oc7137_digitlessNamesSurviveMigrationPruning() async throws {
         let root = tempRoot()
         defer { try? FileManager.default.removeItem(at: root) }
-        let first = try await Store.make(root: root)
+        let first = try await Store.make(root: root, migrations: Migrations.baseline)
         try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         let folder = root.appendingPathComponent("pre-migration")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -127,7 +127,7 @@ import FlotsamBase
         for name in pruned + digitless { try Data(name.utf8).write(to: folder.appendingPathComponent(name)) }
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         let remaining = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
         #expect(remaining == Set(["flotsam-v1.sqlite"] + digitless))
@@ -176,7 +176,7 @@ import FlotsamBase
             try? FileManager.default.removeItem(at: source)
             try? FileManager.default.removeItem(at: destination)
         }
-        let live = try await Store.make(root: source)
+        let live = try await Store.make(root: source, migrations: Migrations.baseline)
         try await live.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         let sourceWal = source.appendingPathComponent("flotsam.sqlite-wal")
@@ -194,7 +194,7 @@ import FlotsamBase
         try #require(mainOnly.itemIds != [1, 2, 3], "fixture is not WAL-resident: the main file already holds the items")
 
         let upgraded = try await FlotsamDatabase.open(
-            folder: destination, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: destination, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         let copy = try readOnlyCopy(of: destination.appendingPathComponent("pre-migration/flotsam-v1.sqlite"))
         #expect(copy.version == 1)

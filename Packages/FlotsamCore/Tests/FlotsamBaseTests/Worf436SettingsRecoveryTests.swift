@@ -91,7 +91,7 @@ private final class WriteDroppingStore: KeyValueStore, @unchecked Sendable {
     /// Lists compare by membership: the default text is long, so assert two literal members instead of the JSON.
     private func isDefault(_ persisted: String, _ literal: String) -> Bool {
         switch literal {
-        case "DEFAULT-IGNORED": persisted.contains("com.apple.keychainaccess") && persisted.contains("org.keepassxc.keepassxc")
+        case "DEFAULT-IGNORED": persisted == "[]"  // empty since TASK-498 (FR-008-11)
         case "DEFAULT-EXCLUDED": persisted.contains("com.apple.Terminal") && persisted.contains("com.vmware.fusion")
         default: persisted == literal
         }

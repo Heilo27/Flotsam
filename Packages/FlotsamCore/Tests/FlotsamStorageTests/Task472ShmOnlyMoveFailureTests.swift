@@ -10,7 +10,7 @@ import FlotsamBase
 @Suite("TASK-472: -shm-only quarantine failure still surfaces STO-DB-002 on relaunch", .timeLimit(.minutes(2)))
 struct Task472ShmOnlyMoveFailureTests {
     private func open(_ root: URL, fs: any FileSystemPort = LocalFileSystem()) async -> (FlotsamError?, FlotsamError?) {
-        switch await FlotsamDatabase.open(folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.all) {
+        switch await FlotsamDatabase.open(folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.baseline) {
         case .failure(let error): return (error, nil)
         case .success(let db): return (nil, db.openNotice)
         }

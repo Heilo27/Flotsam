@@ -43,7 +43,7 @@ import FlotsamBase
     /// Given a pre-migration copy with its WAL and a quarantine folder, when Clear History deletes items, then every
     /// copy is gone, the live database and the files Flotsam did not write stay.
     @Test func clearHistoryPurgesPreMigrationCopiesAndQuarantines() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert((1...3).map { Spec(n: $0, ageMs: Int64($0) * 60_000) })
         let copy = try plantCopy(s, "flotsam-v1.sqlite", ageMs: 60_000)
@@ -67,7 +67,7 @@ import FlotsamBase
     /// succeeds, the outcome says the purge was incomplete and the failure is logged.
     @Test func clearHistoryReportsAnIncompletePurgeAndKeepsGoing() async throws {
         let fileSystem = FaultyFileSystem(failRemove: { $0.lastPathComponent == "flotsam-v1.sqlite" })
-        let s = try await Store.make(fileSystem: fileSystem)
+        let s = try await Store.make(fileSystem: fileSystem, migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert(Spec(n: 1, ageMs: 60_000))
         let stuck = try plantCopy(s, "flotsam-v1.sqlite", ageMs: 60_000)
@@ -85,7 +85,7 @@ import FlotsamBase
 
     /// Given a range that matches nothing, when Clear History runs, then nothing was cleared and the copies stay.
     @Test func clearHistoryThatDeletesNothingLeavesTheCopies() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         let copy = try plantCopy(s, "flotsam-v1.sqlite", ageMs: 60_000)
         let quarantine = try plantQuarantine(s, ageMs: dayMs)
@@ -116,7 +116,7 @@ import FlotsamBase
     /// files Flotsam did not name stay.
     @Test func aConfirmingLaunchDeletesTheCopyAtOnceWithItsSidecars() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let copy = try plantCopy(first, "flotsam-v1.sqlite", ageMs: 60_000)
@@ -126,7 +126,7 @@ import FlotsamBase
         let note = try plantCopy(first, "notes.txt", ageMs: 90 * dayMs)
         let lookalike = try plantCopy(first, "flotsam-v1.sqlite.bak", ageMs: 90 * dayMs)
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(!exists(copy) && !exists(copyWal) && !exists(copyShm) && !exists(second))
         #expect(exists(note) && exists(lookalike))
@@ -137,11 +137,11 @@ import FlotsamBase
     /// with it.
     @Test func theLaunchThatMigratesKeepsTheCopyAndTheNextCleanLaunchDeletesIt() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let oldQuarantine = try plantQuarantine(first, ageMs: 60 * dayMs)
-        let migrations = Migrations.all + [extraMigration]
+        let migrations = Migrations.baseline + [extraMigration]
 
         let migrated = try await open(root, clock, migrations: migrations).get()
         let copy = takenCopy(root)
@@ -161,17 +161,17 @@ import FlotsamBase
     /// much time passes: nothing but a confirming launch deletes it.
     @Test func aCrashBetweenMigratingAndConfirmingKeepsTheCopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
 
-        do { _ = try await open(root, clock, migrations: Migrations.all + [extraMigration]).get() }  // the launch ends here
+        do { _ = try await open(root, clock, migrations: Migrations.baseline + [extraMigration]).get() }  // the launch ends here
         clock.advance(ms: 400 * dayMs)
 
         #expect(exists(takenCopy(root)))
 
         // and the launch that finally runs, and confirms, is the one that deletes it
-        _ = try await open(root, clock, migrations: Migrations.all + [extraMigration]).get()
+        _ = try await open(root, clock, migrations: Migrations.baseline + [extraMigration]).get()
         #expect(!exists(takenCopy(root)))
     }
 
@@ -180,10 +180,10 @@ import FlotsamBase
     /// cleanly, because the quarantine made after the copy still stands.
     @Test func aDamagedConfirmingLaunchKeepsTheCopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
-        let migrations = Migrations.all + [extraMigration]
+        let migrations = Migrations.baseline + [extraMigration]
         _ = try await open(root, clock, migrations: migrations).get()
         let copy = takenCopy(root)
         #expect(exists(copy))
@@ -208,13 +208,13 @@ import FlotsamBase
     /// that launch fails and the copy stays.
     @Test func aFailedConfirmingLaunchKeepsTheCopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
-        _ = try await open(root, clock, migrations: Migrations.all + [extraMigration]).get()
+        _ = try await open(root, clock, migrations: Migrations.baseline + [extraMigration]).get()
         let copy = takenCopy(root)
 
-        let result = await open(root, clock, migrations: Migrations.all)  // this build only knows version 1
+        let result = await open(root, clock, migrations: Migrations.baseline)  // this build only knows version 1
 
         guard case .failure(let error) = result else { Issue.record("expected the open to fail"); return }
         #expect(error.code == .stoDb003)
@@ -226,18 +226,18 @@ import FlotsamBase
     /// which releases the copy in that same launch.
     @Test func aNewerQuarantineHoldsTheCopyOnlyWhileItStands() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let copy = try plantCopy(first, "flotsam-v1.sqlite", ageMs: 10 * dayMs)
         let olderQuarantine = try plantQuarantine(first, ageMs: 11 * dayMs)
         let newerQuarantine = try plantQuarantine(first, ageMs: 9 * dayMs)
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
         #expect(exists(copy) && exists(olderQuarantine) && exists(newerQuarantine))
 
         clock.advance(ms: 21 * dayMs)  // the newer quarantine is now 30 days old, the copy 31
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
         #expect(!exists(copy) && !exists(olderQuarantine) && !exists(newerQuarantine))
     }
 
@@ -245,7 +245,7 @@ import FlotsamBase
     /// removed whole and the second stays, and a pre-migration copy does not shorten or lengthen that.
     @Test func quarantinesStillExpireAtThirtyDays() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let oldQuarantine = try plantQuarantine(first, ageMs: 30 * dayMs)
@@ -253,7 +253,7 @@ import FlotsamBase
         let foreignFolder = try first.plant("corrupt-old/keep.txt", ageMs: 90 * dayMs)
         let foreignFile = try first.plant("corrupt-77")
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(!exists(oldQuarantine))
         #expect(exists(youngQuarantine) && exists(foreignFolder) && exists(foreignFile))
@@ -263,13 +263,13 @@ import FlotsamBase
     /// kept: only a regular file Flotsam can see is ever deleted.
     @Test func aCopyThatCannotBeInspectedIsKept() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let copy = try plantCopy(first, "flotsam-v1.sqlite", ageMs: 90 * dayMs)
 
         _ = try await Store.make(
-            fileSystem: FaultyFileSystem(failInfo: { $0.lastPathComponent == "flotsam-v1.sqlite" }), root: root, clock: clock)
+            fileSystem: FaultyFileSystem(failInfo: { $0.lastPathComponent == "flotsam-v1.sqlite" }), root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(exists(copy))
     }
@@ -277,13 +277,13 @@ import FlotsamBase
     /// Given a copy that cannot be removed at launch, when the app opens, then it still opens.
     @Test func aFailedExpiryDoesNotStopTheLaunch() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let copy = try plantCopy(first, "flotsam-v1.sqlite", ageMs: 90 * dayMs)
 
         let second = try await Store.make(
-            fileSystem: FaultyFileSystem(failRemove: { $0.lastPathComponent == "flotsam-v1.sqlite" }), root: root, clock: clock)
+            fileSystem: FaultyFileSystem(failRemove: { $0.lastPathComponent == "flotsam-v1.sqlite" }), root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(exists(copy))
         #expect(try second.count("item") == 0)
@@ -301,7 +301,7 @@ import FlotsamBase
     /// Given a data folder made by an older build with loose modes, when the app opens, then every Flotsam folder is
     /// 0700 and the database files 0600.
     @Test func openTightensExistingFoldersAndDatabaseFiles() async throws {
-        let first = try await Store.make()
+        let first = try await Store.make(migrations: Migrations.baseline)
         defer { first.cleanUp() }
         let root = first.root
         try await first.insert(Spec(n: 1))
@@ -312,7 +312,7 @@ import FlotsamBase
         for url in folders { try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path) }
         for url in files { try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path) }
 
-        _ = try await Store.make(root: root, clock: first.clock)
+        _ = try await Store.make(root: root, clock: first.clock, migrations: Migrations.baseline)
 
         for url in folders { #expect(mode(url) == 0o700, "\(url.lastPathComponent)") }
         for url in files { #expect(mode(url) == 0o600, "\(url.lastPathComponent)") }
@@ -321,7 +321,7 @@ import FlotsamBase
     /// TASK-422 M1. Given `pre-migration/` is a link to a folder outside the data folder with loose modes, when the app
     /// opens, then the target's mode is not changed (`setAttributes` follows links) and the open still succeeds.
     @Test func openDoesNotChmodThroughALinkedPreMigrationFolder() async throws {
-        let first = try await Store.make()
+        let first = try await Store.make(migrations: Migrations.baseline)
         defer { first.cleanUp() }
         let root = first.root
         let outside = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-m1-\(UUID().uuidString)")
@@ -331,7 +331,7 @@ import FlotsamBase
         try FileManager.default.createSymbolicLink(
             at: root.appendingPathComponent("pre-migration"), withDestinationURL: outside)
 
-        _ = try await Store.make(root: root, clock: first.clock)
+        _ = try await Store.make(root: root, clock: first.clock, migrations: Migrations.baseline)
 
         #expect(mode(outside) == 0o755)
     }
@@ -341,7 +341,7 @@ import FlotsamBase
     @Test func newDatabaseFilesAreOwnerOnlyFromCreation() async throws {
         let previous = umask(0o022)
         defer { umask(previous) }
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert((1...5).map { Spec(n: $0) })
 

@@ -81,6 +81,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 - **FR-003-20** Data errors. An item whose stored data is missing at paste time is deleted and shown as `LIB-IO-001`. A failed database read shows `STO-DB-004` inline in the results area with a Retry button; the panel keeps working.
 - **FR-003-21** Accessibility. Every control is reachable and operable by keyboard; rows expose VoiceOver labels in the form "{kind}, {primary text up to 100 characters}, from {app}, {relative time}, pinned" with row actions available via the VoiceOver actions menu; the panel respects Reduce Motion (no slide, fade only), Increase Contrast, and light and dark appearance; hit targets are at least 44 pt tall; a visible focus ring marks the selection.
 - **FR-003-22** Context menu (right-click, mouse path only). Entries in order: Paste, Paste as Plain Text, Copy, Preview, separator, Pin or Unpin, Tags..., Note..., Edit... (text only), Shortcut and Trigger..., Ungroup (bundle), separator, Reveal in Finder (where applicable), separator, Delete. Each performs the same action as its key in FR-003-08.
+- **FR-003-23** Secure items: authorise, then re-copy. A secure item (FRD-001 FR-001-25) is shown as the fixed mask, never its text, with a lock; when its Keychain key cannot be read on this Mac the row also shows an "Unavailable" badge (the same catalogue string in the Library and the Shelf). Every action that would put its text on the pasteboard (Return, ⌥Return, ⇧Return, double-click, ⌘C, Paste, Paste as Plain Text and Copy in the context menu, and the Shelf's FR-006-21) first checks that the key is readable (`LIB-DAT-002` if not, and no prompt is shown, since nothing could succeed) and then asks the device owner to authenticate (Touch ID, Apple Watch or the account password), every time and with no grace period. A cancelled or failed check is `LIB-OS-002` and nothing is written, recorded or pasted. On success the text is decrypted only then and written as plain text alone (the mode does not matter) with `org.nspasteboard.ConcealedType` plus the own-write markers (FRD-001 FR-001-03), so other apps and clipboard managers treat it as the password it is, Flotsam does not capture its own re-copy, and the clipboard-variable `{clipboard}` (FRD-005 FR-005-17) reads it as empty. Accepted trade-off: because the item is re-copied to the general pasteboard, a password manager's own auto-clear of the clipboard no longer limits how long the password is exposed there.
 
 ## 4. Data Requirements
 - Reads items, tags, source apps and counts through the storage query layer (FRD-007); writes only `pasteCount` and `lastUsedAt`.
@@ -100,6 +101,8 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 | Target app changed or ⌘V could not be posted | LIB-OS-001 | item left on pasteboard; HUD |
 | Stored data missing | LIB-IO-001 | item deleted; HUD |
 | Referenced files all missing | LIB-DAT-001 | no paste; HUD; row marked Missing |
+| Secure item copy not authorised | LIB-OS-002 | nothing written to the pasteboard; HUD (FRD-001 FR-001-25) |
+| Secure item key missing or bytes unreadable | LIB-DAT-002 | no copy; HUD; row marked Unavailable |
 | Accessibility not granted | SET-PRM-001 | copy-only; HUD and footer hint |
 | Database read failed | STO-DB-004 | inline message with Retry |
 
@@ -123,6 +126,7 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 - **AC-003-16** (FR-003-12) Given tags "work" (3 items) and "home" (0 items) and no Emails in the library, then Tags shows both with counts, "home" dimmed, and Types has no Emails row.
 - **AC-003-17** (FR-003-21) Given VoiceOver on, then a row reads as specified, all actions are reachable by keyboard only, and Reduce Motion removes slide animation.
 - **AC-003-18** (FR-003-08) Given two items selected with ⇧↓, then Return is disabled and ⌘P pins both.
+- **AC-003-19** (FR-003-23) Given a secure item and a cancelled Touch ID prompt, when Return, ⇧Return or ⌘C is used, then `LIB-OS-002` shows, nothing is written to the pasteboard and nothing is pasted; given the key is gone, then `LIB-DAT-002` shows with no prompt; given the prompt succeeds, then the pasteboard holds the plain text with `ConcealedType` and the own-write markers, Flotsam does not capture it again, and a following expansion's `{clipboard}` is empty; given a second paste, then the prompt appears again; the row and its Shelf card show only the mask, with an "Unavailable" badge when the key is gone.
 
 ## 8. UI Inventory
 | Element | Type | Where | Behavior |

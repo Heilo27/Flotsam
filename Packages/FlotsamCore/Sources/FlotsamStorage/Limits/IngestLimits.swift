@@ -8,6 +8,9 @@ public enum IngestLimits {
     public static let maxImageBytes = 100 * 1024 * 1024
     public static let maxBundleMembers = 500
     public static let maxNoteCharacters = 2000
+    /// A secure clip's stored ciphertext (FR-001-04 gate 3). A password or token is a few hundred bytes; this leaves
+    /// room for a long passphrase or a pasted key without letting a concealed copy of a document fill the database.
+    public static let maxSecureCiphertextBytes = 64 * 1024
 
     /// The note counter appears from here (FR-004-06): 90% of the ceiling.
     public static let noteCounterThreshold = maxNoteCharacters / 10 * 9
@@ -51,6 +54,9 @@ extension IngestLimits {
         }
 
         if let text = candidate.plainText, text.utf8.count > maxTextBytes { return skip(maxTextBytes) }
+        if let sealed = candidate.secureCiphertext, sealed.count > maxSecureCiphertextBytes {
+            return skip(maxSecureCiphertextBytes)
+        }
 
         var warnings: [FlotsamError] = []
         var kept: [PasteboardRepresentation] = []

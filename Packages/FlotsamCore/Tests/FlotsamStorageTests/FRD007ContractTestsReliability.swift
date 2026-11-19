@@ -64,7 +64,7 @@ struct FRD007ContractReliabilityTests {
         let logs = RecordingLogSink()
 
         // when it opens
-        let database = try await FlotsamDatabase.open(folder: root, logSink: logs).get()
+        let database = try await FlotsamDatabase.openBaseline(folder: root, logSink: logs).get()
 
         // then the exact order, with the migrate entry between the two integrity checks
         #expect(dbLines(logs) == [
@@ -87,10 +87,10 @@ struct FRD007ContractReliabilityTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-7116b-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         try makeV0(at: root)
-        _ = try await FlotsamDatabase.open(folder: root, logSink: RecordingLogSink()).get()
+        _ = try await FlotsamDatabase.openBaseline(folder: root, logSink: RecordingLogSink()).get()
         let logs = RecordingLogSink()
 
-        _ = try await FlotsamDatabase.open(folder: root, logSink: logs).get()
+        _ = try await FlotsamDatabase.openBaseline(folder: root, logSink: logs).get()
 
         #expect(dbLines(logs) == [
             "database.integrityCheck outcome=passed", "database.integrityCheck outcome=passed", "database.open outcome=opened",
@@ -107,7 +107,7 @@ struct FRD007ContractReliabilityTests {
     @Test("OC-7115 reconcile of 20,000 orphan blobs removes them all and never stalls the main actor over 250 ms")
     func oc7115_manyOrphansReconcileOffMainActor() async throws {
         // given 20,000 old orphans, 1 young orphan, 1 referenced blob (item 1)
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         var kept = Spec(n: 1, kind: .image, ageMs: 60_000)
         kept.blobs = 1
@@ -149,7 +149,7 @@ struct FRD007ContractReliabilityTests {
     /// Red if the count reported differs from files removed.
     @Test("OC-7115 a single old orphan is removed and counted once; a folder with none removes nothing")
     func oc7115_zeroAndOneOrphan() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         let none = try await s.database.reconcile().get()
         #expect(none.orphanBlobsRemoved == 0)

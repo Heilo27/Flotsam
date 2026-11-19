@@ -5,10 +5,21 @@ import Foundation
 /// Builds what goes on the pasteboard for one item (FR-003-15 steps 1 and 2). Pure apart from file-existence checks.
 /// The content-to-representation rules are shared with the Shelf drag and live on `ItemContent`.
 enum PastePayload {
-    /// The representations to write, or `LIB-DAT-001` when a file item has no member left on disk.
+    /// The representations to write, or `LIB-DAT-001` when a file item has no member left on disk. A secure item
+    /// needs `revealedSecureText` (from `SecureClipAccess.reveal`); without it the answer is `LIB-OS-002`. Its text is
+    /// written in every mode, as plain text with `ConcealedType`.
     static func representations(
-        for content: ItemContent, mode: PasteMode, itemId: UUID, files: any FileSystemPort
+        for content: ItemContent, mode: PasteMode, itemId: UUID, files: any FileSystemPort,
+        revealedSecureText: String? = nil
     ) -> FlotsamResult<[PasteboardRepresentation]> {
+        // A secure clip's text exists only after `SecureClipAccess.reveal` (the user's authentication), and the caller
+        // passes it in. Called without it, refuse rather than write an empty string: fail closed.
+        if content.isSecure {
+            guard let revealedSecureText else {
+                return .failure(FlotsamError(.libOs002, "A secure item needs authentication to copy", context: [.itemId: .id(itemId)]))
+            }
+            return .success(SecureClip.pasteboardRepresentations(revealing: revealedSecureText))
+        }
         if content.kind.referencesFiles {
             let urls = content.existingMemberURLs(files: files)
             guard !urls.isEmpty else {

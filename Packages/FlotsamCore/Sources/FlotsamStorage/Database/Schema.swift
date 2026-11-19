@@ -86,4 +86,35 @@ enum Schema {
             CREATE INDEX itemTag_tagId ON itemTag(tagId);
             """)
     }
+
+    /// Secure clips (FRD-007 FR-007-03 secure columns): what a password manager copied, kept as ciphertext.
+    ///
+    /// - `isSecure` marks the row; `secureCiphertext` is the AES-GCM sealed text (`SecureClipVaulting`). `plainText`
+    ///   stays NULL, so the text is in neither the row, the search index nor the WAL.
+    /// - The triggers are the last line of defence for three rules the code also enforces, so a code path that
+    ///   forgets one fails the write instead of storing something it must not: a secure row carries no hotkey and no
+    ///   trigger (FR-004-13; the typed refusal is `TRG-VAL-006`), no plain text, and always has its ciphertext.
+    /// - Existing rows take the column defaults (`isSecure = 0`, no ciphertext): nothing to backfill.
+    static func createVersion2(_ db: Database) throws {
+        try db.execute(sql: """
+            ALTER TABLE item ADD COLUMN isSecure INTEGER NOT NULL DEFAULT 0 CHECK (isSecure IN (0, 1));
+            ALTER TABLE item ADD COLUMN secureCiphertext BLOB;
+
+            CREATE TRIGGER item_secure_insert BEFORE INSERT ON item
+            WHEN NEW.isSecure = 1 AND (
+                NEW.hotkeyCode IS NOT NULL OR NEW."trigger" IS NOT NULL
+                OR NEW.plainText IS NOT NULL OR NEW.secureCiphertext IS NULL)
+            BEGIN
+                SELECT RAISE(ABORT, 'secure item invariant violated');
+            END;
+
+            CREATE TRIGGER item_secure_update BEFORE UPDATE ON item
+            WHEN NEW.isSecure = 1 AND (
+                NEW.hotkeyCode IS NOT NULL OR NEW."trigger" IS NOT NULL
+                OR NEW.plainText IS NOT NULL OR NEW.secureCiphertext IS NULL)
+            BEGIN
+                SELECT RAISE(ABORT, 'secure item invariant violated');
+            END;
+            """)
+    }
 }

@@ -136,6 +136,8 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | LIB-OS-001 | Error | Couldn't paste into that app. The item is on your clipboard; press ⌘V. | item left on pasteboard; HUD |
 | LIB-IO-001 | Error | This item's data is missing, so it was removed. | delete item; HUD |
 | LIB-DAT-001 | Warning | The original file or folder has moved or been deleted. | no paste; HUD; row marked Missing |
+| LIB-OS-002 | Warning | Not copied. Confirm it's you to copy a secure item. | nothing written to the pasteboard; HUD |
+| LIB-DAT-002 | Warning | This secure item can't be unlocked on this Mac. | no copy; HUD; row marked Unavailable |
 
 **ORG** (FRD-004)
 | Code | Sev | User message | Recovery |
@@ -157,6 +159,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | TRG-VAL-003 | Error | Shortcuts need ⌘ or ⌃ plus a key, and can't be a reserved system shortcut. | rejected inline |
 | TRG-VAL-004 | Error | That shortcut is already used in Flotsam. | rejected inline |
 | TRG-VAL-005 | Warning | An unknown variable was left as plain text. | saved; inline notice |
+| TRG-VAL-006 | Error | Secure items can't have a trigger or a shortcut. | rejected inline |
 | TRG-OS-001 | Error | macOS wouldn't let Flotsam use that shortcut. Try a different one. | not registered; kept for retry |
 | TRG-OS-002 | Error | Couldn't expand that trigger. Your typed text was left as it was. | abort expansion; HUD |
 | TRG-OS-003 | Warning | Typed triggers were paused by macOS and have been restarted. | re-enable tap; Notice |
@@ -219,6 +222,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
 
 ## 11. Change Log
+- 2026-11-18: §7 gains `LIB-OS-002` (a secure item's copy was not authorised), `LIB-DAT-002` (a secure item's key is missing or its bytes do not open) and `TRG-VAL-006` (a secure item cannot carry a shortcut or trigger), for secure clips (FRD-001 FR-001-25). 63 live codes: 2 Fatal, 22 Warning, 25 Error, 14 Info.
 - 2026-11-18: FR-000-05: a plural count is a whole number in any form, including a boxed one (`NSNumber`): exactly 1 reads `one`; anything else reads `other`. A decimal (1.0, 1.5), text, a missing count and a yes/no value (even one that boxes to 1) are not counts and read `other`.
 - 2026-11-18: FR-000-12: `screenshot.import` added, a ninth interval, one per screenshot pickup (FRD-002 FR-002-14 is measured with it).
 - 2026-11-18: FR-000-11/12: a copy-only paste (⇧Return) logs `paste.copy`, not `paste.back`, and is not timed by the `paste.back` signpost (it posts no ⌘V). FR-000-08: Notices raised for a missing trigger permission or a tap that would not install clear when that condition ends, so the menu-bar warning dot does not outlive the problem.

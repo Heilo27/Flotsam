@@ -61,6 +61,16 @@
         }
       }
     },
+    "error.LIB-DAT-002" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This secure item can't be unlocked on this Mac."
+          }
+        }
+      }
+    },
     "error.LIB-IO-001" : {
       "localizations" : {
         "en" : {
@@ -77,6 +87,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Couldn't paste into that app. The item is on your clipboard; press ⌘V."
+          }
+        }
+      }
+    },
+    "error.LIB-OS-002" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not copied. Confirm it's you to copy a secure item."
           }
         }
       }
@@ -457,6 +477,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "An unknown variable was left as plain text."
+          }
+        }
+      }
+    },
+    "error.TRG-VAL-006" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure items can't have a trigger or a shortcut."
           }
         }
       }
@@ -1183,6 +1213,16 @@
         }
       }
     },
+    "ui.library.secureUnavailable" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unavailable"
+          }
+        }
+      }
+    },
     "ui.library.sidebarAll" : {
       "localizations" : {
         "en" : {
@@ -1199,6 +1239,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "ui.library.spokenSecure" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure item"
           }
         }
       }
@@ -2509,6 +2559,16 @@
         }
       }
     },
+    "ui.secure.authReason" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "copy a secure item"
+          }
+        }
+      }
+    },
     "ui.settings.addApp" : {
       "localizations" : {
         "en" : {
@@ -2780,7 +2840,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Replace your list with the default apps?"
+            "value" : "Clear the ignored-apps list? Flotsam will store copies from every app, password managers included."
           }
         }
       }
@@ -3032,7 +3092,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copies from these apps are never stored."
+            "value" : "Copies from these apps are never stored. The list starts empty: password managers are stored encrypted unless you add them here."
           }
         }
       }
@@ -3192,7 +3252,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flotsam never stores concealed, transient or auto-generated clipboard content."
+            "value" : "Transient copies are never stored. Password manager copies are stored encrypted, shown as dots, and need your password or Touch ID."
           }
         }
       }

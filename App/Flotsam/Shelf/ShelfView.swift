@@ -114,6 +114,9 @@ private struct ShelfCardView: View {
                 if card.isMissing {
                     Text(verbatim: ShelfText.string(ShelfText.missing)).font(.caption2).foregroundStyle(.red)
                 }
+                if let unavailable = card.unavailableBadge {
+                    Text(verbatim: unavailable).font(.caption2).foregroundStyle(.red)
+                }
                 if let source = card.sourceName {
                     Text(verbatim: source).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
                 }
@@ -169,6 +172,8 @@ private struct ShelfCardView: View {
             RoundedRectangle(cornerRadius: 6).fill(Self.color(from: card.text) ?? Color.secondary)
         case .kindIcon(let kind):
             Image(systemName: symbolName(for: kind)).font(.title2).foregroundStyle(.secondary)
+        case .secure:
+            Image(systemName: "lock.fill").font(.title2).foregroundStyle(.secondary)
         }
     }
 

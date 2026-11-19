@@ -33,6 +33,15 @@ public enum ExemptionEdit: Sendable, Equatable {
     case setTrigger(String?)
     /// nil removes the hotkey.
     case setHotkey(Chord?)
+
+    /// Whether the edit gives the item a trigger or a hotkey (not clears one). A secure clip refuses these.
+    var setsBinding: Bool {
+        switch self {
+        case .setPinned: false
+        case .setTrigger(let trigger): trigger != nil
+        case .setHotkey(let chord): chord != nil
+        }
+    }
 }
 
 extension FlotsamDatabase {
@@ -44,27 +53,32 @@ extension FlotsamDatabase {
     /// before/after test uses `Exemption.sqlPredicate` itself, so "last exemption" has one definition.
     ///
     /// Returns false when the item no longer exists (deleted by a racing sweep): nothing to edit, not a failure.
+    ///
+    /// A secure clip takes no trigger and no hotkey (FR-005-09): setting either is rejected with `TRG-VAL-006` and
+    /// nothing changes. Clearing one is allowed (a secure row has none, so it is a no-op), and pinning is allowed.
     public func applyExemptionEdit(_ edit: ExemptionEdit, to id: UUID) async -> FlotsamResult<Bool> {
         let now = clock.now().epochMillis
-        do {
-            return .success(try await pool.write { db in try Self.applyExemptionEdit(db, edit: edit, id: id, now: now) })
-                .map { applied in
-                    // The registry and the trigger snapshot rebuild from this; published after the commit (FR-005-22).
-                    if applied { events.publish(.itemsChanged) }
-                    return applied
-                }
-        } catch {
-            return .failure(Self.writeFailure(error))
-        }
+        let result = await organizeWrite { db in try Self.applyExemptionEdit(db, edit: edit, id: id, now: now) }
+        // The registry and the trigger snapshot rebuild from this; published after the commit (FR-005-22).
+        if case .success(true) = result { events.publish(.itemsChanged) }
+        return result
     }
 
     /// The body of `applyExemptionEdit`, for a caller that already holds a write transaction and edits several items in
-    /// it (FR-004-01 multi-selection pin). The only place `exemptReleasedAt` is maintained.
+    /// it (FR-004-01 multi-selection pin). The only place `exemptReleasedAt` is maintained, and the only place a
+    /// secure clip is refused a trigger or hotkey (`OrganizeRejection` carrying `TRG-VAL-006`; the schema trigger
+    /// behind it is the last line, not the message).
     static func applyExemptionEdit(_ db: Database, edit: ExemptionEdit, id: UUID, now: Int64) throws -> Bool {
         let key = id.uuidString
-        guard let wasExempt = try Bool.fetchOne(
-            db, sql: "SELECT \(Exemption.sqlPredicate) FROM item WHERE id = ?", arguments: [key])
+        guard let state = try Row.fetchOne(
+            db, sql: "SELECT \(Exemption.sqlPredicate) AS exempt, isSecure FROM item WHERE id = ?", arguments: [key])
         else { return false }
+        let wasExempt: Bool = state["exempt"]
+        let isSecure: Bool = state["isSecure"]
+        if isSecure, edit.setsBinding {
+            throw OrganizeRejection(error: FlotsamError(
+                .trgVal006, "A secure item cannot have a shortcut or trigger", context: [.itemId: .id(id)]))
+        }
 
         switch edit {
         case .setPinned(let pinned):

@@ -189,7 +189,7 @@ private enum Worf497 {
 
     /// A version-1 library with items 1...3, closed cleanly, plus the user's own files around the copy.
     static func seededLibrary(root: URL) async throws {
-        let first = try await Store.make(root: root)
+        let first = try await Store.make(root: root, migrations: Migrations.baseline)
         try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         let preMigration = root.appendingPathComponent("pre-migration")
         try FileManager.default.createDirectory(at: preMigration, withIntermediateDirectories: true)
@@ -211,11 +211,11 @@ private enum Worf497 {
         let root = Worf497.tempRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         do {
-            let first = try await Store.make(root: root)
+            let first = try await Store.make(root: root, migrations: Migrations.baseline)
             try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         }
         let reader = try Worf497.HeldReader(path: root.appendingPathComponent(FlotsamDatabase.fileName).path)
-        let writer = try await Store.make(root: root)
+        let writer = try await Store.make(root: root, migrations: Migrations.baseline)
         let text = String(repeating: "x", count: 2_000)
         try await writer.insert((4...203).map { Spec(n: $0, ageMs: hourMs, text: "\(text) \($0)") })
         let mainAlone = try Worf497.read(fileAlone: root.appendingPathComponent(FlotsamDatabase.fileName))
@@ -232,7 +232,7 @@ private enum Worf497 {
 
         let fileSystem = Worf497FileSystem()
         let upgraded = try await FlotsamDatabase.open(
-            folder: root, fileSystem: fileSystem, migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 0.3).get()
+            folder: root, fileSystem: fileSystem, migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 0.3).get()
         reader.release()
 
         let copy = try Worf497.read(fileAlone: root.appendingPathComponent("pre-migration/flotsam-v1.sqlite"))
@@ -278,7 +278,7 @@ private enum Worf497 {
         }
 
         let upgraded = try await FlotsamDatabase.open(
-            folder: root, fileSystem: fileSystem, migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 5).get()
+            folder: root, fileSystem: fileSystem, migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 5).get()
 
         let copy = try Worf497.read(fileAlone: root.appendingPathComponent("pre-migration/flotsam-v1.sqlite"))
         #expect(copy.version == 1)
@@ -298,7 +298,7 @@ private enum Worf497 {
         let root = Worf497.tempRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         try await Worf497.seededLibrary(root: root)
-        let writer = try await Store.make(root: root)
+        let writer = try await Store.make(root: root, migrations: Migrations.baseline)
         let stop = Cell(false)
         let committed = Cell(0)
         let load = Task.detached {
@@ -313,7 +313,7 @@ private enum Worf497 {
         while committed.value < 12 { try await Task.sleep(nanoseconds: 2_000_000) }
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 5).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 5).get()
         stop.value = true
         await load.value
 
@@ -341,7 +341,7 @@ private enum Worf497 {
         let fileSystem = Worf497FileSystem(fault: fault)
 
         let result = await FlotsamDatabase.open(
-            folder: root, fileSystem: fileSystem, migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 0.3)
+            folder: root, fileSystem: fileSystem, migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 0.3)
 
         guard case .failure(let error) = result else { Issue.record("\(fault): the open succeeded without a pre-migration copy"); return }
         #expect(error.code == .stoDb003, "\(fault)")
@@ -361,7 +361,7 @@ private enum Worf497 {
         #expect(live.hasProbeTable == false, "\(fault)")
 
         let retry = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 0.3).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 0.3).get()
         #expect(try await retry.diagnostics().get().userVersion == 2)
         let copy = try Worf497.read(fileAlone: folder.appendingPathComponent("flotsam-v1.sqlite"))
         #expect(copy.ids == [1, 2, 3], "\(fault)")
@@ -382,7 +382,7 @@ private enum Worf497 {
         let fileSystem = Worf497FileSystem()
 
         let upgraded = try await FlotsamDatabase.open(
-            folder: root, fileSystem: fileSystem, migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 0.3).get()
+            folder: root, fileSystem: fileSystem, migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 0.3).get()
 
         let writes = fileSystem.writes.value
         #expect(writes.count == 1)
@@ -412,7 +412,7 @@ private enum Worf497 {
     func folderOnCopyNameIsLeftAlone() async throws {
         let root = Worf497.tempRoot()
         defer { try? FileManager.default.removeItem(at: root) }
-        let first = try await Store.make(root: root)
+        let first = try await Store.make(root: root, migrations: Migrations.baseline)
         try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
         let occupied = root.appendingPathComponent("pre-migration/flotsam-v1.sqlite")
         try FileManager.default.createDirectory(at: occupied, withIntermediateDirectories: true)
@@ -420,7 +420,7 @@ private enum Worf497 {
         _ = first
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [Worf497.addProbe], busyTimeout: 0.3).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 0.3).get()
 
         #expect(try String(contentsOf: occupied.appendingPathComponent("mine.txt"), encoding: .utf8) == "inside")
         let copy = try Worf497.read(fileAlone: root.appendingPathComponent("pre-migration/flotsam-v1-1.sqlite"))

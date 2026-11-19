@@ -43,9 +43,9 @@ public final class LibraryOrganizer {
 
     // MARK: Which actions a selection allows (FR-004-07, -09, -11)
 
-    /// Edit text: exactly one item, of a text-like kind.
+    /// Edit text: exactly one item, of a text-like kind, and not a secure one (its text is never shown).
     public nonisolated static func canEdit(_ rows: [ItemRow]) -> Bool {
-        rows.count == 1 && rows[0].kind.isTextEditable
+        rows.count == 1 && rows[0].kind.isTextEditable && !rows[0].isSecure
     }
 
     /// Ungroup: exactly one item, a bundle.

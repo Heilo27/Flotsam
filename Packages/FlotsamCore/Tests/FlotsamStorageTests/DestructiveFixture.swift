@@ -115,10 +115,16 @@ struct Store {
     /// Every record the database logged (see `RecordingLogSink`).
     var logs = RecordingLogSink()
 
-    static func make(fileSystem: any FileSystemPort = LocalFileSystem(), root: URL? = nil, clock: ManualClock = ManualClock()) async throws -> Store {
+    /// `migrations` defaults to the shipped schema. The migration-machinery suites pass `Migrations.baseline` so a
+    /// synthetic "next release" can be layered on a version-1 file whatever the shipped latest version is.
+    static func make(
+        fileSystem: any FileSystemPort = LocalFileSystem(), root: URL? = nil, clock: ManualClock = ManualClock(),
+        migrations: [Migration] = Migrations.all
+    ) async throws -> Store {
         let root = root ?? FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-8t-\(UUID().uuidString)")
         let logs = RecordingLogSink()
-        let database = try await FlotsamDatabase.open(folder: root, fileSystem: fileSystem, clock: clock, logSink: logs).get()
+        let database = try await FlotsamDatabase.open(
+            folder: root, fileSystem: fileSystem, clock: clock, logSink: logs, migrations: migrations).get()
         return Store(root: root, clock: clock, database: database, logs: logs)
     }
 
@@ -195,9 +201,15 @@ struct Store {
         return try DatabaseQueue(path: root.appendingPathComponent("flotsam.sqlite").path, configuration: configuration)
     }
 
+    /// The fixture numbers (`Store.id(n)`) of the rows present. Rows a test inserted with a random UUID
+    /// are not fixture rows and are skipped, so they cannot trap the parse or collide with a number.
     func presentIds() throws -> Set<Int> {
         let ids = try reader().read { try String.fetchAll($0, sql: "SELECT id FROM item") }
-        return Set(ids.map { Int(String($0.suffix(12)))! })
+        let fixtureNumbers = ids.compactMap { id -> Int? in
+            guard let n = Int(id.suffix(12)), Store.id(n).uuidString == id else { return nil }
+            return n
+        }
+        return Set(fixtureNumbers)
     }
 
     func count(_ table: String) throws -> Int {
@@ -310,4 +322,20 @@ func bestOfThree(under bound: Double, _ run: () async throws -> Double) async re
         if best < bound { break }
     }
     return best
+}
+
+extension Migrations {
+    /// The schema as first released (`user_version` 1). The migration-machinery suites model "a later release" as a
+    /// synthetic version 2 on top of this, so they test the machinery and not whatever the shipped latest version is.
+    static let baseline: [Migration] = [all[0]]
+}
+
+extension FlotsamDatabase {
+    /// `open` on `Migrations.baseline` with the public entry point's defaults, for the machinery suites.
+    static func openBaseline(
+        folder: URL, fileSystem: any FileSystemPort = LocalFileSystem(), clock: any WallClock = SystemClock(),
+        logSink: any LogSink = OSLogSink()
+    ) async -> FlotsamResult<FlotsamDatabase> {
+        await open(folder: folder, fileSystem: fileSystem, clock: clock, logSink: logSink, migrations: Migrations.baseline)
+    }
 }

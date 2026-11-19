@@ -41,6 +41,9 @@ public final class ClipboardCapture {
     private let clock: any WallClock
     private let sink: any LogSink
     private let ingest: IngestActor
+    /// Seals concealed copies (FR-001-04 gate 3). Nil means no secure storage is wired: a concealed copy is then
+    /// rejected `CAP-POL-001`, the same as a missing key (fails closed).
+    private let vault: (any SecureClipVaulting)?
     private let pollTick: PollTick
 
     private let scheduleTimer: TimerScheduler
@@ -77,9 +80,11 @@ public final class ClipboardCapture {
         ingest: IngestActor, settings: SettingsStore, reporter: ErrorReporter,
         ignoredApps: @escaping () -> Set<String>,
         access: any PasteboardAccessPort,
+        vault: (any SecureClipVaulting)? = nil,
         clock: any WallClock = SystemClock(), sink: any LogSink = OSLogSink(), pollTick: PollTick = PollTick(),
         scheduleTimer: @escaping TimerScheduler = ClipboardCapture.systemTimer
     ) {
+        self.vault = vault
         self.scheduleTimer = scheduleTimer
         self.pasteboard = pasteboard
         self.access = access
@@ -103,7 +108,7 @@ public final class ClipboardCapture {
         isStarted = true
         let (stream, continuation) = AsyncStream<CapturedPayload>.makeStream()
         self.continuation = continuation
-        let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink)
+        let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink, vault: vault)
         consumer = Task.detached(priority: .utility) {
             for await payload in stream { await worker.handle(payload) }
         }
@@ -280,7 +285,13 @@ public final class ClipboardCapture {
         var readable = true
         defer { if readable { _ = noteReadability(.readable) } }
         if types.contains(PasteboardMarkers.ownWrite) { return .failure(.skipped(.capPol004)) }
-        if types.contains(where: PasteboardMarkers.neverStore.contains) { return .failure(.skipped(.capPol001)) }
+        if types.contains(where: PasteboardMarkers.neverStoreAtCapture.contains) { return .failure(.skipped(.capPol001)) }
+        // Gate 3, concealed: a password manager's copy is kept, encrypted, and only its plain text. Without the vault
+        // or without plain text there is nothing safe to keep, so it is rejected exactly as before (fails closed).
+        let isConcealed = types.contains(PasteboardMarkers.concealed)
+        if isConcealed, vault == nil || !types.contains(PasteboardTypes.plainText) {
+            return .failure(.skipped(.capPol001))
+        }
 
         let source = resolveSource(types: types)
         if let bundleId = source?.bundleId, ignoredApps().contains(bundleId) { return .failure(.skipped(.capPol002)) }
@@ -289,7 +300,9 @@ public final class ClipboardCapture {
         }
 
         let snapshot: PasteboardSnapshot
-        switch pasteboard.readSnapshot(types: PasteboardTypes.typesToRead(from: types)) {
+        // A concealed copy reads only its plain text: no other representation of a password is ever held in memory.
+        let typesToRead = isConcealed ? [PasteboardTypes.plainText] : PasteboardTypes.typesToRead(from: types)
+        switch pasteboard.readSnapshot(types: typesToRead) {
         case .failure(let error):
             // FR-001-22: one bad read drops this change; the timer carries on.
             return .failure(.failed(FlotsamError(.capOs001, "pasteboard read failed", underlying: error.underlying)))
@@ -306,7 +319,8 @@ public final class ClipboardCapture {
         emptyWatch = nil
 
         return .success(CapturedPayload(
-            representations: snapshot.representations, source: source, capturedAt: clock.now(), origin: .pasteboard))
+            representations: snapshot.representations, source: source, capturedAt: clock.now(), origin: .pasteboard,
+            isConcealed: isConcealed))
     }
 
     // MARK: Save Clipboard (FR-005-06)
@@ -327,7 +341,7 @@ public final class ClipboardCapture {
         case .failure(.silent(let code)):
             return .rejected(FlotsamError(code, "Save Clipboard: pasteboard reads return no data"))
         case .success(let payload):
-            let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink)
+            let worker = IngestWorker(ingest: ingest, reporter: reporter, sink: sink, vault: vault)
             if let error = await worker.handle(payload, reportingFailure: false) { return .rejected(error) }
             return .saved
         }

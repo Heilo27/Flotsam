@@ -137,7 +137,7 @@ private enum V372 {
     static func open(_ root: URL, fs: any FileSystemPort) async throws -> Opened {
         var opened = Opened()
         switch await FlotsamDatabase.open(
-            folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.all)
+            folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.baseline)
         {
         case .failure(let error): opened.failure = error
         case .success(let db):

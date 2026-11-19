@@ -7,11 +7,12 @@ struct Migration {
     let apply: @Sendable (Database) throws -> Void
 }
 
-/// All migrations, in order. Version 1 is the FR-007-03 schema. A later release appends (the FTS5 index, if spike S-1
-/// calls for it, is version 2); it never edits an earlier entry.
+/// All migrations, in order. Version 1 is the FR-007-03 schema; version 2 adds secure clips (`Schema.createVersion2`).
+/// A later release appends; it never edits an earlier entry.
 enum Migrations {
     static let all: [Migration] = [
         Migration(version: 1, apply: Schema.createVersion1),
+        Migration(version: 2, apply: Schema.createVersion2),
     ]
 
     /// The newest version this build understands. A database above it came from a newer app (FR-007-17).

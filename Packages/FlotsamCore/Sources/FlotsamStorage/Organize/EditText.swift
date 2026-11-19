@@ -5,7 +5,7 @@ import GRDB
 extension FlotsamDatabase {
     /// FR-004-07: replaces an item's plain text. Returns the item's new kind, or nil when it no longer exists.
     ///
-    /// Rejected without changing anything: a kind that is not text-like, or text with no non-whitespace character
+    /// Rejected without changing anything: a secure item, a kind that is not text-like, or text with no non-whitespace character
     /// (`ORG-VAL-003`); text over the ingest ceiling (`ORG-LIM-003`). On save the stored rich representations (RTF,
     /// HTML) are removed, the kind and `contentKey` come from `classifiers` (the capture rules, FR-001-09 and
     /// FR-001-15), and `updatedAt` moves. `createdAt`, `lastCopiedAt`, tags, note, pin, trigger and hotkey are not
@@ -14,9 +14,15 @@ extension FlotsamDatabase {
         let now = clock.now().epochMillis
         let result: FlotsamResult<(kind: ItemKind, blobs: [String])?> = await organizeWrite { db in
             let key = id.uuidString
-            guard let kindName = try String.fetchOne(db, sql: "SELECT kind FROM item WHERE id = ?", arguments: [key]) else {
+            guard let item = try Row.fetchOne(db, sql: "SELECT kind, isSecure FROM item WHERE id = ?", arguments: [key]) else {
                 return nil
             }
+            // A secure clip's text is never shown, so it is never edited: the edit would also write plaintext into the
+            // row (the schema trigger refuses that too, but the caller gets the real code).
+            guard !(item["isSecure"] as Bool) else {
+                throw OrganizeRejection(error: FlotsamError(.orgVal003, "A secure item cannot be edited", context: [.itemId: .id(id)]))
+            }
+            let kindName: String = item["kind"]
             guard let kind = ItemKind(rawValue: kindName), kind.isTextEditable else {
                 throw OrganizeRejection(error: FlotsamError(.orgVal003, "Only text-like items can be edited", context: [.itemId: .id(id)]))
             }

@@ -214,13 +214,14 @@ public actor IngestActor {
         try db.execute(
             sql: """
                 INSERT INTO item (id, kind, createdAt, lastCopiedAt, contentKey, plainText, sourceBundleId, sourceName,
-                                  byteSize, pixelWidth, pixelHeight, originalPath, updatedAt)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  byteSize, pixelWidth, pixelHeight, originalPath, updatedAt, isSecure, secureCiphertext)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             arguments: [
                 id, candidate.kind.rawValue, at, at, candidate.contentKey, candidate.plainText,
                 candidate.source?.bundleId, candidate.source?.name, byteSize,
                 prepared.pixelWidth, prepared.pixelHeight, candidate.originalPath, at,
+                candidate.isSecure, candidate.secureCiphertext,
             ])
         for representation in stored {
             try db.execute(
