@@ -15,9 +15,11 @@ extension FlotsamDatabase {
         }
     }
 
+    /// Monotone (FR-002-08): the stored watermark becomes the later of itself and `date`, in one SQL statement, so two
+    /// writes landing out of submission order cannot move it back and re-open a window already scanned.
     public func setScreenshotsLastScanAt(_ date: Date) async -> FlotsamResult<Void> {
         do {
-            try await pool.write { db in try MetaStore.setInt64(db, MetaKey.screenshotsLastScanAt, date.epochMillis) }
+            try await pool.write { db in try MetaStore.raiseInt64(db, MetaKey.screenshotsLastScanAt, to: date.epochMillis) }
             return .success(())
         } catch {
             return .failure(Self.writeFailure(error))

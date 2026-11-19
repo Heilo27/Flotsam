@@ -18,4 +18,17 @@ enum MetaStore {
             sql: "INSERT INTO meta(key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             arguments: [key, String(value)])
     }
+
+    /// Monotone write: the stored value becomes the larger of itself and `value`, decided inside the statement, so
+    /// the outcome never depends on the order two writes arrive in. `value` is TEXT, so both sides are cast to
+    /// integers first; a text `max` would order "9999" above "10000". Only for values that must never go backwards
+    /// (the screenshot watermark, FR-002-08); a caller that legitimately overwrites uses `setInt64`.
+    static func raiseInt64(_ db: Database, _ key: String, to value: Int64) throws {
+        try db.execute(
+            sql: """
+                INSERT INTO meta(key, value) VALUES(?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = max(CAST(value AS INTEGER), CAST(excluded.value AS INTEGER))
+                """,
+            arguments: [key, String(value)])
+    }
 }
