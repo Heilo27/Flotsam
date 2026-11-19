@@ -297,10 +297,11 @@
       "requirement": "AC-008-04",
       "given": "Settings › General",
       "when": "user lists the pane's controls top to bottom",
-      "then": "exactly, in order: Launch at Login switch; 'Pick up screenshots' switch; Screenshot folder name with 'Choose…' and 'Use System Default'; Shelf switch; placement popup with exactly 4 items Right Edge, Left Edge, Bottom Edge, Menu Bar; 'Reveal when the pointer rests at the edge' switch; 'Show Setup Guide…' button; nothing else",
+      "then": "exactly, in order: Launch at Login switch; 'Pick up screenshots' switch; Screenshot folder name with 'Choose…' and 'Use System Default'; Shelf switch; placement popup with exactly 5 items Right Edge, Left Edge, Bottom Edge, Menu Bar, Top Center; 'Reveal when the pointer rests at the edge' switch; 'Show Setup Guide…' button; nothing else",
       "class": "layout",
       "source_verdict": "CONFIRMED",
-      "must_verify": true
+      "must_verify": true,
+      "note": "re-issued by Friday 2026-11-19, TASK-533"
     },
     {
       "id": "OC-8031",

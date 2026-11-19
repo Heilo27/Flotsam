@@ -143,7 +143,7 @@ import FlotsamBase
     @Test("on the top-centre row the menu-bar strip above the panel counts as on the Shelf")
     func hangStripIsOnShelf() {
         let panel = ShelfLayout.frame(for: .topCenter, in: visible, contentExtent: 600)
-        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen)
+        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen, menuBarStripCounts: true)
         #expect(area.maxY == screen.maxY)
         #expect(area.minY == panel.minY)
         #expect(area.minX == panel.minX && area.maxX == panel.maxX)
@@ -159,10 +159,10 @@ import FlotsamBase
     func noStripElsewhere() {
         let flush = CGRect(x: 0, y: 60, width: 1440, height: 840)
         let panel = ShelfLayout.frame(for: .topCenter, in: flush, contentExtent: 600)
-        #expect(ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen) == panel)
+        #expect(ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen, menuBarStripCounts: true) == panel)
         let right = ShelfLayout.frame(for: .rightEdge, in: visible, contentExtent: 300)
         for placement in [ShelfPlacement.rightEdge, .leftEdge, .bottomEdge, .menuBar] {
-            #expect(ShelfLayout.pointerArea(for: placement, panelFrame: right, screenFrame: screen) == right)
+            #expect(ShelfLayout.pointerArea(for: placement, panelFrame: right, screenFrame: screen, menuBarStripCounts: true) == right)
         }
     }
 

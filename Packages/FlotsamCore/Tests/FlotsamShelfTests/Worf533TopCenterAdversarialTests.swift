@@ -48,7 +48,7 @@ import FlotsamBase
         let higher = CGRect(x: 1440, y: 300, width: 1920, height: 1080)
         let visible = CGRect(x: 1440, y: 300, width: 1920, height: 1055)  // 25 pt menu bar
         let panel = ShelfLayout.frame(for: .topCenter, in: visible, contentExtent: 600)
-        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: higher)
+        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: higher, menuBarStripCounts: true)
         #expect(area == CGRect(x: 2400 - 300, y: 1215, width: 600, height: 165))  // 140 panel + 25 strip
         #expect(ShelfLayout.contains(area, CGPoint(x: 2400, y: 1380)))
         #expect(!ShelfLayout.contains(area, CGPoint(x: 2400, y: 1380.1)))
@@ -61,7 +61,7 @@ import FlotsamBase
         let panel = ShelfLayout.frame(for: .topCenter, in: visible, contentExtent: 600)
         #expect(panel == CGRect(x: 456, y: 804, width: 600, height: 140))
         #expect(!screen.contains(CGPoint(x: 756, y: 982)))  // the pointer-at-maxY premise of the inclusive rule
-        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen)
+        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen, menuBarStripCounts: true)
         #expect(area == CGRect(x: 456, y: 804, width: 600, height: 178))
     }
 
@@ -69,7 +69,7 @@ import FlotsamBase
     func autoHiddenMenuBar() {
         let panel = ShelfLayout.frame(for: .topCenter, in: main, contentExtent: 600)
         #expect(panel == CGRect(x: 420, y: 760, width: 600, height: 140))
-        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: main)
+        let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: main, menuBarStripCounts: true)
         #expect(area == panel)
         #expect(ShelfLayout.contains(area, CGPoint(x: 720, y: 900)))
     }
@@ -116,11 +116,8 @@ import FlotsamBase
     func rightEdgeSeamBelongsToTheRightScreen() {
         let left = CGRect(x: 0, y: 0, width: 1440, height: 900)
         let right = CGRect(x: 1440, y: 0, width: 1920, height: 1080)
-        // Before TASK-533 `CGRect.contains` was half-open and this was nil. Inclusive `contains` makes it the left
-        // screen's zone although the pointer is already on the right screen.
-        withKnownIssue("TASK-533 F2: inclusive contains attributes the seam column to the screen the pointer just left") {
-            #expect(hit(.rightEdge, 1440, 450, screens: [left, right]) == nil)
-        }
+        // The seam column is the right screen's first column, so it is not the left screen's zone (F2).
+        #expect(hit(.rightEdge, 1440, 450, screens: [left, right]) == nil)
         // The last column that really is the left screen's still reveals.
         #expect(hit(.rightEdge, 1439.5, 450, screens: [left, right]) == 0)
     }
@@ -128,9 +125,8 @@ import FlotsamBase
     @Test("two screens stacked: the pointer on the BOTTOM row of the upper screen is not reported on the lower screen's top-centre zone")
     func topCenterSeamBelongsToTheUpperScreen() {
         let upper = CGRect(x: 0, y: 900, width: 1440, height: 900)
-        withKnownIssue("TASK-533 F3: top zone of the lower screen is the seam; the upper screen's first row matches it") {
-            #expect(hit(.topCenter, 720, 900, screens: [main, upper]) == nil)
-        }
+        // The seam row is the upper screen's first row, so it is not the lower screen's top zone (F3).
+        #expect(hit(.topCenter, 720, 900, screens: [main, upper]) == nil)
         // The real top of the upper screen is its zone, and the seam's own row just below the join is the lower's.
         #expect(hit(.topCenter, 720, 1799, screens: [main, upper]) == 1)
         #expect(hit(.topCenter, 720, 899.5, screens: [main, upper]) == 0)
@@ -140,9 +136,7 @@ import FlotsamBase
 
     @Test("an empty area contains nothing, so a not-yet-positioned panel cannot claim the pointer")
     func emptyAreaContainsNothing() {
-        withKnownIssue("TASK-533 F4: inclusive contains makes a zero-size rect at the origin contain the origin") {
-            #expect(!ShelfLayout.contains(.zero, .zero))
-        }
+        #expect(!ShelfLayout.contains(.zero, .zero))  // F4
         #expect(!ShelfLayout.contains(.null, CGPoint(x: 5, y: 5)))
     }
 
@@ -151,7 +145,7 @@ import FlotsamBase
         let panel = CGRect(x: 420, y: 700, width: 600, height: 140)
         for top in [840, 841, 865, 900, 1000] as [CGFloat] {
             let screen = CGRect(x: 0, y: 0, width: 1440, height: top)
-            let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen)
+            let area = ShelfLayout.pointerArea(for: .topCenter, panelFrame: panel, screenFrame: screen, menuBarStripCounts: true)
             #expect(area.minX == 420 && area.maxX == 1020 && area.minY == 700)
             #expect(area.maxY == max(top, 840))
         }

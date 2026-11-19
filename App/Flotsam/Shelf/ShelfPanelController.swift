@@ -49,10 +49,9 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private var pointerMonitors: [Any] = []
     private var hoverMonitor: Any?
     private var lastRegion: ShelfRevealMachine.Pointer?
-    /// Where the pointer counts as on the visible Shelf: the panel's final frame, or where it is sliding to, plus the
-    /// menu-bar strip above the top-centre row (`ShelfLayout.pointerArea`). `panel.frame` is mid-animation or off-screen
-    /// right after a reveal, so the pointer is tested against this.
-    private var shownArea: NSRect?
+    /// The panel's final frame (or where it is sliding to) and the frame of its screen. `panel.frame` is mid-animation or
+    /// off-screen right after a reveal, so the pointer is tested against this (`ShelfPointerClassifier`).
+    private var shown: (panel: NSRect, screen: NSRect)?
     /// The drag pasteboard's change count at the last mouse-down: a drag is a gesture that changes it (FR-006-03).
     private var dragCountAtMouseDown: Int?
     private var dragDetected = false
@@ -184,7 +183,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         let ordering = ShelfWindowPolicy.ordering(for: trigger.mode)
         panel.allowsKey = ordering == .keyAndFront
         hosting.rootView = makeView()
-        shownArea = ShelfLayout.pointerArea(for: placement, panelFrame: frame, screenFrame: Self.screenFrame(ofScreenAt: screen))
+        shown = (frame, Self.screenFrame(ofScreenAt: screen))
         switch transition.style {
         case .fade:
             panel.setFrame(frame, display: false)
@@ -219,7 +218,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private func dismiss() {
         showTask?.cancel()
         showTask = nil
-        shownArea = nil
+        shown = nil
         removeKeyMonitor()
         model.didHide()
         guard panel.isVisible else { return }
@@ -255,7 +254,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
 
     private func pointerScreenIndex() -> Int {
         let pointer = NSEvent.mouseLocation
-        return NSScreen.screens.firstIndex { $0.frame.contains(pointer) } ?? 0
+        return ShelfLayout.screenIndex(containing: pointer, in: NSScreen.screens.map(\.frame)) ?? 0
     }
 
     private static func visibleFrame(ofScreenAt index: Int) -> NSRect {
@@ -360,6 +359,9 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         lastRegion = nil
         updateMonitors()
         send(.configure(enabled: enabled, placement: placement, revealOnEdgeHover: settings.value(SettingKeys.shelfRevealOnEdgeHover)))
+        // Turning hover off changes the pointer area of a visible top-centre row (the menu-bar strip stops counting), and
+        // nothing else would report the pointer that already sits there.
+        if machine.isVisible { reportPointer() }
     }
 
     // MARK: Pointer, button and drag monitors (FR-006-03, FR-006-04)
@@ -489,16 +491,10 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     }
 
     private func currentRegion() -> ShelfRevealMachine.Pointer {
-        let point = NSEvent.mouseLocation
-        if machine.isVisible, ShelfLayout.contains(shownArea ?? panel.frame, point) { return .onShelf }
-        let screens = NSScreen.screens.map(\.frame)
-        if placement == .menuBar, let icon = menuBarIconFrame?(), icon.contains(point) {
-            return .menuBarIcon(screen: screens.firstIndex { $0.contains(point) } ?? 0)
-        }
-        if let screen = ShelfLayout.screenIndex(of: point, placement: placement, screens: screens) {
-            return .edgeZone(screen: screen)
-        }
-        return .away
+        ShelfPointerClassifier.region(
+            at: NSEvent.mouseLocation, placement: placement, isVisible: machine.isVisible,
+            panelFrame: shown?.panel ?? panel.frame, screenFrame: shown?.screen, hoverMonitored: hoverMonitor != nil,
+            screens: NSScreen.screens.map(\.frame), menuBarIcon: menuBarIconFrame?())
     }
 
     // MARK: Keys (sticky only, FR-006-08)

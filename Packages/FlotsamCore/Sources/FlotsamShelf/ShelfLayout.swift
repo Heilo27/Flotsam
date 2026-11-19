@@ -85,13 +85,22 @@ public enum ShelfLayout {
         }
     }
 
-    /// The index of the first screen whose edge zone holds `point`, or `nil`. A point on the far border of the
-    /// zone counts as inside, because the pointer's position on the last pixel of a screen is its maxX or maxY.
+    /// The index of the screen whose edge zone holds `point`, or `nil`. The screen is the one `screenIndex(containing:in:)`
+    /// names, so a point on a seam between two screens is never offered the zone of the screen it just left.
     public static func screenIndex(of point: CGPoint, placement: ShelfPlacement, screens: [CGRect]) -> Int? {
-        screens.firstIndex { screen in
-            guard let zone = edgeZone(for: placement, in: screen) else { return false }
-            return contains(zone, point)
-        }
+        guard let index = screenIndex(containing: point, in: screens),
+            let zone = edgeZone(for: placement, in: screens[index]), contains(zone, point)
+        else { return nil }
+        return index
+    }
+
+    /// The one answer to "which screen is this point on" (the reveal's screen, the icon's screen, the edge zone's
+    /// screen). Containment is half-open, so the seam column or row between two screens belongs to exactly one of
+    /// them (the one whose min edge it is). The pointer's position on the physical last column or row of the desktop is
+    /// the screen's maxX or maxY, which no screen contains half-open: that point falls back to the first screen that
+    /// holds it with its borders, so the top row of a screen with nothing above it still resolves to that screen.
+    public static func screenIndex(containing point: CGPoint, in screens: [CGRect]) -> Int? {
+        screens.firstIndex { $0.contains(point) } ?? screens.firstIndex { contains($0, point) }
     }
 
     // MARK: Frame
@@ -167,18 +176,24 @@ public enum ShelfLayout {
     }
 
     /// The area in which the pointer counts as being on a visible Shelf (FR-006-04): the panel, and for the top-centre
-    /// row also the strip between the panel and the physical top of the screen, which is the menu bar. The pointer
-    /// that revealed the row rests at that top edge, so without the strip it would count as having left the Shelf and
-    /// the row would hide 600 ms after it appeared.
-    public static func pointerArea(for placement: ShelfPlacement, panelFrame: CGRect, screenFrame: CGRect) -> CGRect {
-        guard placement == .topCenter, screenFrame.maxY > panelFrame.maxY else { return panelFrame }
+    /// row, while `menuBarStripCounts`, also the strip between the panel and the physical top of the screen, which is
+    /// the menu bar. With hover reveal on, the pointer that revealed the row rests at that top edge, so without the
+    /// strip it would count as having left the Shelf and the row would hide 600 ms after it appeared. The strip counts
+    /// only while the mouse-moved monitor is installed (hover on): without it nothing reports a pointer moving
+    /// sideways inside the strip, so the leave would never be seen and the Shelf would stay (TASK-557 class).
+    public static func pointerArea(
+        for placement: ShelfPlacement, panelFrame: CGRect, screenFrame: CGRect, menuBarStripCounts: Bool
+    ) -> CGRect {
+        guard placement == .topCenter, menuBarStripCounts, screenFrame.maxY > panelFrame.maxY else { return panelFrame }
         return CGRect(x: panelFrame.minX, y: panelFrame.minY, width: panelFrame.width, height: screenFrame.maxY - panelFrame.minY)
     }
 
     /// True when `point` is inside `area`, borders included: the pointer on the last pixel of a screen sits at its
-    /// maxX or maxY, which `CGRect.contains` would call outside.
+    /// maxX or maxY, which `CGRect.contains` would call outside. For the panel and its pointer area only; which screen
+    /// a point is on goes through `screenIndex(containing:in:)`. An empty area contains nothing.
     public static func contains(_ area: CGRect, _ point: CGPoint) -> Bool {
-        point.x >= area.minX && point.x <= area.maxX && point.y >= area.minY && point.y <= area.maxY
+        guard !area.isEmpty else { return false }
+        return point.x >= area.minX && point.x <= area.maxX && point.y >= area.minY && point.y <= area.maxY
     }
 
     private static func verticalHeight(_ contentHeight: CGFloat, in visibleFrame: CGRect) -> CGFloat {
