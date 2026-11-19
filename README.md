@@ -22,6 +22,8 @@ Flotsam keeps your history in a folder on your Mac and sends it nowhere. Deletin
 - **Upgrade backup.** When an update changes how the database is stored, Flotsam first copies the database. It deletes that copy the next time you open Flotsam and the upgraded database opens and checks out healthy, usually within hours. If that launch fails, or Flotsam quits before it, the copy stays until a launch succeeds.
 - **Damaged-database copy.** If the database is found damaged, Flotsam moves it aside so you can recover from it, starts a new empty history, and keeps the moved-aside copy for 30 days, then deletes it. While one of these copies exists, the upgrade backup is kept too, because it may be the last good version of your history.
 
+**Password-manager copies.** A copy a password manager marks as concealed is kept, but only as an encrypted item: its text is sealed with a key held in your Mac's Keychain, it shows as dots with its source app, and copying it again needs your Mac password or Touch ID. It follows your history period like any other clip. Because Flotsam keeps its own encrypted copy, the password manager's auto-clear no longer limits how long it exists; delete the item, or add the manager to Settings > Privacy > Ignored apps to have its copies dropped instead.
+
 **Clear History** deletes both kinds of copy at once. Both live in Flotsam's data folder, readable only by your account.
 
 ## Download and install
