@@ -11,7 +11,7 @@ import Testing
 
 /// A clock whose `sleep` parks until the test releases it, advancing time by the requested duration, and records each
 /// request. Nothing sleeps for real.
-private final class GatedClock: WallClock, @unchecked Sendable {
+final class GatedClock: WallClock, @unchecked Sendable {
     private let lock = NSLock()
     private var current: Date
     private var requested: [TimeInterval] = []
@@ -55,7 +55,7 @@ private final class GatedClock: WallClock, @unchecked Sendable {
     func advance(by seconds: TimeInterval) { lock.withLock { current = current.addingTimeInterval(seconds) } }
 }
 
-private final class Flag: @unchecked Sendable {
+final class Flag: @unchecked Sendable {
     private let lock = NSLock()
     private var raised = false
     func raise() { lock.withLock { raised = true } }
