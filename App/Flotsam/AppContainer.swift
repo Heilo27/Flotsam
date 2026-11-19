@@ -353,10 +353,11 @@ final class AppContainer {
             controller?.toggle()
         }
 
-        // ⌘K reaches the shortcut-and-trigger editor through `actions` (FR-005-09); a selection that is not exactly one
-        // item opens nothing.
+        // The Library reaches the shortcut-and-trigger editor through `actions` (FR-005-09) with the one item it
+        // resolved (`LibraryExternalCommand.shortcutEditorTarget`: exactly one, and not a secure item), so the app
+        // opens the editor for the id it is handed and decides nothing itself.
         actions.editShortcutAndTrigger = { [weak editor] ids in
-            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: ids) else { return }
+            guard let id = ids.first else { return }
             editor?.open(itemId: id)
         }
         startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })

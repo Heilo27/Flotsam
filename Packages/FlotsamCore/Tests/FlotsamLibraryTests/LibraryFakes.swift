@@ -6,13 +6,13 @@ import Foundation
 
 func makeRow(
     _ n: Int = 0, kind: ItemKind = .text, primary: String? = nil, source: String? = "Notes", tags: [String] = [],
-    pinned: Bool = false, copiedAt: Date = Date(timeIntervalSince1970: 1_000_000)
+    pinned: Bool = false, copiedAt: Date = Date(timeIntervalSince1970: 1_000_000), secure: Bool = false
 ) -> ItemRow {
     ItemRow(
         id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", n)) ?? UUID(), kind: kind,
         lastCopiedAt: copiedAt, pasteCount: 0, primaryLine: primary ?? "item \(n)", sourceName: source, tagNames: tags,
         isPinned: pinned, hasTrigger: false, hasShortcut: false, pixelWidth: nil, pixelHeight: nil, memberCount: 0,
-        byteSize: 0)
+        byteSize: 0, isSecure: secure)
 }
 
 /// A scripted storage: serves `rows` filtered by a substring of the search text, in pages of `LibraryQuery.pageSize`.

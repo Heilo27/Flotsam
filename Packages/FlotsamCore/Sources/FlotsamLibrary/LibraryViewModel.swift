@@ -506,6 +506,11 @@ public final class LibraryViewModel {
         case .revealInFinder: reveal()
         case .openSettings: effects.openSettings()
         case .external(.cycleSort): cycleSort()
+        case .external(.shortcutAndTrigger):
+            // The editor's one gate (FR-005-09): exactly one row that can carry a shortcut. The app opens the editor
+            // for the id it is handed and no other, so nothing else reaches it.
+            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: selectedRows) else { return }
+            effects.external(.shortcutAndTrigger, [id])
         case .external(let command): effects.external(command, selectedRows.map(\.id))
         }
     }

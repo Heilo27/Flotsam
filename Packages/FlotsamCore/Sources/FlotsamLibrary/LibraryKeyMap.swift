@@ -14,12 +14,23 @@ public enum LibraryDirection: Sendable, Equatable { case up, down, left, right }
 public enum LibraryExternalCommand: Sendable, Equatable {
     case pin, tags, note, edit, delete, cycleSort, ungroup, shortcutAndTrigger
 
-    /// The one item the shortcut-and-trigger editor opens for (FR-005-09): the editor edits a single item, so only
-    /// that command with exactly one selected row resolves. Anything else, no selection or several rows, opens nothing.
-    public func shortcutEditorTarget(selection ids: [UUID]) -> UUID? {
-        guard self == .shortcutAndTrigger, ids.count == 1 else { return nil }
-        return ids.first
+    /// The one item the shortcut-and-trigger editor opens for (FR-005-09), the one rule behind ⌘K, the "Shortcut and
+    /// Trigger..." context-menu row and the Library's choice to hide for the editor: only that command, with exactly one
+    /// selected row, and that row must be able to carry a shortcut (`ShortcutEditorRule`). No selection, several rows or
+    /// a secure item opens nothing.
+    public func shortcutEditorTarget(selection rows: [ItemRow]) -> UUID? {
+        guard self == .shortcutAndTrigger, rows.count == 1, let row = rows.first,
+            ShortcutEditorRule.allows(isSecure: row.isSecure)
+        else { return nil }
+        return row.id
     }
+}
+
+/// Which items may open the shortcut-and-trigger editor (FR-005-09). One home, read by `shortcutEditorTarget` (⌘K) and
+/// by `LibraryContextMenu` (the menu row), so the keyboard and the menu cannot disagree. A secure item (FRD-001
+/// FR-001-25) can carry no hotkey and no trigger, so the editor does not open for it.
+public enum ShortcutEditorRule {
+    public static func allows(isSecure: Bool) -> Bool { !isSecure }
 }
 
 public enum LibraryCommand: Sendable, Equatable {

@@ -14,7 +14,8 @@ public enum LibraryContextMenu {
     /// it, Delete. A separator never leads, trails or doubles, so a kind without Reveal in Finder has one separator
     /// between the organize group and Delete. Note, Edit and Ungroup act on one item, so they appear only when the menu's
     /// target is a single item (`singleTarget`). A secure item (`isSecure`) is offered neither Edit nor Shortcut and
-    /// Trigger: its text is never shown, and it can carry no hotkey or trigger (FR-005-09).
+    /// Trigger: its text is never shown, and it can carry no hotkey or trigger (FR-005-09; the Shortcut and Trigger row reads
+    /// `ShortcutEditorRule`, the same rule ⌘K reads).
     public static func entries(kind: ItemKind, pinUnpins: Bool, singleTarget: Bool, isSecure: Bool = false) -> [LibraryMenuEntry] {
         var entries: [LibraryMenuEntry] = [
             plain(LibraryText.menuPaste, .paste(.paste)),
@@ -29,7 +30,7 @@ public enum LibraryContextMenu {
             entries.append(plain(LibraryText.menuNote, .external(.note)))
             if kind.isTextEditable, !isSecure { entries.append(plain(LibraryText.menuEdit, .external(.edit))) }
         }
-        if !isSecure { entries.append(plain(LibraryText.menuShortcutAndTrigger, .external(.shortcutAndTrigger))) }
+        if ShortcutEditorRule.allows(isSecure: isSecure) { entries.append(plain(LibraryText.menuShortcutAndTrigger, .external(.shortcutAndTrigger))) }
         if singleTarget, kind == .bundle { entries.append(plain(LibraryText.menuUngroup, .external(.ungroup))) }
         entries.append(.separator)
         if kind.referencesFiles {
