@@ -131,8 +131,9 @@ final class AppContainer {
     }
 
     /// Builds the Settings window over this container's objects and points `actions.openSettings` at it, so every
-    /// "Open Settings" caller (the menu row, the Library, a Notice) takes the one path (FR-008-03). The window is
-    /// created at first use; the database it reads is asked for on each call, because it opens after launch.
+    /// "Open Settings" caller (the menu row, the Library) takes the one path (FR-008-03). No Notice or alert has an
+    /// "Open Settings" action today (a `Notice` carries a code and a message only); one added later must call
+    /// `actions.openSettings`. The window is created at first use; the database it reads is asked for on each call, because it opens after launch.
     func installSettings(showSetupGuide: @escaping @MainActor @Sendable () -> Void) {
         let reporter = reporter
         let presenter = presenter
@@ -162,11 +163,11 @@ final class AppContainer {
     }
 
     /// The App-side home of "a Flotsam window opens, so the Library hides" (FR-003-02, TASK-524). Every opener of the
-    /// Settings window and the item editor runs it before fronting the window: the Library's own ⌘, and ⌘K, and the
-    /// menu-bar "Settings…" row. A no-op when the Library is already hidden or not built yet. The
-    /// Library's `perform` also hides first (LibraryViewModel.perform), for the package-level guarantee that holds
-    /// without the App; both end at the same idempotent `hidePanel`.
-    private func hideLibraryBeforeWindowOpens() { library?.hidePanel() }
+    /// Settings window, the item editor and the setup guide runs it before fronting the window: the Library's own ⌘, and
+    /// ⌘K, the menu-bar "Settings…" row, and "Show Setup Guide…" (AppDelegate). A no-op when the Library is already
+    /// hidden or not built yet. The Library's `perform` also hides first (LibraryViewModel.perform), for the
+    /// package-level guarantee that holds without the App; both end at the same idempotent `hidePanel`.
+    func hideLibraryBeforeWindowOpens() { library?.hidePanel() }
 
     private func openDatabase() async {
         switch await FlotsamDatabase.open(folder: environment.dataFolder, secureVault: secureVault) {

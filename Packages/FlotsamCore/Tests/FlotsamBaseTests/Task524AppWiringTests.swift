@@ -44,7 +44,21 @@ private func slice(_ text: String, from start: String, through end: String) -> S
     @Test("the hide is the Library panel's own idempotent hidePanel, and nothing else")
     func helperHidesTheLibrary() throws {
         let code = try appContainerCode()
-        #expect(code.contains("private func hideLibraryBeforeWindowOpens() { library?.hidePanel() }"))
+        #expect(code.contains("func hideLibraryBeforeWindowOpens() { library?.hidePanel() }"))
+    }
+
+    @Test("the setup guide (menu-bar row and Settings button share one closure) hides the Library, then shows it")
+    func setupGuideClosureHidesFirst() throws {
+        let delegate = try frd008Code("App/Flotsam/AppDelegate.swift")
+            .components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+        let closure = try #require(slice(delegate, from: "let showSetupGuide:", through: "onboarding.show() }"))
+        let hideAt = try #require(closure.range(of: "container?.hideLibraryBeforeWindowOpens()"))
+        let showAt = try #require(closure.range(of: "onboarding.show()"))
+        #expect(hideAt.upperBound <= showAt.lowerBound)
+        // Both consumers get that one closure, not a fresh `{ onboarding.show() }`.
+        #expect(delegate.contains("container.installSettings(showSetupGuide: showSetupGuide)"))
+        #expect(delegate.contains("StatusItemController(container: container, showSetupGuide: showSetupGuide)"))
+        #expect(!delegate.contains("{ onboarding.show() }"))
     }
 
     @Test("the menu-bar row runs actions.openSettings, so it cannot skip the hide")
@@ -53,11 +67,13 @@ private func slice(_ text: String, from start: String, through end: String) -> S
         #expect(status.contains("run: container.actions.openSettings"))
     }
 
-    // A new opener that called the window controllers directly would skip the hide.
-    @Test("only the two closures open Settings or the item editor")
+    // A new opener that called the window controllers directly would skip the hide. Counted per file, so a second call
+    // site inside AppContainer.swift is caught as well as one in another file.
+    @Test("exactly one call site opens Settings and exactly one opens the item editor")
     func noOtherOpener() throws {
         let root = try frd008SourceRoot().appendingPathComponent("App/Flotsam")
-        var settingsOpeners: [String] = [], editorOpeners: [String] = []
+        func occurrences(of needle: String, in code: String) -> Int { code.components(separatedBy: needle).count - 1 }
+        var settingsOpeners: [String: Int] = [:], editorOpeners: [String: Int] = [:]
         let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
         while let url = files?.nextObject() as? URL {
             guard url.pathExtension == "swift" else { continue }
@@ -65,12 +81,24 @@ private func slice(_ text: String, from start: String, through end: String) -> S
             let code = try frd008Code(relative)
             let name = url.lastPathComponent
             // `SettingsWindowController.openSettings()` itself is the definition, not a caller.
-            if name != "SettingsWindowController.swift", code.contains("window?.openSettings()") || code.contains("settingsWindow?.openSettings()") {
-                settingsOpeners.append(name)
+            if name != "SettingsWindowController.swift" {
+                let count = occurrences(of: "window?.openSettings()", in: code) + occurrences(of: "settingsWindow?.openSettings()", in: code)
+                if count > 0 { settingsOpeners[name] = count }
             }
-            if code.contains(".open(itemId:") { editorOpeners.append(name) }
+            let edits = occurrences(of: ".open(itemId:", in: code)
+            if edits > 0 { editorOpeners[name] = edits }
         }
-        #expect(settingsOpeners == ["AppContainer.swift"])
-        #expect(editorOpeners == ["AppContainer.swift"])
+        #expect(settingsOpeners == ["AppContainer.swift": 1])
+        #expect(editorOpeners == ["AppContainer.swift": 1])
+        // The setup guide: every `onboarding.show(` outside the controller itself is in AppDelegate (the one closure
+        // above, plus the launch-time resume, which cannot have the Library open).
+        var onboardingOpeners: [String] = []
+        let all = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+        while let url = all?.nextObject() as? URL {
+            guard url.pathExtension == "swift" else { continue }
+            let relative = "App/Flotsam/" + url.path.replacingOccurrences(of: root.path + "/", with: "")
+            if try frd008Code(relative).contains("onboarding.show(") { onboardingOpeners.append(url.lastPathComponent) }
+        }
+        #expect(onboardingOpeners == ["AppDelegate.swift"])
     }
 }
