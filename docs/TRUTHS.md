@@ -3,7 +3,8 @@
 Open-source, local-first macOS clipboard + screenshot history. Functional reference: LinkHiv
 (linkhiv.com, closed, US$79). We match its form factor (layout, placement, sizing, interaction model) and reach functional
 parity or better, reverse-engineered by black-box observation only: no source, no assets. We never
-take its name, copy, icon, art or visual skin.
+take its name, copy, icon, art or visual skin. A reference feature that adds value and breaks no
+truth below is in scope, even if an earlier Truth Test cut it.
 
 ## PRIMARY TRUTH
 **Anything you copied or screenshotted on this Mac in the past 30 days is back in the app you're
@@ -41,13 +42,14 @@ pasted, OR any feature requires a network call carrying clip content. Either →
    is CUT, not deferred.
 2. **Not a text-expander suite.** No scripts, forms, nested snippets or team libraries — Typinator
    and Espanso own that.
-3. **Not a screenshot tool.** No capture, annotation, recording or OCR search — CleanShot/Shottr own
-   that. We only *recall* screenshots.
+3. **Not a screenshot tool.** No capture, annotation or recording — CleanShot/Shottr own that. We
+   only *recall* screenshots. On-device text recognition (Apple Vision) is allowed solely to make
+   images searchable; no OCR editing or export features.
 4. **Not a commercial product.** No license keys, trials, telemetry or analytics. MIT, free, forever.
 
 ## NOT DOING (v1)
-iOS/iPad companion · AirDrop/Share-sheet from the Shelf (v1.1 candidate) · OCR · themes beyond
-light/dark · Mac App Store build (sandbox breaks paste-back & accessibility).
+iOS/iPad companion · themes beyond light/dark · Mac App Store build (sandbox breaks paste-back &
+accessibility). v1.1: Apple Intelligence actions (on-device only) · per-app clip lifetime rules.
 
 ## AMENDMENT LOG
 | Date | Change | Reason | FRDs re-tested |
@@ -56,3 +58,4 @@ light/dark · Mac App Store build (sandbox breaks paste-back & accessibility).
 | 2026-11-17 | Added S5 "Invisible on the machine" (resource budget, pithy code) | Ryan: runs constantly; must be light on resources, most efficient method wins | all FRDs re-tested in TASK-373 (docs/research/S5-resource-audit.md): CPU and idle memory held; wake-ups are 2.0/s for the poll alone and 2.7 to 2.9/s with the watchdog and re-resolve as separate timers (over 2.5); FR-001-20, AC-001-01/16, FR-003-13, FR-007-07 edited; periodic-timer consolidation and Paused-timer changes ticketed |
 | 2026-11-18 | Minimum macOS raised from 14 to 26 (macOS 14 and 15 dropped) | Ryan, 2026-11-18: skip macOS 14/15 test environments; ship macOS 26+ only | all FRDs re-read under TASK-487: meaning changes in FRD-001 FR-001-18 (pasteboard gate now unconditional), FRD-008 FR-008-12/13 and §7 tables (onboarding step 2 and the Privacy row always shown), FRD-005 FR-005-02 rationale; assumption rows narrowed to macOS 26 in FRD-003, 005, 006, 007, 008 (spikes S-2, S-3, S-5, S-9 lose their 14/15 matrix rows); FRD-009 FR-009-11 added; FRD-002, 004, 000 unchanged |
 | 2026-11-19 | Reference clause: form factor and functional parity (or better) with LinkHiv, by black-box reverse engineering; visual skin stays original | Ryan, 2026-11-19: "it needs to have a form factor that is similar, and functional parity, or even better operation. this is a true reverse engineer cause we dont have any access to its source material" | parity dossier + gap matrix against every FRD under TASK-532 |
+| 2026-11-19 | Precedence: reference features that add value and break no truth override earlier CUTs. A3 narrowed: on-device OCR allowed for search only. NOT DOING: Shelf share zone and OCR moved into v1; Apple Intelligence and per-app lifetime rules set for v1.1. Local MCP allowed as opt-in, per-client approval: Flotsam makes no network call itself, and consent warns that a client may send clips to its cloud | Ryan, 2026-11-19, parity ESCALATE rulings: "If the feature adds value, and does not mess up our goals then add them"; edge bar keep if cheap; capture cue keep; per-app lifetime v1.1; share zone v1; OCR search only; Apple Intelligence v1.1; MCP opt-in local only | FRD re-test under TASK-548 |
