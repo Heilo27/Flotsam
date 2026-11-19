@@ -778,7 +778,17 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Select one item to paste"
+            "value" : "Return queues these items"
+          }
+        }
+      }
+    },
+    "ui.library.footerQueue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld queued, Esc cancels"
           }
         }
       }
@@ -839,6 +849,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Paste"
+          }
+        }
+      }
+    },
+    "ui.library.hintQueue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start paste queue"
           }
         }
       }
@@ -3997,6 +4017,16 @@
         }
       }
     },
+    "ui.settings.shortcutPasteQueue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste Queue"
+          }
+        }
+      }
+    },
     "ui.settings.shortcutsFootnote" : {
       "localizations" : {
         "en" : {
@@ -4253,6 +4283,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Screenshot"
+          }
+        }
+      }
+    },
+    "ui.queue.ready" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste queue ready: %lld items"
+          }
+        }
+      }
+    },
+    "ui.queue.progress" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasted %lld of %lld"
+          }
+        }
+      }
+    },
+    "ui.queue.finished" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste queue finished"
+          }
+        }
+      }
+    },
+    "ui.queue.cancelled" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paste queue cancelled"
+          }
+        }
+      }
+    },
+    "ui.queue.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The paste queue is empty"
+          }
+        }
+      }
+    },
+    "ui.queue.noShortcut" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set a Paste Queue shortcut in Settings first"
           }
         }
       }

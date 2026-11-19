@@ -218,7 +218,7 @@ Priority P1 = serves a primary-truth path or the clause's most visible form fact
 | T1 | Island top-centre placement with horizontal card row | Shelf offers topCenter placement hung from menu bar; card row scrolls horizontally; opens by hover on top edge zone; passes FR-006-17 timings | FR-006-01, -03, -05 | P1 |
 | T2 | Search and type/tag filter inside Shelf | Search field and type pills in Shelf (sticky mode, keyboard operable); results within 100 ms at 10k items; FRD-006 non-goal edited | FR-006 (new), FR-003-09 | P1 |
 | T3 | Library compact layout | Layout with sidebar and list only, about square, switchable in Settings; keeps FR-003-05 open latency | FR-003-03, -06 | P2 |
-| T4 | Paste Queue | Select several items, paste one per shortcut press, advance only after success; Esc cancels; copy-only without Accessibility | FR-003-15 (new FR) | P2 |
+| T4 | Paste Queue | Select several items, paste one per shortcut press, advance only after success; Esc cancels; copy-only without Accessibility | FR-003-25 (new FR) | P2 |
 | T5 | Filters for Notes, Shortcuts, Videos, Groups | Sidebar rows added; counts update within 200 ms | FR-003-12, FR-004-10 | P2 |
 | T6 | Hover row actions and hover preview | Hover reveals copy, pin, delete; preview opens after delay; keyboard model unchanged | FR-003-14, -22 | P2 |
 | T7 | Manual bundling, bundle rename, auto-bundle toggle | Group selected items into a bundle; rename; setting for auto-bundle; one transaction | FR-004-11, FR-001-12 | P2 |

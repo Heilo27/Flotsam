@@ -118,19 +118,26 @@ public struct LibraryFooter: Equatable {
 
     public let hints: [Hint]
     public let countText: String
-    /// "Press ⌘V to paste" when Accessibility is off; "Select one item to paste" while several rows are selected.
+    /// "Press ⌘V to paste" when Accessibility is off; "Return starts a paste queue" while several rows are selected; the
+    /// queue's remaining count and "Esc cancels" while one waits (FR-003-25).
     public let notice: String?
     /// The "Enable" button's label while Accessibility is off (FR-008-14); nil when pasting works.
     public let enableLabel: String?
     /// The active sort's name, shown beside the count (FR-004-12).
     public let sortName: String
 
-    public init(totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool, sort: LibrarySort) {
+    public init(
+        totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool, sort: LibrarySort,
+        queueRemaining: Int = 0
+    ) {
         sortName = LibraryText.sortName(sort)
         enableLabel = isAccessibilityTrusted ? nil : LibraryText.string("ui.library.footerEnable")
         let multi = selectionCount >= 2
         if multi {
-            hints = [Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClearSelection"))]
+            hints = [
+                Hint(key: LibraryText.string("ui.library.keyReturn"), label: LibraryText.string("ui.library.hintQueue")),
+                Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClearSelection")),
+            ]
             countText = LibraryText.selectedCount(selectionCount)
             notice = LibraryText.string("ui.library.footerMultiDisabled")
             return
@@ -144,6 +151,12 @@ public struct LibraryFooter: Equatable {
             : Hint(key: LibraryText.string("ui.library.keyCommandC"), label: LibraryText.string("ui.library.hintCopy"))
         hints = [paste, secondary, preview]
         countText = LibraryText.itemCount(totalCount)
-        notice = isAccessibilityTrusted ? nil : LibraryText.string("ui.library.footerCopyOnly")
+        // A waiting paste queue says so, and that Esc drops it (FR-003-25); it outranks the copy-only reminder, which the
+        // enable button still carries.
+        if queueRemaining > 0 {
+            notice = LibraryText.format("ui.library.footerQueue", queueRemaining)
+        } else {
+            notice = isAccessibilityTrusted ? nil : LibraryText.string("ui.library.footerCopyOnly")
+        }
     }
 }

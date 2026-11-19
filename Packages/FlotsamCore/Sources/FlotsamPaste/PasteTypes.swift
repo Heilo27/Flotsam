@@ -28,6 +28,15 @@ public protocol PasteHost {
     func hidePanel()
 }
 
+/// The host for a paste that opens no panel (the paste queue, FR-003-25): nothing is visible and hiding does nothing, so
+/// FR-003-15 steps 5 and 6 reduce to the settle delay and the ⌘V.
+@MainActor
+public struct NoPanelHost: PasteHost {
+    public init() {}
+    public var isPanelVisible: Bool { false }
+    public func hidePanel() {}
+}
+
 /// The slice of Storage the paste sequence uses. `FlotsamDatabase` conforms below; tests use a fake, so Paste tests need
 /// no database.
 public protocol PasteItemStore: Sendable {
