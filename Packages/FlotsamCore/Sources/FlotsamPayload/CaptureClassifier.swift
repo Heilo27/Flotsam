@@ -79,8 +79,11 @@ public enum CaptureClassifier {
             // Filtered to what exists at capture time (FR-001-12).
             guard FileManager.default.fileExists(atPath: standardized.path, isDirectory: &isDirectory) else { continue }
             seenAny = true
+            // Bookmarks only for the first `BundleLimits.maxMembers` (FR-001-12): ingest keeps no more than that, so
+            // later members stay in the list by path alone and ingest still sees, and reports, the true count.
+            let bookmark = members.count < BundleLimits.maxMembers ? try? standardized.bookmarkData() : nil
             members.append(ClassifiedMember(
-                path: standardized.path, bookmark: try? standardized.bookmarkData(), isDirectory: isDirectory.boolValue))
+                path: standardized.path, bookmark: bookmark, isDirectory: isDirectory.boolValue))
         }
         guard seenAny else { return .failure(FlotsamError(.capDat001, "copied files no longer exist")) }
 
