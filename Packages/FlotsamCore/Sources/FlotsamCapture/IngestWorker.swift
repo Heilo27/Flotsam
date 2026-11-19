@@ -13,11 +13,14 @@ struct IngestWorker: Sendable {
     var vault: (any SecureClipVaulting)? = nil
     /// Whether a copy of several files becomes one bundle (`capture.autoBundle`, FR-001-12). Read once per payload.
     var autoBundle: @Sendable () -> Bool = { true }
+    /// The quiet capture cue (FR-001-30), told once per payload after something is stored. Nil: no cue.
+    var cue: CaptureCue? = nil
 
     /// Classifies and ingests `payload`. A failure is reported in the background unless `reportingFailure` is false
-    /// (Save Clipboard shows it itself); it is returned either way, nil on success.
+    /// (Save Clipboard shows it itself); it is returned either way, nil on success. `cueing` is false for Save Clipboard,
+    /// which answers the user with its own HUD (FR-001-30). A concealed copy never cues (`handleSecure`).
     @discardableResult
-    func handle(_ payload: CapturedPayload, reportingFailure: Bool = true) async -> FlotsamError? {
+    func handle(_ payload: CapturedPayload, reportingFailure: Bool = true, cueing: Bool = true) async -> FlotsamError? {
         if payload.isConcealed { return await handleSecure(payload, reportingFailure: reportingFailure) }
 
         let classification: Classification
@@ -33,14 +36,19 @@ struct IngestWorker: Sendable {
         // minus its index in milliseconds, so Recent lists them in pasteboard order (as Ungroup does, FR-004-11).
         let parts = autoBundle() ? [classification] : CaptureClassifier.splitIntoMembers(classification)
         var firstFailure: FlotsamError?
+        var storedAny = false
         for (index, part) in parts.enumerated() {
             let candidate = IngestCandidate(
                 classification: part, source: payload.source, origin: payload.origin,
                 occurredAt: payload.capturedAt.addingTimeInterval(-Double(index) / 1000))
             if let failure = await ingestOne(candidate, payload: payload, reportingFailure: reportingFailure) {
                 firstFailure = firstFailure ?? failure
+            } else {
+                storedAny = true
             }
         }
+        // FR-001-30: one cue per copy, not one per file of a multi-file copy kept as separate items.
+        if storedAny, cueing { cue?.captured(.clip) }
         return firstFailure
     }
 

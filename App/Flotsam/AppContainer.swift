@@ -52,8 +52,14 @@ final class AppContainer {
     /// it; the bindings are applied once the Library exists (`startLibrary`).
     let shortcuts = ShortcutRegistry(registrar: CarbonHotkeyRegistrar(), systemHotkeys: SymbolicHotkeyProvider())
     private var unsubscribeShortcuts: (@Sendable () -> Void)?
+    /// Retention sweep and reconcile (FR-007-09, FR-007-13). Nil until the database has opened. Retained: their loops run
+    /// until `stopMaintenance()`.
+    private var retentionScheduler: RetentionScheduler?
+    private var reconcileScheduler: ReconcileScheduler?
     private var unsubscribeItemEvents: (@Sendable () -> Void)?
     private var itemHotkeyAction: ItemHotkeyAction?
+    /// FR-007-23: reads the text in stored images for search. Event-driven, no timer (ADR-0004 S5).
+    private var textRecognition: TextRecognitionIndexer?
     /// The typed-trigger engine (FR-005-10). Nil until the database has opened. Retained: its loops run until `stop()`.
     private(set) var triggerEngine: TriggerEngine?
     /// Asks the tap thread to clear the typed word (FR-005-11): shared by the tap adapter and the engine, whose
@@ -71,6 +77,12 @@ final class AppContainer {
     private var observers: [any NSObjectProtocol] = []
     private var permissionLogger: PermissionTransitionLogger?
     private var permissionObserver: (any NSObjectProtocol)?
+    /// The quiet capture cue (FR-001-30): one panel, one gate (`capture.cue`), shared by clipboard capture and live
+    /// screenshot pickup so the two cannot disagree. The panel is built at the first cue.
+    private let captureCuePanel = CaptureCuePanel()
+    private lazy var captureCue = CaptureCue(settings: settings) { [captureCuePanel] kind in
+        Task { @MainActor in captureCuePanel.show(kind) }
+    }
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
     /// Seals and opens secure items with the Keychain key (ADR-0011). Capture seals with it, the database asks it whether
@@ -220,11 +232,21 @@ final class AppContainer {
             startShelf(database: opened, paster: paster, frontmost: frontmost)
             startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
+            startTextRecognition(database: opened)
+            startMaintenance(database: opened)
         case .failure(let error):
             await reporter.report(error, origin: .background)
             // No library means nothing can be imported: a click that was waiting, and every later one, shows why.
             importRecent.unavailable(error)
         }
+    }
+
+    /// FR-007-23: starts the background reader of image text. It runs once now (the bounded backfill) and again when an
+    /// item arrives; it never schedules itself.
+    private func startTextRecognition(database: FlotsamDatabase) {
+        let indexer = TextRecognitionIndexer(database: database, recognizer: VisionTextRecognizer())
+        textRecognition = indexer
+        Task { await indexer.start() }
     }
 
     /// FRD-001: wires capture to the database and starts the poll. Wake and activation each force one immediate
@@ -236,7 +258,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
-            access: SystemPasteboardAccess(), vault: secureVault, pollTick: pollTick)
+            access: SystemPasteboardAccess(), vault: secureVault, cue: captureCue, pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
         let presenter = presenter
@@ -264,6 +286,45 @@ final class AppContainer {
         capture.start()
     }
 
+    /// FR-007-09 and FR-007-13 (ADR-0004): the retention sweep (30 s after launch, hourly, and on wake) and reconcile
+    /// (15 s after launch, then weekly). Both own their one sleep on the injected clock, not a timer of this app and not
+    /// `PollTick`, so S5's idle budget is the one ADR-0004 already lists for them. The retention setting is read at each
+    /// sweep, and the sweep deletes only through the one deletion path (FR-007-15). The sweep's budget Notice
+    /// (`STO-LIM-001`, already throttled to once per 24 h) goes to the reporter like any background error.
+    private func startMaintenance(database: FlotsamDatabase) {
+        let reporter = reporter
+        let retention = RetentionScheduler(database: database, settings: settings) { notice in
+            Task { await reporter.report(notice, origin: .background) }
+        }
+        let reconcile = ReconcileScheduler(database: database)
+        retentionScheduler = retention
+        reconcileScheduler = reconcile
+        // Storage does not import AppKit, so the wake notification is observed here (RetentionScheduler's contract).
+        observers.append(
+            NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+            ) { _ in
+                Task { await retention.sweepNow() }
+            })
+        Task {
+            await retention.start()
+            await reconcile.start()
+        }
+    }
+
+    /// Quit: cancels the two schedulers' loops (ADR-0004: every long-running actor loop is cancelled at quit). A pass
+    /// already running finishes or dies with the process; both are transactional.
+    func stopMaintenance() {
+        let retention = retentionScheduler
+        let reconcile = reconcileScheduler
+        retentionScheduler = nil
+        reconcileScheduler = nil
+        Task {
+            await retention?.stop()
+            await reconcile?.stop()
+        }
+    }
+
     /// FRD-002: wires screenshot pickup. The watcher itself reads `screenshots.enabled`, so with the setting off it
     /// creates no stream, no timer and touches no folder (FR-002-05).
     private func startScreenshots(database: FlotsamDatabase) {
@@ -276,7 +337,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings),
             watermarkStore: DatabaseWatermarkStore(database: database),
             report: { error in await reporter.report(error, origin: .background) },
-            clear: { code in await reporter.clearNotices(code: code) }, pollTick: pollTick)
+            clear: { code in await reporter.clearNotices(code: code) }, pollTick: pollTick, cue: captureCue)
         screenshots = watcher
 
         let watched: Set<String> = [

@@ -47,6 +47,8 @@ public actor ScreenshotWatcher {
     private let report: @Sendable (FlotsamError) async -> Void
     private let clear: @Sendable (ErrorCode) async -> Void
     private let sink: any LogSink
+    /// The quiet capture cue (FR-001-30); nil shows none.
+    private let cue: CaptureCue?
 
     // MARK: State
 
@@ -113,6 +115,7 @@ public actor ScreenshotWatcher {
         report: @escaping @Sendable (FlotsamError) async -> Void,
         clear: @escaping @Sendable (ErrorCode) async -> Void,
         pollTick: PollTick,
+        cue: CaptureCue? = nil,
         sink: any LogSink = OSLogSink()
     ) {
         self.fileSystem = fileSystem
@@ -129,6 +132,7 @@ public actor ScreenshotWatcher {
         self.report = report
         self.clear = clear
         self.sink = sink
+        self.cue = cue
         self.lastMode = settings.value(SettingKeys.captureMode)
     }
 
@@ -743,6 +747,9 @@ public actor ScreenshotWatcher {
             retry[job.file.url.path] = nil
             await settle(job)
             FlotsamLog.log(.screenshotImported(outcome: created ? .stored : .deduped, byteSize: byteSize), sink: sink)
+            // FR-001-30: a newly stored screenshot picked up live. Not "Import recent screenshots" (it ends in its own
+            // "Imported {n}" HUD, FR-002-12), and not one from a pickup session that has ended.
+            if created, job.batch == nil, active, job.session == session { cue?.captured(.screenshot) }
             for warning in result.warnings where mayReport(for: job) { await report(warning) }
         case .unstable(let error):
             // `deactivate` emptied the retry list (FR-002-05): an import that was already running when pickup went off

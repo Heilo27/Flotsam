@@ -11,15 +11,17 @@ import GRDB
 enum SearchIndex {
     /// FR-003-09: only the first 10,000 characters of plain text are searchable.
     static let plainTextCharacterLimit = 10_000
+    /// FR-007-23: recognised image text is bounded the same way. The `item.ocrText` CHECK in migration 4 spells the same number.
+    static let recognizedTextCharacterLimit = 10_000
 
     static func refresh(_ db: Database, itemId: String) throws {
         guard let row = try Row.fetchOne(
             db,
             sql: """
-                SELECT kind, substr(plainText, 1, ?) AS text, note, name, sourceName, originalPath, isSecure
+                SELECT kind, substr(plainText, 1, ?) AS text, substr(ocrText, 1, ?) AS recognized, note, name, sourceName, originalPath, isSecure
                 FROM item WHERE id = ?
                 """,
-            arguments: [plainTextCharacterLimit, itemId])
+            arguments: [plainTextCharacterLimit, recognizedTextCharacterLimit, itemId])
         else { return }
 
         var fields: [String] = []
@@ -27,6 +29,8 @@ enum SearchIndex {
         // keeps a future code path that sets it from reaching the index.
         let isSecure: Bool = row["isSecure"]
         if !isSecure, let text: String = row["text"] { fields.append(text) }
+        // FR-003-55: what text recognition read from an image is searchable, and only searchable: nothing else reads it.
+        if !isSecure, let recognized: String = row["recognized"] { fields.append(recognized) }
         if let note: String = row["note"] { fields.append(note) }
         if let name: String = row["name"] { fields.append(name) }
         fields += try String.fetchAll(

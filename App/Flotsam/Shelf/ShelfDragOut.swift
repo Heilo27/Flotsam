@@ -9,6 +9,13 @@ import FlotsamStorage
 /// (`coveredIds`: `ShelfModel.covered(by:)` or `LibraryViewModel.coveredIDs(by:)`); this is the AppKit session between
 /// them. Each surface owns one instance.
 ///
+/// A session's pasteboard writers handed to the system share picker (FR-006-42). `retained` keeps the lazy data
+/// providers alive for as long as the picker holds the items: the drag session that built them ends at the drop.
+struct ShelfShareItems {
+    let items: [any NSPasteboardWriting]
+    let retained: [AnyObject]
+}
+
 /// The drag pasteboard is the only one written: the general pasteboard is never touched, so nothing here is an own
 /// write for clipboard capture to skip. The operation is `.copy` whatever modifier keys are held.
 @MainActor
@@ -41,6 +48,11 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     private var draggedItemIds: [UUID] = []
     /// `NSPasteboardItem` does not retain its data provider; these live until the session ends.
     private var providers: [Provider] = []
+    /// The in-flight session's writers: what the share zone hands to the system share picker, so the share carries
+    /// exactly what the drag would have dropped (FR-006-42). Empty outside a session.
+    private var sessionWriters: [any NSPasteboardWriting] = []
+    /// The session's items went to the share picker: its end does the accounting but does not hide the Shelf.
+    private var sharedInSession = false
 
     // MARK: Before the drag
 
@@ -123,12 +135,15 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
         switch ShelfDragStart.launch(ready, outcomes: outcomes) {
         case .fail(let error):
             providers = []
+            sessionWriters = []
             ports.report(error)
         case .start(let dragged, let error):
             // A card none of whose items got a writer is not dragged, so it is neither counted as pasted when the drop
             // is accepted nor on the drag image's badge (FR-006-10, FR-006-11).
             if let error { ports.report(error) }
             draggedItemIds = dragged
+            sessionWriters = writers.map(\.writer)
+            sharedInSession = false
             let frame = view.bounds
             let image = Self.stackedImage(of: view, count: dragged.count)
             let dragItems = writers.enumerated().map { index, entry in
@@ -177,6 +192,20 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
         }
     }
 
+    // MARK: Share (FR-006-42)
+
+    /// A session is running whose items the share zone can take.
+    var canShare: Bool { !sessionWriters.isEmpty }
+
+    /// The running session's items for the system share picker, or nil when none runs. Secure cards were authenticated
+    /// when the drag was prepared (FR-006-21), so what is handed over is already the revealed text. Marks the session
+    /// shared: its end still counts the paste but leaves the Shelf open under the picker.
+    func shareItems() -> ShelfShareItems? {
+        guard !sessionWriters.isEmpty else { return nil }
+        sharedInSession = true
+        return ShelfShareItems(items: sessionWriters, retained: providers)
+    }
+
     // MARK: NSDraggingSource
 
     func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
@@ -193,6 +222,9 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
     func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
         onSession?(false)
         providers = []
+        sessionWriters = []
+        let shared = sharedInSession
+        sharedInSession = false
         let cards = draggedItemIds
         draggedItemIds = []
         guard let ports else { return }
@@ -201,7 +233,7 @@ final class ShelfDragOut: NSObject, NSDraggingSource {
             // FR-006-11: one paste per card however many pasteboard items it contributed; FR-006-18: the count only.
             Task { for id in accepted { await ports.recordPaste(id) } }
             FlotsamLog.log(.shelf(.dragOut, outcome: .draggedOut, detail: .count(accepted.count)))
-            onAccepted?()
+            if !shared { onAccepted?() }
         case .userCancelled, .none:
             break
         }
