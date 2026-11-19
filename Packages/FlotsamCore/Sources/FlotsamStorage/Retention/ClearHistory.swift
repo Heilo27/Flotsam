@@ -2,13 +2,18 @@ import FlotsamBase
 import Foundation
 import GRDB
 
-/// The ranges offered by Settings > Storage > Clear History (FR-007-11).
+/// The ranges offered by Settings > Storage > Clear History and, for the short ones, by the menu bar's Clear Recent
+/// (FR-007-11).
 public enum ClearRange: Sendable, Equatable, CaseIterable {
-    case lastHour, last24Hours, allTime
+    case last5Minutes, lastHour, last24Hours, allTime
+
+    /// The ranges the menu bar's Clear Recent submenu offers, in order (FR-007-11, FR-008-16).
+    public static let recentMenuRanges: [ClearRange] = [.last5Minutes, .lastHour]
 
     /// How far back from now the range reaches; nil for all time.
     var lookbackMillis: Int64? {
         switch self {
+        case .last5Minutes: TimeSpan.minuteMillis * 5
         case .lastHour: TimeSpan.hourMillis
         case .last24Hours: TimeSpan.dayMillis
         case .allTime: nil
