@@ -19,11 +19,14 @@ private final class FakePresenter: SettingsWindowPresenter {
     var log: [String] = []
     private(set) var windows: [FakeWindow] = []
     private(set) var itemsSeen: [[SettingsPaneItem]] = []
+    /// The callback the window was given: what a click on a toolbar button calls.
+    private(set) var didSelect: (@MainActor (SettingsPane) -> Void)?
     /// What a real tab controller does while it is built: it reports its first tab as selected.
     var selectionReportedWhileBuilding: SettingsPane?
 
     func makeWindow(items: [SettingsPaneItem], didSelect: @escaping @MainActor (SettingsPane) -> Void) -> any SettingsWindowHandle {
         itemsSeen.append(items)
+        self.didSelect = didSelect
         log.append("make")
         if let pane = selectionReportedWhileBuilding { didSelect(pane) }
         let window = FakeWindow(presenter: self)
@@ -137,6 +140,20 @@ private struct Rig {
         #expect(presenter.log.last(where: { $0.hasPrefix("select:") }) == "select:shortcuts")
     }
 
+    // Worf (mutation survivor): the callback handed to the window is the one that stores the pane. A click on a toolbar
+    // button reaches only that callback, so a no-op there left every other test green.
+    @Test("OC-8025: a pane picked through the window's callback is stored and reopened on, by a fresh launch")
+    func windowCallbackStoresPane() {
+        let rig = Rig(); defer { rig.wipe() }
+        rig.driver.open()
+        rig.presenter.didSelect?(.storage)
+
+        let (driver, presenter) = rig.relaunched()
+        driver.open()
+        #expect(presenter.log == ["make", "select:storage", "front"])
+        #expect(SettingsPane.lastOpened(in: Rig.launch(rig.defaultsName)) == .storage)
+    }
+
     // Closing with ⌘W or Escape only hides the window (it is not released), so the driver has no "closed" state: a
     // reopen after close is the same call and reuses the window (`singleWindowRefocused`).
     @Test("OC-8024: with no presenter set, open builds nothing and a selection is still remembered")
@@ -226,6 +243,11 @@ private func scanControls(in code: String, file: String) -> [ScannedControl] {
 /// string, or a `SettingsString` title. A bare string literal title is not a catalogue key.
 private func labelProblem(_ control: ScannedControl) -> String? {
     let label = control.label
+    // `Text("Shelf")` and `Text(verbatim: "Shelf")` are literals too: they compile, and VoiceOver reads them, but they
+    // are not the catalogue's text (FR-000-05).
+    if label.range(of: #"\b(Text|Label)\((verbatim:\s*)?""#, options: .regularExpression) != nil {
+        return "\(control.kind) in \(control.file) labels itself with a literal string"
+    }
     let usesText = label.contains("Text(") || label.contains("SettingsString.") || label.contains("Label(")
     if label.trimmingCharacters(in: .whitespaces).hasPrefix("\"") { return "\(control.kind) in \(control.file) has a literal title" }
     if usesText { return nil }
@@ -250,9 +272,25 @@ private func labelProblem(_ control: ScannedControl) -> String? {
     func everyControlLabelled() throws {
         var controls: [ScannedControl] = []
         for source in try paneSources() { controls += scanControls(in: source.code, file: source.path) }
-        #expect(controls.count >= 25, "the scan must see the panes' controls (saw \(controls.count))")
+        // 37 at TASK-086 (25 Button, 6 Toggle, 6 Picker). Raise it when a pane gains a control; a lower number would let
+        // the scan quietly stop seeing a dozen of them.
+        #expect(controls.count >= 37, "the scan must see the panes' controls (saw \(controls.count))")
+        #expect(controls.filter { $0.kind == "Button" }.count >= 25)
+        #expect(controls.filter { $0.kind == "Toggle" }.count >= 6)
+        #expect(controls.filter { $0.kind == "Picker" }.count >= 6)
         #expect(Set(controls.map(\.kind)).isSuperset(of: ["Toggle", "Picker", "Button"]))
         #expect(controls.compactMap(labelProblem).isEmpty, "\(controls.compactMap(labelProblem))")
+    }
+
+    // Worf: the scan only knows the control kinds in its pattern. A kind it does not know, or a tap gesture standing in
+    // for a button (not in the Tab order, no Space), would pass unseen, so the Settings sources may not use them.
+    @Test("OC-8024: Settings views use no control kind the label scan cannot see, and no tap gesture or focus opt-out")
+    func noUnscannedControlKinds() throws {
+        let banned = ["SecureField", "Menu(", "Menu {", "DatePicker", "ColorPicker", "TextEditor", "DisclosureGroup", "onTapGesture",
+                      "onLongPressGesture", ".focusable(false)", "allowsHitTesting(false)", "NSSlider", "NSButton", "NSTextField"]
+        var hits: [String] = []
+        for source in try paneSources() { for word in banned where source.code.contains(word) { hits.append("\(word) in \(source.path)") } }
+        #expect(hits.isEmpty, "\(hits): teach scanControls this kind, or keep it out of Settings")
     }
 
     // The scan above must be able to fail: the same checks on synthetic sources.
@@ -265,6 +303,9 @@ private func labelProblem(_ control: ScannedControl) -> String? {
         #expect(problems("Toggle(isOn: $on) { Text(.shelf) }").isEmpty)
         #expect(problems("Picker(selection: $p) { Text(.a) } label: { Text(.shelfPlacement) }").isEmpty)
         #expect(problems(#"Button(SettingsString.cancel.text, role: .cancel) {}"#).isEmpty)
+        #expect(problems(#"Toggle(isOn: $on) { Text("Shelf") }"#).count == 1, "a literal Text is not a catalogue label")
+        #expect(problems(#"Toggle(isOn: $on) { Text(verbatim: "Shelf") }"#).count == 1)
+        #expect(problems(#"Toggle(isOn: $on) { Text(verbatim: SettingsString.shelf.text) }"#).isEmpty)
     }
 
     // The toolbar buttons are labelled from the driver's items, not from a second copy of the titles.
@@ -275,5 +316,30 @@ private func labelProblem(_ control: ScannedControl) -> String? {
         #expect(code.contains("accessibilityDescription: item.label"))
         #expect(code.contains("func openSettings() { driver.open() }"))
         #expect(!code.contains("SettingsPane.allCases"), "pane order has one home, the driver")
+    }
+
+    // Worf (mutation survivors): the window itself is built in the App target, which no unit test compiles. These are
+    // the choices that were in the controller before TASK-086 and that nothing else would notice losing.
+    @Test("OC-8024: the glue keeps the window's title, toolbar style, close behaviour and the forwards to the driver")
+    func glueKeepsWindowShape() throws {
+        let code = try frd008Code("App/Flotsam/Settings/SettingsWindowController.swift")
+        let required = [
+            "tabStyle = .toolbar",
+            "tabs.title = SettingsString.window.text",
+            "window.title = SettingsString.window.text",
+            "window.styleMask = [.titled, .closable, .miniaturizable]",
+            "window.isReleasedWhenClosed = false",  // a closed window is reopened, never rebuilt
+            "window.setFrameAutosaveName(\"\")",
+            "window.center()",
+            "func select(_ pane: SettingsPane) { tabs.select(pane) }",
+            "NSApp.activate()",
+            "window.makeKeyAndOrderFront(nil)",
+            "didSelect(items[index].pane)",
+            "driver = SettingsWindowDriver(settings: env.settings)",
+            "driver.presenter = self",
+            "for item in items { addTabViewItem(tabItem(for: item)) }",
+            "tab.identifier = item.pane.rawValue",
+        ]
+        #expect(required.filter { !code.contains($0) } == [], "removed from the Settings window glue")
     }
 }
