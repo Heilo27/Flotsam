@@ -46,6 +46,12 @@ public final class ShelfModel {
     /// The card a successful drop stored or bumped, highlighted for `ShelfLayout.dropHighlightDuration` and scrolled
     /// into view (FR-006-15). Set by `highlight(_:)`; cleared by `clearHighlight(of:)`.
     public private(set) var highlightedItemId: UUID?
+    /// The search field's text and the selected type pill (FR-006-22); nil is the All pill. Both are the Library's own
+    /// query inputs (`LibraryQuery.text`, `LibraryFilter.kind`), so the Shelf has no matcher of its own.
+    public private(set) var searchText = ""
+    public private(set) var kindFilter: ItemKind?
+    /// The kinds that have an item, in the Library's Types order: the pills after All.
+    public private(set) var availableKinds: [ItemKind] = []
 
     // MARK: Collaborators
 
@@ -88,6 +94,12 @@ public final class ShelfModel {
 
     public var isEmpty: Bool { pinnedRows.isEmpty && recentRows.isEmpty }
 
+    /// A search or type filter is narrowing the cards (FR-006-22).
+    public var isFiltering: Bool { !searchText.isEmpty || kindFilter != nil }
+
+    /// The search header is shown only to a sticky Shelf: a transient one never takes key (FR-006-08).
+    public var showsSearch: Bool { isSticky }
+
     public var selectedRows: [ItemRow] { orderedRows.filter { selection.contains($0.id) } }
 
     public var cursorID: UUID? { cursor }
@@ -125,10 +137,13 @@ public final class ShelfModel {
         self.target = target
         isSticky = sticky
         isOpen = true
+        // A reveal starts clean, like the Library's open (FR-003-04): empty search, All.
+        searchText = ""
+        kindFilter = nil
         subscribeIfNeeded()
         await effects.captureNow()
         guard isOpen else { return }
-        startReload(selection: .first)
+        startReload(selection: .first, refreshKinds: true)
         await loadTask?.value
     }
 
@@ -160,7 +175,38 @@ public final class ShelfModel {
 
     private func storedItemsChanged() {
         guard isOpen else { return }
-        startReload(selection: .keep(selection))
+        startReload(selection: .keep(selection), refreshKinds: true)
+    }
+
+    // MARK: Search and type filter (FR-006-22)
+
+    public func setSearchText(_ text: String) {
+        guard text != searchText else { return }
+        searchText = text
+        startReload(selection: .first)
+    }
+
+    /// Selects a type pill; nil is All. Choosing the pill already selected changes nothing.
+    public func setKindFilter(_ kind: ItemKind?) {
+        guard kind != kindFilter else { return }
+        kindFilter = kind
+        startReload(selection: .first)
+    }
+
+    /// ⌥↑ / ⌥↓: the previous or next pill, stopping at All and at the last kind (the Library's sidebar does the same).
+    public func stepKindFilter(by delta: Int) {
+        let pills: [ItemKind?] = [nil] + availableKinds
+        let current = pills.firstIndex { $0 == kindFilter } ?? 0
+        setKindFilter(pills[min(max(current + delta, 0), pills.count - 1)])
+    }
+
+    /// The Esc ladder (FR-006-22): clear the search, then the type filter. True when it cleared something, false when
+    /// Esc should hide the Shelf.
+    @discardableResult
+    public func clearSearchState() -> Bool {
+        if !searchText.isEmpty { setSearchText(""); return true }
+        if kindFilter != nil { setKindFilter(nil); return true }
+        return false
     }
 
     // MARK: Loading (FR-006-06)
@@ -172,28 +218,35 @@ public final class ShelfModel {
         case keep(Set<UUID>)
     }
 
-    private func startReload(selection policy: SelectionPolicy) {
+    /// What one load asks storage for. Unfiltered it is FR-006-06's two reads (Pinned, and the first page for Recent);
+    /// with a search or a type filter it is the one `LibraryQuery` the Library would run for the same text and filter,
+    /// split into Pinned and Recent by each row's own pin flag (FR-006-22).
+    private func startReload(selection policy: SelectionPolicy, refreshKinds: Bool = false) {
         loadTask?.cancel()
         generation += 1
         let generation = generation
         if orderedRows.isEmpty { loadState = .loading }
-        let pinnedQuery = LibraryQuery(filter: .pinned, text: "", sort: .recent, page: 0)
-        let allQuery = LibraryQuery(filter: .all, text: "", sort: .recent, page: 0)
+        let filtering = isFiltering
+        let allQuery = LibraryQuery(filter: kindFilter.map(LibraryFilter.kind) ?? .all, text: searchText, sort: .recent, page: 0)
+        let pinnedQuery = filtering ? nil : LibraryQuery(filter: .pinned, text: "", sort: .recent, page: 0)
         loadTask = Task { [weak self] in
             guard let self else { return }
-            async let pinnedResult = source.items(matching: pinnedQuery)
+            async let pinnedResult = readPinned(pinnedQuery)
             async let allResult = source.items(matching: allQuery)
             let (pinnedPage, allPage) = await (pinnedResult, allResult)
             guard !Task.isCancelled, generation == self.generation else { return }
-            switch (pinnedPage, allPage) {
+            if refreshKinds { await loadKinds(generation: generation) }
+            guard !Task.isCancelled, generation == self.generation else { return }
+            switch (pinnedPage ?? .success(ItemPage(rows: [], totalCount: 0, page: 0)), allPage) {
             case (.failure(let error), _), (_, .failure(let error)):
                 // The previous cards stay on screen.
                 loadState = .failed(error)
                 effects.report(error)
             case (.success(let pinned), .success(let all)):
-                let limit = ShelfLayout.sectionLimit
-                let pinnedRows = Array(pinned.rows.prefix(limit))
-                // Recent is the first unfiltered page with pinned items removed (FR-006-06).
+                let limit = filtering ? ShelfLayout.resultLimit : ShelfLayout.sectionLimit
+                // Filtering reads one page and splits it; unfiltered, Pinned has its own read and Recent is the first
+                // unfiltered page with pinned items removed (FR-006-06).
+                let pinnedRows = Array((filtering ? all.rows.filter(\.isPinned) : pinned.rows).prefix(limit))
                 let recentRows = Array(all.rows.filter { !$0.isPinned }.prefix(limit))
                 let rows = pinnedRows + recentRows
                 let textResult = await details.cardTexts(for: rows.map(\.id))
@@ -206,6 +259,22 @@ public final class ShelfModel {
                 }
                 apply(pinned: pinnedRows, recent: recentRows, texts: loadedTexts, selection: policy)
             }
+        }
+    }
+
+    /// The Pinned read of an unfiltered load; nil when a filter makes the one query serve both sections.
+    private func readPinned(_ query: LibraryQuery?) async -> FlotsamResult<ItemPage>? {
+        guard let query else { return nil }
+        return await source.items(matching: query)
+    }
+
+    /// Reads which kinds exist for the pills. A failed read keeps the previous pills and is reported like a list failure.
+    private func loadKinds(generation: Int) async {
+        let counts = await source.sidebarCounts()
+        guard !Task.isCancelled, generation == self.generation else { return }
+        switch counts {
+        case .success(let counts): availableKinds = ItemKind.displayOrder.filter { (counts.kinds[$0] ?? 0) > 0 }
+        case .failure(let error): effects.report(error)
         }
     }
 
@@ -240,12 +309,14 @@ public final class ShelfModel {
     /// Handles a key; true when the Shelf used it. A transient Shelf, a closed one, and keys outside the map (Space)
     /// return false and change nothing.
     @discardableResult
-    public func handle(_ stroke: KeyStroke) -> Bool {
-        guard isOpen, let command = ShelfKeyMap.command(for: stroke, isSticky: isSticky) else { return false }
+    public func handle(_ stroke: KeyStroke, searchHasSelection: Bool = false) -> Bool {
+        let context = ShelfKeyMap.Context(searchIsEmpty: searchText.isEmpty, searchHasSelection: searchHasSelection)
+        guard isOpen, let command = ShelfKeyMap.command(for: stroke, isSticky: isSticky, context: context) else { return false }
         switch command {
         case .move(let direction): move(direction)
         case .paste(let mode): pasteSelected(mode: mode)
-        case .hide: hide()
+        case .hide: if !clearSearchState() { hide() }
+        case .stepFilter(let delta): stepKindFilter(by: delta)
         }
         return true
     }

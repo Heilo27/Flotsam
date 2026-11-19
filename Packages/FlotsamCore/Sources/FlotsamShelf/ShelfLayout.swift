@@ -46,6 +46,19 @@ public enum ShelfLayout {
     public static let cardTextReadLimit = 1_000
     /// Each section lists at most this many cards (FR-006-06).
     public static let sectionLimit = 20
+    /// While a search or type filter is active each section lists up to one page of matches (FR-006-22), so a search
+    /// reaches past the 20 newest cards. One page is the query layer's own size (FR-007-18).
+    public static let resultLimit = LibraryQuery.pageSize
+
+    // MARK: Search header (FR-006-22)
+
+    /// The search field and type pills a sticky Shelf shows above its cards: one row in the horizontal placements (the
+    /// 140 pt strip keeps its height, its cards give the row up), two rows (field, then pills) in the vertical ones.
+    /// A transient Shelf never takes key and shows no header (FR-006-08).
+    public static let searchRowHeight: CGFloat = 32
+    public static func searchHeaderHeight(for placement: ShelfPlacement) -> CGFloat {
+        isHorizontal(placement) ? searchRowHeight : searchRowHeight * 2
+    }
 
     // MARK: Motion (FR-006-05)
 
@@ -107,12 +120,13 @@ public enum ShelfLayout {
 
     /// The height of the content for a vertical list: cards, their gaps, one header per non-empty section and padding.
     /// An empty Shelf (the empty state) is as tall as the minimum.
-    public static func contentHeight(pinnedCount: Int, recentCount: Int) -> CGFloat {
+    /// `headerHeight` is the search header of a sticky Shelf (0 for a transient one).
+    public static func contentHeight(pinnedCount: Int, recentCount: Int, headerHeight: CGFloat = 0) -> CGFloat {
         let sections = [pinnedCount, recentCount].filter { $0 > 0 }
         guard !sections.isEmpty else { return minimumHeight }
         let cards = CGFloat(pinnedCount + recentCount)
         let gaps = CGFloat(max(pinnedCount + recentCount - sections.count, 0)) * cardSpacing
-        return contentPadding * 2 + CGFloat(sections.count) * sectionHeaderHeight + cards * cardHeight + gaps
+        return contentPadding * 2 + headerHeight + CGFloat(sections.count) * sectionHeaderHeight + cards * cardHeight + gaps
     }
 
     /// The width of the content for the bottom strip: one card per item in one row, padding either side. An empty
@@ -155,9 +169,11 @@ public enum ShelfLayout {
     }
 
     /// The card size for a placement (FR-006-07): 64 pt tall across the panel, or 112 pt wide in the bottom strip.
-    public static func cardSize(for placement: ShelfPlacement) -> CGSize {
+    /// In the horizontal placements a sticky Shelf's cards are as much shorter as its search row is tall (`showsSearch`).
+    public static func cardSize(for placement: ShelfPlacement, showsSearch: Bool = false) -> CGSize {
         if isHorizontal(placement) {
-            return CGSize(width: bottomCardWidth, height: bottomHeight - contentPadding * 2)
+            let header = showsSearch ? searchHeaderHeight(for: placement) : 0
+            return CGSize(width: bottomCardWidth, height: bottomHeight - contentPadding * 2 - header)
         }
         return CGSize(width: panelWidth - contentPadding * 2, height: cardHeight)
     }

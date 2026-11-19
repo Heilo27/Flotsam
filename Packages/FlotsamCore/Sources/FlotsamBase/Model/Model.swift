@@ -4,6 +4,27 @@ import Foundation
 public enum ItemKind: String, CaseIterable, Sendable {
     case text, richText, link, color, phone, email, image, file, folder, bundle, screenshot
 
+    /// The kinds in the order every type list shows them (FR-003-12 sidebar Types rows; FR-006-22 Shelf type pills). The
+    /// one home of that order: `ItemKind` itself stays in storage order, so nothing that persists or counts by kind is
+    /// affected. The exhaustive switch makes a new kind a compile error here.
+    public static let displayOrder: [ItemKind] = allCases.sorted { displayRank($0) < displayRank($1) }
+
+    private static func displayRank(_ kind: ItemKind) -> Int {
+        switch kind {
+        case .text: 0
+        case .richText: 1
+        case .link: 2
+        case .color: 3
+        case .phone: 4
+        case .email: 5
+        case .image: 6
+        case .screenshot: 7
+        case .file: 8
+        case .folder: 9
+        case .bundle: 10
+        }
+    }
+
     /// The kinds stored by reference to files on disk (FRD-001 FR-001-12): their content is the members, not a blob.
     public var referencesFiles: Bool {
         switch self {
