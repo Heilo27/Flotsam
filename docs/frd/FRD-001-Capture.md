@@ -15,7 +15,7 @@ Watch the macOS general pasteboard, decide what is worth keeping, classify it, a
 
 ## 2. User Stories
 - As a keyboard-first user, everything I copy is in the Library by the time I open it, with no setup.
-- As a security-conscious user, a password-manager copy never lands in history.
+- As a security-conscious user, a password-manager copy lands in history only as an encrypted, masked item that needs my password or Touch ID to copy again, and I can ignore a manager entirely.
 - As a designer, copying five files in Finder gives me one entry I can paste or drag as a unit.
 - As a user, a link is a link and a hex colour is a colour, so I can filter for them later.
 

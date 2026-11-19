@@ -75,7 +75,7 @@ Re-run this whenever `main` moves or a builder branch is marked `ready`:
 - **A2** Launch smoke: **[S2: done 2026-11-17 @ 3878487, launch/menu bar/quit only; copy checks wait on FRD-001]**
   - build the Debug app and launch it;
   - copy text, a URL, an image and a file, and confirm each appears in storage once FRD-001 has landed;
-  - copy from a password manager (concealed type) and confirm nothing is stored;
+  - copy from a password manager (concealed type) and confirm it is stored as a masked secure item with no plaintext on disk;
   - check the menu bar item;
   - quit cleanly.
 

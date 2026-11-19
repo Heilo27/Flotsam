@@ -3092,7 +3092,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copies from these apps are never stored."
+            "value" : "Copies from these apps are never stored. The list starts empty: password managers are stored encrypted unless you add them here."
           }
         }
       }
@@ -3252,7 +3252,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flotsam never stores concealed, transient or auto-generated clipboard content."
+            "value" : "Transient copies are never stored. Password manager copies are stored encrypted, shown as dots, and need your password or Touch ID."
           }
         }
       }
