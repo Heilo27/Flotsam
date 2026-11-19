@@ -38,8 +38,9 @@ function hashes_follow(s, p, h,   k) {
   return 1
 }
 # Does a "/" at position i of s open a regex literal? Only in an expression-start position (after = ( , : ; { [ ! & | < a ternary
-# ? or a keyword such as return), never as division or the /= operator, and never when followed by a space or tab. A postfix ? (optional
-# chaining: `total?`, `f()?`) ends an operand like an identifier does; a ternary ? has whitespace (or an operator) before it.
+# ? or a keyword such as return), never as division or the /= operator, and never when followed by a space or tab. A postfix ? or !
+# (optional chaining `total?`, `f()?`, force unwrap `total!`) ends an operand like an identifier does; a ternary ?, a prefix ! and
+# `try?` `try!` `as?` `as!` do not (the keyword test runs on the text before the ? or !).
 # At the start of a line the position is judged by the code that ended the previous line (prevcode): `let r =` then `/x/` is
 # a regex, and `total` then `/n + ...` is a continued division. When that code ends an operand (an identifier, ) ] } a string, a
 # regex, `#if DEBUG`) both readings are possible: a literal that closes on this line with nothing after it but a comment is a
@@ -50,11 +51,14 @@ function regex_start(out, s, i,   o, p, q, nx, j, tail, atstart) {
   o = out; sub(/[ \t]+$/, "", o); atstart = 0
   if (o == "") { o = prevcode; if (o == "") return 1; atstart = 1 }
   p = substr(o, length(o), 1)
-  if (p == "?") {
+  if (p == "?" || p == "!") {
+    # A postfix ? or ! (`total?`, `f()?`, `a[0]!`) ends an operand. A ternary ?, `??` and a prefix ! have no operand
+    # character before them. `try?`, `try!`, `as?`, `as!` (and `return!`, ...) are keywords, not operands: an expression starts after.
     q = substr(o, length(o) - 1, 1)
     if (q !~ /[A-Za-z0-9_$)\]]/) return 1
+    if (substr(o, 1, length(o) - 1) ~ /(^|[^A-Za-z0-9_$.])(try|as|return|in|case|await|throw|where)$/) return 1
   } else {
-    if (index("=(,:;{[!&|<", p) > 0) return 1
+    if (index("=(,:;{[&|<", p) > 0) return 1
     if (o ~ /(^|[^A-Za-z0-9_$.])(return|in|case|try|await|throw|where)$/) return 1
   }
   if (!atstart) return 0
@@ -332,8 +336,9 @@ function finish(   L, t) {
   # FR-000-05: a literal handed to a view or an AppKit text property bypasses the String Catalog. Heuristic by design: it
   # catches the common SwiftUI and AppKit entry points (also Text(verbatim: "..."), a literal split over lines, a space before
   # the paren, LocalizedStringKey("...")); Text(name) and catalogue lookups are not literals. A view name needs a left
-  # identifier boundary (MyText("x") is a custom type, not Text). Code review and the catalogue test cover the rest.
-  scan_all("USTRING", "(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup)[ \t\n]*\\([ \t\n]*(verbatim:[ \t\n]*)?\"", 1, 0)
+  # identifier boundary (MyText("x") is a custom type, not Text), so a SwiftUI view whose name merely ends in a listed name
+  # (DatePicker, NavigationLink, ShareLink, ...) is listed by name too; all of them take a LocalizedStringKey title. Code review and the catalogue test cover the rest.
+  scan_all("USTRING", "(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup|DatePicker|MultiDatePicker|ColorPicker|PhotosPicker|NavigationLink|ShareLink|TextFieldLink|CommandMenu|Tab|TabSection|LabeledContent|ControlGroup|ProgressView|ContentUnavailableView|Window|WindowGroup|UtilityWindow)[ \t\n]*\\([ \t\n]*(verbatim:[ \t\n]*)?\"", 1, 0)
   scan_all("USTRING", "LocalizedStringKey[ \t\n]*\\([ \t\n]*\"", 1, 0)
   scan_all("USTRING", "\\.(help|navigationTitle|accessibilityLabel|accessibilityHint|badge|confirmationDialog|alert)[ \t\n]*\\([ \t\n]*\"", 0, 0)
   scan_all("USTRING", "\\.(messageText|informativeText|title|stringValue|toolTip|placeholderString|label)[ \t]*=[ \t\n]*\"", 0, 0)

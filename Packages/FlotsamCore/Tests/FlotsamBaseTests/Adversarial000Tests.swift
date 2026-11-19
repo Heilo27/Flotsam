@@ -492,6 +492,16 @@ private enum AdvLintHarness {
     /// `extraFiles` maps a path relative to the tree root (e.g. "project.yml") to its contents; Package.swift may be overridden the same way.
     static func exitStatus(for source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
                            extraFiles: [String: String] = [:]) async throws -> Int32 {
+        try await run(source, at: relativePath, extraFiles: extraFiles).status
+    }
+
+    /// Whether the lint reports the fatalError/precondition rule on a tree holding only `source` (other rules may fire too).
+    static func reportsFatal(_ source: String) async throws -> Bool {
+        try await run(source).output.contains("fatalError/precondition without")
+    }
+
+    private static func run(_ source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
+                            extraFiles: [String: String] = [:]) async throws -> ProcessResult {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("flotsam-8a-lint-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
@@ -513,7 +523,7 @@ private enum AdvLintHarness {
             try Data((contents + "\n").utf8).write(to: url)
         }
 
-        return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path]).status
+        return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path])
     }
 }
 
@@ -1119,41 +1129,59 @@ struct Adversarial000Task367368Verification {
         #expect(try await status(open + "    /a/\n}\nfatalError(\"x\")") == 1)
     }
 
-    // OC: FR-000-05. TASK-367 (new false negatives). Defect: the substring match used to flag DatePicker("x"), NavigationLink("x") and
-    // the like (they end in Picker / Link); the left boundary stops flagging them. They take a LocalizedStringKey title: real FR-000-05 violations.
-    @Test("KNOWN TASK-367: SwiftUI views whose names end in a listed view name are no longer flagged")
-    func suffixedSwiftUIViewsNoLongerFlagged() async throws {
-        // control: the unprefixed names are flagged
-        #expect(try await status("let v = Picker(\"When\", selection: $d) {}") == 1)
-        #expect(try await status("let v = Link(\"Go\", destination: u)") == 1)
+    // OC: FR-000-05. TASK-367. Mutant: any of these names dropped from the USTRING view-name list. SwiftUI views whose names end in a
+    // listed name (DatePicker, NavigationLink, ...) take a LocalizedStringKey title, so a literal title is a FR-000-05 violation.
+    @Test("TASK-367: SwiftUI views whose names end in a listed view name are still flagged")
+    func suffixedSwiftUIViewsStillFlagged() async throws {
         for shape in [
+            "let v = Picker(\"When\", selection: $d) {}", "let v = Link(\"Go\", destination: u)",
             "let v = DatePicker(\"When\", selection: $d)", "let v = ColorPicker(\"Tint\", selection: $c)",
             "let v = NavigationLink(\"Go\") { X() }", "let v = ShareLink(\"Share\", item: u)",
             "let v = CommandMenu(\"Tools\") {}", "let v = PhotosPicker(\"Pick\", selection: $s)",
-            "let v = MultiDatePicker(\"When\", selection: $s)",
+            "let v = MultiDatePicker(\"When\", selection: $s)", "let v = TextFieldLink(\"Go\") { }",
+            "let v = Tab(\"Home\", systemImage: \"house\") { }", "let v = TabSection(\"More\") { }",
+            "let v = LabeledContent(\"Name\") { }", "let v = ControlGroup(\"Edit\") { }",
+            "let v = ProgressView(\"Loading\")", "let v = ContentUnavailableView(\"None\", systemImage: \"x\")",
+            "let v = Window(\"Main\", id: \"m\") { }", "let v = WindowGroup(\"Main\") { }",
+            "let v = Toggle(\"On\", isOn: $b)", "let v = Stepper(\"N\", value: $n)", "let v = Label(\"T\", systemImage: \"x\")",
+            "let v = Section(\"S\") { }", "let v = Menu(\"M\") { }", "let v = TextField(\"T\", text: $t)",
+            "let v = SecureField(\"T\", text: $t)", "let v = GroupBox(\"G\") { }", "let v = DisclosureGroup(\"D\") { }",
         ] {
-            // given a SwiftUI view with a literal title, when linted, then it should fail (today it exits 0)
-            let code = try await status(shape)
-            withKnownIssue("no longer matched after the left boundary: \(shape.debugDescription)") {
-                #expect(code == 1)
-            }
+            // given a SwiftUI view with a literal title, when linted, then it fails
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+        // given a custom type that merely ends in a view name, when linted, then it passes
+        for shape in ["let v = MyPicker(\"x\")", "let v = FooTab(\"x\")", "let v = TabView(\"x\")"] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
         }
     }
 
-    // OC: FR-000-02. TASK-368 (new regression). Defect: a postfix ? now ends an operand, but `try?` is a keyword: a regex after it is read as division.
-    @Test("KNOWN TASK-368: a regex literal after try? is read as division")
+    // OC: FR-000-02. TASK-368. Mutant: the keyword test skipped when the text ends in a postfix-looking ? or !.
+    @Test("TASK-368: a regex literal after try?, try!, as? or as! is a regex, not a division")
     func regexAfterTryQuestionMark() async throws {
         // control: the same shape after plain `try` is a regex and the call after it is still seen
         #expect(try await status("let r = try /\"/; fatalError(\"x\")") == 1)
-        // given a regex with a quote after try?, then a real fatalError on the line, when linted, then it should fail (today it exits 0: the quote opens a string)
-        let hidden = try await status("let r = try? /\"/; fatalError(\"x\")")
-        withKnownIssue("try? then / is read as division, so the quote hides the rest of the line") {
-            #expect(hidden == 1)
+        for kw in ["try?", "try!", "x as?", "x as!"] {
+            // given a regex with a quote after the keyword, then a real fatalError on the line, when linted, then the call is reported
+            #expect(try await AdvLintHarness.reportsFatal("let r = \(kw) /\"/; fatalError(\"x\")"), "quote after \(kw)")
+            // given a regex holding banned-looking text, when linted, then the text is not linted as code
+            #expect(try await !AdvLintHarness.reportsFatal("let r = \(kw) /fatalError(x)/"), "regex text after \(kw)")
         }
-        // given a regex after try? holding banned-looking text, when linted, then it should pass (today it exits 1)
-        let falsePositive = try await status("let r = try? /fatalError(x)/")
-        withKnownIssue("try? then / is read as division, so the regex text is linted as code") {
-            #expect(falsePositive == 0)
+        // given try? with nothing else banned, when linted, then the whole file passes
+        #expect(try await status("let r = try? /fatalError(x)/") == 0)
+    }
+
+    // OC: FR-000-02. TASK-515. Mutant: `!` left in the expression-start character list (a postfix ! no longer ends an operand).
+    @Test("TASK-515: a postfix ! ends an operand, so the / after it is a division; a prefix ! and try! start an expression")
+    func postfixForceUnwrapEndsOperand() async throws {
+        // given an operand, a postfix !, then a division whose second operand holds a real fatalError, when linted, then the call is reported
+        for operand in ["total!", "f()!", "a[0]!", "x1!", "(a)!"] {
+            #expect(try await AdvLintHarness.reportsFatal("let r = \(operand)/n + g(fatalError(\"x\"))/2"), "inline after \(operand)")
+            #expect(try await AdvLintHarness.reportsFatal("let r = \(operand)\n    /n + g(fatalError(\"x\"))/2"), "line-start after \(operand)")
+        }
+        // given a prefix ! before a regex literal holding banned-looking text, when linted, then the text is not linted as code
+        for shape in ["let ok = !/fatalError(x)/.matches", "if !/fatalError(x)/.matches {}", "let ok = (!/fatalError(x)/.matches)"] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
         }
     }
 
