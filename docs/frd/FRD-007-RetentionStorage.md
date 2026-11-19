@@ -141,4 +141,4 @@ All of these appear in Settings › Storage (pane layout in FRD-008); behaviours
 7. No database encryption at rest (FileVault is the boundary), except secure items, whose text is sealed individually (FRD-001 FR-001-25); stated in the PRD §9 privacy section.
 
 ## 10. Out of Scope
-Sync, export, import or backup of the library (A1: sync is CUT; export deferred, not logged as a feature); encryption beyond FileVault; per-kind or per-app retention rules; compressing text; deduplicating blob bytes across items; cloud or network storage of any kind (A1, A4); OCR indexing of images (A3); deleting or moving the user's original files.
+Sync, export, import or backup of the library (A1: sync is CUT; export deferred, not logged as a feature); encryption beyond FileVault; per-kind retention rules; per-app clip lifetime rules (v1.1, TASK-555); compressing text; deduplicating blob bytes across items; cloud or network storage of any kind (A1, A4); OCR indexing of images (A3); deleting or moving the user's original files.
