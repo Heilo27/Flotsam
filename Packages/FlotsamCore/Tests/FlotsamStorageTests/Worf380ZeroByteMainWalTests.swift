@@ -57,7 +57,7 @@ private enum W380 {
         _ root: URL, fs: any FileSystemPort = LocalFileSystem(), then work: ((FlotsamDatabase) async throws -> Void)? = nil
     ) async throws -> Opened {
         var opened = Opened()
-        switch await FlotsamDatabase.open(folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.all) {
+        switch await FlotsamDatabase.open(folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.baseline) {
         case .failure(let error): opened.failure = error
         case .success(let db):
             opened.notice = db.openNotice

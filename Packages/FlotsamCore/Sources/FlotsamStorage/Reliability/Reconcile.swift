@@ -161,6 +161,7 @@ extension FlotsamDatabase {
                             SELECT id FROM item
                             WHERE id IN (\(marks))
                               AND (plainText IS NULL OR plainText = '')
+                              AND isSecure = 0
                               AND kind NOT IN (\(kinds))
                               AND NOT EXISTS (SELECT 1 FROM representation WHERE representation.itemId = item.id)
                             """,

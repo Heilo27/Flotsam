@@ -89,6 +89,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
 | Shortcut invalid, reserved or system-owned | TRG-VAL-003 | inline, not saved |
 | Shortcut already used in Flotsam | TRG-VAL-004 | inline, not saved |
 | Unknown variable or bad format in item text | TRG-VAL-005 | saved; variable left as plain text |
+| Shortcut or trigger on a secure item | TRG-VAL-006 | inline, not saved |
 | macOS refuses to register a hotkey | TRG-OS-001 | binding kept, badge, retried |
 | Expansion failed | TRG-OS-002 | boundary key re-posted or trigger re-typed; HUD |
 | Event tap disabled by macOS | TRG-OS-003 | re-enabled; Notice |

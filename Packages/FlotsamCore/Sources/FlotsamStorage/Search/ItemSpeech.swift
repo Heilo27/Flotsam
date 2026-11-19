@@ -9,7 +9,15 @@ public enum ItemSpeech {
 
     /// "Text, hello, from Notes, 2 min ago, pinned": kind, primary line, source app (when known), age, pin state.
     public static func label(for row: ItemRow, now: Date) -> String {
-        var spoken = [KindLabel.text(for: row.kind), String(row.primaryLine.prefix(primaryLimit))]
+        // A secure item is never read aloud as its mask (eight "bullet"s): it is "Secure item", plus "Unavailable" when
+        // its key is gone.
+        var spoken: [String]
+        if row.isSecure {
+            spoken = [template("ui.library.spokenSecure")]
+            if row.isUnavailable { spoken.append(row.primaryLine) }
+        } else {
+            spoken = [KindLabel.text(for: row.kind), String(row.primaryLine.prefix(primaryLimit))]
+        }
         if let source = row.sourceName, !source.isEmpty {
             spoken.append(String(format: template("ui.library.fromApp"), source))
         }

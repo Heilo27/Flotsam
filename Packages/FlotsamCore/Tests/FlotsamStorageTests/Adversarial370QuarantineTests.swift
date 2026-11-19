@@ -214,7 +214,7 @@ enum V370 {
     /// Opens through the real entry point, inspects the result through the pool, and lets the database go (closing
     /// the pool) before returning, so the caller can look at the files on disk.
     static func open(
-        _ root: URL, migrations: [Migration] = Migrations.all, then work: ((FlotsamDatabase) async throws -> Void)? = nil
+        _ root: URL, migrations: [Migration] = Migrations.baseline, then work: ((FlotsamDatabase) async throws -> Void)? = nil
     ) async throws -> Outcome {
         var outcome = Outcome()
         let result = await FlotsamDatabase.open(
@@ -663,13 +663,13 @@ struct Adversarial370QuarantineTests {
     /// the pool was closed and checkpointed before the move so it is self-contained), and a fresh healthy database.
     /// Dies if the post-migration check is skipped, or if the quarantine moves files while the pool is still open.
     @Test func postMigrationCheckFailure_throwingCheck_takesDamagedPath_selfContainedQuarantine() async throws {
-        try await postMigrationScenario { [Migrations.all[0], Self.sabotage(root: $0)] }
+        try await postMigrationScenario { [Migrations.baseline[0], Self.sabotage(root: $0)] }
     }
 
     /// OC-370-16b: same obligations when the post-migration quick_check returns failing rows instead of throwing.
     /// Dies if a non-"ok" result is ignored (`.damaged` branch replaced by `.opened`).
     @Test func postMigrationCheckFailure_rowsCheck_takesDamagedPath_selfContainedQuarantine() async throws {
-        try await postMigrationScenario { [Migrations.all[0], Self.rowsSabotage(root: $0)] }
+        try await postMigrationScenario { [Migrations.baseline[0], Self.rowsSabotage(root: $0)] }
     }
 
     private func postMigrationScenario(_ migrationsFor: (URL) -> [Migration]) async throws {
@@ -713,7 +713,7 @@ struct Adversarial370QuarantineTests {
         let root = V370.makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         try V370.buildPlain(at: V370.dbURL(root), items: 10, version: 1)
-        let migrations = [Migrations.all[0], Self.sabotage(root: root)]  // v1 file has no `legacy` table: sabotage is a no-op
+        let migrations = [Migrations.baseline[0], Self.sabotage(root: root)]  // v1 file has no `legacy` table: sabotage is a no-op
 
         let outcome = try await V370.open(root, migrations: migrations)
         #expect(outcome.failure == nil)

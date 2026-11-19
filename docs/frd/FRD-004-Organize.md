@@ -66,7 +66,7 @@ Fields owned by this FRD (schema in FRD-007): item `pinned`, `note`, `updatedAt`
 |---|---|---|
 | Tag name empty, over 32, or duplicate | ORG-VAL-001 | inline, rejected |
 | Note over 2,000 characters | ORG-VAL-002 | inline, rejected |
-| Edit on a non-text kind, or empty text | ORG-VAL-003 | rejected |
+| Edit on a non-text kind, a secure item, or empty text | ORG-VAL-003 | rejected |
 | More than 10 tags on an item | ORG-LIM-001 | assignment rejected |
 | More than 100 tags | ORG-LIM-002 | creation rejected |
 | Edited text over ceiling | ORG-LIM-003 | rejected inline |

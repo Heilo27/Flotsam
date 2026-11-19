@@ -8,6 +8,9 @@ extension ItemContent {
     /// Text-bearing kinds: the plain text, then every stored representation. Every other kind: the stored
     /// representations as they are (an image's bytes).
     public var storedRepresentations: [PasteboardRepresentation] {
+        // A secure clip has no stored representation to hand out: its text is behind `SecureClipAccess.reveal`, so a
+        // drag or a plain paste of it writes nothing rather than an empty string.
+        guard !isSecure else { return [] }
         guard kind.isTextBearing else { return representations }
         return [plainTextRepresentation] + representations
     }

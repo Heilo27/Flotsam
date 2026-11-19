@@ -81,6 +81,13 @@ final class ItemBindingsEditorModel {
         async let bindings = services.database.itemBindings()
         switch (await content, await bindings) {
         case (.success(let content), .success(let bindings)):
+            // A secure item takes no shortcut and no trigger (FR-005-09): the editor does not open for it. The menu
+            // and ⌘K already stop here; this is the editor's own answer if one is opened some other way.
+            guard !content.isSecure else {
+                services.report(FlotsamError(.trgVal006, "A secure item cannot have a shortcut or trigger", context: [.itemId: .id(itemId)]))
+                phase = .failed
+                return
+            }
             triggerOffered = content.kind.isTextBearing
             storedHotkey = bindings.hotkeys[itemId]
             storedTrigger = bindings.triggers[itemId]

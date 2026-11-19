@@ -1243,6 +1243,16 @@
         }
       }
     },
+    "ui.library.spokenSecure" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secure item"
+          }
+        }
+      }
+    },
     "ui.library.spokenPinned" : {
       "localizations" : {
         "en" : {

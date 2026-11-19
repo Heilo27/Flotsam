@@ -40,7 +40,7 @@ final class W472FileSystem: FileSystemPort, @unchecked Sendable {
 @Suite("Worf472: notice-pending marker", .timeLimit(.minutes(3)))
 struct Worf472NoticePendingTests {
     private func open(_ root: URL, fs: any FileSystemPort = LocalFileSystem()) async -> (failure: FlotsamError?, notice: FlotsamError?) {
-        switch await FlotsamDatabase.open(folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.all) {
+        switch await FlotsamDatabase.open(folder: root, fileSystem: fs, clock: SystemClock(), migrations: Migrations.baseline) {
         case .failure(let error): return (error, nil)
         case .success(let db): return (nil, db.openNotice)
         }

@@ -9,11 +9,15 @@ struct IngestWorker: Sendable {
     let ingest: IngestActor
     let reporter: ErrorReporter
     let sink: any LogSink
+    /// Seals concealed copies; nil rejects them (`CAP-POL-001`).
+    var vault: (any SecureClipVaulting)? = nil
 
     /// Classifies and ingests `payload`. A failure is reported in the background unless `reportingFailure` is false
     /// (Save Clipboard shows it itself); it is returned either way, nil on success.
     @discardableResult
     func handle(_ payload: CapturedPayload, reportingFailure: Bool = true) async -> FlotsamError? {
+        if payload.isConcealed { return await handleSecure(payload, reportingFailure: reportingFailure) }
+
         let classification: Classification
         switch CaptureClassifier.classify(payload.representations) {
         case .failure(let error):
@@ -46,6 +50,48 @@ struct IngestWorker: Sendable {
 }
 
 extension IngestWorker {
+    /// A concealed copy (FR-001-04 gate 3): seal the plain text and ingest only the ciphertext. Whatever goes wrong
+    /// before there is a ciphertext (no vault, no usable text, no usable key) is a policy rejection, `CAP-POL-001`:
+    /// logged as a skip, never raised, and nothing is stored. The text itself is never logged, never in an error, and
+    /// the log line carries 0 bytes (the length of a password is not for the log either).
+    private func handleSecure(_ payload: CapturedPayload, reportingFailure: Bool) async -> FlotsamError? {
+        let rejection = FlotsamError(.capPol001, "Concealed copy was not stored")
+        let text = payload.representations.first { $0.uti == PasteboardTypes.plainText }
+            .map { String(decoding: $0.data, as: UTF8.self) }
+        guard let vault, let text, !text.allSatisfy(\.isWhitespace) else {
+            logSkip()
+            return rejection
+        }
+        let sealed: SealedSecret
+        switch vault.seal(text) {
+        case .failure:
+            logSkip()
+            return rejection
+        case .success(let value):
+            sealed = value
+        }
+
+        let candidate = IngestCandidate(
+            secure: sealed, source: payload.source, origin: payload.origin, occurredAt: payload.capturedAt)
+        switch await ingest.ingest(candidate) {
+        case .failure(let error):
+            let failure = Self.captureFailure(error)
+            if reportingFailure { await reporter.report(failure, origin: .background) }
+            return failure
+        case .success(let result):
+            for warning in result.warnings { await reporter.report(warning, origin: .background) }
+            FlotsamLog.log(
+                .pasteboardProcessed(
+                    kind: .text, byteSize: 0, outcome: result.outcome.isBump ? .deduped : .stored, policy: nil),
+                sink: sink)
+            return nil
+        }
+    }
+
+    private func logSkip() {
+        FlotsamLog.log(.pasteboardProcessed(kind: nil, byteSize: 0, outcome: .skipped, policy: .capPol001), sink: sink)
+    }
+
     /// A write the disk or database refused (`STO-DB-001`, `STO-IO-001`) is, for capture, a copy that could not be
     /// saved: `CAP-IO-001` (FR-001-22), keeping the cause: the underlying error when there is one, and always the
     /// original `STO-*` code as the `code` context field (a refusal from DiskGuard or BlobStore has no underlying

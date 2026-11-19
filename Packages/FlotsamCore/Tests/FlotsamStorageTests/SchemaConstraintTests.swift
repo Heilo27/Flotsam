@@ -49,8 +49,9 @@ struct SchemaConstraintTests {
             "id", "kind", "createdAt", "lastCopiedAt", "copyCount", "pasteCount", "lastUsedAt", "contentKey", "plainText",
             "searchText", "sourceBundleId", "sourceName", "byteSize", "pixelWidth", "pixelHeight", "originalPath", "pinned",
             "note", "updatedAt", "hotkeyCode", "hotkeyModifiers", "trigger", "exemptReleasedAt",
+            "isSecure", "secureCiphertext",
         ])
-        #expect(try await columns("item", store).count == 23)
+        #expect(try await columns("item", store).count == 25)
         #expect(!(try await columns("item", store)).contains("exempt"))
         #expect(Set(try await columns("representation", store)) == ["id", "itemId", "uti", "byteSize", "blobName"])
         #expect(Set(try await columns("bundleMember", store)) == ["itemId", "ordinal", "path", "bookmark", "isDirectory"])
@@ -200,9 +201,9 @@ struct SchemaConstraintTests {
         let mirror = try await store.reader().read { try String.fetchOne($0, sql: "SELECT value FROM meta WHERE key = 'schemaVersion'") }
         let before = try await store.reader().read { try String.fetchOne($0, sql: "SELECT value FROM meta WHERE key = 'retention.lastSweepAt'") }
 
-        // then version 1 is recorded both ways and no sweep time exists yet
-        #expect(version == 1)
-        #expect(mirror == "1")
+        // then the latest version is recorded both ways and no sweep time exists yet
+        #expect(version == Migrations.all.last?.version)
+        #expect(mirror == String(Migrations.all.last!.version))
         #expect(before == nil)
 
         // when five seconds later one sweep runs
@@ -214,7 +215,7 @@ struct SchemaConstraintTests {
         #expect(stamped == String(launch + 5000))
         #expect(Int64(stamped ?? "0")! >= launch)
         // and the version is unchanged by the sweep
-        #expect(try await store.reader().read { try String.fetchOne($0, sql: "SELECT value FROM meta WHERE key = 'schemaVersion'") } == "1")
+        #expect(try await store.reader().read { try String.fetchOne($0, sql: "SELECT value FROM meta WHERE key = 'schemaVersion'") } == String(Migrations.all.last!.version))
     }
 }
 

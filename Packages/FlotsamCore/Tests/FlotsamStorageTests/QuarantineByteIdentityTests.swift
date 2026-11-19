@@ -17,7 +17,7 @@ import FlotsamBase
     /// pointers swapped: the file still opens and reports a version, and only `PRAGMA quick_check` sees the damage.
     private func damagedDatabase() async throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-8t-identity-\(UUID().uuidString)")
-        let seeded = try await Store.make(root: root)
+        let seeded = try await Store.make(root: root, migrations: Migrations.baseline)
         let padding = String(repeating: "x", count: 200)
         try await seeded.insert((1...400).map { Spec(n: $0, text: "identity-row-\($0)-\(padding)") })
         let pageSize = try await seeded.database.pool.read { try Int.fetchOne($0, sql: "PRAGMA page_size")! }
@@ -57,7 +57,7 @@ import FlotsamBase
         let before = try sha256(root.appendingPathComponent("flotsam.sqlite"))
         let sizeBefore = try Data(contentsOf: root.appendingPathComponent("flotsam.sqlite")).count
 
-        let database = try await FlotsamDatabase.open(folder: root).get()
+        let database = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         let preserved = try quarantineFolder(root).appendingPathComponent("flotsam.sqlite")
         #expect(try Data(contentsOf: preserved).count == sizeBefore)
@@ -80,7 +80,7 @@ import FlotsamBase
         try Data(repeating: 0xCD, count: 32_768).write(to: root.appendingPathComponent("flotsam.sqlite-shm"))
         let before = try Dictionary(uniqueKeysWithValues: names.map { ($0, try sha256(root.appendingPathComponent($0))) })
 
-        let database = try await FlotsamDatabase.open(folder: root).get()
+        let database = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         let folder = try quarantineFolder(root)
         for name in names {

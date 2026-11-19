@@ -2,8 +2,8 @@ import FlotsamBase
 import Foundation
 import GRDB
 
-/// Thrown inside a write transaction to roll it back and hand a specific FRD-004 code to the caller. Anything else
-/// thrown in there is a database failure and becomes `STO-DB-001`.
+/// Thrown inside a write transaction to roll it back and hand a specific code (an FRD-004 one, or `TRG-VAL-006` from
+/// the exemption edit) to the caller. Anything else thrown in there is a database failure and becomes `STO-DB-001`.
 struct OrganizeRejection: Error {
     let error: FlotsamError
 }

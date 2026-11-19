@@ -37,12 +37,17 @@ public struct IngestCandidate: Sendable, Equatable {
     /// False only for screenshot backfill (FRD-002 FR-002-12), which is not a copy event: a `contentKey` match then
     /// leaves the existing item fully untouched instead of bumping it (FRD-001 FR-001-15 exception).
     public let countsAsCopy: Bool
+    /// The encrypted text of a secure clip (FR-001-04 gate 3); nil for every other item. When set, `plainText` is nil
+    /// and `contentKey` is the keyed `secure:` fingerprint: plaintext never reaches the database.
+    public let secureCiphertext: Data?
+
+    public var isSecure: Bool { secureCiphertext != nil }
 
     public init(
         kind: ItemKind, contentKey: String, plainText: String? = nil,
         representations: [PasteboardRepresentation] = [], members: [IngestMember] = [],
         source: SourceApp? = nil, origin: CaptureOrigin, occurredAt: Date, originalPath: String? = nil,
-        countsAsCopy: Bool = true
+        countsAsCopy: Bool = true, secureCiphertext: Data? = nil
     ) {
         self.kind = kind
         self.contentKey = contentKey
@@ -54,6 +59,15 @@ public struct IngestCandidate: Sendable, Equatable {
         self.occurredAt = occurredAt
         self.originalPath = originalPath
         self.countsAsCopy = countsAsCopy
+        self.secureCiphertext = secureCiphertext
+    }
+
+    /// A secure clip: what a password manager copied, already sealed (`SecureClipVaulting.seal`). Text kind, no
+    /// plain text, no representations: the ciphertext is the only copy of the content.
+    public init(secure sealed: SealedSecret, source: SourceApp?, origin: CaptureOrigin, occurredAt: Date) {
+        self.init(
+            kind: .text, contentKey: SecureClip.contentKeyPrefix + sealed.fingerprint, source: source, origin: origin,
+            occurredAt: occurredAt, secureCiphertext: sealed.ciphertext)
     }
 
     /// The one mapping from a classified pasteboard to an ingest candidate, shared by clipboard capture and the Shelf

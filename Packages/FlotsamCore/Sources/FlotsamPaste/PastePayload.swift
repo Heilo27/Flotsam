@@ -9,6 +9,11 @@ enum PastePayload {
     static func representations(
         for content: ItemContent, mode: PasteMode, itemId: UUID, files: any FileSystemPort
     ) -> FlotsamResult<[PasteboardRepresentation]> {
+        // A secure clip is never written from stored content: its text exists only after `SecureClipAccess.reveal`
+        // (the user's authentication). Until a caller reveals it, refuse rather than write an empty string.
+        if content.isSecure {
+            return .failure(FlotsamError(.libOs002, "A secure item needs authentication to copy", context: [.itemId: .id(itemId)]))
+        }
         if content.kind.referencesFiles {
             let urls = content.existingMemberURLs(files: files)
             guard !urls.isEmpty else {

@@ -33,14 +33,19 @@ public struct CapturedPayload: Sendable, Equatable {
     public let source: SourceApp?
     public let capturedAt: Date
     public let origin: CaptureOrigin
+    /// The pasteboard carried `org.nspasteboard.ConcealedType` (FR-001-04 gate 3). `representations` then holds the
+    /// plain text only; ingest seals it instead of classifying it, so it never reaches storage as text.
+    public let isConcealed: Bool
 
     public init(
-        representations: [PasteboardRepresentation], source: SourceApp?, capturedAt: Date, origin: CaptureOrigin
+        representations: [PasteboardRepresentation], source: SourceApp?, capturedAt: Date, origin: CaptureOrigin,
+        isConcealed: Bool = false
     ) {
         self.representations = representations
         self.source = source
         self.capturedAt = capturedAt
         self.origin = origin
+        self.isConcealed = isConcealed
     }
 }
 

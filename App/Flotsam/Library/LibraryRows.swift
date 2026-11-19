@@ -89,7 +89,7 @@ private struct RowInteraction: ViewModifier {
         let entries = LibraryContextMenu.entries(
             kind: row.kind,
             pinUnpins: model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned),
-            singleTarget: !model.selection.contains(row.id) || model.selection.count == 1)
+            singleTarget: !model.selection.contains(row.id) || model.selection.count == 1, isSecure: row.isSecure)
         ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
             switch entry {
             case .separator:

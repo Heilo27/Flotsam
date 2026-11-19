@@ -50,8 +50,8 @@ import FlotsamBase
 
     /// A root holding a v2 database (migrated from v1 by a real launch) and the pre-migration copy that launch left.
     private func migratedRoot(clock: ManualClock) async throws -> (root: URL, copy: URL, migrations: [Migration]) {
-        let first = try await Store.make(clock: clock)
-        let migrations = Migrations.all + [v2]
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
+        let migrations = Migrations.baseline + [v2]
         _ = try await FlotsamDatabase.open(
             folder: first.root, fileSystem: LocalFileSystem(), clock: clock, migrations: migrations).get()
         let copy = first.root.appendingPathComponent("pre-migration/\(DataFolder.preMigrationCopyName(fromVersion: 1))")
@@ -102,10 +102,10 @@ import FlotsamBase
     /// delete on this path, and under dropping the copy.
     @Test func aFailingCheckOnTheMigratingLaunchQuarantinesAndKeepsTheCopy() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
-        let migrations = Migrations.all + [v2]
+        let migrations = Migrations.baseline + [v2]
         let seam = Seam(failFirst: 1)
 
         let db = try await FlotsamDatabase.open(
@@ -177,7 +177,7 @@ import FlotsamBase
         let seam = Seam(failFirst: 0)
 
         let db = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), clock: ManualClock(), migrations: Migrations.all,
+            folder: root, fileSystem: LocalFileSystem(), clock: ManualClock(), migrations: Migrations.baseline,
             postMigrationCheck: seam.check).get()
 
         #expect(db.openNotice?.code == .stoDb002)
@@ -199,7 +199,7 @@ import FlotsamBase
         try damagedPlainDatabase(at: root)
 
         let db = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), clock: ManualClock(), migrations: Migrations.all,
+            folder: root, fileSystem: LocalFileSystem(), clock: ManualClock(), migrations: Migrations.baseline,
             postMigrationCheck: nil).get()
 
         #expect(db.openNotice?.code == .stoDb002)
@@ -237,14 +237,14 @@ import FlotsamBase
     /// (copy survived, quarantine survived).
     private func confirmingLaunch(copyMillis: (Int64) -> Int64, stampMillis: (Int64) -> Int64) async throws -> (copy: Bool, quarantine: Bool) {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let now = first.clock.millis
         let copy = try first.plant("pre-migration/flotsam-v1.sqlite")
         try setDate(copy, millis: copyMillis(now))
         let quarantine = try first.plant("corrupt-\(stampMillis(now))/keep.txt").deletingLastPathComponent()
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
         return (exists(copy), exists(quarantine))
     }
 
@@ -281,7 +281,7 @@ import FlotsamBase
     /// of the two (FRD wording), so it is deleted; with both old and a young quarantine it is kept (W08 shape).
     @Test func theNewerOfCreationAndModificationDecides() async throws {
         let clock = ManualClock()
-        let first = try await Store.make(clock: clock)
+        let first = try await Store.make(clock: clock, migrations: Migrations.baseline)
         let root = first.root
         defer { first.cleanUp() }
         let now = first.clock.millis
@@ -296,7 +296,7 @@ import FlotsamBase
         #expect((attrs[.modificationDate] as? Date)! < Date(), "arrange: modification is in the past")
         let quarantine = try first.plant("corrupt-\(now - hourMs)/keep.txt")
 
-        _ = try await Store.make(root: root, clock: clock)
+        _ = try await Store.make(root: root, clock: clock, migrations: Migrations.baseline)
 
         #expect(!exists(copy))
         #expect(exists(quarantine))
@@ -326,7 +326,7 @@ import FlotsamBase
         let root = V370.makeRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         try V370.buildLegacy(at: V370.dbURL(root), rows: 400, incrementalVacuum: true)
-        let migrations = [Migrations.all[0], sabotagingMigration(main: V370.dbURL(root))]
+        let migrations = [Migrations.baseline[0], sabotagingMigration(main: V370.dbURL(root))]
 
         let db = try await FlotsamDatabase.open(
             folder: root, fileSystem: LocalFileSystem(), clock: ManualClock(), migrations: migrations,

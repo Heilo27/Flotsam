@@ -52,7 +52,7 @@ struct Worf484AdversarialTests {
 
     /// A data folder whose database sits at version 1 (this build's shipped schema), with `rows` items, closed.
     private func makeFolder(clock: ManualClock, rows: Int = 0) async throws -> URL {
-        let store = try await Store.make(clock: clock)
+        let store = try await Store.make(clock: clock, migrations: Migrations.baseline)
         if rows > 0 { try await store.insert((1...rows).map { Spec(n: $0, text: String(repeating: "secret-\($0) ", count: 40)) }) }
         return store.root
     }
@@ -73,7 +73,7 @@ struct Worf484AdversarialTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let oldQuarantine = try plantQuarantine(root, stamp: clock.millis - 60 * dayMs)
 
-        let db = try await open(root, clock, Migrations.all + [v2]).get()
+        let db = try await open(root, clock, Migrations.baseline + [v2]).get()
 
         #expect(preMigrationNames(root) == ["flotsam-v1.sqlite"])
         #expect(exists(oldQuarantine))
@@ -90,12 +90,12 @@ struct Worf484AdversarialTests {
         let stale = try plantCopy(root, "flotsam-v0.sqlite", at: clock.now().addingTimeInterval(-40 * 86_400))
         let note = try plantCopy(root, "notes.txt", at: clock.now().addingTimeInterval(-40 * 86_400))
 
-        _ = try await open(root, clock, Migrations.all + [v2]).get()
+        _ = try await open(root, clock, Migrations.baseline + [v2]).get()
         #expect(preMigrationNames(root) == ["flotsam-v1.sqlite", "notes.txt"])
         #expect(!exists(stale))
 
         clock.advance(ms: 60_000)  // a minute later: no waiting period
-        _ = try await open(root, clock, Migrations.all + [v2]).get()
+        _ = try await open(root, clock, Migrations.baseline + [v2]).get()
         #expect(preMigrationNames(root) == ["notes.txt"])
         #expect(exists(note))
     }
@@ -112,7 +112,7 @@ struct Worf484AdversarialTests {
         let broken = Migration(version: 2) { _ in throw Boom() }
 
         for _ in 0..<2 {
-            guard case .failure(let error) = await open(root, clock, Migrations.all + [broken]) else {
+            guard case .failure(let error) = await open(root, clock, Migrations.baseline + [broken]) else {
                 Issue.record("the broken migration must fail the launch"); return
             }
             #expect(error.code == .stoDb003)
@@ -120,11 +120,11 @@ struct Worf484AdversarialTests {
             #expect(exists(quarantine))
         }
 
-        _ = try await open(root, clock, Migrations.all + [v2]).get()
+        _ = try await open(root, clock, Migrations.baseline + [v2]).get()
         #expect(preMigrationNames(root) == ["flotsam-v1.sqlite"], "the migrating launch keeps its copy")
         #expect(exists(quarantine))
 
-        _ = try await open(root, clock, Migrations.all + [v2]).get()
+        _ = try await open(root, clock, Migrations.baseline + [v2]).get()
         #expect(preMigrationNames(root) == [])
         #expect(!exists(quarantine))
     }
@@ -137,7 +137,7 @@ struct Worf484AdversarialTests {
         let clock = ManualClock()
         let root = try await makeFolder(clock: clock, rows: 400)
         defer { try? FileManager.default.removeItem(at: root) }
-        let migrations = Migrations.all + [v2]
+        let migrations = Migrations.baseline + [v2]
         _ = try await open(root, clock, migrations).get()  // migrates, takes the copy; the launch then ends
         let copy = root.appendingPathComponent("pre-migration/flotsam-v1.sqlite")
         #expect(exists(copy))
@@ -177,11 +177,11 @@ struct Worf484AdversarialTests {
         let clock = ManualClock()
         let root = try await makeFolder(clock: clock, rows: 2)
         defer { try? FileManager.default.removeItem(at: root) }
-        _ = try await open(root, clock, Migrations.all + [v2]).get()
+        _ = try await open(root, clock, Migrations.baseline + [v2]).get()
         let quarantine = try plantQuarantine(root, stamp: clock.millis - 90 * dayMs)
         let before = try Data(contentsOf: root.appendingPathComponent("flotsam.sqlite"))
 
-        guard case .failure(let error) = await open(root, clock, Migrations.all) else {
+        guard case .failure(let error) = await open(root, clock, Migrations.baseline) else {
             Issue.record("a newer database must be refused"); return
         }
 
@@ -203,7 +203,7 @@ struct Worf484AdversarialTests {
         for url in DataFolder(root: root).databaseFileURLs { try? FileManager.default.removeItem(at: url) }
         try Data(repeating: 0xAB, count: 8192).write(to: root.appendingPathComponent("flotsam.sqlite"))
 
-        let db = try await open(root, clock, Migrations.all).get()
+        let db = try await open(root, clock, Migrations.baseline).get()
 
         #expect(db.openNotice?.code == .stoDb002)
         #expect(exists(copy))
@@ -223,7 +223,7 @@ struct Worf484AdversarialTests {
         let older = try plantCopy(root, "flotsam-v1.sqlite", at: clock.now().addingTimeInterval(-7_200))
         let newer = try plantCopy(root, "flotsam-v2.sqlite", at: clock.now().addingTimeInterval(-1_800))
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
 
         #expect(exists(older))
         #expect(!exists(newer))
@@ -241,13 +241,13 @@ struct Worf484AdversarialTests {
         let atStamp = try plantCopy(root, "flotsam-v1.sqlite", at: stampDate)
         let afterStamp = try plantCopy(root, "flotsam-v2.sqlite", at: stampDate.addingTimeInterval(1))
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
         #expect(exists(atStamp))
         #expect(!exists(afterStamp))
 
         try FileManager.default.removeItem(at: quarantine)
         let young = try plantCopy(root, "flotsam-v3.sqlite", at: clock.now().addingTimeInterval(-60))
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
         #expect(!exists(atStamp) && !exists(young))
     }
 
@@ -262,7 +262,7 @@ struct Worf484AdversarialTests {
         let copy = try plantCopy(root, "flotsam-v1.sqlite", at: Date(timeIntervalSince1970: Double(stamp - dayMs) / 1000))
         let stuck = FaultyFileSystem(failRemove: { $0.lastPathComponent.hasPrefix("corrupt-") })
 
-        _ = try await open(root, clock, Migrations.all, fs: stuck).get()
+        _ = try await open(root, clock, Migrations.baseline, fs: stuck).get()
 
         #expect(exists(quarantine) && exists(copy))
     }
@@ -285,7 +285,7 @@ struct Worf484AdversarialTests {
             try plantCopy(root, name, at: when)
         }
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
 
         #expect(preMigrationNames(root) == ["flotsam-v1.sqlite-journal", "flotsam-v1.sqlite-wal.old", "flotsam-v1.sqlite.bak", "notes.txt"])
     }
@@ -315,7 +315,7 @@ struct Worf484AdversarialTests {
         let oldLink = root.appendingPathComponent("corrupt-\(clock.millis - 40 * dayMs)")
         try FileManager.default.createSymbolicLink(at: oldLink, withDestinationURL: outside.appendingPathComponent("dir"))
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
 
         #expect(isLink(wal) && isLink(main) && isLink(oldLink))
         #expect(exists(shmFolder.appendingPathComponent("held.txt")))
@@ -334,10 +334,10 @@ struct Worf484AdversarialTests {
         try plantCopy(root, "flotsam-v1.sqlite-wal", at: when)
         try plantCopy(root, "flotsam-v2.sqlite", at: when)
 
-        _ = try await open(root, clock, Migrations.all, fs: FaultyFileSystem(failRemove: { $0.lastPathComponent == "flotsam-v2.sqlite" })).get()
+        _ = try await open(root, clock, Migrations.baseline, fs: FaultyFileSystem(failRemove: { $0.lastPathComponent == "flotsam-v2.sqlite" })).get()
         #expect(preMigrationNames(root) == ["flotsam-v2.sqlite"])
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
         #expect(preMigrationNames(root) == [])
     }
 
@@ -354,7 +354,7 @@ struct Worf484AdversarialTests {
         let over = try plantQuarantine(root, stamp: clock.millis - 2_592_000_000 - 1)
         let week = try plantQuarantine(root, stamp: clock.millis - 7 * dayMs)
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
 
         #expect(!exists(exact) && !exists(over))
         #expect(exists(justUnder) && exists(week))
@@ -389,7 +389,7 @@ struct Worf484AdversarialTests {
         let quarantine = try plantQuarantine(root, stamp: clock.millis - 3_600_000)
         let future = try plantCopy(root, "flotsam-v1.sqlite", at: clock.now().addingTimeInterval(86_400))
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
 
         #expect(!exists(future))
         #expect(exists(quarantine))
@@ -404,7 +404,7 @@ struct Worf484AdversarialTests {
         let quarantine = try plantQuarantine(root, stamp: clock.millis + dayMs)
         let copy = try plantCopy(root, "flotsam-v1.sqlite", at: clock.now().addingTimeInterval(-3_600))
 
-        _ = try await open(root, clock, Migrations.all).get()
+        _ = try await open(root, clock, Migrations.baseline).get()
 
         #expect(exists(quarantine) && exists(copy))
     }
@@ -415,7 +415,7 @@ struct Worf484AdversarialTests {
     /// are gone and a foreign file stays; with the guard standing it still purges (Clear History is not guarded).
     @Test func clearHistoryStillRemovesACopyThatAQuarantineGuards() async throws {
         let clock = ManualClock()
-        let store = try await Store.make(clock: clock)
+        let store = try await Store.make(clock: clock, migrations: Migrations.baseline)
         defer { store.cleanUp() }
         try await store.insert(Spec(n: 1, ageMs: 60_000))
         let quarantine = try plantQuarantine(store.root, stamp: clock.millis - 3_600_000)

@@ -20,8 +20,9 @@ extension FlotsamDatabase {
         } catch {
             return .failure(Self.readFailure(error))
         }
-        // The file checks run after the read transaction ends, so a slow volume never holds a database snapshot.
-        return .success(markingMissing(read.page, fileMembers: read.fileMembers))
+        // The file checks and the key check run after the read transaction ends, so a slow volume or a Keychain call
+        // never holds a database snapshot.
+        return .success(markingUnavailable(markingMissing(read.page, fileMembers: read.fileMembers)))
     }
 
     /// Sets `isMissing` on every file, folder or bundle row none of whose members exist now (FRD-003 FR-003-07). The
@@ -32,6 +33,16 @@ extension FlotsamDatabase {
             guard row.kind.referencesFiles else { return row }
             return (fileMembers[row.id] ?? []).anyExists(files: fileSystem) ? row : row.withMissing(true)
         }
+        return ItemPage(rows: rows, totalCount: page.totalCount, page: page.page)
+    }
+
+    /// Marks every secure row unavailable when the Keychain key cannot be read now (FR-003-07, AC "a missing key gives
+    /// an unavailable row"). The key is asked once per page and only when the page holds a secure row, so an ordinary
+    /// page costs no Keychain call. A database opened without a vault has no key, so its secure rows are unavailable.
+    private func markingUnavailable(_ page: ItemPage) -> ItemPage {
+        guard page.rows.contains(where: \.isSecure), secureVault?.isKeyAvailable != true else { return page }
+        let label = FlotsamStrings.text(forKey: "ui.library.secureUnavailable") ?? ""
+        let rows = page.rows.map { $0.isSecure ? $0.withUnavailable(label: label) : $0 }
         return ItemPage(rows: rows, totalCount: page.totalCount, page: page.page)
     }
 
@@ -233,6 +244,7 @@ extension FlotsamDatabase {
         let isPinned: Bool
         let hasTrigger: Bool
         let hasShortcut: Bool
+        let isSecure: Bool
         let pixelWidth: Int?
         let pixelHeight: Int?
         let memberCount: Int
@@ -244,7 +256,7 @@ extension FlotsamDatabase {
                 id: uuid, kind: kind, lastCopiedAt: Date(epochMillis: lastCopiedAt), pasteCount: pasteCount,
                 primaryLine: primaryLine, sourceName: sourceName, tagNames: tagNames, isPinned: isPinned,
                 hasTrigger: hasTrigger, hasShortcut: hasShortcut, pixelWidth: pixelWidth, pixelHeight: pixelHeight,
-                memberCount: memberCount, byteSize: byteSize)
+                memberCount: memberCount, byteSize: byteSize, isSecure: isSecure)
         }
     }
 
@@ -257,7 +269,7 @@ extension FlotsamDatabase {
             sql: """
                 SELECT id, kind, lastCopiedAt, pasteCount, substr(plainText, 1, ?) AS text, sourceName, pinned,
                        "trigger" IS NOT NULL AS hasTrigger, hotkeyCode IS NOT NULL AS hasShortcut,
-                       pixelWidth, pixelHeight, byteSize,
+                       isSecure, pixelWidth, pixelHeight, byteSize,
                        (SELECT COUNT(*) FROM bundleMember WHERE bundleMember.itemId = item.id) AS memberCount
                 FROM item WHERE \(whereSQL)
                 """,
@@ -283,14 +295,16 @@ extension FlotsamDatabase {
             let id: String = row["id"]
             let kind: String = row["kind"]
             let memberCount: Int = row["memberCount"]
+            let isSecure: Bool = row["isSecure"]
             return RowCore(
                 id: id, kind: kind, lastCopiedAt: row["lastCopiedAt"], pasteCount: row["pasteCount"],
-                primaryLine: PrimaryLine.text(
+                // A secure clip shows the mask and nothing of its text, in rows, search results and the sort.
+                primaryLine: isSecure ? SecureClip.mask : PrimaryLine.text(
                     kind: ItemKind(rawValue: kind) ?? .text, plainText: row["text"], pixelWidth: row["pixelWidth"],
                     pixelHeight: row["pixelHeight"], memberCount: memberCount, memberNames: names[id] ?? []),
                 sourceName: row["sourceName"], isPinned: row["pinned"] == 1, hasTrigger: row["hasTrigger"],
-                hasShortcut: row["hasShortcut"], pixelWidth: row["pixelWidth"], pixelHeight: row["pixelHeight"],
-                memberCount: memberCount, byteSize: row["byteSize"])
+                hasShortcut: row["hasShortcut"], isSecure: isSecure, pixelWidth: row["pixelWidth"],
+                pixelHeight: row["pixelHeight"], memberCount: memberCount, byteSize: row["byteSize"])
         }
     }
 

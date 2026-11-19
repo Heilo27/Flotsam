@@ -15,7 +15,7 @@ private let tenMinMs: Int64 = 10 * 60_000
     /// OC-7024. Given orphan blobs (no row) aged 9 min and 11 min and a referenced blob, when reconcile runs, then only the
     /// 11 minute orphan is removed.
     @Test func oc7024_orphanBlobGraceIsTenMinutes() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert(Spec(n: 1, ageMs: hourMs, blobs: 1, repBytes: 10))
         try s.plantOrphanBlob(101, ageMs: 9 * 60_000)
@@ -60,7 +60,7 @@ private let tenMinMs: Int64 = 10 * 60_000
     /// UUID, a .bak copy of a Flotsam name, a Flotsam-looking name with no ordinal), when reconcile runs, then the orphan
     /// thumbnails go and every foreign file survives with its contents.
     @Test func oc7114_orphanThumbnailsGoAndForeignFilesSurvive() async throws {
-        let s = try await Store.make()
+        let s = try await Store.make(migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await s.insert(Spec(n: 1, ageMs: hourMs, blobs: 1, repBytes: 10, thumbs: true))
         let old = 3 * hourMs
@@ -104,7 +104,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         var faulty = FaultyFileSystem()
         let unstatable = Store.id(300).uuidString + ".1"
         faulty.failInfo = { $0.lastPathComponent == unstatable }
-        let s = try await Store.make(fileSystem: faulty)
+        let s = try await Store.make(fileSystem: faulty, migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await arrangeMissingRowAndOrphan(s)
 
@@ -124,7 +124,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         var faulty = FaultyFileSystem()
         let unstatable = Store.id(2).uuidString + ".1"
         faulty.failInfo = { $0.lastPathComponent == unstatable }
-        let s = try await Store.make(fileSystem: faulty)
+        let s = try await Store.make(fileSystem: faulty, migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await arrangeMissingRowAndOrphan(s)
 
@@ -141,7 +141,7 @@ private let tenMinMs: Int64 = 10 * 60_000
     @Test func unreadableShardListingSkipsRepair() async throws {
         var faulty = FaultyFileSystem()
         faulty.failList = { $0.lastPathComponent == "00" }
-        let s = try await Store.make(fileSystem: faulty)
+        let s = try await Store.make(fileSystem: faulty, migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await arrangeMissingRowAndOrphan(s)
 
@@ -157,7 +157,7 @@ private let tenMinMs: Int64 = 10 * 60_000
     @Test func unreadableBlobsRootNeverEmptiesTheDatabase() async throws {
         var faulty = FaultyFileSystem()
         faulty.failList = { $0.lastPathComponent == "blobs" }
-        let s = try await Store.make(fileSystem: faulty)
+        let s = try await Store.make(fileSystem: faulty, migrations: Migrations.baseline)
         defer { s.cleanUp() }
         try await arrangeMissingRowAndOrphan(s)
 
@@ -192,7 +192,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         let (root, garbage) = try corruptRoot()
         defer { try? FileManager.default.removeItem(at: root) }
 
-        let database = try await FlotsamDatabase.open(folder: root).get()
+        let database = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         let folders = quarantined(root)
         #expect(folders.count == 1)
@@ -222,7 +222,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         }
 
         // when the database opens
-        _ = try await FlotsamDatabase.open(folder: root).get()
+        _ = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         // then the three blobs are under the quarantine folder, identical, and blobs/ is empty again
         let folder = try #require(quarantined(root).first)
@@ -263,7 +263,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         // given 400 rows spread over many pages, closed and checkpointed
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-8t-leaf-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
-        let seeded = try await Store.make(root: root)
+        let seeded = try await Store.make(root: root, migrations: Migrations.baseline)
         let padding = String(repeating: "x", count: 200)
         try await seeded.insert((1...400).map { Spec(n: $0, text: "m96-row-\($0)-\(padding)") })
         let pageSize = try await seeded.database.pool.read { try Int.fetchOne($0, sql: "PRAGMA page_size")! }
@@ -304,7 +304,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         let walHash = try sha256(wal)
 
         // when the database opens
-        let database = try await FlotsamDatabase.open(folder: root).get()
+        let database = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         // then the damaged bytes are preserved exactly in one quarantine folder and a fresh database is live
         let folders = quarantined(root)
@@ -325,7 +325,7 @@ private let tenMinMs: Int64 = 10 * 60_000
     @Test func oc7111_quarantineFolderSurvivesEveryDeletePathAndReopen() async throws {
         let (root, garbage) = try corruptRoot()
         defer { try? FileManager.default.removeItem(at: root) }
-        let database = try await FlotsamDatabase.open(folder: root).get()
+        let database = try await FlotsamDatabase.openBaseline(folder: root).get()
         let folder = try #require(quarantined(root).first)
         let before = try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted()
         #expect(!before.isEmpty)
@@ -333,7 +333,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         _ = try await database.clearHistory(range: .allTime, includeExempt: true).get()
         _ = try await database.runRetentionSweep(preset: .d7, budget: .mib500).get()
         _ = try await database.reconcile().get()
-        _ = try await FlotsamDatabase.open(folder: root).get()
+        _ = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         #expect(quarantined(root) == [folder])
         #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted() == before)
@@ -372,7 +372,7 @@ private let tenMinMs: Int64 = 10 * 60_000
 
     /// Creates a version-1 database with three items and closes it, as if the app had quit.
     private func makeVersionOne(_ root: URL) async throws {
-        let first = try await Store.make(root: root)
+        let first = try await Store.make(root: root, migrations: Migrations.baseline)
         try await first.insert((1...3).map { Spec(n: $0, ageMs: hourMs) })
     }
 
@@ -386,7 +386,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         try await makeVersionOne(root)
 
         let upgraded = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         let copy = try snapshot(root.appendingPathComponent("pre-migration/flotsam-v1.sqlite"))
         #expect(copy.version == 1)
@@ -414,7 +414,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         for name in pruned + foreign { try Data(name.utf8).write(to: folder.appendingPathComponent(name)) }
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         let remaining = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
         #expect(remaining == Set(["flotsam-v1.sqlite"] + foreign))
@@ -439,7 +439,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         #expect(FileManager.default.fileExists(atPath: inner.path))
         #expect((try? FileManager.default.destinationOfSymbolicLink(atPath: link.path)) != nil)
@@ -460,7 +460,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         try Data("keep".utf8).write(to: inner)
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         #expect(try String(contentsOf: inner, encoding: .utf8) == "keep")
         let copy = folder.appendingPathComponent("flotsam-v1-1.sqlite")
@@ -487,7 +487,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
 
         _ = try await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [addProbe]).get()
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [addProbe]).get()
 
         #expect(try FileManager.default.destinationOfSymbolicLink(atPath: link.path) == target.path)
         #expect(try String(contentsOf: target, encoding: .utf8) == "outside")
@@ -501,7 +501,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         defer { try? FileManager.default.removeItem(at: root) }
         try await makeVersionOne(root)
 
-        let reopened = try await FlotsamDatabase.open(folder: root).get()
+        let reopened = try await FlotsamDatabase.openBaseline(folder: root).get()
 
         #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("pre-migration").path))
         let store = Store(root: root, clock: ManualClock(), database: reopened)
@@ -525,7 +525,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         }
         let before = try Data(contentsOf: file)
 
-        let result = await FlotsamDatabase.open(folder: root)
+        let result = await FlotsamDatabase.openBaseline(folder: root)
 
         guard case .failure(let error) = result else {
             Issue.record("a version-99 database opened")
@@ -549,7 +549,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         }
 
         let result = await FlotsamDatabase.open(
-            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.all + [failing])
+            folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [failing])
 
         guard case .failure(let error) = result else {
             Issue.record("a failing migration reported success")

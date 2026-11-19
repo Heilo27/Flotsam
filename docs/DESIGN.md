@@ -335,6 +335,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.tagOverflow` | +%lld | (row chips) |
 | `ui.library.fromApp` | from %@ | (VoiceOver row label) |
 | `ui.library.spokenPinned` | pinned | (VoiceOver row label, pinned rows) |
+| `ui.library.spokenSecure` | Secure item | (VoiceOver row label, secure rows, in place of kind and text) |
 | `ui.library.previewShowMore` | Show more | (9/15) |
 | `ui.library.previewMore` | and %lld more | (13/40) |
 | `ui.library.previewUnavailable` | Preview unavailable | (19/40) |

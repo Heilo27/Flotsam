@@ -15,12 +15,18 @@ enum SearchIndex {
     static func refresh(_ db: Database, itemId: String) throws {
         guard let row = try Row.fetchOne(
             db,
-            sql: "SELECT kind, substr(plainText, 1, ?) AS text, note, sourceName, originalPath FROM item WHERE id = ?",
+            sql: """
+                SELECT kind, substr(plainText, 1, ?) AS text, note, sourceName, originalPath, isSecure
+                FROM item WHERE id = ?
+                """,
             arguments: [plainTextCharacterLimit, itemId])
         else { return }
 
         var fields: [String] = []
-        if let text: String = row["text"] { fields.append(text) }
+        // A secure clip's content is never searchable (FR-003-09); the schema keeps its plainText NULL, and this
+        // keeps a future code path that sets it from reaching the index.
+        let isSecure: Bool = row["isSecure"]
+        if !isSecure, let text: String = row["text"] { fields.append(text) }
         if let note: String = row["note"] { fields.append(note) }
         fields += try String.fetchAll(
             db,

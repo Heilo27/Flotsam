@@ -40,10 +40,14 @@ public final class FlotsamDatabase: Sendable {
     /// Where this database's log records go (FR-000-09). The production sink writes to `os.Logger`; a test injects a
     /// recording one, because `os.Logger` has no readback that shows the redacted (`.private`) parts of a line.
     let logSink: any LogSink
+    /// The vault that holds the key for secure clips. Storage never encrypts or decrypts (ADR-0001 keeps CryptoKit out
+    /// of it); it only asks `isKeyAvailable` so a secure row whose key is gone reads as unavailable. nil means no key
+    /// source, which reads the same way.
+    let secureVault: (any SecureClipVaulting)?
 
     private init(
         pool: DatabasePool, folder: DataFolder, fileSystem: any FileSystemPort, clock: any WallClock,
-        notice: FlotsamError?, logSink: any LogSink
+        notice: FlotsamError?, logSink: any LogSink, secureVault: (any SecureClipVaulting)?
     ) {
         self.pool = pool
         self.folder = folder
@@ -51,6 +55,7 @@ public final class FlotsamDatabase: Sendable {
         self.clock = clock
         self.openNotice = notice
         self.logSink = logSink
+        self.secureVault = secureVault
     }
 
     /// The one way Storage logs an error: category `storage`, through this database's sink (FR-000-09, FR-000-10).
@@ -65,9 +70,11 @@ public final class FlotsamDatabase: Sendable {
     /// Folder failure is `STO-IO-002`; any other database failure is `STO-DB-003` (both Fatal, FR-000-04).
     public static func open(
         folder: URL, fileSystem: any FileSystemPort = LocalFileSystem(), clock: any WallClock = SystemClock(),
-        logSink: any LogSink = OSLogSink()
+        logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil
     ) async -> FlotsamResult<FlotsamDatabase> {
-        await open(folder: folder, fileSystem: fileSystem, clock: clock, logSink: logSink, migrations: Migrations.all)
+        await open(
+            folder: folder, fileSystem: fileSystem, clock: clock, logSink: logSink, secureVault: secureVault,
+            migrations: Migrations.all)
     }
 
     private enum Attempt {
@@ -84,7 +91,7 @@ public final class FlotsamDatabase: Sendable {
     /// It never replaces the pre-open probe.
     static func open(
         folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(),
-        logSink: any LogSink = OSLogSink(), migrations: [Migration],
+        logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil, migrations: [Migration],
         postMigrationCheck: ((Database) throws -> Bool)? = nil,
         busyTimeout: TimeInterval = busyTimeoutSeconds
     ) async -> FlotsamResult<FlotsamDatabase> {
@@ -112,7 +119,7 @@ public final class FlotsamDatabase: Sendable {
                     notice = FlotsamError(.stoDb002, "Database damaged; moved aside and recreated")
                 }
                 FlotsamLog.log(.database(.open, outcome: .opened), sink: logSink)
-                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink))
+                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink, secureVault: secureVault))
             case .failed(let error):
                 FlotsamLog.log(.database(.open, outcome: .failed), sink: logSink)
                 return .failure(error)

@@ -100,6 +100,8 @@ A fast floating panel that appears over whatever you are doing, finds a clip, an
 | Target app changed or ⌘V could not be posted | LIB-OS-001 | item left on pasteboard; HUD |
 | Stored data missing | LIB-IO-001 | item deleted; HUD |
 | Referenced files all missing | LIB-DAT-001 | no paste; HUD; row marked Missing |
+| Secure item copy not authorised | LIB-OS-002 | nothing written to the pasteboard; HUD (FRD-001 FR-001-25) |
+| Secure item key missing or bytes unreadable | LIB-DAT-002 | no copy; HUD; row marked Unavailable |
 | Accessibility not granted | SET-PRM-001 | copy-only; HUD and footer hint |
 | Database read failed | STO-DB-004 | inline message with Retry |
 

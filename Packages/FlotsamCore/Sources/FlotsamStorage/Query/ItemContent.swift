@@ -40,10 +40,17 @@ public struct ItemContent: Sendable, Equatable {
     public let note: String?
     /// Alphabetical by name, like `ItemRow.tagNames`.
     public let tags: [ItemTag]
+    /// A secure clip's AES-GCM sealed text (`SecureClipVaulting`); nil for every other item. When set, `plainText` is
+    /// nil and `representations` are empty: the only way to the text is `SecureClipAccess.reveal`, behind the user's
+    /// authentication.
+    public let secureCiphertext: Data?
+
+    public var isSecure: Bool { secureCiphertext != nil }
 
     public init(
         kind: ItemKind, plainText: String?, representations: [PasteboardRepresentation], members: [ItemMember],
-        firstCopiedAt: Date? = nil, copyCount: Int = 1, note: String? = nil, tags: [ItemTag] = []
+        firstCopiedAt: Date? = nil, copyCount: Int = 1, note: String? = nil, tags: [ItemTag] = [],
+        secureCiphertext: Data? = nil
     ) {
         self.kind = kind
         self.plainText = plainText
@@ -53,6 +60,7 @@ public struct ItemContent: Sendable, Equatable {
         self.copyCount = copyCount
         self.note = note
         self.tags = tags
+        self.secureCiphertext = secureCiphertext
     }
 }
 
@@ -62,12 +70,13 @@ extension FlotsamDatabase {
     public func content(of itemId: UUID) async -> FlotsamResult<ItemContent> {
         struct Stored {
             let kind: String; let plainText: String?; let createdAt: Int64; let copyCount: Int; let note: String?
+            let secureCiphertext: Data?
             let tags: [ItemTag]; let blobs: [(uti: String, blobName: String)]; let members: [ItemMember] }
         let stored: Stored?
         do {
             stored = try await pool.read { db in
                 let id = itemId.uuidString
-                guard let item = try Row.fetchOne(db, sql: "SELECT kind, plainText, createdAt, copyCount, note FROM item WHERE id = ?", arguments: [id]) else {
+                guard let item = try Row.fetchOne(db, sql: "SELECT kind, plainText, createdAt, copyCount, note, secureCiphertext FROM item WHERE id = ?", arguments: [id]) else {
                     return nil
                 }
                 let blobs = try Row.fetchAll(
@@ -86,7 +95,7 @@ extension FlotsamDatabase {
                     .map { ItemTag(name: $0["name"], color: TagColor(stored: $0["color"])) }
                 return Stored(
                     kind: item["kind"], plainText: item["plainText"], createdAt: item["createdAt"],
-                    copyCount: item["copyCount"], note: item["note"], tags: tags, blobs: blobs, members: members)
+                    copyCount: item["copyCount"], note: item["note"], secureCiphertext: item["secureCiphertext"], tags: tags, blobs: blobs, members: members)
             }
         } catch {
             return .failure(Self.readFailure(error))
@@ -106,7 +115,7 @@ extension FlotsamDatabase {
             kind: ItemKind(rawValue: stored.kind) ?? .text, plainText: stored.plainText,
             representations: representations, members: stored.members,
             firstCopiedAt: Date(epochMillis: stored.createdAt), copyCount: stored.copyCount, note: stored.note,
-            tags: stored.tags))
+            tags: stored.tags, secureCiphertext: stored.secureCiphertext))
     }
 
     /// FR-003-15 step 4: one more paste, and "last used" is now. Never edits the stored content (a paste does not
