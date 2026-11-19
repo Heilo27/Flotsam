@@ -1503,6 +1503,16 @@
         }
       }
     },
+    "ui.menu.clearRecent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Recent"
+          }
+        }
+      }
+    },
     "ui.menu.dismissAll" : {
       "localizations" : {
         "en" : {
@@ -1583,12 +1593,52 @@
         }
       }
     },
+    "ui.menu.pause15Minutes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 Minutes"
+          }
+        }
+      }
+    },
+    "ui.menu.pause1Hour" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Hour"
+          }
+        }
+      }
+    },
     "ui.menu.pauseCapture" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pause Capture"
+          }
+        }
+      }
+    },
+    "ui.menu.pauseFor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause For"
+          }
+        }
+      }
+    },
+    "ui.menu.pauseUntilTomorrow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Until Tomorrow"
           }
         }
       }
@@ -2863,6 +2913,16 @@
         }
       }
     },
+    "ui.settings.clearRecentTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear recent history?"
+          }
+        }
+      }
+    },
     "ui.settings.confirmBudget" : {
       "localizations" : {
         "en" : {
@@ -3653,6 +3713,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Last 24 hours"
+          }
+        }
+      }
+    },
+    "ui.settings.rangeLast5Minutes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 5 minutes"
           }
         }
       }
