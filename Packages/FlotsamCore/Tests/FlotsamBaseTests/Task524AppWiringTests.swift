@@ -34,7 +34,7 @@ private func slice(_ text: String, from start: String, through end: String) -> S
     func editorClosureHidesAfterGuardBeforeOpen() throws {
         let code = try appContainerCode()
         let closure = try #require(slice(code, from: "actions.editShortcutAndTrigger = {", through: "editor?.open(itemId: id)"))
-        let guardAt = try #require(closure.range(of: "shortcutEditorTarget(selection: ids) else { return }"))
+        let guardAt = try #require(closure.range(of: "guard let id = ids.first else { return }"))
         let hideAt = try #require(closure.range(of: hide))
         let openAt = try #require(closure.range(of: "editor?.open(itemId: id)"))
         #expect(guardAt.upperBound <= hideAt.lowerBound)

@@ -364,10 +364,12 @@ final class AppContainer {
             controller?.toggle()
         }
 
-        // ⌘K reaches the shortcut-and-trigger editor through `actions` (FR-005-09); a selection that is not exactly one
-        // item opens nothing.
+        // The Library reaches the shortcut-and-trigger editor through `actions` (FR-005-09) with the one item it
+        // resolved (`LibraryExternalCommand.shortcutEditorTarget`: exactly one, and not a secure item), so the app
+        // opens the editor for the id it is handed and decides nothing itself. The Library hides first, as for every
+        // Flotsam window that opens from it (TASK-524).
         actions.editShortcutAndTrigger = { [weak self, weak editor] ids in
-            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: ids) else { return }
+            guard let id = ids.first else { return }
             self?.hideLibraryBeforeWindowOpens()
             editor?.open(itemId: id)
         }

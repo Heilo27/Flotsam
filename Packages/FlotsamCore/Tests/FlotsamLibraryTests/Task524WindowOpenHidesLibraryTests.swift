@@ -45,7 +45,7 @@ private final class Task524Presenter: SettingsWindowPresenter {
 @MainActor
 private final class Task524Rig {
     let host = FakeHost()
-    let source = FakeSource(rows: Harness.rows(3))
+    let source: FakeSource
     var model: LibraryViewModel!
     var settings: SettingsWindowDriver!
     var presenter: Task524Presenter!
@@ -56,7 +56,8 @@ private final class Task524Rig {
     var editorOpened: [(libraryVisible: Bool, id: UUID?)] = []
     var externalCalls: [(LibraryExternalCommand, [UUID])] = []
 
-    init() async {
+    init(rows: [ItemRow] = Harness.rows(3)) async {
+        source = FakeSource(rows: rows)
         presenter = Task524Presenter(rig: self)
         settings = SettingsWindowDriver(settings: SettingsStore(store: Task524KV()))
         settings.presenter = presenter
@@ -66,8 +67,8 @@ private final class Task524Rig {
                 openSettings: { [unowned self] in settings.open() },
                 external: { [unowned self] command, ids in
                     externalCalls.append((command, ids))
-                    // The App's `actions.editShortcutAndTrigger`: the editor opens only for exactly one item.
-                    guard let id = command.shortcutEditorTarget(selection: ids) else { return }
+                    // The App's `actions.editShortcutAndTrigger`: it opens the editor for the one id the Library resolved.
+                    guard command == .shortcutAndTrigger, let id = ids.first else { return }
                     editorOpened.append((libraryVisible: host.isPanelVisible, id: id))
                 }))
         await model.open(target: FrontmostApp(bundleId: "com.apple.TextEdit", processId: 4242))
@@ -126,12 +127,25 @@ private final class Task524Rig {
         #expect(rig.host.hideCount == 1)
     }
 
+    // A secure item opens no editor (FR-005-09), so the Library must not hide for one: it would vanish and show nothing.
+    @Test func shortcutEditorOnASecureSingleSelection_opensNothingAndTheLibraryStays() async {
+        let rig = await Task524Rig(rows: [makeRow(0, secure: true), makeRow(1)])
+        #expect(rig.model.selectedRows.count == 1)
+        #expect(rig.model.selectedRows.first?.isSecure == true)
+        #expect(!LibraryCommand.external(.shortcutAndTrigger).opensFlotsamWindow(selection: rig.model.selectedRows))
+        rig.model.perform(.external(.shortcutAndTrigger))
+        #expect(rig.editorOpened.isEmpty)
+        #expect(rig.externalCalls.isEmpty)
+        #expect(rig.host.hideCount == 0)
+    }
+
     @Test func shortcutEditorWithSeveralRowsSelected_opensNothingAndTheLibraryStays() async {
         let rig = await Task524Rig()
         rig.model.perform(.extend(.down))
         #expect(rig.model.selectedRows.count == 2)
         rig.model.perform(.external(.shortcutAndTrigger))
-        #expect(rig.externalCalls.count == 1)
+        // The Library resolves the one target itself (TASK-526), so with several rows nothing reaches the app at all.
+        #expect(rig.externalCalls.isEmpty)
         #expect(rig.editorOpened.isEmpty)
         #expect(rig.host.hideCount == 0)
     }

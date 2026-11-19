@@ -131,11 +131,11 @@ private final class RealRig {
 
     // The one rule as a table: every command, literal expectation. Kills a mutant that widens or narrows the rule.
     @Test func opensFlotsamWindow_everyCommand() {
-        let one = [UUID()]
-        let two = [UUID(), UUID()]
-        let opens: [(LibraryCommand, [UUID])] = [(.openSettings, []), (.openSettings, one), (.openSettings, two), (.external(.shortcutAndTrigger), one)]
-        for (command, ids) in opens { #expect(command.opensFlotsamWindow(selection: ids), "\(command) \(ids.count)") }
-        let closed: [(LibraryCommand, [UUID])] = [
+        let one = [makeRow(1)]
+        let two = [makeRow(1), makeRow(2)]
+        let opens: [(LibraryCommand, [ItemRow])] = [(.openSettings, []), (.openSettings, one), (.openSettings, two), (.external(.shortcutAndTrigger), one)]
+        for (command, rows) in opens { #expect(command.opensFlotsamWindow(selection: rows), "\(command) \(rows.count)") }
+        let closed: [(LibraryCommand, [ItemRow])] = [
             (.external(.shortcutAndTrigger), []), (.external(.shortcutAndTrigger), two),
             (.external(.pin), one), (.external(.tags), one), (.external(.note), one), (.external(.edit), one),
             (.external(.delete), one), (.external(.cycleSort), one), (.external(.ungroup), one),
@@ -143,6 +143,8 @@ private final class RealRig {
             (.paste(.paste), one), (.pasteRow(1), one), (.togglePreview, one), (.escape, one),
             (.previousFilter, one), (.nextFilter, one), (.toggleViewMode, one), (.revealInFinder, one),
         ]
-        for (command, ids) in closed { #expect(!command.opensFlotsamWindow(selection: ids), "\(command) \(ids.count)") }
+        // A secure item opens no editor, so a lone secure selection does not hide the Library either.
+        #expect(!LibraryCommand.external(.shortcutAndTrigger).opensFlotsamWindow(selection: [makeRow(3, secure: true)]))
+        for (command, rows) in closed { #expect(!command.opensFlotsamWindow(selection: rows), "\(command) \(rows.count)") }
     }
 }

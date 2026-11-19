@@ -14,12 +14,23 @@ public enum LibraryDirection: Sendable, Equatable { case up, down, left, right }
 public enum LibraryExternalCommand: Sendable, Equatable {
     case pin, tags, note, edit, delete, cycleSort, ungroup, shortcutAndTrigger
 
-    /// The one item the shortcut-and-trigger editor opens for (FR-005-09): the editor edits a single item, so only
-    /// that command with exactly one selected row resolves. Anything else, no selection or several rows, opens nothing.
-    public func shortcutEditorTarget(selection ids: [UUID]) -> UUID? {
-        guard self == .shortcutAndTrigger, ids.count == 1 else { return nil }
-        return ids.first
+    /// The one item the shortcut-and-trigger editor opens for (FR-005-09), the one rule behind ⌘K, the "Shortcut and
+    /// Trigger..." context-menu row and the Library's choice to hide for the editor: only that command, with exactly one
+    /// selected row, and that row must be able to carry a shortcut (`ShortcutEditorRule`). No selection, several rows or
+    /// a secure item opens nothing.
+    public func shortcutEditorTarget(selection rows: [ItemRow]) -> UUID? {
+        guard self == .shortcutAndTrigger, rows.count == 1, let row = rows.first,
+            ShortcutEditorRule.allows(isSingleItem: true, isSecure: row.isSecure)
+        else { return nil }
+        return row.id
     }
+}
+
+/// When the shortcut-and-trigger editor may open (FR-005-09, FR-003-22). One home, read by `shortcutEditorTarget` (⌘K)
+/// and by `LibraryContextMenu` (the menu row), so the keyboard and the menu cannot disagree: exactly one item, and not a
+/// secure one (FRD-001 FR-001-25 items can carry no hotkey and no trigger). Several items, or none, open nothing.
+public enum ShortcutEditorRule {
+    public static func allows(isSingleItem: Bool, isSecure: Bool) -> Bool { isSingleItem && !isSecure }
 }
 
 public enum LibraryCommand: Sendable, Equatable {
@@ -41,10 +52,10 @@ public enum LibraryCommand: Sendable, Equatable {
     /// editor (⌘K, the context-menu row) open an ordinary window, and the Library hides first so the window is never
     /// covered, whatever state that window was in. The editor counts only when it will open: a selection that is not
     /// exactly one item opens nothing (FR-005-09), so the Library stays.
-    public func opensFlotsamWindow(selection ids: [UUID]) -> Bool {
+    public func opensFlotsamWindow(selection rows: [ItemRow]) -> Bool {
         switch self {
         case .openSettings: true
-        case .external(let command): command.shortcutEditorTarget(selection: ids) != nil
+        case .external(let command): command.shortcutEditorTarget(selection: rows) != nil
         default: false
         }
     }
