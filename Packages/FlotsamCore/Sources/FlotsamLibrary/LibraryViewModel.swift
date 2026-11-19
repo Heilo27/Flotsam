@@ -677,6 +677,14 @@ public final class LibraryViewModel {
         return await organize { await $0.togglePin(ids) }
     }
 
+    /// The items a drag out of row `id` carries, in on-screen order (FR-003-45): the whole selection when the row is in
+    /// it, else the row alone with the selection unchanged. The same rule as `ShelfModel.covered(by:)` over this
+    /// model's own selection and rows (FR-006-10).
+    public func coveredIDs(by id: UUID) -> [UUID] {
+        if selection.contains(id) { return selectedRows.map(\.id) }
+        return visibleRows.filter { $0.id == id }.map(\.id)
+    }
+
     /// Whether Pin on a context menu opened on row `id` would unpin (FR-004-01): the action covers the selection when the
     /// row is in it, else just the row, and unpins only when every item it covers is pinned (any unpinned one: pin all).
     public func pinActionUnpins(menuRowID id: UUID, isPinned: Bool) -> Bool {
@@ -829,6 +837,9 @@ public final class LibraryViewModel {
         hoverTask = nil
         hoverPreview = nil
     }
+
+    /// A drag out of a row began (FR-003-45): the hover strip and hover preview go, as they do when the pointer leaves.
+    public func dragBegan() { clearHover() }
 
     private func clearHover() {
         hoveredRowID = nil

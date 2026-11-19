@@ -99,7 +99,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         super.init()
         driver.perform = { [weak self] commands in self?.perform(commands) }
         hostBox.target = self
-        dragOut.model = model
+        dragOut.coveredIds = { [weak model] id in model?.covered(by: id).map(\.id) ?? [] }
         // The machine must not hide a Shelf under its own drag (FR-006-03), and an accepted drop hides a transient one
         // (FR-006-11).
         dragOut.onSession = { [weak self] dragging in self?.ownDragSession(dragging) }
@@ -317,7 +317,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
 
     /// A drag that began in this Shelf's own cards is refused, silently (FR-006-12).
     private func originatesInShelf(_ info: any NSDraggingInfo) -> Bool {
-        info.draggingSource is ShelfDragOut
+        (info.draggingSource as? ShelfDragOut) === dragOut
     }
 
     /// The card a drop stored or bumped is highlighted for 600 ms and scrolled to the top of Recent (FR-006-15).

@@ -179,7 +179,7 @@ Marks: PARITY, GAP, BETTER, DIFFERENT-FORM, CUT. "Ours" cites FRD or DESIGN. Ver
 | FN-29 | Capture of Universal Clipboard toggle | FR-001-14 always captured as "Another device" | PARITY | |
 | FN-30 | Tagged-history amount limit (tags keep clips longer) | Tag retention is a non-goal (FRD-004) | GAP | KEEP (S2); needs FRD-004/007 decision |
 | FN-31 | Drag out of Island; drop into Island | FR-006-10, -12 | PARITY | |
-| FN-32 | Drag out of Library rows | FRD-006 non-goal | GAP | KEEP (S3 drag first-class); N whether theirs does it |
+| FN-32 | Drag out of Library rows | FRD-003 FR-003-45 | PARITY | KEEP (S3 drag first-class); built as T8 (TASK-540) |
 | FN-33 | Island share zone (AirDrop, system sharing) | Shelf non-goal, v1.1 candidate | GAP | ESCALATE: Ryan to rule if clause overrides NOT DOING v1 |
 | FN-34 | Paste Queue (sequential paste) | None | GAP | KEEP (S1/S4 flow); new FR needed |
 | FN-35 | Add manual clip | None | GAP | KEEP, low (S4 trigger creation without copying) |

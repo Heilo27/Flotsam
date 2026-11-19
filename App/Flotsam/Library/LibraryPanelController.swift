@@ -36,6 +36,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
     }
 
     let model: LibraryViewModel
+    /// Drag-out from the rows (FR-003-45). The app supplies its ports once the database is open.
+    let dragOut = ShelfDragOut()
     private let driver: LibraryPanelDriver
     private let organize: OrganizeCoordinator
     private let hostBox: HostBox
@@ -68,6 +70,9 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
         super.init()
         driver.presenter = self
         hostBox.target = self
+        dragOut.coveredIds = { [weak model] id in model?.coveredIDs(by: id) ?? [] }
+        // An accepted drop hides the panel, as a paste does (FR-003-45).
+        dragOut.onAccepted = { [weak self] in self?.hidePanel() }
         configurePanel()
         observeHideTriggers()
     }
@@ -117,7 +122,7 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
         effect.material = .hudWindow
         effect.blendingMode = .behindWindow
         effect.state = .active
-        let hosting = NSHostingView(rootView: LibraryView(model: model, organize: organize))
+        let hosting = NSHostingView(rootView: LibraryView(model: model, organize: organize, dragOut: dragOut))
         hosting.translatesAutoresizingMaskIntoConstraints = false
         effect.addSubview(hosting)
         NSLayoutConstraint.activate([
@@ -146,6 +151,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
     }
 
     func windowDidResignKey(_ notification: Notification) {
+        // The authentication prompt of a secure row's drag takes key from the panel; that is not a click outside (FR-003-45).
+        guard !dragOut.isPreparing else { return }
         driver.panelResignedKey()
     }
 

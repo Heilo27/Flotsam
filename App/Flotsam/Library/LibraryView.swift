@@ -8,6 +8,7 @@ import SwiftUI
 struct LibraryView: View {
     let model: LibraryViewModel
     let organize: OrganizeCoordinator
+    let dragOut: ShelfDragOut
     @FocusState private var searchFocused: Bool
 
     var body: some View {
@@ -94,7 +95,7 @@ struct LibraryView: View {
                     buttonTitle: model.searchText.isEmpty ? nil : LibraryText.string(LibraryText.clearSearchButton)
                 ) { model.setSearchText(String()) }
             } else {
-                LibraryItemsView(model: model)
+                LibraryItemsView(model: model, dragOut: dragOut)
             }
         }
     }

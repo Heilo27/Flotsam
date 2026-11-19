@@ -21,7 +21,7 @@ protocol ShelfDropDelegate: AnyObject {
 }
 
 /// The panel's content view: the blur background, a drag destination for the drop zone, and a tracking area for the
-/// pointer. `draggingSource` of a drag that began in the Shelf is a `ShelfDragOut`, which the delegate refuses.
+/// pointer. `draggingSource` of a drag that began in the Shelf is the Shelf's own `ShelfDragOut`, which the delegate refuses (a drag from a Library row is not the Shelf's own and is accepted by the usual rules).
 final class ShelfDropView: NSVisualEffectView {
     weak var delegate: (any ShelfDropDelegate)?
     private var area: NSTrackingArea?
