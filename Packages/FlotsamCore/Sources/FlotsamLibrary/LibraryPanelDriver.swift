@@ -48,6 +48,9 @@ public final class LibraryPanelDriver: PasteHost {
     private let preferences: any LibraryPreferences
     private let captureNow: @MainActor () async -> Void
     private var isOpening = false
+    /// A hide arrived while `show()` was still awaiting (capture, open-state load): the panel is not visible yet, so
+    /// there is nothing to order out, but the show must not then put the Library on screen (FR-003-02).
+    private var hideRequestedWhileOpening = false
 
     /// The latest show started by `toggle()`, kept so tests can await it.
     public private(set) var showTask: Task<Void, Never>?
@@ -71,7 +74,10 @@ public final class LibraryPanelDriver: PasteHost {
     public var isPanelVisible: Bool { presenter?.isVisible ?? false }
 
     public func hidePanel() {
-        guard isPanelVisible else { return }
+        guard isPanelVisible else {
+            if isOpening { hideRequestedWhileOpening = true }
+            return
+        }
         presenter?.hide()
         model.panelDidHide()
     }
@@ -89,10 +95,21 @@ public final class LibraryPanelDriver: PasteHost {
     public func show() async {
         guard !isOpening, !isPanelVisible else { return }
         isOpening = true
-        defer { isOpening = false }
+        hideRequestedWhileOpening = false
+        defer {
+            isOpening = false
+            hideRequestedWhileOpening = false
+        }
         let target = frontmost.frontmost()
         await captureNow()
+        // A hide that arrived during an await (a Flotsam window opening, a Space change) wins: the Library never appears
+        // over it (FR-003-02). Before the open nothing needs undoing; after it the model is balanced with `panelDidHide`.
+        if hideRequestedWhileOpening { return }
         await model.open(target: target)
+        if hideRequestedWhileOpening {
+            model.panelDidHide()
+            return
+        }
         // The layout the model just loaded, so the frame, the minimum and the columns drawn cannot disagree (FR-003-06).
         let layout = model.layout
         let size = preferences.previewPreset.openingSize(from: preferences.panelSize(for: layout), in: layout)

@@ -31,6 +31,18 @@ public enum LibraryExternalCommand: Sendable, Equatable {
 /// secure one (FRD-001 FR-001-25 items can carry no hotkey and no trigger). Several items, or none, open nothing.
 public enum ShortcutEditorRule {
     public static func allows(isSingleItem: Bool, isSecure: Bool) -> Bool { isSingleItem && !isSecure }
+
+    /// The App's own gate in front of the editor (FR-005-09), for any caller that hands it ids: the id to open, or nil
+    /// (open nothing, hide nothing) unless there is exactly one id and it is not a secure item. `isSecure` reads the
+    /// item; a failed read is returned, not guessed at, so the caller reports it and still opens nothing.
+    @MainActor
+    public static func target(ids: [UUID], isSecure: @MainActor (UUID) async -> FlotsamResult<Bool>) async -> FlotsamResult<UUID?> {
+        guard ids.count == 1, let id = ids.first else { return .success(nil) }
+        switch await isSecure(id) {
+        case .success(let secure): return .success(allows(isSingleItem: true, isSecure: secure) ? id : nil)
+        case .failure(let error): return .failure(error)
+        }
+    }
 }
 
 public enum LibraryCommand: Sendable, Equatable {
