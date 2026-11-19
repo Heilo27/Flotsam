@@ -45,6 +45,14 @@ targets:
         product: FlotsamTriggers
       - package: FlotsamCore
         product: FlotsamShelf
+      - package: FlotsamCore
+        product: FlotsamMCP
+      # The stdio helper an AI app launches (FRD-010, ADR-0013). Embedded beside the app's own executable.
+      - target: flotsam-mcp
+        embed: true
+        codeSign: true
+        copy:
+          destination: executables
     info:
       path: App/Flotsam/Info.plist
       properties:
@@ -64,6 +72,22 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: io.github.heilo27.Flotsam
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  # `flotsam-mcp`: a byte relay from standard input and output to the app's local socket. Links FlotsamBase only: no
+  # database, no clips, no network code (ADR-0013).
+  flotsam-mcp:
+    type: tool
+    platform: macOS
+    sources:
+      - App/MCPHelper
+    dependencies:
+      - package: FlotsamCore
+        product: FlotsamBase
+    settings:
+      base:
+        PRODUCT_NAME: flotsam-mcp
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.heilo27.Flotsam.mcp
+        GENERATE_INFOPLIST_FILE: NO
+        SKIP_INSTALL: YES
 schemes:
   Flotsam:
     build:

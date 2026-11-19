@@ -58,6 +58,8 @@ final class AppContainer {
     private var reconcileScheduler: ReconcileScheduler?
     private var unsubscribeItemEvents: (@Sendable () -> Void)?
     private var itemHotkeyAction: ItemHotkeyAction?
+    /// The local MCP server (FRD-010). Built when the database opens; it listens only while `mcp.enabled` is on.
+    private var localMCP: LocalMCPService?
     /// FR-007-23: reads the text in stored images for search. Event-driven, no timer (ADR-0004 S5).
     private var textRecognition: TextRecognitionIndexer?
     /// The typed-trigger engine (FR-005-10). Nil until the database has opened. Retained: its loops run until `stop()`.
@@ -198,6 +200,8 @@ final class AppContainer {
             report: reportUserInitiated,
             hud: showHUD,
             showSetupGuide: showSetupGuide,
+            mcpHelperPath: MCPPeerIdentity.bundledHelperPath,
+            confirmEnableMCP: { MCPAlerts.confirmEnable() },
             importRecentScreenshots: { [weak self] in self?.actions.importRecentScreenshots?() },
             copyDiagnostics: {
                 await SettingsDiagnostics.copy(settings: settings, probe: permissions, storage: storage, reporter: reporter)
@@ -233,12 +237,26 @@ final class AppContainer {
             startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
             startTextRecognition(database: opened)
+            startLocalMCP(database: opened)
             startMaintenance(database: opened)
         case .failure(let error):
             await reporter.report(error, origin: .background)
             // No library means nothing can be imported: a click that was waiting, and every later one, shows why.
             importRecent.unavailable(error)
         }
+    }
+
+    /// FR-010-01: hands the open database to the local MCP service, which listens only while the setting is on.
+    private func startLocalMCP(database: FlotsamDatabase) {
+        let service = LocalMCPService(settings: settings, dataFolder: environment.dataFolder, report: reportUserInitiated)
+        localMCP = service
+        service.attach(database: database)
+    }
+
+    /// Quit: closes every MCP connection and removes the socket file.
+    func stopLocalMCP() {
+        localMCP?.stop()
+        localMCP = nil
     }
 
     /// FR-007-23: starts the background reader of image text. It runs once now (the bounded backfill) and again when an

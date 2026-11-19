@@ -25,6 +25,10 @@ struct SettingsEnvironment: Sendable {
     let hud: @MainActor @Sendable (String) -> Void
     /// Reopens onboarding (FR-008-12).
     let showSetupGuide: @MainActor @Sendable () -> Void
+    /// Where the bundled `flotsam-mcp` helper is, shown so the user can point an AI app at it (FR-010-11).
+    let mcpHelperPath: String
+    /// FR-010-02: shows the cloud warning; true only if the user chose Turn On.
+    let confirmEnableMCP: @MainActor @Sendable () -> Bool
     /// FR-002-12: the same action onboarding calls; it shows the "Imported {n}" HUD itself. Read at click time, because
     /// pickup is wired after the database opens, which can be after this environment is built.
     let importRecentScreenshots: @MainActor @Sendable () -> Void

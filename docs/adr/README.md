@@ -16,3 +16,4 @@ One file per significant decision. Format: Status, Context (forces), Decision, A
 | [0010](0010-dependency-allowlist.md) | Dependency allowlist: GRDB only | Accepted |
 | [0011](0011-testing-seams.md) | Testing seams: ports for clock, pasteboard, filesystem, settings store | Accepted |
 | [0012](0012-project-tooling.md) | xcodegen `project.yml` is the project; the `.xcodeproj` is generated and not committed | Accepted |
+| [0013](0013-local-mcp-server.md) | Local MCP server: AF_UNIX socket, OS-verified client identity, per-client approval, read-only tools | Accepted |

@@ -194,6 +194,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | SET-PRM-001 | Warning | Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V. | copy-only fallback |
 | SET-PRM-002 | Warning | Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security. | triggers inert |
 | SET-OS-001 | Error | Couldn't change Launch at Login. Check System Settings › General › Login Items. | revert toggle; HUD |
+| SET-OS-002 | Error | Couldn't start local AI access, so it was turned off. Check that Flotsam's data folder is available, then turn it on again. | switch reverts to off |
 | SET-VAL-001 | Error | That folder can't be used for screenshots. Choose a folder you can read. | rejected |
 | SET-VAL-002 | Error | That isn't an app Flotsam can add. Choose an application. | rejected |
 | SET-DAT-001 | Warning | A setting had an invalid value and was reset to its default. | reset; Notice |
@@ -222,6 +223,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
 
 ## 11. Change Log
+- 2026-11-19: §7 gains `SET-OS-002` (the local AI access server could not start; the switch returns to off), FRD-010 FR-010-01.
 - 2026-11-18: §7 gains `LIB-OS-002` (a secure item's copy was not authorised), `LIB-DAT-002` (a secure item's key is missing or its bytes do not open) and `TRG-VAL-006` (a secure item cannot carry a shortcut or trigger), for secure clips (FRD-001 FR-001-25). 63 live codes: 2 Fatal, 22 Warning, 25 Error, 14 Info.
 - 2026-11-18: FR-000-05: a plural count is a whole number in any form, including a boxed one (`NSNumber`): exactly 1 reads `one`; anything else reads `other`. A decimal (1.0, 1.5), text, a missing count and a yes/no value (even one that boxes to 1) are not counts and read `other`.
 - 2026-11-18: FR-000-12: `screenshot.import` added, a ninth interval, one per screenshot pickup (FRD-002 FR-002-14 is measured with it).

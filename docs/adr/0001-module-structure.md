@@ -37,12 +37,13 @@ Import table (the whole graph):
 | Shortcuts | Base, Storage, Paste | FRD-005 FR-005-01 to -09 (registry, chord rules, recorder logic) |
 | Triggers | Base, Storage, Paste | FRD-005 FR-005-10 to -21 (matcher, snapshot, expansion) |
 | Shelf | Base, Storage, Payload | FRD-006 reveal state machine, drop processing |
+| MCP | Base, Storage | FRD-010 approval gate, line framer, JSON-RPC handler (ADR-0013); the socket server and peer identity are adapters in `App/Platform/` |
 
 Rules (enforced by `bin/check-architecture.sh`, run before every commit and in CI):
 1. A target imports only the targets listed above. SwiftPM refuses cycles and undeclared imports at compile time, so the table is the graph, not a convention.
 2. No package target imports AppKit, SwiftUI, Carbon, ServiceManagement or ApplicationServices. System access goes through a port protocol in Base (ADR-0011), implemented in `App/Platform/`.
 3. Only Storage imports GRDB or SQLite3.
-4. No package or app source uses URLSession, NWConnection, NWPathMonitor, WKWebView, CFNetwork, or links Sparkle (A4).
+4. No package or app source uses URLSession, NWConnection, NWPathMonitor, WKWebView, CFNetwork, an IP, TCP or UDP socket, or links Sparkle (A4). An `AF_UNIX` socket is not a network API and is allowed (ADR-0013).
 5. No `print`, `NSLog`, `dump`, `try!`, or force-unwrap on external data in package sources (FR-000-09, FR-000-02).
 6. Language mode is Swift 6 everywhere.
 

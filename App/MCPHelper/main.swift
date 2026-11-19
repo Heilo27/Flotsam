@@ -17,7 +17,7 @@ enum Relay {
         let path = MCPWire.socketURL(inFolder: launch.dataFolder).path
         signal(SIGPIPE, SIG_IGN)
         guard let socketFD = openSocket(path: path) else {
-            diagnose("flotsam-mcp: cannot reach Flotsam. Open Flotsam and turn on Settings > Privacy > Local AI access.")
+            diagnose("flotsam-mcp: cannot reach Flotsam. Open Flotsam and turn on Settings > Privacy > Local AI Access.")
             return Exit.unreachable
         }
 

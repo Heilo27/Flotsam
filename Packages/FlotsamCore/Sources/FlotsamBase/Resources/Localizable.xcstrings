@@ -3612,7 +3612,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flotsam makes no network connections."
+            "value" : "Flotsam makes no network connections. If you turn on Local AI Access, an AI app you approve can read your history through a private connection on this Mac."
           }
         }
       }
@@ -4953,6 +4953,156 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drag a card from the Shelf into any app, or drop files, text and images on it to save them."
+          }
+        }
+      }
+    },
+    "ui.settings.mcpHeader" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local AI Access"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpToggle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let AI apps read my clipboard history"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off by default. AI apps you approve one by one can search your history and read the text of items."
+          }
+        }
+      }
+    },
+    "ui.settings.mcpHelperPath" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program to give your AI app"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpNoClients" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No AI app is approved yet. The first one that connects asks you."
+          }
+        }
+      }
+    },
+    "ui.settings.mcpRevoke" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revoke"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpRevokeHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stops this AI app from reading your history"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpEnableTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let AI apps read your clipboard history?"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpEnableBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An AI app you approve can search your history and read the text of items. Most AI apps send what they read to their own cloud service, so anything in your history may leave this Mac once an AI app reads it. Flotsam never shares secure items or items copied from apps in your ignored list. You approve each AI app separately and can revoke it at any time."
+          }
+        }
+      }
+    },
+    "ui.settings.mcpTurnOn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn On"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpApproveTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let this AI app read your clipboard history?"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpApproveBody" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It can search your history and read the text of items, except secure items and items from your ignored apps. Most AI apps send what they read to their own cloud service. You can revoke it any time in Settings under Privacy."
+          }
+        }
+      }
+    },
+    "ui.settings.mcpAllow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow"
+          }
+        }
+      }
+    },
+    "ui.settings.mcpDeny" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Don't Allow"
+          }
+        }
+      }
+    },
+    "error.SET-OS-002" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't start local AI access, so it was turned off. Check that Flotsam's data folder is available, then turn it on again."
           }
         }
       }
