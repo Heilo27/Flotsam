@@ -306,6 +306,22 @@ struct FRD001GateContractTests {
             #expect(!rig.sink.everything.contains(secret))
         }
     }
+
+    /// OC-1118 (FR-001-25, TASK-506): a concealed copy whose plain text is only whitespace is a policy rejection,
+    /// not an unreadable copy: CAP-POL-001, nothing stored. Runs on the in-memory `MemoryKeychain` vault. Mutation:
+    /// drop the whitespace guard in `handleSecure` (a blank secure row is sealed) or raise CAP-OS-001 instead: the row
+    /// count or the code goes red.
+    @Test("OC-1118: a Concealed copy of only whitespace is rejected with CAP-POL-001, nothing stored")
+    func concealedWhitespaceOnlyIsRejected() async throws {
+        try await withRig(withVault: true) { rig in
+            rig.pasteboard.copy([(PB.text, PB.data(" \n\t  ")), (PasteboardMarkers.concealed, Data())])
+            await rig.process()
+            #expect(rig.sink.logged(.capPol001).count == 1)
+            #expect(rig.sink.logged(.capOs001).isEmpty)
+            try #expect(await rig.itemCount() == 0)
+            try #expect(await rig.secureRows().isEmpty)
+        }
+    }
 }
 
 @MainActor
