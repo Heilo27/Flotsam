@@ -56,7 +56,7 @@ struct StoragePane: View {
         .alert(changes.pending?.title ?? "", isPresented: Binding(get: { changes.pending != nil }, set: { if !$0 { changes.cancel() } }),
             presenting: changes.pending
         ) { change in
-            Button(SettingsString.resetAction.text, role: .destructive) { changes.confirm(change) }
+            Button(SettingsString.deleteAction.text, role: .destructive) { changes.confirm(change) }
             Button(SettingsString.cancel.text, role: .cancel) { changes.cancel() }
         } message: { change in
             Text(verbatim: change.message)

@@ -46,25 +46,37 @@ final class ClearHistoryModel {
     /// preview failed.
     var count: Int { isCounting ? 0 : ((try? preview?.get())?.count ?? 0) }
 
+    /// True when the count for the current choice could not be read. It is not an empty range: Delete stays off and
+    /// the text says so.
+    var countFailed: Bool {
+        guard !isCounting, case .failure = preview else { return false }
+        return true
+    }
+
     var countText: String {
         if isCounting { return SettingsString.clearCounting.text }
+        if countFailed { return SettingsString.clearCountFailed.text }
         return count > 0 ? SettingsString.clearCount.text([.count(count)]) : SettingsString.clearNothing.text
     }
 
     var canDelete: Bool { count > 0 && !deleting }
     var deleteTitle: SettingsString { deleting ? .clearDeleting : .clearDelete }
 
-    /// Re-reads the count for the current range and option. The view runs it whenever either changes. A result that
+    /// Re-reads the count for the current range and option. The view runs it whenever either changes. Every call
+    /// starts by forgetting the landed count, so the count stays pending until this request's answer lands (returning
+    /// to an earlier choice never shows its old count). A failed count is reported and shown as such. A result that
     /// arrives after the choice moved on, or after a newer request started, is dropped: only the newest request for
     /// the key still on screen may land, so a slow answer for an earlier choice cannot overwrite a newer one.
     func refreshPreview() async {
         latestRequest += 1
         let request = latestRequest
         let asked = key
+        previewKey = nil
         let result = await storage.clearPreview(asked.range, asked.includeExempt)
         guard request == latestRequest, asked == key else { return }
         preview = result
         previewKey = asked
+        if case .failure(let error) = result { report(error) }
     }
 
     /// The Cancel button: closes the sheet and calls nothing that deletes.

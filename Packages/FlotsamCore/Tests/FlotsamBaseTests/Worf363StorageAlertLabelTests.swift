@@ -13,8 +13,6 @@ import Testing
     func confirmButtonIsNotReset() throws {
         let storage = try frd008Code("App/Flotsam/Settings/StoragePane.swift")
         #expect(storage.contains("changes.confirm(change)"), "the alert must still call confirm")
-        withKnownIssue("DEFECT Major: the data-deleting alert's destructive button reuses SettingsString.resetAction (\"Reset\")") {
-            #expect(!storage.contains("Button(SettingsString.resetAction.text, role: .destructive) { changes.confirm(change) }"))
-        }
+        #expect(!storage.contains("Button(SettingsString.resetAction.text, role: .destructive) { changes.confirm(change) }"))
     }
 }

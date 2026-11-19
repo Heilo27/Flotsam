@@ -2711,6 +2711,16 @@
         }
       }
     },
+    "ui.settings.clearCountFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t count the items in this range."
+          }
+        }
+      }
+    },
     "ui.settings.clearDelete" : {
       "localizations" : {
         "en" : {
@@ -3603,6 +3613,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Remove app"
+          }
+        }
+      }
+    },
+    "ui.settings.deleteAction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
           }
         }
       }

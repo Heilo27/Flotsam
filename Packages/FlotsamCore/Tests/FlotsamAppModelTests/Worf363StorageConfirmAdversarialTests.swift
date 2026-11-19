@@ -52,14 +52,29 @@ private actor Desk {
     func answer(_ index: Int, count: Int) { conts[index].resume(returning: count) }
 }
 
+/// A one-shot latch the fake clear waits on. Any number of callers may wait (a model that wrongly makes a second call
+/// must fail its test, not strand the first), and a release after 5 seconds means a latch that is never opened fails
+/// on its assertions instead of hanging.
 private actor Latch {
-    private var continuation: CheckedContinuation<Void, Never>?
+    private var waiters: [CheckedContinuation<Void, Never>] = []
     private var isOpen = false
+
     func wait() async {
         if isOpen { return }
-        await withCheckedContinuation { continuation = $0 }
+        let release = Task { [self] in
+            try? await Task.sleep(for: .seconds(5))
+            open()
+        }
+        await withCheckedContinuation { waiters.append($0) }
+        release.cancel()
     }
-    func open() { isOpen = true; continuation?.resume(); continuation = nil }
+
+    func open() {
+        isOpen = true
+        let pending = waiters
+        waiters = []
+        for waiter in pending { waiter.resume() }
+    }
 }
 
 @MainActor private func settle() async { for _ in 0..<40 { await Task.yield() } }
@@ -411,10 +426,8 @@ private actor Latch {
         rig.model.range = .lastHour
         let third = rig.refresh()
         await waitForQuestions(rig.desk, 3)
-        withKnownIssue("DEFECT Minor: an earlier landed count for the same key is shown as current until the refresh lands") {
-            #expect(rig.model.countText == "Counting items\u{2026}")
-            #expect(!rig.model.canDelete)
-        }
+        #expect(rig.model.countText == "Counting items\u{2026}")
+        #expect(!rig.model.canDelete)
         await rig.desk.answer(1, count: 8)
         await rig.desk.answer(2, count: 6)
         await second.value
@@ -432,9 +445,7 @@ private actor Latch {
         await rig.desk.answer(0, count: 0)
         await run.value
         #expect(!rig.model.canDelete)
-        withKnownIssue("DEFECT Minor: preview failure is swallowed and reads as an empty range") {
-            #expect(rig.log.snapshot.reported == [.stoDb004])
-        }
+        #expect(rig.log.snapshot.reported == [.stoDb004])
     }
 }
 

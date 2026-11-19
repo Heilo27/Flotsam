@@ -45,20 +45,28 @@ private final class Calls: @unchecked Sendable {
     func update(_ change: @Sendable (inout State) -> Void) { state.withLock { change(&$0) } }
 }
 
-/// A one-shot gate a fake clear waits on, so a test can look at the model while the deletion is "in flight".
+/// A one-shot gate a fake waits on, so a test can look at the model while a call is "in flight". Any number of callers
+/// may wait on it (a model that wrongly makes a second call must fail its test, not strand the first), and a latch
+/// release after 5 seconds means a test whose gate is never opened fails on its assertions instead of hanging.
 private actor Gate {
-    private var continuation: CheckedContinuation<Void, Never>?
+    private var waiters: [CheckedContinuation<Void, Never>] = []
     private var isOpen = false
 
     func wait() async {
         if isOpen { return }
-        await withCheckedContinuation { continuation = $0 }
+        let release = Task { [self] in
+            try? await Task.sleep(for: .seconds(5))
+            open()
+        }
+        await withCheckedContinuation { waiters.append($0) }
+        release.cancel()
     }
 
     func open() {
         isOpen = true
-        continuation?.resume()
-        continuation = nil
+        let pending = waiters
+        waiters = []
+        for waiter in pending { waiter.resume() }
     }
 }
 
@@ -558,6 +566,23 @@ private let gib: Int64 = 1024 * 1024 * 1024
         await optionInFlight.value
         #expect(model.canDelete)
         #expect(model.count == 9)
+    }
+
+    /// A count that cannot be read is shown as a failure, never as an empty range, and Delete stays off.
+    /// Red if the failure reads "Nothing to clear in this range." or leaves Delete usable.
+    @Test("OC-7088 a failed count reads as a failure, not as an empty range, and Delete stays disabled")
+    func oc7088_failedCountText() async {
+        var storage = SettingsStorage(database: { nil })
+        storage.clearPreview = { _, _ in .failure(FlotsamError(.stoDb004, "fake preview failure")) }
+        let calls = Calls()
+        let model = ClearHistoryModel(
+            storage: storage, report: { error in calls.update { $0.reported.append(error.code) } },
+            hud: { _ in }, onClose: {})
+        await model.refreshPreview()
+        #expect(model.countFailed)
+        #expect(model.countText == "Couldn\u{2019}t count the items in this range.")
+        #expect(model.canDelete == false)
+        #expect(calls.snapshot.reported == [.stoDb004])
     }
 
     /// With nothing to delete, Delete does nothing at all.
