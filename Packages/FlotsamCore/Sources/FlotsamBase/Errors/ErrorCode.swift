@@ -34,7 +34,7 @@ public enum ErrorCode: String, CaseIterable, Sendable {
     case capLim001 = "CAP-LIM-001"
     /// Rich representation dropped, plain text kept.
     case capLim002 = "CAP-LIM-002"
-    /// Keep first 500; Notice.
+    /// Keep the first `BundleLimits.maxMembers`; Notice.
     case capLim003 = "CAP-LIM-003"
     /// Item not stored; Notice.
     case capIo001 = "CAP-IO-001"
