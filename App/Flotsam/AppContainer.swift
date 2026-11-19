@@ -155,8 +155,18 @@ final class AppContainer {
             })
         let window = SettingsWindowController(env: settingsEnvironment)
         settingsWindow = window
-        actions.openSettings = { [weak window] in window?.openSettings() }
+        actions.openSettings = { [weak self, weak window] in
+            self?.hideLibraryBeforeWindowOpens()
+            window?.openSettings()
+        }
     }
+
+    /// The App-side home of "a Flotsam window opens, so the Library hides" (FR-003-02, TASK-524). Every opener of the
+    /// Settings window and the item editor runs it before fronting the window: the Library's own ⌘, and ⌘K, and the
+    /// menu-bar "Settings…" row. A no-op when the Library is already hidden or not built yet. The
+    /// Library's `perform` also hides first (LibraryViewModel.perform), for the package-level guarantee that holds
+    /// without the App; both end at the same idempotent `hidePanel`.
+    private func hideLibraryBeforeWindowOpens() { library?.hidePanel() }
 
     private func openDatabase() async {
         switch await FlotsamDatabase.open(folder: environment.dataFolder, secureVault: secureVault) {
@@ -355,8 +365,9 @@ final class AppContainer {
 
         // ⌘K reaches the shortcut-and-trigger editor through `actions` (FR-005-09); a selection that is not exactly one
         // item opens nothing.
-        actions.editShortcutAndTrigger = { [weak editor] ids in
+        actions.editShortcutAndTrigger = { [weak self, weak editor] ids in
             guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: ids) else { return }
+            self?.hideLibraryBeforeWindowOpens()
             editor?.open(itemId: id)
         }
         startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })

@@ -160,7 +160,9 @@ private func settle(_ condition: () -> Bool) async {
     func settingsEntryPointsShareOneClosure() throws {
         let container = try frd008Code("App/Flotsam/AppContainer.swift")
         #expect(container.contains("openSettings: { [weak self] in self?.actions.openSettings?() }"))
-        #expect(container.contains("actions.openSettings = { [weak window] in window?.openSettings() }"))
+        // TASK-524: the closure hides the Library first, then opens the window (Task524AppWiringTests pins the order).
+        #expect(container.contains("actions.openSettings = { [weak self, weak window] in"))
+        #expect(container.contains("window?.openSettings()"))
         let status = try frd008Code("App/Flotsam/StatusItemController.swift")
         #expect(status.contains("run: container.actions.openSettings"))
     }
