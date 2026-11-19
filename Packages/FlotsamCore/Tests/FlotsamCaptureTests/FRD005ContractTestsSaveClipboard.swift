@@ -79,9 +79,9 @@ private func freshCount(_ rig: ContractRig) async throws -> Int {
 
 @MainActor
 private func withCuratedRig(
-    frontmost: SourceApp? = ContractRig.writerApp, _ body: (ContractRig) async throws -> Void
+    frontmost: SourceApp? = ContractRig.writerApp, withVault: Bool = false, _ body: (ContractRig) async throws -> Void
 ) async throws {
-    try await withRig(frontmost: frontmost, scheduleTimer: inertTimer) { rig in
+    try await withRig(frontmost: frontmost, withVault: withVault, scheduleTimer: inertTimer) { rig in
         rig.settings.set(CaptureMode.curated, for: SettingKeys.captureMode)
         try await body(rig)
     }
@@ -136,9 +136,11 @@ struct FRD005ContractTestsSaveClipboard {
         }
     }
 
-    @Test("OC-5036 Concealed content is not saved: count stays N, no item holds it, the private HUD appears")
-    func oc5036ConcealedIsRejected() async throws {
-        try await withCuratedRig { rig in
+    /// OC-5036 (FR-005-06 / AC-005-06 as amended in TASK-503). Mutation: restore the old drop for Concealed in the
+    /// capture gate: the count stays N, the HUD is the private one and no secure row exists, so each expectation is red.
+    @Test("OC-5036 Concealed content is saved as a secure item: count N+1, no item holds the plain text, the saved HUD appears")
+    func oc5036ConcealedIsSavedAsSecureItem() async throws {
+        try await withCuratedRig(withVault: true) { rig in
             // given one item stored (N = 1) and Concealed content on the clipboard
             await seed(rig, "kept-before")
             rig.clock.advance(by: 10)
@@ -146,13 +148,17 @@ struct FRD005ContractTestsSaveClipboard {
             let readsBefore = rig.pasteboard.bytesRequested.count
             // when the user presses the chord
             let hud = await pressSaveClipboard(rig)
-            // then count stays N, no item holds the content, the concealed HUD shows, and the bytes were never read
+            // then count is N+1 with one secure row, no item holds the plain text (the new row has none), the saved HUD
+            // shows, and only the plain text of the concealed copy was read
             let after = try await freshRecent(rig)
-            #expect(after.count == 1)
-            #expect(after.map(\.text) == ["kept-before"])
+            #expect(after.count == 2)
+            #expect(after.map(\.text).contains("kept-before"))
             #expect(!after.contains { $0.text.contains("conceal-secret-xyz") })
-            #expect(hud == [hudPrivate])
-            #expect(rig.pasteboard.bytesRequested.count == readsBefore)
+            try #expect(await rig.secureRows().count == 1)
+            try #expect(await rig.secureRows().first?.plainText == nil)
+            #expect(rig.allDataBytes().range(of: Data("conceal-secret-xyz".utf8)) == nil)
+            #expect(hud == [hudSaved])
+            #expect(Array(rig.pasteboard.bytesRequested.dropFirst(readsBefore)) == [PB.text])
         }
     }
 
