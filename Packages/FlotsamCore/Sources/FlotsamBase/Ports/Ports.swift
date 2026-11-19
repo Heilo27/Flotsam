@@ -77,8 +77,8 @@ public protocol FileSystemPort: Sendable {
     func moveItem(at source: URL, to destination: URL) -> FlotsamResult<Void>
     /// Moves `source` over `destination` in one step: a reader sees the old file or the new one, never neither.
     /// `moveItem` fails onto an existing path, and removing first leaves a gap in which the file does not exist.
-    /// The default is that two-step form, for a fake that only models the other operations; the real file system
-    /// overrides it with a single `rename(2)`.
+    /// The default below is that two-step form and is NOT atomic: for a test fake that only models the other
+    /// operations. Every real conformer must override it with a single `rename(2)`, as `LocalFileSystem` does.
     func replaceItem(at destination: URL, with source: URL) -> FlotsamResult<Void>
     func removeItem(at url: URL) -> FlotsamResult<Void>
     func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]>
@@ -100,6 +100,8 @@ public protocol FileSystemPort: Sendable {
 }
 
 extension FileSystemPort {
+    /// Not atomic: removes the destination, then moves (a reader can see neither file in between). Only test fakes use
+    /// this; production's `LocalFileSystem` overrides it with `rename(2)`. Do not rely on it for crash safety.
     public func replaceItem(at destination: URL, with source: URL) -> FlotsamResult<Void> {
         if fileExists(at: destination), case .failure(let error) = removeItem(at: destination) { return .failure(error) }
         return moveItem(at: source, to: destination)

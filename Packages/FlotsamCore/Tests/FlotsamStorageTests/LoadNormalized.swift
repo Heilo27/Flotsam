@@ -7,8 +7,9 @@ import Foundation
 /// How much of a core the machine gave a thread that wanted all of one, over the window between `init` and `stop()`:
 /// thread CPU time divided by wall time, 1.0 on an idle machine and small when it is starved. A wall-clock budget
 /// multiplied by this is the time the work would have taken with the CPU to itself, so the budget stops depending on
-/// how many other processes (or other tests) are running. A sleep or an I/O stall inside the work does not lower the
-/// share, so it still counts against the budget in full.
+/// how many other processes (or other tests) are running. The share measures CPU contention, not the work: a sleep or an
+/// I/O stall inside the work leaves the probe free to spin, so on a quiet machine the share is 1.0 and the stall counts
+/// in full, but under load the share is low and the stall is scaled down with everything else.
 final class CPUShareProbe: @unchecked Sendable {
     private let lock = NSLock()
     private var stopRequested = false
@@ -61,14 +62,18 @@ final class CPUShareProbe: @unchecked Sendable {
 /// wall-time figure (a p95, a longest stall); it is multiplied by the CPU share a spinning probe thread was given while
 /// `run` executed (`CPUShareProbe`, the OC-7098 mechanism). On a quiet machine the share is 1.0 and the figure is read
 /// unchanged; at a load average of 250 on 18 cores the share is a few percent and a 15x-slow-but-correct run reads as the
-/// 1x it is. Work that really is slower (an added sleep, a full scan, an I/O stall) does not lower the share, so it still
-/// reads its full wall time against the bound. The 0.02 floor matches OC-7098 and caps the allowance at 50x.
+/// 1x it is. The limit: CPU-bound regressions (a full scan, an added loop) are caught at any load, because they take the
+/// same share as the probe; sleep or I/O regressions are caught only on a quiet machine, where the share is 1.0, and are
+/// discounted by the share under load (OC-W496-01 pins that scaling). The 0.02 floor matches OC-7098 and caps the
+/// allowance at 50x.
 ///
 /// Runs on the caller's actor (`isolation`), so a `@MainActor` test can measure main-actor work inside `run`.
+///
+/// `probe` is a seam for the test that the `defer` below ends the spin thread when `run` throws; callers use the default.
 func loadNormalized(
-    isolation: isolated (any Actor)? = #isolation, _ run: () async throws -> Double
+    isolation: isolated (any Actor)? = #isolation, probe: CPUShareProbe = CPUShareProbe(),
+    _ run: () async throws -> Double
 ) async rethrows -> Double {
-    let probe = CPUShareProbe()
     defer { _ = probe.stop() }  // a throwing run must still end the spin thread; stop() is idempotent
     let wall = try await run()
     return wall * max(probe.stop(), 0.02)
