@@ -480,7 +480,7 @@ struct Adversarial000PrivacyTests {
 // MARK: - Architecture lint (FR-000-02, FR-000-09)
 
 /// Runs a copy of bin/check-architecture.sh against a throwaway tree holding one fixture file, so the repo is never touched.
-private enum AdvLintHarness {
+enum AdvLintHarness {
     static var repoRoot: URL {
         // .../Packages/FlotsamCore/Tests/FlotsamBaseTests/<this file>
         var url = URL(fileURLWithPath: #filePath)
@@ -492,6 +492,16 @@ private enum AdvLintHarness {
     /// `extraFiles` maps a path relative to the tree root (e.g. "project.yml") to its contents; Package.swift may be overridden the same way.
     static func exitStatus(for source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
                            extraFiles: [String: String] = [:]) async throws -> Int32 {
+        try await run(source, at: relativePath, extraFiles: extraFiles).status
+    }
+
+    /// Whether the lint reports the fatalError/precondition rule on a tree holding only `source` (other rules may fire too).
+    static func reportsFatal(_ source: String) async throws -> Bool {
+        try await run(source).output.contains("fatalError/precondition without")
+    }
+
+    static func run(_ source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
+                            extraFiles: [String: String] = [:]) async throws -> ProcessResult {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("flotsam-8a-lint-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: root) }
@@ -513,7 +523,7 @@ private enum AdvLintHarness {
             try Data((contents + "\n").utf8).write(to: url)
         }
 
-        return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path]).status
+        return try await runProcess("/bin/bash", [root.appendingPathComponent("bin/check-architecture.sh").path])
     }
 }
 
@@ -982,9 +992,9 @@ struct Adversarial000KillCheckPins {
         #expect(try await status("log.debugger(\"x\")") == 0)
     }
 
-    // MARK: known issues, still present
+    // MARK: TASK-367 / TASK-368 (fixed; the withKnownIssue wrappers are removed)
 
-    // OC: FR-000-02. TASK-368. Defect: a line-start regex after a line ending in `}`, `)`, a string, a regex or a `#if` line is read as
+    // OC: FR-000-02. TASK-368. Was a defect: a line-start regex after a line ending in `}`, `)`, a string, a regex or a `#if` line is read as
     // division (judged by the previous code line), so its text is linted as code. New since 2ed68a4; RegexBuilder is the real shape.
     @Test("KNOWN TASK-368: a statement-position regex literal after a code line is linted as code")
     func statementPositionRegexAfterCodeLine() async throws {
@@ -997,27 +1007,21 @@ struct Adversarial000KillCheckPins {
         // control: the same regex after `let r =` is a regex and passes
         #expect(try await status("let r =\n    /fatalError(x)/") == 0)
         for shape in shapes {
-            // given a regex literal on its own line after a code line, when linted, then it should pass (today it exits 1)
-            let code = try await status(shape)
-            withKnownIssue("line-start / after a code line is division: \(shape.debugDescription)") {
-                #expect(code == 0)
-            }
+            // given a regex literal on its own line after a code line, when linted, then it passes
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
         }
     }
 
-    // OC: FR-000-02. TASK-368. Defect: a previous line ending in `?` makes the next line-start / a regex, hiding a banned call (pre-existing).
+    // OC: FR-000-02. TASK-368. Was a defect: a previous line ending in `?` makes the next line-start / a regex, hiding a banned call (pre-existing).
     @Test("KNOWN TASK-368: a division continued after a line ending in ? hides a banned call")
     func divisionAfterQuestionMark() async throws {
         // control: the same continuation after a plain identifier fails
         #expect(try await status("let r = total\n    /n + g(fatalError(\"x\"))/2") == 1)
-        // given optional-chaining then a continued division, when linted, then it should fail (today it exits 0)
-        let code = try await status("let r = total?\n    /n + g(fatalError(\"x\"))/2")
-        withKnownIssue("`?` at line end reads the next line-start / as a regex") {
-            #expect(code == 1)
-        }
+        // given optional-chaining then a continued division, when linted, then it fails
+        #expect(try await status("let r = total?\n    /n + g(fatalError(\"x\"))/2") == 1)
     }
 
-    // OC: FR-000-05 / FR-000-04. Defect: USTRING view names have no left identifier boundary, and NETWORK is a bare substring match,
+    // OC: FR-000-05 / FR-000-04. TASK-367. Was a defect: USTRING view names have no left identifier boundary, and NETWORK is a bare substring match,
     // so a type that merely contains Text/Button/URLSession fails the lint. False positives only; no violation can pass because of it.
     @Test("KNOWN: identifiers that contain a view or network name fail the lint")
     func missingLeftBoundaryFalsePositives() async throws {
@@ -1026,11 +1030,167 @@ struct Adversarial000KillCheckPins {
         #expect(try await status("let v = Text(\"hello\")") == 1)
         #expect(try await status("let s = URLSession.shared") == 1)
         for shape in shapes {
-            // given an identifier that only contains the banned name, when linted, then it should pass (today it exits 1)
-            let code = try await status(shape)
-            withKnownIssue("no left boundary on this rule: \(shape.debugDescription)") {
-                #expect(code == 0)
-            }
+            // given an identifier that only contains the banned name, when linted, then it passes
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
+        }
+    }
+}
+
+// MARK: - TASK-367 / TASK-368 blind verification (Worf, 2026-11-18)
+
+/// Pins the lint behaviour TASK-367 (left identifier boundaries) and TASK-368 (statement-position regex vs continued division)
+/// must keep, and the shapes the same change newly lets through. Every expected value is a literal exit status.
+@Suite("8A TASK-367/368 lint boundaries and regex judgment")
+struct Adversarial000Task367368Verification {
+    private func status(_ source: String) async throws -> Int32 {
+        try await AdvLintHarness.exitStatus(for: source)
+    }
+
+    // OC: FR-000-02. TASK-367. Mutant that turns it red: drop the left boundary from the LOCDESC rule (`t ~ /localizedDescription/`).
+    @Test("TASK-367: an identifier that merely ends in localizedDescription passes; a real access fails")
+    func localizedDescriptionLeftBoundary() async throws {
+        // given identifiers whose tail is localizedDescription, when linted, then they pass
+        for shape in ["let s = mylocalizedDescription", "let s = _localizedDescription", "let s = x1localizedDescription"] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
+        }
+        // given a bare or member access, when linted, then it fails
+        for shape in ["let s = localizedDescription", "let s = e.localizedDescription", "let s = e\n    .localizedDescription", "let s = x?.localizedDescription"] {
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-05. TASK-367. Mutant: LocalizedStringKey rule back to lb=0.
+    @Test("TASK-367: MyLocalizedStringKey(\"x\") passes; LocalizedStringKey(\"x\") fails, qualified or not")
+    func localizedStringKeyLeftBoundary() async throws {
+        // given a custom type that contains the name, when linted, then it passes
+        #expect(try await status("let v = MyLocalizedStringKey(\"x\")") == 0)
+        // given the real type, bare or module-qualified, when linted, then it fails
+        #expect(try await status("let v = LocalizedStringKey(\"x\")") == 1)
+        #expect(try await status("let v = SwiftUI.LocalizedStringKey(\"x\")") == 1)
+    }
+
+    // OC: FR-000-04. TASK-367. Mutant: NETWORK rule back to a substring match (no left boundary).
+    @Test("TASK-367: identifiers that merely end in a network name pass")
+    func networkNamesLeftBoundary() async throws {
+        // given identifiers whose tail is a network name, when linted, then they pass
+        for shape in ["let s = MyURLSession.shared", "let s = _URLSession.shared", "let s = x1NWConnection(a)", "let w = MyWKWebView()", "let m = $NWPathMonitor"] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-04. TASK-367. Mutant: a boundary that needs whitespace on the left (`[ \t]`) or a right boundary on the name.
+    @Test("TASK-367: network names keep failing after any non-identifier character and with any suffix")
+    func networkNamesStillFail() async throws {
+        for shape in [
+            "let s = Foundation.URLSession.shared", "let s = [URLSession.shared]", "let s = 1+URLSession.shared",
+            "let s = \"\\(URLSession.shared)\"", "let c = URLSessionConfiguration.default",
+            "let c = NWConnection(host: h, port: p, using: .tcp)", "let w = WKWebView()", "let m = NWPathMonitor()",
+        ] {
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-02. TASK-368. Mutants: drop `)`, `]`, a digit, `_`, `$` or an uppercase letter from the operand class that precedes a postfix `?`.
+    @Test("TASK-368: every operand shape before a postfix ? makes the next line-start / a division")
+    func optionalChainingOperandShapes() async throws {
+        let banned = "n + g(fatalError(\"x\"))/2"
+        // given an operand ending in an identifier, `)`, `]`, digit, `_`, `$0` or capital, then `?`, then a continued division, when linted, then it fails
+        for operand in ["total?", "f()?", "a[0]?", "x1?", "x_?", "_x?", "a$?", "$0?", "X?", "a?.b?"] {
+            #expect(try await status("let r = \(operand)\n    /\(banned)") == 1, "line-start after \(operand)")
+        }
+        // given the same inline, when linted, then it fails
+        for operand in ["total?", "f()?", "a[0]?", "(a)?"] {
+            #expect(try await status("let r = \(operand)/\(banned)") == 1, "inline after \(operand)")
+        }
+    }
+
+    // OC: FR-000-02. TASK-368. Mutant: polarity of the postfix-? test flipped, or every ? treated as an operand end.
+    @Test("TASK-368: a ternary or ?? operator still makes the following / a regex literal")
+    func ternaryQuestionMarkStartsRegex() async throws {
+        // given a regex literal after a ternary ?, a ?? or either at a line end, when linted, then the banned-looking text inside it passes
+        for shape in [
+            "let r = c ? /fatalError(x)/ : /y/", "let r = c ?\n    /fatalError(x)/ : /y/",
+            "let r = a ?? /fatalError(x)/", "let r = a ??\n    /fatalError(x)/",
+        ] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-02. TASK-368. Mutants: the comment alternatives dropped from the tail test; the tail not trimmed.
+    @Test("TASK-368: a statement-position regex may be followed by a comment; followed by code it is not hidden")
+    func statementRegexTail() async throws {
+        let open = "let r = Regex {\n    Capture(.digit)\n"
+        // given a regex line ending in a line comment or a block comment, when linted, then it passes
+        #expect(try await status(open + "    /fatalError(x)/ // why\n}") == 0)
+        #expect(try await status(open + "    /fatalError(x)/ /* why */\n}") == 0)
+        #expect(try await status(open + "    /fatalError(x)/\n}") == 0)
+        // given real code after the regex on the same line, when linted, then the code is still seen
+        #expect(try await status(open + "    /a/; fatalError(\"x\")\n}") == 1)
+        #expect(try await status(open + "    /a/\n}\nfatalError(\"x\")") == 1)
+    }
+
+    // OC: FR-000-05. TASK-367. Mutant: any of these names dropped from the USTRING view-name list. SwiftUI views whose names end in a
+    // listed name (DatePicker, NavigationLink, ...) take a LocalizedStringKey title, so a literal title is a FR-000-05 violation.
+    @Test("TASK-367: SwiftUI views whose names end in a listed view name are still flagged")
+    func suffixedSwiftUIViewsStillFlagged() async throws {
+        for shape in [
+            "let v = Picker(\"When\", selection: $d) {}", "let v = Link(\"Go\", destination: u)",
+            "let v = DatePicker(\"When\", selection: $d)", "let v = ColorPicker(\"Tint\", selection: $c)",
+            "let v = NavigationLink(\"Go\") { X() }", "let v = ShareLink(\"Share\", item: u)",
+            "let v = CommandMenu(\"Tools\") {}", "let v = PhotosPicker(\"Pick\", selection: $s)",
+            "let v = MultiDatePicker(\"When\", selection: $s)", "let v = TextFieldLink(\"Go\") { }",
+            "let v = Tab(\"Home\", systemImage: \"house\") { }", "let v = TabSection(\"More\") { }",
+            "let v = LabeledContent(\"Name\") { }", "let v = ControlGroup(\"Edit\") { }",
+            "let v = ProgressView(\"Loading\")", "let v = ContentUnavailableView(\"None\", systemImage: \"x\")",
+            "let v = Window(\"Main\", id: \"m\") { }", "let v = WindowGroup(\"Main\") { }",
+            "let v = Toggle(\"On\", isOn: $b)", "let v = Stepper(\"N\", value: $n)", "let v = Label(\"T\", systemImage: \"x\")",
+            "let v = Section(\"S\") { }", "let v = Menu(\"M\") { }", "let v = TextField(\"T\", text: $t)",
+            "let v = SecureField(\"T\", text: $t)", "let v = GroupBox(\"G\") { }", "let v = DisclosureGroup(\"D\") { }",
+        ] {
+            // given a SwiftUI view with a literal title, when linted, then it fails
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
+        }
+        // given a custom type that merely ends in a view name, when linted, then it passes
+        for shape in ["let v = MyPicker(\"x\")", "let v = FooTab(\"x\")", "let v = TabView(\"x\")"] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-02. TASK-368. Mutant: the keyword test skipped when the text ends in a postfix-looking ? or !.
+    @Test("TASK-368: a regex literal after try?, try!, as? or as! is a regex, not a division")
+    func regexAfterTryQuestionMark() async throws {
+        // control: the same shape after plain `try` is a regex and the call after it is still seen
+        #expect(try await status("let r = try /\"/; fatalError(\"x\")") == 1)
+        for kw in ["try?", "try!", "x as?", "x as!"] {
+            // given a regex with a quote after the keyword, then a real fatalError on the line, when linted, then the call is reported
+            #expect(try await AdvLintHarness.reportsFatal("let r = \(kw) /\"/; fatalError(\"x\")"), "quote after \(kw)")
+            // given a regex holding banned-looking text, when linted, then the text is not linted as code
+            #expect(try await !AdvLintHarness.reportsFatal("let r = \(kw) /fatalError(x)/"), "regex text after \(kw)")
+        }
+        // given try? with nothing else banned, when linted, then the whole file passes
+        #expect(try await status("let r = try? /fatalError(x)/") == 0)
+    }
+
+    // OC: FR-000-02. TASK-515. Mutant: `!` left in the expression-start character list (a postfix ! no longer ends an operand).
+    @Test("TASK-515: a postfix ! ends an operand, so the / after it is a division; a prefix ! and try! start an expression")
+    func postfixForceUnwrapEndsOperand() async throws {
+        // given an operand, a postfix !, then a division whose second operand holds a real fatalError, when linted, then the call is reported
+        for operand in ["total!", "f()!", "a[0]!", "x1!", "(a)!"] {
+            #expect(try await AdvLintHarness.reportsFatal("let r = \(operand)/n + g(fatalError(\"x\"))/2"), "inline after \(operand)")
+            #expect(try await AdvLintHarness.reportsFatal("let r = \(operand)\n    /n + g(fatalError(\"x\"))/2"), "line-start after \(operand)")
+        }
+        // given a prefix ! before a regex literal holding banned-looking text, when linted, then the text is not linted as code
+        for shape in ["let ok = !/fatalError(x)/.matches", "if !/fatalError(x)/.matches {}", "let ok = (!/fatalError(x)/.matches)"] {
+            #expect(try await status(shape) == 0, "\(shape.debugDescription)")
+        }
+    }
+
+    // OC: FR-000-02. TASK-368 (accepted ambiguity, pinned so it is a decision). A continued division whose second slash ends the line reads as a regex.
+    @Test("KNOWN TASK-368: a continued division whose second slash ends the line hides a banned call")
+    func divisionEndingInSlashAtLineEnd() async throws {
+        let code = try await status("let r = total\n    /g(fatalError(\"x\"))/\n    2")
+        withKnownIssue("operand then line-start /...../ with nothing after it is read as a regex") {
+            #expect(code == 1)
         }
     }
 }
