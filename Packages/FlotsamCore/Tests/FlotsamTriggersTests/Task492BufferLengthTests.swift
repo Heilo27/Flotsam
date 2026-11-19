@@ -37,8 +37,8 @@ import Testing
         #expect(try #require(h.space().match).triggerLength == 4)
     }
 
-    // N Backspaces after multi-codepoint input, whether the scalars arrive in one event or several, never trap, and
-    // each Backspace removes one grapheme.
+    // N Backspaces after multi-codepoint input, whether the scalars arrive in one event or several, never trap. Since
+    // TASK-493 such input is non-ASCII and kills the word at once, so nothing is held and Backspace changes nothing.
     @Test(arguments: [
         ["e\u{0301}"],  // one event, two scalars
         ["e", "\u{0301}"],  // two events, one grapheme
@@ -49,32 +49,31 @@ import Testing
     func manyBackspacesAfterMultiCodepointInputNeverTrap(events: [String]) {
         let h = harness()
         for text in events { _ = h.down(0, text) }
-        #expect(!h.matcher.holdsNoCharacters)
-        _ = h.down(TriggerKeys.backspace)
         #expect(h.matcher.holdsNoCharacters)
-        for _ in 0..<5 { #expect(h.down(TriggerKeys.backspace) == .pass) }
+        for _ in 0..<6 { #expect(h.down(TriggerKeys.backspace) == .pass) }
         #expect(h.matcher.holdsNoCharacters)
     }
 
-    // One Backspace removes the whole cluster built from a character and a later mark.
-    @Test func aMarkJoinsTheLastCharacterSoOneBackspaceRemovesBoth() throws {
+    // TASK-493 replaced the old re-match: a mark kills the word, and Backspacing it away (one Backspace or the whole
+    // cluster, retyping the last letter or not) does not bring it back, so no match and no Backspaces are posted.
+    @Test func aMarkKillsTheWordSoBackspacingItAwayAndRetypingDoesNotMatch() {
         let h = harness()
         h.type(";sig")
         _ = h.down(0, acute)
         _ = h.down(TriggerKeys.backspace)
         h.type("g")
-        #expect(try #require(h.space().match).typedText == ";sig")
+        #expect(h.space() == .pass)
     }
 
     // FR-005-14 step 5: the Backspace count is the typed trigger's length in characters. A match is always ASCII (the
-    // grammar is), so it has no combining sequence and its count equals the keys typed; a word that carried a mark
-    // never equals a trigger.
-    @Test func triggerLengthIsTheTypedLengthAfterAMarkWasBackspacedAway() throws {
+    // grammar is), so its count equals the keys typed, and the next word after a killed one reads it the same way.
+    @Test func triggerLengthIsTheTypedLengthOfTheNextWordAfterAMarkKilledThePreviousOne() throws {
         let h = harness()
         h.type(";sig")
         _ = h.down(0, acute)
         _ = h.down(TriggerKeys.backspace)
-        h.type("g")
+        #expect(h.space() == .pass)
+        h.type(";sig")
         let match = try #require(h.space().match)
         #expect(match.triggerLength == 4)
         #expect(match.triggerLength == match.typedText.count)
@@ -87,25 +86,27 @@ import Testing
         #expect(h.space() == .pass)
     }
 
-    // The cap counts graphemes of the buffer, not characters delivered: marks do not push the word over 24.
-    @Test func manyCombiningMarksDoNotTripTheCap() throws {
-        let h = harness()
-        h.type(";sig")
-        for _ in 0..<30 { _ = h.down(0, acute) }
-        _ = h.down(TriggerKeys.backspace)  // removes the one cluster "g" plus its marks
-        h.type("g")
-        let match = try #require(h.space().match)
-        #expect(match.typedText == ";sig")
-        #expect(match.triggerLength == 4)
+    // Many marks, however they are Backspaced, never trap and never bring the word back.
+    @Test func manyCombiningMarksKillTheWordAndNoBackspaceCountRevivesIt() {
+        for backspaces in [0, 1, 2, 30, 31, 40] {
+            let h = harness()
+            h.type(";sig")
+            for _ in 0..<30 { _ = h.down(0, acute) }
+            for _ in 0..<backspaces { _ = h.down(TriggerKeys.backspace) }
+            h.type("g")
+            #expect(h.space() == .pass, "\(backspaces) Backspaces")
+        }
     }
 
-    @Test func aMarkOnA24CharacterWordKeepsItLiveAndTheTriggerLengthIs24() throws {
+    @Test func aMarkOnA24CharacterWordKillsItAndTheNextWordStillMatchesAt24() throws {
         let trigger = ";" + String(repeating: "a", count: TriggerGrammar.maximumLength - 1)
         let h = harness(trigger)
         h.type(trigger)
-        _ = h.down(0, acute)  // still 24 graphemes
-        _ = h.down(TriggerKeys.backspace)  // 23
+        _ = h.down(0, acute)
+        _ = h.down(TriggerKeys.backspace)
         h.type("a")
+        #expect(h.space() == .pass)
+        h.type(trigger)
         let match = try #require(h.space().match)
         #expect(match.triggerLength == TriggerGrammar.maximumLength)
         #expect(match.typedText == trigger)
