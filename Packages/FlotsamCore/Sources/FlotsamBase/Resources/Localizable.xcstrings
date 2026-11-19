@@ -3857,6 +3857,16 @@
         }
       }
     },
+    "ui.settings.edgeBar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show a small bar at the edge"
+          }
+        }
+      }
+    },
     "ui.settings.libraryLayout" : {
       "localizations" : {
         "en" : {
@@ -4163,6 +4173,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drop to pin"
+          }
+        }
+      }
+    },
+    "ui.shelf.edgeBar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shelf edge bar. Rest the pointer here to open the Shelf."
           }
         }
       }

@@ -6,15 +6,16 @@ import FlotsamBase
 /// itself is here so it runs on plain values in tests.
 public enum ShelfPointerClassifier {
     /// `.onShelf` while the Shelf is visible and the pointer is inside its pointer area (`ShelfLayout.pointerArea`);
-    /// `.menuBarIcon` over the icon with the menu-bar placement; `.edgeZone` in the placement's zone on the screen
+    /// `.onBar` over a showing collapsed bar (FR-006-37); `.menuBarIcon` over the icon with the menu-bar placement; `.edgeZone` in the placement's zone on the screen
     /// that holds the pointer; otherwise `.away`.
     /// - Parameters:
     ///   - panelFrame: the panel's final frame (or where it slides to), not its mid-animation frame.
     ///   - screenFrame: the frame of the screen the panel is on, `nil` when unknown.
     ///   - hoverMonitored: the global mouse-moved monitor is installed (`shelf.revealOnEdgeHover` on).
+    ///   - edgeBars: the frame of the collapsed bar on each screen, by screen index; empty while no bar is showing.
     public static func region(
         at point: CGPoint, placement: ShelfPlacement, isVisible: Bool, panelFrame: CGRect, screenFrame: CGRect?,
-        hoverMonitored: Bool, screens: [CGRect], menuBarIcon: CGRect?
+        hoverMonitored: Bool, screens: [CGRect], menuBarIcon: CGRect?, edgeBars: [CGRect] = []
     ) -> ShelfRevealMachine.Pointer {
         if isVisible {
             let area = screenFrame.map {
@@ -22,6 +23,7 @@ public enum ShelfPointerClassifier {
             } ?? panelFrame
             if ShelfLayout.contains(area, point) { return .onShelf }
         }
+        if let bar = edgeBars.firstIndex(where: { ShelfLayout.contains($0, point) }) { return .onBar(screen: bar) }
         if placement == .menuBar, let icon = menuBarIcon, icon.contains(point) {
             return .menuBarIcon(screen: ShelfLayout.screenIndex(containing: point, in: screens) ?? 0)
         }

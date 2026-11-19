@@ -32,6 +32,9 @@ public struct ShelfRevealMachine: Sendable, Equatable {
     public static let dragDwell: TimeInterval = 0.300
     /// How long the pointer must rest in the edge zone with hover reveal on (FR-006-03b).
     public static let hoverDwell: TimeInterval = 0.500
+    /// How long the pointer must rest on the collapsed bar (FR-006-37): shorter than the edge zone's, because the bar is
+    /// something to aim at and the zone is a place nobody can see.
+    public static let barDwell: TimeInterval = 0.300
     /// How long a transient Shelf waits after the pointer leaves, or the drag ends, before it hides (FR-006-04).
     public static let hideDelay: TimeInterval = 0.600
     /// How long the Shelf stays after a successful drop (FR-006-15).
@@ -42,6 +45,8 @@ public struct ShelfRevealMachine: Sendable, Equatable {
         case away
         case edgeZone(screen: Int)
         case menuBarIcon(screen: Int)
+        /// On the collapsed bar (FR-006-37). Only reported while a bar is showing, i.e. the setting is on.
+        case onBar(screen: Int)
         case onShelf
     }
 
@@ -235,6 +240,10 @@ public struct ShelfRevealMachine: Sendable, Equatable {
         case .edgeZone(let screen) where placement != .menuBar:
             if isDragging { return (.drag, screen, Self.dragDwell) }
             if revealOnEdgeHover && !isButtonDown { return (.hover, screen, Self.hoverDwell) }
+            return nil
+        case .onBar(let screen):
+            if isDragging { return (.drag, screen, Self.dragDwell) }
+            if !isButtonDown { return (.hover, screen, Self.barDwell) }
             return nil
         case .menuBarIcon(let screen) where placement == .menuBar && isDragging:
             return (.menuBarIconDrag, screen, Self.dragDwell)

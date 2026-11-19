@@ -22,6 +22,12 @@ public enum ShelfLayout {
     /// How long a dropped card stays highlighted (FR-006-15). The 1.5 s hold is `ShelfRevealMachine.dropHold`.
     public static let dropHighlightDuration: TimeInterval = 0.6
 
+    // MARK: Collapsed edge bar (FR-006-37)
+
+    /// The collapsed bar is this thick and this long, in points, centred on its edge of the visible frame.
+    public static let edgeBarThickness: CGFloat = 6
+    public static let edgeBarLength: CGFloat = 96
+
     // MARK: Panel (FR-006-05)
 
     public static let panelWidth: CGFloat = 280
@@ -93,6 +99,25 @@ public enum ShelfLayout {
             let length = screenFrame.width * edgeZoneLengthFraction
             let originY = placement == .topCenter ? screenFrame.maxY - thickness : screenFrame.minY
             return CGRect(x: screenFrame.midX - length / 2, y: originY, width: length, height: thickness)
+        case .menuBar:
+            return nil
+        }
+    }
+
+    /// The collapsed bar (FR-006-37): a small pill on the placement's edge of `visibleFrame`, centred along it, so it sits
+    /// where the Shelf slides from and never covers the Dock or the menu bar. `nil` for the menu-bar placement, which has
+    /// no edge.
+    public static func edgeBar(for placement: ShelfPlacement, in visibleFrame: CGRect) -> CGRect? {
+        let thickness = edgeBarThickness
+        switch placement {
+        case .rightEdge, .leftEdge:
+            let length = min(edgeBarLength, visibleFrame.height)
+            let originX = placement == .rightEdge ? visibleFrame.maxX - thickness : visibleFrame.minX
+            return CGRect(x: originX, y: visibleFrame.midY - length / 2, width: thickness, height: length)
+        case .bottomEdge, .topCenter:
+            let length = min(edgeBarLength, visibleFrame.width)
+            let originY = placement == .topCenter ? visibleFrame.maxY - thickness : visibleFrame.minY
+            return CGRect(x: visibleFrame.midX - length / 2, y: originY, width: length, height: thickness)
         case .menuBar:
             return nil
         }
