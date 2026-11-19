@@ -15,6 +15,12 @@ extension BundleIdentifierList {
         identifiers.contains(id) ? self : BundleIdentifierList(identifiers + [id])
     }
 
+    /// Adds every identifier of `other` that is not already present, keeping the existing order; the user's own entries
+    /// are never removed or reordered (FR-008-11 preset).
+    public func adding(contentsOf other: BundleIdentifierList) -> BundleIdentifierList {
+        other.identifiers.reduce(self) { $0.adding($1) }
+    }
+
     public func removing(_ id: String) -> BundleIdentifierList {
         BundleIdentifierList(identifiers.filter { $0 != id })
     }
