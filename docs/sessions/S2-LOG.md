@@ -1988,3 +1988,24 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 - **Pause route: needs Ryan.** The pause was set by writing capture.mode to the isolated suite, which the running app picks up live. The menu-bar Pause/Resume item (FR-008-16) could not be driven here: clicking the status item opened no menu. Settings › Storage also needs a hand check.
 - **Defects:** none. **Spec drift:** none.
 - **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was empty before the run and empty after. TextEdit was closed unsaved, and the suite plist was removed.
+
+## Spikes S-7/S-3 and perf timings: main @ 2e73758 (2026-11-19)
+
+Setup: a Debug build on macOS 27.3. The app ran isolated (CFFIXED_USER_HOME, a fresh FLOTSAM_DATA_DIR, an agent suite, FAKE_SECURE=1). The 10,000 items were seeded by direct insert on the shipped migrations, not through the capture path. Load average was 19.35 at the start of rows 1–2; rows 3–5 ran at a load of 2.4–5. The numbers are external wall-clock times unless marked as signposts. Release-build numbers may be lower.
+
+- **R1 S-7: PASS.** 5 valid runs; run 1 was invalid and is excluded. The panel was visible in 55–71 ms, and Return pasted in 94–118 ms.
+- **R2 S-3: PASS as observed.** All 5 runs logged `shelf.reveal outcome=revealed trigger=drag`. From arrival to visible took 328–364 ms, which includes the 300 ms dwell.
+  - **Strict no-AX: needs Ryan.** TCC attributes the process to Terminal, which holds a grant, so "no Accessibility" can't be proven from here.
+- **R3 Library open (FR-003-05, budget p95 ≤ 150 ms): PASS (external).**
+  - Warm: p50 55.3, p95 73.3, max 92.6 ms.
+  - Cold: p50 86.3, p95 95.1, max 97.3 ms.
+  - AC-003-04 asks for 50 runs; fewer were run here.
+  - The `library.open` signpost covers only the model reload (5 runs: p50 7.7, p95 8.3 ms). It does not span the open-to-visible time the budget names.
+- **R4 paste-back (FR-003-19, budget p95 ≤ 150 ms): PASS (external).** From Return to landed: p50 106.9, p95 120.5, max 120.8 ms. The `paste.back` signpost over 6 runs read p50 47.0, p95 53.3 ms.
+- **R5 Shelf reveal (FR-006-17 / AC-006-18, budget p95 ≤ 120 ms from dwell complete, 20 runs at 10k): FAIL on the signpost.** Over 20 runs, `shelf.reveal` read p50 164.4, p95 176.3, max 178.9 ms.
+  - **Unresolved discrepancy:** externally, arrival to visible was p50 337.4, p95 359.6, max 362.5 ms. Minus the 300 ms dwell, that is 37.4 / 59.6 / 62.5 ms, which is inside the budget.
+  - So either the signpost does not start at dwell complete as FRD-006 note 8 says, or the external method misses time. Not diagnosed. The signpost begin needs a code read before this counts as a real perf failure.
+- **Not measured:** the drag-start-to-drag-image budget (≤ 100 ms) and the 5 MiB drop-to-card budget (≤ 800 ms) from FR-006-17.
+- **Defect: the Shelf sometimes stays visible after a transient reveal.** This happened in R2 run 5 and R5 run 1. It needed 1–5 extra pointer moves to dismiss. Repro rate is low (2 of 25 reveals).
+- **Signpost coverage:** log retention kept only the final process, so R3 and most of R4 have no signposts.
+- **Snapshot identity:** the real data dir, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was empty before and after, and the suite plist was removed.
