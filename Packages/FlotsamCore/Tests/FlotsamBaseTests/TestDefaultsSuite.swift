@@ -71,8 +71,11 @@ func withTestDefaults<T>(_ label: String, _ body: (TestDefaultsSuite) async thro
 /// Deletes, at process exit, the plist of every suite this process made, after `cfprefsd`'s late writes have landed.
 final class TestDefaultsExitSweep: @unchecked Sendable {
     static let shared = TestDefaultsExitSweep()
-    /// Longer than the observed ~0.95 s write delay, with margin for a loaded machine.
-    private static let settleSeconds = 2.0
+
+    /// Longer than the observed ~0.95 s write delay, with margin for a loaded machine. Tests pass a shorter one.
+    private let settleSeconds: Double
+
+    init(settleSeconds: Double = 2.0) { self.settleSeconds = settleSeconds }
 
     private let lock = NSLock()
     private var names: [String] = []
@@ -86,15 +89,17 @@ final class TestDefaultsExitSweep: @unchecked Sendable {
             defer { installed = true }
             return !installed
         }
-        if install { atexit { TestDefaultsExitSweep.shared.sweep() } }
+        // Only the shared sweep owns the process-exit hook; a test's own instance is swept by calling `sweep()`.
+        if install && self === Self.shared { atexit { TestDefaultsExitSweep.shared.sweep() } }
     }
 
     func touch() { lock.withLock { lastActivity = Date() } }
 
-    private func sweep() {
+    /// Waits out the settle window since the last activity, then deletes the plist of every name tracked here, and only those.
+    func sweep() {
         let (pending, last) = lock.withLock { (names, lastActivity) }
         guard !pending.isEmpty else { return }
-        let remaining = Self.settleSeconds - Date().timeIntervalSince(last)
+        let remaining = settleSeconds - Date().timeIntervalSince(last)
         if remaining > 0 { Thread.sleep(forTimeInterval: remaining) }
         for name in pending { try? FileManager.default.removeItem(at: TestDefaultsSuite.plistURL(forSuite: name)) }
     }
