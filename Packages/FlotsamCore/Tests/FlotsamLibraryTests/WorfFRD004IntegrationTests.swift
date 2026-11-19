@@ -635,8 +635,7 @@ final class Rig {
         // that is truly slow is CPU-bound, takes the same share, and stays over the bound on all three runs. Only the
         // commands are inside the probe's window, not the 10,000-item setup.
         var figures = ""
-        var worstFraction = Double.infinity
-        for _ in 1...3 {
+        let worstFraction = try await bestOfThree(under: 1) {
             let rig = try await Rig((1...10_000).map { .init(n: $0, hours: $0) })
             defer { rig.cleanUp() }
             #expect(try rig.count("item") == 10_000)
@@ -669,8 +668,7 @@ final class Rig {
             #expect(try rig.count("itemTag") == 520)
             #expect(rig.reported.errors.isEmpty)
             figures = "\(rawFigures); load-normalized fraction of budget \(fraction)"
-            worstFraction = min(worstFraction, fraction)
-            if worstFraction < 1 { break }
+            return fraction
         }
         #expect(worstFraction < 1, "over budget on all 3 runs; last run: \(figures)")
     }
