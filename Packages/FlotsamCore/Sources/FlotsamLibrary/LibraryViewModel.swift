@@ -37,6 +37,11 @@ public final class LibraryViewModel {
     public private(set) var selection: Set<UUID> = []
     public private(set) var isPreviewOpen = false
     public private(set) var preview: LibraryPreview?
+    /// The row the pointer is on (FR-003-38); it never changes the selection or the cursor (FR-003-39).
+    public private(set) var hoveredRowID: UUID?
+    /// The preview of the hovered row, set once the pointer has rested on it for `LibraryHover.previewDelay`, and only
+    /// while the preview pane is closed (FR-003-39).
+    public private(set) var hoverPreview: LibraryPreview?
     public private(set) var viewMode: LibraryViewMode
     /// Standard or Compact, read from settings at each open (FR-003-06). Settings opens in its own window and the Library
     /// hides first (FR-003-02), so the value cannot change while the panel is shown.
@@ -86,6 +91,9 @@ public final class LibraryViewModel {
     @ObservationIgnored private var isFetchingPage = false
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var previewTask: Task<Void, Never>?
+    /// The pending or running hover preview. Exists only between the pointer entering a row and leaving it, so an idle
+    /// panel runs no timer (FR-003-39).
+    @ObservationIgnored private var hoverTask: Task<Void, Never>?
     /// The running relative-time watch (FR-003-24); `panelDidHide` cancels it so a hide never depends on the view.
     @ObservationIgnored private var relativeTimeTask: Task<Void, Never>?
     /// The latest paste, kept so tests (and a future cancel) can await it.
@@ -163,6 +171,7 @@ public final class LibraryViewModel {
         filter = .all
         isPreviewOpen = false
         preview = nil
+        clearHover()
         selection = []
         cursor = nil
         anchor = nil
@@ -270,6 +279,7 @@ public final class LibraryViewModel {
         reloadQueued = false
         loadTask?.cancel()
         previewTask?.cancel()
+        clearHover()
         relativeTimeTask?.cancel()
         relativeTimeTask = nil
         generation += 1
@@ -557,6 +567,8 @@ public final class LibraryViewModel {
     }
 
     public func perform(_ command: LibraryCommand) {
+        // Any key or command ends a hover preview; the pointer resting on a row does not bring it back (FR-003-39).
+        clearHoverPreview()
         // Opening a Flotsam window hides the Library first, as an explicit step and not as a side effect of the window
         // taking key: a window coming back from the Dock does not move key in time (FR-003-02, TASK-524).
         if command.opensFlotsamWindow(selection: selectedRows) { host.hidePanel() }
@@ -736,7 +748,7 @@ public final class LibraryViewModel {
 
     private func setPreviewOpen(_ open: Bool) {
         isPreviewOpen = open
-        if open { refreshPreview() } else { previewTask?.cancel(); preview = nil }
+        if open { clearHoverPreview(); refreshPreview() } else { previewTask?.cancel(); preview = nil }
     }
 
     private func refreshPreview() {
@@ -744,15 +756,62 @@ public final class LibraryViewModel {
         guard isPreviewOpen, let row = selectedRow else { preview = nil; return }
         previewTask = Task { [weak self] in
             guard let self else { return }
-            let source = source
-            let content = await source.content(of: row.id)
-            let image = row.kind == .image || row.kind == .screenshot ? await source.thumbnail(itemId: row.id, size: .preview) : nil
+            let result = await loadPreview(for: row)
             guard !Task.isCancelled, selectedRow?.id == row.id else { return }
-            switch content {
-            case .success(let content): preview = LibraryPreview(row: row, content: content, imageData: image)
+            switch result {
+            case .success(let loaded): preview = loaded
             case .failure(let error): preview = nil; effects.report(error)
             }
         }
+    }
+
+    /// The one place a row's preview content is read and built, for the pane (FR-003-14) and the hover preview (FR-003-39).
+    private func loadPreview(for row: ItemRow) async -> FlotsamResult<LibraryPreview> {
+        let source = source
+        let content = await source.content(of: row.id)
+        let image = row.kind == .image || row.kind == .screenshot ? await source.thumbnail(itemId: row.id, size: .preview) : nil
+        return content.map { LibraryPreview(row: row, content: $0, imageData: image) }
+    }
+
+    // MARK: Hover (FR-003-38, FR-003-39)
+
+    /// The pointer entered (`isInside`) or left row `id`. Moves no selection and no cursor. After the pointer has rested
+    /// on a row for `LibraryHover.previewDelay` its preview shows, unless the preview pane is open. Entering another row
+    /// restarts the wait; leaving cancels it.
+    public func pointer(_ id: UUID, isInside: Bool) {
+        // Leaving row A and entering row B may arrive in either order, so a leave only counts for the row it names.
+        if isInside {
+            guard hoveredRowID != id else { return }
+        } else {
+            guard hoveredRowID == id else { return }
+        }
+        hoveredRowID = isInside ? id : nil
+        clearHoverPreview()
+        guard isInside, isShown, !isPreviewOpen else { return }
+        hoverTask = Task { [weak self] in
+            try? await Task.sleep(for: LibraryHover.previewDelay)
+            guard !Task.isCancelled, let self, hoveredRowID == id, !isPreviewOpen,
+                let row = loadedRows.first(where: { $0.id == id })
+            else { return }
+            let result = await loadPreview(for: row)
+            guard !Task.isCancelled, hoveredRowID == id, !isPreviewOpen else { return }
+            switch result {
+            case .success(let loaded): hoverPreview = loaded
+            case .failure(let error): effects.report(error)
+            }
+        }
+    }
+
+    /// Ends the hover preview and its pending wait. The pointer's row stays recorded, so only a new entry reopens it.
+    private func clearHoverPreview() {
+        hoverTask?.cancel()
+        hoverTask = nil
+        hoverPreview = nil
+    }
+
+    private func clearHover() {
+        hoveredRowID = nil
+        clearHoverPreview()
     }
 
     public func awaitPreview() async { await previewTask?.value }
