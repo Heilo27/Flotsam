@@ -437,7 +437,7 @@
       "requirement": "AC-008-04",
       "given": "Settings › Privacy",
       "when": "user lists the pane's controls",
-      "then": "exactly: ignored-apps list (+, -, Reset to Defaults); read-only text naming concealed, transient and auto-generated pasteboard types as never stored; 'Paste from Other Apps' status row with guidance and System Settings button; one-line statement that Flotsam makes no network connections; no control that sends, shares, uploads or reports anything",
+      "then": "exactly: ignored-apps list (+, -, Reset to Defaults); read-only text naming transient and auto-generated pasteboard types as never stored and concealed (password manager) copies as stored encrypted, masked, behind the Mac's password or Touch ID; 'Paste from Other Apps' status row with guidance and System Settings button; one-line statement that Flotsam makes no network connections; no control that sends, shares, uploads or reports anything",
       "class": "layout",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -677,7 +677,7 @@
       "requirement": "AC-008-06",
       "given": "Fresh install, onboarding closed on step 1",
       "when": "user opens Settings › Privacy",
-      "then": "the ignored list has exactly 6 entries equal to {com.apple.keychainaccess, com.apple.Passwords, com.1password.1password, com.agilebits.onepassword7, com.bitwarden.desktop, org.keepassxc.keepassxc}",
+      "then": "the ignored list is empty: zero entries, and no password manager is ignored (FR-008-11)",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -735,7 +735,7 @@
     {
       "id": "OC-8075",
       "requirement": "SET-VAL-002",
-      "given": "Ignored list at 6 defaults",
+      "given": "Ignored list holds 6 user-added apps",
       "when": "user clicks 'Add…' and chooses an .app bundle with no bundle identifier",
       "then": "inline text 'That isn't an app Flotsam can add. Choose an application.'; list count stays 6 with identical members",
       "class": "error",
@@ -775,9 +775,9 @@
     {
       "id": "OC-8079",
       "requirement": "AC-008-06",
-      "given": "Ignored list = 6 defaults minus Bitwarden plus TextEdit (6 entries)",
+      "given": "Ignored list = Keychain Access, Passwords, 1Password 8, 1Password 7, KeePassXC and TextEdit (6 user-added entries)",
       "when": "user clicks 'Reset to Defaults' and clicks Cancel",
-      "then": "the alert text is 'Replace your list with the default apps?'; after Cancel the list is unchanged: TextEdit present, Bitwarden absent, count 6",
+      "then": "the alert text is 'Clear the ignored-apps list? Flotsam will store copies from every app, password managers included.'; after Cancel the list is unchanged: TextEdit present, Bitwarden absent, count 6",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -787,7 +787,7 @@
       "requirement": "FR-008-11",
       "given": "Same list as above; history holds TextEdit items",
       "when": "user clicks 'Reset to Defaults' and confirms",
-      "then": "list equals exactly the 6 defaults; TextEdit absent; Bitwarden present; Library item count unchanged",
+      "then": "the list is empty (the default is empty, FR-008-11); TextEdit absent; Bitwarden absent; Library item count unchanged",
       "class": "destructive",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -795,7 +795,7 @@
     {
       "id": "OC-8081",
       "requirement": "FR-008-11",
-      "given": "Default ignored list",
+      "given": "Ignored list holds 6 user-added entries",
       "when": "user removes all 6 entries, then copies 'oracle-e1' in TextEdit",
       "then": "the list shows no rows and no error; 'Reset to Defaults' remains available; the copy is stored (+1)",
       "class": "empty",

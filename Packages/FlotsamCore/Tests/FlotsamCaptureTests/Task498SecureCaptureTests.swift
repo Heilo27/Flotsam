@@ -61,7 +61,7 @@ private final class SecureRig {
     private var started = false
     var dataFolder: URL { root.appendingPathComponent("data") }
 
-    init(withVault: Bool = true, keychain: MemoryKeychain = MemoryKeychain()) async throws {
+    init(withVault: Bool = true, keychain: MemoryKeychain = MemoryKeychain(), ignoring: Set<String> = []) async throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-498-capture-\(UUID().uuidString)")
         self.keychain = keychain
         let vault = withVault ? SecureClipVault(store: keychain) : nil
@@ -72,7 +72,7 @@ private final class SecureRig {
         capture = ClipboardCapture(
             pasteboard: pasteboard, sourceApps: ContractSourceApps(frontmost: ContractRig.writerApp),
             ownWrites: OwnWriteLedger(), ingest: IngestActor(database: database, settings: settings), settings: settings,
-            reporter: reporter, ignoredApps: { [] }, access: AllowedPasteboardAccess(), vault: vault, clock: ManualClock(),
+            reporter: reporter, ignoredApps: { ignoring }, access: AllowedPasteboardAccess(), vault: vault, clock: ManualClock(),
             sink: sink, scheduleTimer: inertTimer)
     }
 
@@ -230,6 +230,35 @@ private func contains(_ haystack: Data, _ needle: String) -> Bool { haystack.ran
 
 @MainActor
 @Suite struct SecureCaptureRejectionTests {
+    /// Worf (TASK-498 QA), AC-008-06: the default list is empty, but a list the user fills in still wins over a password
+    /// manager's concealed copy. Red if the ignored-apps gate (gate 4) is skipped for a concealed copy.
+    @Test("AC-008-06 W498-I1: a concealed copy from an app the user ignores is rejected with CAP-POL-002 and stored nowhere")
+    func concealedFromIgnoredAppIsRejected() async throws {
+        let rig = try await SecureRig(ignoring: ["com.example.writer"])
+        await rig.copyConcealed(marker)
+
+        #expect(try await rig.itemCount() == 0)
+        #expect(rig.sink.logged(.capPol002).count == 1)
+        #expect(rig.sink.logged(.capPol001).count == 0)
+        #expect(rig.pasteboard.bytesRequested.isEmpty)
+        #expect(contains(rig.allDataBytes(), marker) == false)
+        #expect(rig.sink.everything.contains(marker) == false)
+        await rig.finish()
+    }
+
+    /// Control for the test above: the same copy with only a different app listed is stored, so CAP-POL-002 comes from
+    /// the bundle id match and not from any non-empty list.
+    @Test("AC-008-06 W498-I2: a concealed copy is stored when the ignored list names only other apps")
+    func concealedFromANonIgnoredAppIsStored() async throws {
+        let rig = try await SecureRig(ignoring: ["com.example.other"])
+        await rig.copyConcealed(marker)
+
+        #expect(try await rig.itemCount() == 1)
+        #expect(rig.sink.logged(.capPol002).count == 0)
+        #expect(try await rig.secureRow() != nil)
+        await rig.finish()
+    }
+
     /// Guards `vault == nil` in gate 3: with no vault a concealed copy fails closed exactly as it did before secure clips.
     @Test("AC-001-04: a concealed copy with no vault wired is rejected with CAP-POL-001 and nothing is stored")
     func noVaultRejectsConcealed() async throws {

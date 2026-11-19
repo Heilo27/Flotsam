@@ -557,7 +557,11 @@ import Testing
         func launch() -> SettingsStore {
             SettingsStore(store: UserDefaultsStore(defaults: UserDefaults(suiteName: name)!), onInvalid: { reported.add($0) })
         }
+        // Worf (TASK-498 QA): the default is now empty, so removing entries from it removed nothing. Start from a stored list of
+        // the six retired defaults and empty it for real.
+        launch().set(BundleIdentifierList.retiredIgnoredAppsDefault, for: SettingKeys.privacyIgnoredApps)
         var list = launch().value(SettingKeys.privacyIgnoredApps)
+        #expect(list.identifiers.count == 6)
         for id in Array(list.identifiers) { list = list.removing(id) }
         #expect(list.identifiers.isEmpty)
 

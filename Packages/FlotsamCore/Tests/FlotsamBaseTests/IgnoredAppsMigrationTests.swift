@@ -53,6 +53,24 @@ import Testing
         }
     }
 
+    /// Worf (TASK-498 QA). Six entries that are only five distinct apps (one repeated) are a subset of the old six with
+    /// the same count: kept, because it is not the old default. Red if set equality becomes a subset test.
+    @Test func fiveOfTheSixPlusARepeatIsNotTheOldDefault() {
+        let list = Array(Self.oldSix.dropLast()) + [Self.oldSix[0]]
+        let store = store(holding: list)
+        #expect(!IgnoredAppsMigration.run(on: store))
+        #expect(stored(store) == list)
+    }
+
+    /// Six entries, five of the old six plus one other app: same count, not the same set. Red if set equality is dropped
+    /// for a count-only (or always-true) test.
+    @Test func fiveOfTheSixPlusAnotherAppIsNotTheOldDefault() {
+        let list = Array(Self.oldSix.dropLast()) + ["com.example.other"]
+        let store = store(holding: list)
+        #expect(!IgnoredAppsMigration.run(on: store))
+        #expect(stored(store) == list)
+    }
+
     @Test func anEmptyStoredListStaysEmpty() {
         let store = store(holding: [])
         #expect(!IgnoredAppsMigration.run(on: store))
