@@ -337,8 +337,8 @@ function finish(   L, t) {
   # catches the common SwiftUI and AppKit entry points (also Text(verbatim: "..."), a literal split over lines, a space before
   # the paren, LocalizedStringKey("...")); Text(name) and catalogue lookups are not literals. A view name needs a left
   # identifier boundary (MyText("x") is a custom type, not Text), so a SwiftUI view whose name merely ends in a listed name
-  # (DatePicker, NavigationLink, ShareLink, ...) is listed by name too; all of them take a LocalizedStringKey title. Code review and the catalogue test cover the rest.
-  scan_all("USTRING", "(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup|DatePicker|MultiDatePicker|ColorPicker|PhotosPicker|NavigationLink|ShareLink|TextFieldLink|CommandMenu|Tab|TabSection|LabeledContent|ControlGroup|ProgressView|ContentUnavailableView|Window|WindowGroup|UtilityWindow)[ \t\n]*\\([ \t\n]*(verbatim:[ \t\n]*)?\"", 1, 0)
+  # (DatePicker, NavigationLink, ShareLink, MenuButton, NewDocumentButton, ...) is listed by name too; all of them take a LocalizedStringKey title. Code review and the catalogue test cover the rest.
+  scan_all("USTRING", "(Text|Button|Label|Toggle|Picker|Section|TextField|SecureField|Menu|Link|MenuBarExtra|Stepper|GroupBox|DisclosureGroup|DatePicker|MultiDatePicker|ColorPicker|PhotosPicker|NavigationLink|ShareLink|TextFieldLink|CommandMenu|Tab|TabSection|LabeledContent|ControlGroup|ProgressView|ContentUnavailableView|Window|WindowGroup|UtilityWindow|MenuButton|NewDocumentButton|TableColumn|SharePreview|AccessibilityRotorEntry)[ \t\n]*\\([ \t\n]*(verbatim:[ \t\n]*)?\"", 1, 0)
   scan_all("USTRING", "LocalizedStringKey[ \t\n]*\\([ \t\n]*\"", 1, 0)
   scan_all("USTRING", "\\.(help|navigationTitle|accessibilityLabel|accessibilityHint|badge|confirmationDialog|alert)[ \t\n]*\\([ \t\n]*\"", 0, 0)
   scan_all("USTRING", "\\.(messageText|informativeText|title|stringValue|toolTip|placeholderString|label)[ \t]*=[ \t\n]*\"", 0, 0)
