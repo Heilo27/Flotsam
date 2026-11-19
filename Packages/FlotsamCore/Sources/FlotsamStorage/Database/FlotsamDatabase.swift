@@ -44,10 +44,15 @@ public final class FlotsamDatabase: Sendable {
     /// of it); it only asks `isKeyAvailable` so a secure row whose key is gone reads as unavailable. nil means no key
     /// source, which reads the same way.
     let secureVault: (any SecureClipVaulting)?
+    /// The bundle identifiers of the apps the user ignores (FR-008-11), read at each read so a Settings edit applies to the
+    /// next list, count or search with no relaunch. Every read that lists or counts items hides their items (FR-008-42,
+    /// `notFromIgnoredApps`). Storage does not know where the list lives; the app supplies it, as it does to capture.
+    let ignoredApps: @Sendable () -> Set<String>
 
     private init(
         pool: DatabasePool, folder: DataFolder, fileSystem: any FileSystemPort, clock: any WallClock,
-        notice: FlotsamError?, logSink: any LogSink, secureVault: (any SecureClipVaulting)?
+        notice: FlotsamError?, logSink: any LogSink, secureVault: (any SecureClipVaulting)?,
+        ignoredApps: @escaping @Sendable () -> Set<String>
     ) {
         self.pool = pool
         self.folder = folder
@@ -56,6 +61,7 @@ public final class FlotsamDatabase: Sendable {
         self.openNotice = notice
         self.logSink = logSink
         self.secureVault = secureVault
+        self.ignoredApps = ignoredApps
     }
 
     /// The one way Storage logs an error: category `storage`, through this database's sink (FR-000-09, FR-000-10).
@@ -67,14 +73,16 @@ public final class FlotsamDatabase: Sendable {
     var blobs: BlobStore { BlobStore(folder: folder, fileSystem: fileSystem) }
 
     /// Creates the data folder (0700), opens the pool with the FR-007-02 pragmas, migrates and integrity-checks.
-    /// Folder failure is `STO-IO-002`; any other database failure is `STO-DB-003` (both Fatal, FR-000-04).
+    /// Folder failure is `STO-IO-002`; any other database failure is `STO-DB-003` (both Fatal, FR-000-04). `ignoredApps` is the
+    /// live ignored-apps list the app owns (FR-008-11); the default, no ignored apps, is for a caller that has no such list.
     public static func open(
         folder: URL, fileSystem: any FileSystemPort = LocalFileSystem(), clock: any WallClock = SystemClock(),
-        logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil
+        logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil,
+        ignoredApps: @escaping @Sendable () -> Set<String> = { [] }
     ) async -> FlotsamResult<FlotsamDatabase> {
         await open(
             folder: folder, fileSystem: fileSystem, clock: clock, logSink: logSink, secureVault: secureVault,
-            migrations: Migrations.all)
+            ignoredApps: ignoredApps, migrations: Migrations.all)
     }
 
     private enum Attempt {
@@ -98,7 +106,8 @@ public final class FlotsamDatabase: Sendable {
     /// late there).
     static func open(
         folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock = SystemClock(),
-        logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil, migrations: [Migration],
+        logSink: any LogSink = OSLogSink(), secureVault: (any SecureClipVaulting)? = nil,
+        ignoredApps: @escaping @Sendable () -> Set<String> = { [] }, migrations: [Migration],
         postMigrationCheck: ((Database) throws -> Bool)? = nil,
         busyTimeout: TimeInterval = busyTimeoutSeconds
     ) async -> FlotsamResult<FlotsamDatabase> {
@@ -107,7 +116,7 @@ public final class FlotsamDatabase: Sendable {
         let job = BlockingOpen {
             openBlocking(
                 folder: root, fileSystem: fileSystem, clock: clock, logSink: logSink, secureVault: secureVault,
-                migrations: migrations, postMigrationCheck: postMigrationCheck, busyTimeout: busyTimeout)
+                ignoredApps: ignoredApps, migrations: migrations, postMigrationCheck: postMigrationCheck, busyTimeout: busyTimeout)
         }
         return await withCheckedContinuation { continuation in
             let thread = Thread { continuation.resume(returning: job.run()) }
@@ -123,7 +132,7 @@ public final class FlotsamDatabase: Sendable {
 
     private static func openBlocking(
         folder root: URL, fileSystem: any FileSystemPort, clock: any WallClock, logSink: any LogSink,
-        secureVault: (any SecureClipVaulting)?, migrations: [Migration],
+        secureVault: (any SecureClipVaulting)?, ignoredApps: @escaping @Sendable () -> Set<String>, migrations: [Migration],
         postMigrationCheck: ((Database) throws -> Bool)?, busyTimeout: TimeInterval
     ) -> FlotsamResult<FlotsamDatabase> {
         let layout = DataFolder(root: root)
@@ -150,7 +159,7 @@ public final class FlotsamDatabase: Sendable {
                     notice = FlotsamError(.stoDb002, "Database damaged; moved aside and recreated")
                 }
                 FlotsamLog.log(.database(.open, outcome: .opened), sink: logSink)
-                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink, secureVault: secureVault))
+                return .success(FlotsamDatabase(pool: pool, folder: layout, fileSystem: fileSystem, clock: clock, notice: notice, logSink: logSink, secureVault: secureVault, ignoredApps: ignoredApps))
             case .failed(let error):
                 FlotsamLog.log(.database(.open, outcome: .failed), sink: logSink)
                 return .failure(error)

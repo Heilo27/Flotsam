@@ -218,7 +218,11 @@ final class AppContainer {
     func hideLibraryBeforeWindowOpens() { library?.hidePanel() }
 
     private func openDatabase() async {
-        switch await FlotsamDatabase.open(folder: environment.dataFolder, secureVault: secureVault) {
+        // FR-008-42: the same live list capture reads (FR-008-11), so a Settings edit hides or restores items at the next read.
+        let settings = settings
+        switch await FlotsamDatabase.open(
+            folder: environment.dataFolder, secureVault: secureVault, ignoredApps: { settings.ignoredApps }
+        ) {
         case .success(let opened):
             database = opened
             startCapture(database: opened)
@@ -257,7 +261,7 @@ final class AppContainer {
             pasteboard: SystemPasteboard(), sourceApps: SystemSourceApps(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
-            ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
+            ignoredApps: { settings.ignoredApps },
             access: SystemPasteboardAccess(), vault: secureVault, cue: captureCue, pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.

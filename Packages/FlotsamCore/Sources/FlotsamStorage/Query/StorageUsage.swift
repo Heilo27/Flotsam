@@ -28,7 +28,8 @@ extension FlotsamDatabase {
         do {
             return .success(try await pool.read { db in
                 StorageUsage(
-                    totalItems: try Self.count(db, selection: Selection(filter: .all, text: "")),
+                    // Storage accounting counts every stored row, hidden or not: the space is used either way (FR-008-42).
+                    totalItems: try Self.count(db, selection: Selection(filter: .all, text: "", ignoredApps: [])),
                     imageBytes: try Self.imageBytes(db),
                     databaseBytes: try Self.databaseBytes(db))
             })
