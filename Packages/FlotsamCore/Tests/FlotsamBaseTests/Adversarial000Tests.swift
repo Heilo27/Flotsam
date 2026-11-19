@@ -480,7 +480,7 @@ struct Adversarial000PrivacyTests {
 // MARK: - Architecture lint (FR-000-02, FR-000-09)
 
 /// Runs a copy of bin/check-architecture.sh against a throwaway tree holding one fixture file, so the repo is never touched.
-private enum AdvLintHarness {
+enum AdvLintHarness {
     static var repoRoot: URL {
         // .../Packages/FlotsamCore/Tests/FlotsamBaseTests/<this file>
         var url = URL(fileURLWithPath: #filePath)
@@ -500,7 +500,7 @@ private enum AdvLintHarness {
         try await run(source).output.contains("fatalError/precondition without")
     }
 
-    private static func run(_ source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
+    static func run(_ source: String, at relativePath: String = "FlotsamBase/Fixture.swift",
                             extraFiles: [String: String] = [:]) async throws -> ProcessResult {
         let fm = FileManager.default
         let root = fm.temporaryDirectory.appendingPathComponent("flotsam-8a-lint-\(UUID().uuidString)")
