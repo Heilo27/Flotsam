@@ -818,6 +818,8 @@ struct FRD001KindContractTests {
 }
 
 // Unreachable from this package, no test written (needs a running app, the OS, or UI):
-// OC-1001 (10-minute CPU profile), OC-1003 (menu tracking run loop mode), OC-1022 and OC-1023 (Secure Event Input),
+// OC-1001 (10-minute CPU profile),
 // OC-1033 (system screenshot; the kind-set half is covered by the kinds asserted in OC-1034..1048),
 // and the panel/hotkey/paste halves of OC-1005..1010, 1030, 1042, 1044, 1045, 1055.
+// OC-1003 (menu-tracking run loop mode), OC-1022 and OC-1023 (Secure Event Input) are covered in
+// FRD001SecureInputAndTrackingTests.swift (TASK-156).

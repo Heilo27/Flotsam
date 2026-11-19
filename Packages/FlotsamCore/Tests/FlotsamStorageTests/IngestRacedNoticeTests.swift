@@ -17,8 +17,15 @@ final class RaceHookFileSystem: FileSystemPort, @unchecked Sendable {
     private let lock = NSLock()
     private var hook: (@Sendable () -> Void)?
     private var fired = 0
+    private var answer: Int64?
+    private var failWrites = false
 
-    func arm(_ hook: @escaping @Sendable () -> Void) { lock.withLock { self.hook = hook } }
+    /// `capacity` is what the firing `availableCapacity` call answers (nil = unknown, the disk guard passes; a small
+    /// number makes the loser hit the disk guard). `failBlobWrites` makes every `writeFile` after the hook fires fail,
+    /// so the loser's blob write (step 5) fails. TASK-415.
+    func arm(capacity: Int64? = nil, failBlobWrites: Bool = false, _ hook: @escaping @Sendable () -> Void) {
+        lock.withLock { self.hook = hook; answer = capacity; failWrites = failBlobWrites }
+    }
     var timesFired: Int { lock.withLock { fired } }
 
     func fileExists(at url: URL) -> Bool { real.fileExists(at: url) }
@@ -28,19 +35,22 @@ final class RaceHookFileSystem: FileSystemPort, @unchecked Sendable {
     func removeItem(at url: URL) -> FlotsamResult<Void> { real.removeItem(at: url) }
     func contentsOfDirectory(at url: URL) -> FlotsamResult<[URL]> { real.contentsOfDirectory(at: url) }
     func extendedAttribute(named name: String, at url: URL) -> Data? { real.extendedAttribute(named: name, at: url) }
-    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> { real.writeFile(data, to: url, permissions: permissions) }
+    func writeFile(_ data: Data, to url: URL, permissions: Int) -> FlotsamResult<Void> {
+        if lock.withLock({ failWrites && fired > 0 }) { return .failure(FlotsamError(.stoIo001, "Injected blob write failure")) }
+        return real.writeFile(data, to: url, permissions: permissions)
+    }
     func readFile(at url: URL) -> FlotsamResult<Data> { real.readFile(at: url) }
     func readFileNoFollow(at url: URL) -> FlotsamResult<Data> { real.readFileNoFollow(at: url) }
     func fileInfo(at url: URL) -> FileInfo? { real.fileInfo(at: url) }
     func availableCapacity(at url: URL) -> Int64? {
-        let pending = lock.withLock { () -> (@Sendable () -> Void)? in
+        let pending = lock.withLock { () -> (hook: @Sendable () -> Void, answer: Int64?)? in
             guard let hook else { return nil }
             self.hook = nil
             fired += 1
-            return hook
+            return (hook, answer)
         }
-        pending?()
-        return nil
+        pending?.hook()
+        return pending?.answer
     }
 }
 
@@ -48,10 +58,13 @@ final class RaceHookFileSystem: FileSystemPort, @unchecked Sendable {
     private let winnerId = UUID()
 
     /// Commits the "other identical payload" that won the race: one row, same contentKey, copyCount 1.
-    private func armWinner(_ rig: Rig, _ fs: RaceHookFileSystem, key: String, kind: ItemKind, lastCopiedAt: Int64 = 1_700_000_000_000) {
+    private func armWinner(
+        _ rig: Rig, _ fs: RaceHookFileSystem, key: String, kind: ItemKind, lastCopiedAt: Int64 = 1_700_000_000_000,
+        capacity: Int64? = nil, failBlobWrites: Bool = false
+    ) {
         let pool = rig.store.database.pool
         let id = winnerId.uuidString
-        fs.arm {
+        fs.arm(capacity: capacity, failBlobWrites: failBlobWrites) {
             try? pool.write { db in
                 try db.execute(
                     sql: """
@@ -144,5 +157,128 @@ final class RaceHookFileSystem: FileSystemPort, @unchecked Sendable {
         guard case .created = result.outcome else { Issue.record("expected created"); return }
         #expect(result.warnings.map(\.code) == [.capLim002])
         #expect(try rig.itemCount() == 2)
+    }
+
+    // MARK: TASK-415 (W-405-2): a race loser never fails for a payload the winner already stored
+
+    private func png() -> Data { TestImage.make(width: 64, height: 64, format: .png) }
+
+    /// OC-415-1. The competing copy commits between step 1 and the disk guard, and the guard then refuses the loser
+    /// (40 MiB free). The loser bumps the winner: one item, copyCount 2, no blob, no notice. Red if the re-check after a
+    /// step 2-5 failure is removed (the loser returns STO-IO-001 for a payload that is stored).
+    @Test("OC-415-1 a loser that hits the disk guard while the winner commits bumps instead of failing")
+    func oc415_1_diskGuardLoser() async throws {
+        let fs = RaceHookFileSystem()
+        let rig = try await Rig.make(on: fs)
+        defer { rig.cleanUp() }
+        armWinner(rig, fs, key: "k-415-guard", kind: .text, capacity: 40 * mib)
+
+        let result = try await rig.ingest.ingest(rig.text("k-415-guard", "fallback")).get()
+
+        #expect(fs.timesFired == 1)
+        #expect(result.outcome == .bumped(winnerId))
+        #expect(result.warnings.isEmpty)
+        #expect(try copyCount(rig) == 2)
+        #expect(try rig.itemCount() == 1)
+        #expect(rig.blobFiles().isEmpty)
+    }
+
+    /// OC-415-2. Same race, the loser then fails the image decode (undecodable bytes, CAP-VAL-001): bumped, not failed.
+    @Test("OC-415-2 a loser whose image fails to decode while the winner commits bumps instead of failing")
+    func oc415_2_decodeLoser() async throws {
+        let fs = RaceHookFileSystem()
+        let rig = try await Rig.make(on: fs)
+        defer { rig.cleanUp() }
+        armWinner(rig, fs, key: "k-415-decode", kind: .image)
+
+        let result = try await rig.ingest.ingest(rig.image("k-415-decode", Data("not an image".utf8))).get()
+
+        #expect(fs.timesFired == 1)
+        #expect(result.outcome == .bumped(winnerId))
+        #expect(result.warnings.isEmpty)
+        #expect(try copyCount(rig) == 2)
+        #expect(try rig.itemCount() == 1)
+        #expect(rig.blobFiles().isEmpty)
+    }
+
+    /// OC-415-3. Same race, the loser's blob write (step 5) fails: bumped, with no orphan blob.
+    @Test("OC-415-3 a loser whose blob write fails while the winner commits bumps instead of failing")
+    func oc415_3_blobWriteLoser() async throws {
+        let fs = RaceHookFileSystem()
+        let rig = try await Rig.make(on: fs)
+        defer { rig.cleanUp() }
+        armWinner(rig, fs, key: "k-415-blob", kind: .image, failBlobWrites: true)
+
+        let result = try await rig.ingest.ingest(rig.image("k-415-blob", png())).get()
+
+        #expect(fs.timesFired == 1)
+        #expect(result.outcome == .bumped(winnerId))
+        #expect(result.warnings.isEmpty)
+        #expect(try copyCount(rig) == 2)
+        #expect(try rig.itemCount() == 1)
+        #expect(rig.blobFiles().isEmpty)
+    }
+
+    /// OC-415-4. A backfill (countsAsCopy false) that loses the race and hits the disk guard is `.unchanged`, not a
+    /// failure and not a bump.
+    @Test("OC-415-4 a backfill loser that hits the disk guard leaves the winner unchanged")
+    func oc415_4_backfillGuardLoser() async throws {
+        let fs = RaceHookFileSystem()
+        let rig = try await Rig.make(on: fs)
+        defer { rig.cleanUp() }
+        armWinner(rig, fs, key: "k-415-backfill", kind: .text, capacity: 40 * mib)
+        let base = rig.text("k-415-backfill", "fallback")
+        let backfill = IngestCandidate(
+            kind: base.kind, contentKey: base.contentKey, plainText: base.plainText, origin: .screenshotFile,
+            occurredAt: base.occurredAt, countsAsCopy: false)
+
+        let result = try await rig.ingest.ingest(backfill).get()
+
+        #expect(result.outcome == .unchanged(winnerId))
+        #expect(try copyCount(rig) == 1)
+        #expect(try rig.itemCount() == 1)
+    }
+
+    /// OC-415-5. Control: a lone payload (the competing commit has a different key) that hits the disk guard, decodes
+    /// badly, or fails its blob write still fails with its own code, and stores nothing. Red if the re-check ever turns
+    /// a genuine failure into a bump or a success.
+    @Test("OC-415-5 a lone payload that fails steps 2 to 5 still fails with its own code")
+    func oc415_5_loneFailures() async throws {
+        // disk guard
+        do {
+            let fs = RaceHookFileSystem()
+            let rig = try await Rig.make(on: fs)
+            defer { rig.cleanUp() }
+            armWinner(rig, fs, key: "someone-else", kind: .text, capacity: 40 * mib)
+            let result = await rig.ingest.ingest(rig.text("k-415-lone-guard", "x"))
+            guard case .failure(let error) = result else { Issue.record("expected the disk guard failure"); return }
+            #expect(error.code == .stoIo001)
+            #expect(try rig.itemCount() == 1)
+            #expect(try copyCount(rig) == 1)
+            #expect(rig.blobFiles().isEmpty)
+        }
+        // decode
+        do {
+            let fs = RaceHookFileSystem()
+            let rig = try await Rig.make(on: fs)
+            defer { rig.cleanUp() }
+            armWinner(rig, fs, key: "someone-else", kind: .text)
+            let result = await rig.ingest.ingest(rig.image("k-415-lone-decode", Data("not an image".utf8)))
+            guard case .failure(let error) = result else { Issue.record("expected the decode failure"); return }
+            #expect(error.code == .capVal001)
+            #expect(try rig.itemCount() == 1)
+        }
+        // blob write
+        do {
+            let fs = RaceHookFileSystem()
+            let rig = try await Rig.make(on: fs)
+            defer { rig.cleanUp() }
+            armWinner(rig, fs, key: "someone-else", kind: .text, failBlobWrites: true)
+            let result = await rig.ingest.ingest(rig.image("k-415-lone-blob", png()))
+            guard case .failure(let error) = result else { Issue.record("expected the blob write failure"); return }
+            #expect(error.code == .stoIo001)
+            #expect(try rig.itemCount() == 1)
+            #expect(rig.blobFiles().isEmpty)
+        }
     }
 }
