@@ -36,6 +36,9 @@ private final class FakeFrontable: FrontableWindow {
     /// What `appIsActive` answers; a test flips it to model the system accepting or refusing the request.
     var active = false
     var appIsActive: Bool { active }
+    /// What `frontmostAppID` answers; a test changes it to model the user switching apps.
+    var frontmost: Int32? = 100
+    var frontmostAppID: Int32? { frontmost }
     /// What `windowIsOpen` answers; a test flips it to model the window closing during the grace period.
     var open = true
     var windowIsOpen: Bool { open }

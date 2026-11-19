@@ -6,7 +6,7 @@ import Foundation
 // later `NSApp.activate()` is only a request, and the system refuses it when the user is working in another app: the
 // window then opens behind that app and the next key goes to it. So the sequence is fixed here, once, for every window:
 // ask for activation, put the window in front and key, and if Flotsam is still not the frontmost app a moment later,
-// have the system activate it the way a launch does.
+// have the system activate it the way a launch does, unless the user has meanwhile switched to some other app.
 
 /// The App's view of one window and of the application, as `WindowFronting` needs them.
 @MainActor
@@ -14,6 +14,9 @@ public protocol FrontableWindow: AnyObject {
     /// Whether Flotsam is the frontmost application right now (what the system says, not what AppKit believes: a
     /// non-activating panel can make `NSApp.isActive` true while another app is still frontmost).
     var appIsActive: Bool { get }
+    /// The process id of the frontmost application right now, nil when the system reports none. `WindowFronting` reads it
+    /// when asked to show the window and again when the grace ends: a different answer means the user moved on.
+    var frontmostAppID: Int32? { get }
     /// Whether the window is still on screen. A window closed during the grace period must not pull Flotsam forward.
     var windowIsOpen: Bool { get }
     /// The ordinary, cooperative request that Flotsam become the active application (`NSApp.activate()`).
@@ -43,7 +46,12 @@ public final class WindowFronting {
     /// only then may a refused request be escalated to the system's activation. The setup guide shown by Flotsam itself at
     /// launch passes false, so a login-item start never takes the keyboard from the app the user is working in. A call
     /// with `forcing: false` also never cancels a follow-up an earlier forcing call left pending.
+    ///
+    /// The forced activation is also conditional on the user not having moved on: the frontmost app is read when this call
+    /// is made, and the follow-up forces only if that same app is still frontmost when the grace ends (which is what a
+    /// refused request looks like). If the user switched to a third app inside the grace, nothing is forced.
     public func bringToFront(_ window: any FrontableWindow, forcing: Bool = true) {
+        let frontmostAtCall = window.frontmostAppID
         window.requestAppActivation()
         window.orderFrontAndMakeKey()
         // A user's explicit open outranks a passive show: only a forcing call replaces a pending follow-up, so a
@@ -52,7 +60,8 @@ public final class WindowFronting {
         followUp?.cancel()
         followUp = Task { [clock] in
             await clock.sleep(for: Self.activationGrace)
-            guard !Task.isCancelled, window.windowIsOpen, !window.appIsActive else { return }
+            guard !Task.isCancelled, window.windowIsOpen, !window.appIsActive,
+                  window.frontmostAppID == frontmostAtCall else { return }
             window.forceAppActivation()
             window.orderFrontAndMakeKey()
         }

@@ -16,15 +16,19 @@ final class WindowFrontAdapter: FrontableWindow {
     /// the user did not ask for (the setup guide at launch): the plain request only, never the system activation.
     func bringToFront(forcing: Bool = true) { fronting.bringToFront(self, forcing: forcing) }
 
-    var windowIsOpen: Bool { window.isVisible }
+    /// A miniaturized window is open: `isVisible` is false for it, and it must not suppress the follow-up while it is
+    /// being brought back out of the Dock.
+    var windowIsOpen: Bool { window.isVisible || window.isMiniaturized }
 
-    var appIsActive: Bool {
-        NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier
-    }
+    var frontmostAppID: Int32? { NSWorkspace.shared.frontmostApplication?.processIdentifier }
+
+    var appIsActive: Bool { frontmostAppID == ProcessInfo.processInfo.processIdentifier }
 
     func requestAppActivation() { NSApp.activate() }
 
     func orderFrontAndMakeKey() {
+        // A miniaturized window ignores the ordering calls below: it has to come back out of the Dock first (FR-008-03).
+        if window.isMiniaturized { window.deminiaturize(nil) }
         window.orderFrontRegardless()
         window.makeKeyAndOrderFront(nil)
     }

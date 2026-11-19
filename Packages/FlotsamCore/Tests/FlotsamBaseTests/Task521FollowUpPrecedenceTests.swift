@@ -45,6 +45,7 @@ private final class GateClock: WallClock {
 private final class LogWindow: FrontableWindow {
     var log: [String] = []
     var appIsActive: Bool { false }
+    var frontmostAppID: Int32? { 100 }
     var windowIsOpen: Bool { true }
     func requestAppActivation() { log.append("request") }
     func orderFrontAndMakeKey() { log.append("front") }

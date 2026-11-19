@@ -6,7 +6,7 @@ import Testing
 // single-window happy paths; these attack the two rules the builder named (never force at launch, never force a window
 // closed during the grace) and the neighbours of each: overlapping opens, a second window in play, and the source scans
 // that are supposed to keep a new activation call from slipping in. Each test names the product edit that turns it red.
-// What only a real macOS shows (the refusal itself, a user switching to a third app inside the grace) is the live
+// What only a real macOS shows (the refusal itself) is the live
 // matrix's (TASK-518), not asserted here.
 
 // MARK: - Harness
@@ -67,7 +67,9 @@ private final class RecordingWindow: FrontableWindow {
     let timeline: Timeline
     var active = false
     var open = true
+    var frontmost: Int32? = 100
     var appIsActive: Bool { active }
+    var frontmostAppID: Int32? { frontmost }
     var windowIsOpen: Bool { open }
     init(_ name: String, _ timeline: Timeline) { self.name = name; self.timeline = timeline }
     func requestAppActivation() { timeline.events.append("\(name):request") }
@@ -397,17 +399,18 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
     }
 
     // OC-521-S03. Red if a second caller of the forced activation appears anywhere: it would be a path that forces without
-    // going through the grace and the closed-window and user-asked checks.
-    @Test("S03: forceAppActivation has one call site, the WindowFronting follow-up, and the adapter is its only implementation")
+    // going through the grace and the closed-window, user-asked and still-the-same-frontmost-app checks.
+    @Test("S03: forceAppActivation has one call site, the WindowFronting follow-up, behind its four checks, and the adapter is its only implementation")
     func forceHasOneCaller() throws {
         let calls = try occurrences(of: #"\.forceAppActivation\s*\("#, under: "Packages/FlotsamCore/Sources")
             .merging(try occurrences(of: #"\.forceAppActivation\s*\("#, under: "App")) { a, b in a + b }
         #expect(calls == ["Packages/FlotsamCore/Sources/FlotsamBase/Ports/WindowFronting.swift": 1])
         let impls = try occurrences(of: #"func forceAppActivation\s*\("#, under: "App")
         #expect(impls == ["App/Flotsam/WindowFrontAdapter.swift": 1])
-        // and the follow-up's call sits behind all three checks, in that file
+        // and the follow-up's call sits behind all four checks, in that file
         let fronting = try frd008Code("Packages/FlotsamCore/Sources/FlotsamBase/Ports/WindowFronting.swift")
-        #expect(fronting.contains("guard !Task.isCancelled, window.windowIsOpen, !window.appIsActive else { return }"))
+        #expect(fronting.contains("guard !Task.isCancelled, window.windowIsOpen, !window.appIsActive,"))
+        #expect(fronting.contains("window.frontmostAppID == frontmostAtCall else { return }"))
         #expect(fronting.contains("guard forcing else { return }"))
     }
 
