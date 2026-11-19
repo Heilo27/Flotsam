@@ -46,17 +46,21 @@ private final class TickingClock: WallClock, @unchecked Sendable {
         return condition()
     }
 
+    /// True when `task` ends within 10 s on its own. Polls a flag rather than awaiting the task, so a task that never
+    /// ends (a cancel that was not forwarded) fails this check instead of hanging the whole run; it is then cancelled.
     private func returns(_ task: Task<Void, Never>) async -> Bool {
-        let timedOut = Flag()
-        let watchdog = Task {
-            try? await Task.sleep(for: .seconds(10))
-            guard !Task.isCancelled else { return }
-            timedOut.raise()
-            task.cancel()
-        }
-        await task.value
-        watchdog.cancel()
-        return !timedOut.isRaised
+        let finished = Flag()
+        let observer = Task { await task.value; finished.raise() }
+        let ended = await waitForFlag(finished, seconds: 10)
+        if !ended { task.cancel() }
+        observer.cancel()
+        return ended
+    }
+
+    private func waitForFlag(_ flag: Flag, seconds: Double) async -> Bool {
+        let deadline = Date().addingTimeInterval(seconds)
+        while !flag.isRaised, Date() < deadline { try? await Task.sleep(for: .milliseconds(2)) }
+        return flag.isRaised
     }
 
     /// Lets the watch wake `times` times, collecting the first row's visible text after each wake.
@@ -242,6 +246,94 @@ private final class TickingClock: WallClock, @unchecked Sendable {
             #expect(row.accessibilityLabel.contains(visible), "spoken \(row.accessibilityLabel) vs shown \(visible)")
         }
         #expect(ticking.reads - readsBefore == 1, "one reading per pass")
+    }
+
+    // MARK: Hide, show, hide leaves one watch at a time (WORF-525-F4 re-QA)
+
+    @Test func hideShowHideLeavesNoWatchLiveAndNeverTwoAtOnce() async {
+        let (model, clock) = make(ages: [120])
+        await model.open(target: nil)
+        let first = Task { await model.runRelativeTimeWatch() }
+        #expect(await waitFor { clock.parked == 1 })
+        model.panelDidHide()
+        #expect(await returns(first), "hide #1 ends the first watch")
+        #expect(clock.parked == 0)
+
+        await model.open(target: nil)
+        let second = Task { await model.runRelativeTimeWatch() }
+        #expect(await waitFor { clock.parked == 1 && clock.sleeps.count == 2 })
+        model.panelDidHide()
+        #expect(await returns(second), "hide #2 ends the second watch")
+        #expect(clock.parked == 0)
+        #expect(clock.sleeps.count == 2, "no third sleep was started by either hide")
+        #expect(model.timeRevision == 0, "no cancelled watch bumped the rows")
+    }
+
+    @Test func hidingBeforeTheWatchTaskFirstRunsStartsNoSleepAtAll() async {
+        let (model, clock) = make(ages: [120])
+        await model.open(target: nil)
+        model.panelDidHide()
+        let watch = Task { await model.runRelativeTimeWatch() }
+        #expect(await returns(watch), "a watch started on a hidden panel returns at once")
+        #expect(clock.sleeps.isEmpty)
+    }
+
+    /// The view restarts the watch only when `relativeTimeWatchKey` changes. `panelDidHide` cancels the model's task, so a
+    /// show must change the key again or a view that never saw the hidden key would keep a dead watch.
+    @Test func theWatchKeyDiffersAfterEveryShowEvenWithIdenticalRows() async {
+        let (model, _) = make(ages: [120])
+        await model.open(target: nil)
+        let firstShow = model.relativeTimeWatchKey
+        model.panelDidHide()
+        await model.open(target: nil)
+        let secondShow = model.relativeTimeWatchKey
+        #expect(firstShow != secondShow, "same rows, same limit, shown again: the key must still change")
+    }
+
+    // MARK: Re-QA of the calendar rule (WORF-525 round 2)
+
+    private func calendar(_ zone: String) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: zone)!
+        calendar.locale = Locale(identifier: "en_US")
+        return calendar
+    }
+
+    private func utc(_ iso: String) -> Date { ISO8601DateFormatter().date(from: iso)! }
+
+    /// Lord Howe shifts by 30 minutes, so the calendar-day boundary (23.5 h after the copy) falls between two whole-hour
+    /// steps. A copy made 2026-10-03 12:00 LHST reads "Yesterday" from 2026-10-04 12:00 LHDT, 84,600 s later.
+    @Test func aHalfHourDaylightShiftWakesAtTheDayBoundaryNotAtTheNextWholeHour() {
+        let lordHowe = calendar("Australia/Lord_Howe")
+        let copied = utc("2026-10-03T01:30:00Z")
+        let now = copied.addingTimeInterval(83_400)  // 23 h 10 min: "23h ago", next whole-hour step is 3,000 s away
+        #expect(ItemSpeech.relativeTime(copied, now: now, calendar: lordHowe) == "23h ago")
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: now, calendar: lordHowe) == 1_200)
+        #expect(ItemSpeech.relativeTime(copied, now: now.addingTimeInterval(1_199), calendar: lordHowe) == "23h ago")
+        #expect(ItemSpeech.relativeTime(copied, now: now.addingTimeInterval(1_200), calendar: lordHowe) == "Yesterday")
+    }
+
+    /// The window is 604,800 s exactly: a copy that old still reads relatively; one second more and it is a date.
+    @Test func aCopyExactlySevenDaysOldStillSchedulesAndOneSecondOlderDoesNot() {
+        let utcCalendar = calendar("UTC")
+        let now = Self.start
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(-604_800), now: now, calendar: utcCalendar) != nil)
+        #expect(ItemSpeech.secondsUntilRelativeTimeChanges(now.addingTimeInterval(-604_801), now: now, calendar: utcCalendar) == nil)
+    }
+
+    /// WORF-525-F7: the 7-day cutoff is 604,800 s, but the day step counts calendar days. Where a daylight-saving change
+    /// falls inside the week, the last "7d ago" turns into a date up to 23 h before the next calendar-day wake.
+    @Test func theLastDayLabelTurnsIntoADateAtTheSevenDayCutoffNotAFullDayLate() {
+        let newYork = calendar("America/New_York")
+        let copied = utc("2026-03-01T15:00:00Z")  // 10:00 EST
+        let now = utc("2026-03-08T14:00:00Z")  // 10:00 EDT: 7 calendar days, 601,200 s old
+        let before = ItemSpeech.relativeTime(copied, now: now, calendar: newYork)
+        let after = ItemSpeech.relativeTime(copied, now: now.addingTimeInterval(3_601), calendar: newYork)
+        #expect(before != after, "the label changes within 3,601 s (the copy turns 604,800 s old)")
+        let delay = ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: now, calendar: newYork)
+        withKnownIssue("WORF-525-F7: the day step overshoots the 7-day cutoff by 23 h across a spring-forward week") {
+            #expect((delay ?? 0) <= 3_601)
+        }
     }
 
     // MARK: Future-dated rows (WORF-525-F2)
