@@ -31,7 +31,7 @@ safe to paste into a public GitHub issue. This FRD is the contract the other eig
   - **Fatal** — Flotsam cannot run safely. Show a modal alert with the user message, a "Reveal Data Folder" button and a "Quit" button, then terminate. If the data folder does not exist (`STO-IO-002`), "Reveal Data Folder" reveals its nearest existing ancestor and never creates the folder. Closed list: `STO-IO-002`, `STO-DB-003`. No other code may be Fatal.
   - **Error** — the user's action or a background save failed. Propagate to the caller, surface per FR-000-08, never crash.
   - **Warning** — the app is degraded but working (permission off, limit hit, fallback active). Log at notice, continue, surface per FR-000-08.
-  - **Info** — an expected, policy-driven or benign skip (for example a concealed pasteboard item). Log only; never shown to the user and never recorded in the ring buffer (FR-000-13).
+  - **Info** — an expected, policy-driven or benign skip (for example a transient pasteboard item). Log only; never shown to the user and never recorded in the ring buffer (FR-000-13).
 
 **Catalogue and strings**
 - **FR-000-05** One catalogue: the Xcode String Catalog `Localizable.xcstrings`. Every user-facing string in the app (errors and normal UI) is a catalogue key; no user-facing string literal appears in a view or model. Error messages use keys `error.<code>` (for example `error.SET-PRM-001`). Source language English; plural and count variations use catalogue variations, not string concatenation. Every string that puts a count next to a noun carries `one` and `other` plural variations, so a count of 1 reads "1 item" (never "1 items"): `ui.library.footerItems`, `ui.row.bundleCount`, `ui.organize.confirmDelete`, `ui.organize.confirmDeleteTag`, `ui.settings.clearCount`, `ui.settings.clearDone`, `ui.settings.confirmShorten` and `ui.settings.confirmBudget`. Counts with no noun ("Imported %lld", "%lld selected", "%lld of 2,000") and `error.CAP-LIM-003` (always above 500) need no plural. A test sweeps the catalogue so a new count-plus-noun string without plural variations fails it, and the raw-catalogue fallback resolves plurals the same way so no format specifier is ever shown. Each code's argument kinds (a count fills `%lld`, text fills `%@`) must match its message's format specifiers; a consistency check fails the tests on a mismatch. Showing a message never crashes: if the arguments do not fit the message, the user sees the SYS-INT-001 text instead.
@@ -108,7 +108,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 | CAP-PRM-001 | Warning | macOS is blocking Flotsam from reading copied items. Allow Flotsam under Paste from Other Apps in System Settings. | capture suspended; Notice; retry on app activation |
 | CAP-OS-001 | Warning | Flotsam couldn't read the clipboard just now. It will keep trying. | skip tick, retry next poll |
 | CAP-OS-002 | Info | — | source app recorded as Unknown |
-| CAP-POL-001 | Info | — | skipped: concealed, transient or auto-generated pasteboard marker |
+| CAP-POL-001 | Info | — | skipped: transient or auto-generated pasteboard marker, or a concealed copy that cannot be kept securely (no plain text, or no secure vault) |
 | CAP-POL-002 | Info | — | skipped: source app is on the ignored list |
 | CAP-POL-003 | Info | — | skipped: capture paused, or curated mode without explicit save |
 | CAP-POL-004 | Info | — | skipped: Flotsam's own pasteboard write |

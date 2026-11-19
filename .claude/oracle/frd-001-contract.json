@@ -661,11 +661,11 @@
       "requirement": "FR-001-14",
       "given": "Capture mode Active, Flotsam running, source app not on the ignored list",
       "when": "a remote-clipboard pasteboard also carrying org.nspasteboard.ConcealedType and text K arrives",
-      "then": "no item with text K exists and the app's log (subsystem = bundle id) records CAP-POL-001 for that event",
+      "then": "one secure item is stored (Library item count delta +1) whose source is 'Another device'; no item has plain text K, searching for K finds nothing, the database file, its WAL and the app's log contain no occurrence of K, and the log records no CAP-POL-001 for that event",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): SPEC CONFLICT, not edited: FR-001-14 still ends 'Concealed and transient markers still reject it' while FR-001-04 gate 3 and FR-001-25 make any concealed copy a secure item (production does not special-case remote). Friday to resolve in FRD-001 FR-001-14, then this `then` follows."
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth); spec conflict resolved 2026-11-18 TASK-503: FR-001-14 now defers to FR-001-04 gate 3 and FR-001-25: a remote concealed copy is a secure item with the source 'Another device'."
     },
     {
       "id": "OC-1067",
@@ -862,11 +862,11 @@
       "requirement": "FR-001-19",
       "given": "Capture mode Curated",
       "when": "text carrying org.nspasteboard.ConcealedType is copied, then Save Clipboard is invoked",
-      "then": "nothing is stored at either step; Save Clipboard logs CAP-POL-001 (gates 2 to 5 run on save)",
+      "then": "the copy stores nothing (Curated holds it); Save Clipboard then stores one secure item (masked, no plain text) with the saved HUD and no CAP-POL-001 (gates 2 to 5 run on save, and gate 3 makes a concealed copy a secure item)",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): SPEC CONFLICT, not edited: FR-005-06 / AC-005-06 still say Save Clipboard never saves Concealed content, while FR-005-06 runs gates 2 to 5 and FR-001-04 gate 3 makes a concealed copy a secure item (production saves it). Friday to resolve in FRD-005 FR-005-06, then this `then` follows."
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth); spec conflict resolved 2026-11-18 TASK-503: FR-005-06 / AC-005-06 now say Save Clipboard stores a concealed copy as a secure item, as a poll does."
     },
     {
       "id": "OC-1087",
@@ -1175,6 +1175,17 @@
       "source_verdict": "CONFIRMED",
       "must_verify": true,
       "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-1117",
+      "requirement": "AC-001-25,FR-001-25,FR-001-22",
+      "given": "Capture mode Active, Flotsam running, the secure vault available, source app not on the ignored list",
+      "when": "a pasteboard is written with org.nspasteboard.ConcealedType plus a text representation T whose data provider fails when read",
+      "then": "the change is dropped with CAP-OS-001, not CAP-POL-001; the Library item count is unchanged (delta 0) and no secure item exists; the database file, its WAL and the app's log contain no occurrence of T",
+      "class": "error",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-503 (Friday's ruling: a concealed copy whose plain text cannot be read is handled like any other unreadable copy, fail closed): FR-001-25 / AC-001-25 as amended in TASK-503"
     }
   ]
 }

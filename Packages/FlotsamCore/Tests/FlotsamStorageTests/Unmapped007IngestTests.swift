@@ -163,18 +163,15 @@ private let png16 = TestImage.make(width: 16, height: 16, format: .png)
 
     // MARK: OC-7106 (logic half)
 
-    /// OC-7106 logic half. Red if the toggle maps a state to the wrong mode, Curated stops showing Pause, or the
-    /// poll gate answers yes while paused.
-    @Test("OC-7106 the menu toggle flips Active and Paused, Curated pauses, and only Active lets the poll and screenshots save")
+    /// OC-7106 logic half. Red if the toggle maps a state to the wrong mode, Curated stops resuming to Active (FR-008-16),
+    /// or the poll gate answers yes while paused.
+    @Test("OC-7106 the menu toggle flips Active and Paused, Curated resumes to Active, and only Active lets the poll and screenshots save")
     func oc7106_menuToggleAndGates() throws {
         // given each mode, then when the menu item is chosen
         // then the mode, the label state and both gates are the literal expected values
-        #expect(CaptureMode.active.afterMenuToggle == .paused)
-        #expect(CaptureMode.paused.afterMenuToggle == .active)
-        #expect(CaptureMode.curated.afterMenuToggle == .paused)
-        #expect(CaptureMode.active.isPaused == false)
-        #expect(CaptureMode.paused.isPaused == true)
-        #expect(CaptureMode.curated.isPaused == false)
+        #expect(MenuBarModel.captureToggle(for: .active).next == .paused)
+        #expect(MenuBarModel.captureToggle(for: .paused).next == .active)
+        #expect(MenuBarModel.captureToggle(for: .curated).next == .active)
         #expect(CaptureMode.active.capturesClipboardAutomatically == true)
         #expect(CaptureMode.paused.capturesClipboardAutomatically == false)
         #expect(CaptureMode.curated.capturesClipboardAutomatically == false)
@@ -194,21 +191,21 @@ private let png16 = TestImage.make(width: 16, height: 16, format: .png)
         #expect(first.value(SettingKeys.captureMode) == .active)
 
         // when Pause Capture is chosen
-        first.set(first.value(SettingKeys.captureMode).afterMenuToggle, for: SettingKeys.captureMode)
+        first.set(MenuBarModel.captureToggle(for: first.value(SettingKeys.captureMode)).next, for: SettingKeys.captureMode)
 
         // then a fresh store reads Paused and the menu would read Resume Capture
         let afterPause = SettingsStore(store: kv).value(SettingKeys.captureMode)
         #expect(afterPause == .paused)
-        #expect(afterPause.isPaused == true)
+        #expect(MenuBarModel.captureToggle(for: afterPause).titleKey == "ui.menu.resumeCapture")
         #expect(afterPause.capturesClipboardAutomatically == false)
 
         // when Resume Capture is chosen
-        first.set(afterPause.afterMenuToggle, for: SettingKeys.captureMode)
+        first.set(MenuBarModel.captureToggle(for: afterPause).next, for: SettingKeys.captureMode)
 
         // then a fresh store reads Active again and capture is on
         let afterResume = SettingsStore(store: kv).value(SettingKeys.captureMode)
         #expect(afterResume == .active)
-        #expect(afterResume.isPaused == false)
+        #expect(MenuBarModel.captureToggle(for: afterResume).titleKey == "ui.menu.pauseCapture")
         #expect(afterResume.capturesClipboardAutomatically == true)
     }
 
