@@ -1475,6 +1475,17 @@
       "source_verdict": "CONFIRMED",
       "must_verify": true,
       "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-5148",
+      "requirement": "FR-005-13 e,FR-005-20,FR-005-11",
+      "given": "Trigger ';sig' exists; the frontmost application cannot be identified (no application, or one with no bundle identifier)",
+      "when": "user types ordinary prose of 30 characters, then ';s', then 'x', then ';sig' Space, then ';sig' Space again",
+      "then": "no expansion and no log entry at any step; the typed-word buffer holds nothing after the prose and after 'x' (it holds ';s' only while that is the start of a trigger); the first ';sig ' (typed after the mistyped character in the same word) is passed through untouched, and the second whole ';sig' is held to its boundary key and suppressed without logging",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-499 (FR-005-13 e / FR-005-20 amended: unknown app is limited like an excluded app)"
     }
   ]
 }
