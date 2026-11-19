@@ -6,9 +6,11 @@ extension SettingsPane {
         switch self {
         case .general: .paneGeneral
         case .shortcuts: .paneShortcuts
+        case .types: .paneTypes
         case .triggers: .paneTriggers
         case .privacy: .panePrivacy
         case .storage: .paneStorage
+        case .tips: .paneTips
         case .about: .paneAbout
         }
     }
@@ -18,9 +20,11 @@ extension SettingsPane {
         switch self {
         case .general: "gearshape"
         case .shortcuts: "keyboard"
+        case .types: "square.grid.2x2"
         case .triggers: "bolt"
         case .privacy: "hand.raised"
         case .storage: "internaldrive"
+        case .tips: "lightbulb"
         case .about: "info.circle"
         }
     }
@@ -69,6 +73,35 @@ extension LibraryLayoutMode {
         switch self {
         case .standard: .layoutStandard
         case .compact: .layoutCompact
+        }
+    }
+}
+
+extension LibraryBackground {
+    public var label: SettingsString {
+        switch self {
+        case .system: .backgroundSystem
+        case .light: .backgroundLight
+        case .dark: .backgroundDark
+        }
+    }
+}
+
+extension LibraryPreviewPreset {
+    public var label: SettingsString {
+        switch self {
+        case .closed: .presetClosed
+        case .open: .presetOpen
+        case .roomy: .presetRoomy
+        }
+    }
+}
+
+extension LibraryDisplay {
+    public var label: SettingsString {
+        switch self {
+        case .pointer: .displayPointer
+        case .focus: .displayFocus
         }
     }
 }

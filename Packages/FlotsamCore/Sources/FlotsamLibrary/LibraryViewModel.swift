@@ -20,6 +20,9 @@ public final class LibraryViewModel {
     /// Rows held in memory on open and added per scroll step (FR-003-05).
     public static let rowsPerStep = 50
 
+    /// How long after a hide a reopen may resume where the user left off (FR-003-04, `library.resumeOnReopen`).
+    public static let resumeWindow: TimeInterval = 10
+
     // MARK: Observable state
 
     public private(set) var loadState: LoadState = .loading
@@ -81,6 +84,8 @@ public final class LibraryViewModel {
     /// Observed on purpose: `footer()` reads it, so the footer view re-renders on every ⌘S (FR-004-12).
     private var sort: LibrarySort
     @ObservationIgnored private var lastAccessibilityTrusted: Bool?
+    /// When the panel last hid; `open` compares it with `resumeWindow` (FR-003-04). A stamp, not a timer (ADR-0004).
+    @ObservationIgnored private var lastHiddenAt: Date?
     @ObservationIgnored private var cursor: UUID?
     @ObservationIgnored private var anchor: UUID?
     @ObservationIgnored private var target: FrontmostApp?
@@ -127,7 +132,10 @@ public final class LibraryViewModel {
         LibraryColumns.resolve(layout: layout, previewOpen: isPreviewOpen, hasPreviewableRow: loadState == .loaded && selectedRow != nil)
     }
 
-    public var sidebarEntries: [SidebarEntry] { sidebar.map(SidebarEntry.entries(from:)) ?? [] }
+    public var sidebarEntries: [SidebarEntry] {
+        let order = preferences.typeOrder
+        return sidebar.map { SidebarEntry.entries(from: $0, typeOrder: order) } ?? []
+    }
 
     /// Selected rows in list order.
     public var selectedRows: [ItemRow] { visibleRows.filter { selection.contains($0.id) } }
@@ -161,27 +169,44 @@ public final class LibraryViewModel {
 
     // MARK: Lifecycle
 
-    /// The panel is about to show (FR-003-04): empty search, All, newest selected, top of the list, preview closed.
-    /// `target` is the app that was frontmost before the panel, recorded by the caller (FR-003-02).
+    /// The panel is about to show (FR-003-04): empty search, All, newest selected, top of the list, and the preview closed
+    /// unless the preview preset opens it. With `library.resumeOnReopen` on, an open within `resumeWindow` of the last hide
+    /// instead keeps the search, filter, preview and selected item. `target` is the app that was frontmost before the
+    /// panel, recorded by the caller (FR-003-02).
     public func open(target: FrontmostApp?) async {
         self.target = target
         isShown = true
         refreshAccessibility()
+        viewMode = preferences.viewMode
+        layout = preferences.layout
+        sort = preferences.sort
+        let resuming = shouldResume()
+        lastHiddenAt = nil
+        if resuming {
+            // Everything the user left is still in place; the reload below refreshes it and keeps the selection.
+            subscribeToChanges()
+            startReload(interval: .libraryOpen, selection: .keep(selection))
+            await loadTask?.value
+            return
+        }
         searchText = ""
         filter = .all
-        isPreviewOpen = false
+        isPreviewOpen = preferences.previewPreset.opensPreview(in: layout)
         preview = nil
         clearHover()
         selection = []
         cursor = nil
         anchor = nil
-        viewMode = preferences.viewMode
-        layout = preferences.layout
-        sort = preferences.sort
         scrollResetToken += 1
         subscribeToChanges()
         startReload(interval: .libraryOpen)
         await loadTask?.value
+    }
+
+    /// FR-003-04: the last hide was within `resumeWindow` and the setting is on.
+    private func shouldResume() -> Bool {
+        guard preferences.resumeOnReopen, let hidden = lastHiddenAt else { return false }
+        return clock.now().timeIntervalSince(hidden) <= Self.resumeWindow
     }
 
     /// FR-004-13: counts and footer follow every commit and every capture while the panel is shown. The bus calls
@@ -273,6 +298,7 @@ public final class LibraryViewModel {
     /// (FR-003-13).
     public func panelDidHide() {
         isShown = false
+        lastHiddenAt = clock.now()
         unsubscribeEvents?()
         unsubscribeEvents = nil
         reloadInFlight = false

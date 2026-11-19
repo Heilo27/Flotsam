@@ -101,16 +101,21 @@ public struct ShelfEffects {
     /// confirmation never deletes.
     public var confirmDelete: @MainActor (String) async -> Bool
     public var now: @MainActor () -> Date
+    /// The types the pills show and their order (`library.types`, FR-003-12). Read at each load, so a change in Settings
+    /// shows at the next reveal.
+    public var typeOrder: @MainActor () -> TypeOrder
 
     public init(
         report: @escaping @MainActor (FlotsamError) -> Void = { _ in },
         captureNow: @escaping @MainActor () async -> Void = {},
         confirmDelete: @escaping @MainActor (String) async -> Bool = { _ in false },
-        now: @escaping @MainActor () -> Date = { Date() }
+        now: @escaping @MainActor () -> Date = { Date() },
+        typeOrder: @escaping @MainActor () -> TypeOrder = { .default }
     ) {
         self.report = report
         self.captureNow = captureNow
         self.confirmDelete = confirmDelete
         self.now = now
+        self.typeOrder = typeOrder
     }
 }

@@ -26,6 +26,13 @@ public enum PasteOutcome: Sendable, Equatable {
 public protocol PasteHost {
     var isPanelVisible: Bool { get }
     func hidePanel()
+    /// Whether the paste sequence hides the panel (step 5) and waits for it to be gone (step 6). True unless the user
+    /// turned off `library.closeAfterPaste` (FR-003-15).
+    var closesAfterPaste: Bool { get }
+}
+
+extension PasteHost {
+    public var closesAfterPaste: Bool { true }
 }
 
 /// The host for a paste that opens no panel (the paste queue, FR-003-25): nothing is visible and hiding does nothing, so

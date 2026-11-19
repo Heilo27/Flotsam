@@ -13,6 +13,13 @@ public protocol LibraryScreenProvider {
     var screens: [LibraryScreen] { get }
     /// The main screen, else the first; nil when the system reports none.
     var mainScreen: LibraryScreen? { get }
+    /// The centre of the topmost window of process `processId`, in AppKit coordinates; nil when it has none on screen.
+    /// Used when the Library opens with the focused window's display (`library.display`).
+    func focusedWindowCenter(ofProcess processId: Int32) -> CGPoint?
+}
+
+extension LibraryScreenProvider {
+    public func focusedWindowCenter(ofProcess processId: Int32) -> CGPoint? { nil }
 }
 
 /// The window the driver shows and hides. There is deliberately no "activate the app" member: the Library never makes
@@ -88,14 +95,19 @@ public final class LibraryPanelDriver: PasteHost {
         await model.open(target: target)
         // The layout the model just loaded, so the frame, the minimum and the columns drawn cannot disagree (FR-003-06).
         let layout = model.layout
+        let size = preferences.previewPreset.openingSize(from: preferences.panelSize(for: layout), in: layout)
         presenter?.show(
-            at: frame(for: preferences.panelSize(for: layout), layout: layout),
-            minimumSize: LibraryLayout.minimumSize(for: layout))
+            at: frame(for: size, layout: layout, target: target), minimumSize: LibraryLayout.minimumSize(for: layout))
     }
 
-    /// The panel's frame on the pointer's screen (FR-003-03).
-    public func frame(for size: PanelSize, layout: LibraryLayoutMode = .standard) -> CGRect {
-        let screen = LibraryLayout.screen(containing: screens.pointerLocation, in: screens.screens, main: screens.mainScreen)
+    /// The panel's frame on the screen it opens on (FR-003-03): the pointer's, or with `library.display` set to focus,
+    /// the one holding the target app's focused window, falling back to the pointer's when that app has none.
+    public func frame(for size: PanelSize, layout: LibraryLayoutMode = .standard, target: FrontmostApp? = nil) -> CGRect {
+        var anchor = screens.pointerLocation
+        if preferences.display == .focus, let target, let center = screens.focusedWindowCenter(ofProcess: target.processId) {
+            anchor = center
+        }
+        let screen = LibraryLayout.screen(containing: anchor, in: screens.screens, main: screens.mainScreen)
         return LibraryLayout.frame(in: screen?.visibleFrame ?? LibraryLayout.fallbackVisibleFrame, size: size, layout: layout)
     }
 
