@@ -30,6 +30,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
   |---|---|---|---|
   | openLibrary | `shortcuts.openLibrary` | ⌃⌘V | toggle the Library (FRD-003 FR-003-02) |
   | saveClipboard | `shortcuts.saveClipboard` | none | FR-005-06 |
+  | addClip | `shortcuts.addClip` | none | open the Add Clip window (FRD-004 FR-004-19) |
   | toggleShelf | `shortcuts.toggleShelf` | none | show or hide the Shelf (FRD-006) |
   | pasteQueue | `shortcuts.pasteQueue` | none | paste the next item of the paste queue (FRD-003 FR-003-25); like item hotkeys it is off while a Flotsam window is key (FR-005-05) |
   | item hotkey (one per item, optional) | stored on the item | none | FR-005-05 |
@@ -70,7 +71,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
 
 ## 4. Data Requirements
 - Item fields (schema in FRD-007): `hotkey` (key code, modifier flags; null when none), `trigger` (string; null when none). Uniqueness of `trigger` (case-insensitive) and `hotkey` is enforced at validation and by the database (unique indexes).
-- Settings (registry in FRD-008): `shortcuts.openLibrary`, `shortcuts.saveClipboard`, `shortcuts.toggleShelf`, `triggers.enabled` (bool, default true), `triggers.excludedApps` (bundle identifiers; default list in FR-005-13).
+- Settings (registry in FRD-008): `shortcuts.openLibrary`, `shortcuts.saveClipboard`, `shortcuts.addClip`, `shortcuts.toggleShelf`, `triggers.enabled` (bool, default true), `triggers.excludedApps` (bundle identifiers; default list in FR-005-13).
 - In memory only: the trigger snapshot, the word buffer, the pasteboard restore snapshot.
 - Constants (one home, here): boundary keys; word-idle timeout 5 s; buffer limit 24; restore delay 300 ms; restore snapshot cap 32 MiB; watchdog interval 5 s; re-enable limit 3 in 60 s. The marker value for Flotsam's own events is one named constant.
 
@@ -131,7 +132,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
 | Element | Type | Where | Behavior |
 |---|---|---|---|
 | Shortcut recorder | key-capture control | Settings › Shortcuts, item editor | FR-005-04 |
-| Shortcuts pane list (Open Library, Save Clipboard, Toggle Shelf, Paste Queue) | settings rows | Settings › Shortcuts (FRD-008) | one recorder per registry row |
+| Shortcuts pane list (Open Library, Save Clipboard, Add Clip, Toggle Shelf, Paste Queue) | settings rows | Settings › Shortcuts (FRD-008) | one recorder per registry row |
 | Shortcut and Trigger editor | popover (⌘K) | anchored to selected item | recorder, trigger field, variable help line, inline validation |
 | Variable help line | caption | editor | lists `{date}`, `{time}`, `{clipboard}` and format examples (catalogue strings) |
 | Trigger and hotkey badges | icons | Library rows (FRD-003) | show item has a binding |
@@ -139,7 +140,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
 | Permission status rows | status rows | Settings › Triggers | Accessibility and Input Monitoring state with button to System Settings |
 | HUD | floating label | screen with pointer | `TRG-OS-002`, `shortcuts.saved`, `SET-PRM-001` |
 | Notices and warning dot | list entry, icon | menu bar | `TRG-OS-001`, `TRG-OS-003`, `SET-PRM-002` |
-| Menu-bar items "Save Clipboard", "Open Library", "Toggle Shelf" | menu items | menu bar menu (FRD-008) | show their current chord |
+| Menu-bar items "Save Clipboard", "Add Clip…", "Open Library", "Toggle Shelf" | menu items | menu bar menu (FRD-008) | show their current chord |
 
 ## 9. Assumptions and open items (flagged for Friday)
 1. Default chord. `⌃⌘V` is provisional. It must be checked in a spike against macOS 26 system shortcuts and common apps (Finder, Safari, Slack, Xcode, VS Code, Terminal) before it is final; `openLibrary` is the only default so a collision costs one chord, not several.

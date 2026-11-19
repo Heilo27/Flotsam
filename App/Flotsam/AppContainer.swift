@@ -86,6 +86,8 @@ final class AppContainer {
     private var settingsWindow: SettingsWindowController?
     /// The shortcut-and-trigger editor (FR-005-09). Nil until the database has opened.
     private var itemEditor: ItemBindingsEditorWindowController?
+    /// The Add Clip window (FR-004-19). Nil until the database has opened.
+    private var addClipWindow: AddClipWindowController?
 
     init() {
         let environment = AppEnvironment.launch()
@@ -240,6 +242,14 @@ final class AppContainer {
         let presenter = presenter
         let saveClipboard = SaveClipboardAction(saver: capture, hud: { presenter.showHUD(message: $0) })
         actions.saveClipboard = { Task { await saveClipboard.run() } }
+        // FR-004-19: the Add Clip hotkey and the menu row both open this one window; it stores through `capture`.
+        let errorReporter = reporter
+        let addClip = AddClipWindowController(
+            add: { text in await capture.addManualClip(text: text) },
+            report: { error in Task { await errorReporter.report(error, origin: .inline) } },
+            hud: { presenter.showHUD(message: $0) })
+        addClipWindow = addClip
+        actions.addClip = { addClip.open() }
 
         let center = NotificationCenter.default
         let workspace = NSWorkspace.shared.notificationCenter
@@ -549,10 +559,11 @@ final class AppContainer {
     private func startShortcuts(openLibrary: @escaping @MainActor () -> Void) {
         shortcuts.setAction(.openLibrary, openLibrary)
         shortcuts.setAction(.saveClipboard) { [weak self] in self?.actions.saveClipboard?() }
+        shortcuts.setAction(.addClip) { [weak self] in self?.actions.addClip?() }
         reportShortcutErrors(shortcuts.applyGlobalSettings(settings))
 
         let names: Set<String> = [
-            SettingKeys.shortcutsOpenLibrary.name, SettingKeys.shortcutsSaveClipboard.name,
+            SettingKeys.shortcutsOpenLibrary.name, SettingKeys.shortcutsSaveClipboard.name, SettingKeys.shortcutsAddClip.name,
             SettingKeys.shortcutsToggleShelf.name, SettingKeys.shortcutsPasteQueue.name, SettingKeys.shelfEnabled.name,
         ]
         unsubscribeShortcuts = settings.subscribe { [weak self] change in
@@ -587,6 +598,8 @@ struct AppActions {
     var openLibrary: (@MainActor () -> Void)?
     /// FRD-005 Save Clipboard.
     var saveClipboard: (@MainActor () -> Void)?
+    /// FRD-004 FR-004-19 Add Clip: opens the text entry window.
+    var addClip: (@MainActor () -> Void)?
     /// FRD-005 ⌘K in the Library: edit the selected item's shortcut and trigger. Inert until FRD-005 fills it.
     var editShortcutAndTrigger: (@MainActor ([UUID]) -> Void)?
     /// FRD-006 Shelf.

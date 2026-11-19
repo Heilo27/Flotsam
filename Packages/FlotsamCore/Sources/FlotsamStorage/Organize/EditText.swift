@@ -26,12 +26,8 @@ extension FlotsamDatabase {
             guard let kind = ItemKind(rawValue: kindName), kind.isTextEditable else {
                 throw OrganizeRejection(error: FlotsamError(.orgVal003, "Only text-like items can be edited", context: [.itemId: .id(id)]))
             }
-            guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw OrganizeRejection(error: FlotsamError(.orgVal003, "Edited text has no visible character", context: [.itemId: .id(id)]))
-            }
-            guard text.utf8.count <= IngestLimits.maxTextBytes else {
-                throw OrganizeRejection(error: FlotsamError(
-                    .orgLim003, "Edited text is over the text ceiling", context: [.limitBytes: .bytes(IngestLimits.maxTextBytes)]))
+            if let rejection = TextEntryRules.rejection(for: text, context: [.itemId: .id(id)]) {
+                throw OrganizeRejection(error: rejection)
             }
 
             let rich = IngestLimits.richTypeIdentifiers.sorted()

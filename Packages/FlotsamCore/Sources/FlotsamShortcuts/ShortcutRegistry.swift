@@ -5,6 +5,7 @@ import FlotsamBase
 public enum ShortcutID: Sendable, Hashable {
     case openLibrary
     case saveClipboard
+    case addClip
     case toggleShelf
     case pasteQueue
     case item(UUID)
@@ -115,6 +116,7 @@ public final class ShortcutRegistry {
         let wanted: [(ShortcutID, ChordBinding)] = [
             (.openLibrary, settings.value(SettingKeys.shortcutsOpenLibrary)),
             (.saveClipboard, settings.value(SettingKeys.shortcutsSaveClipboard)),
+            (.addClip, settings.value(SettingKeys.shortcutsAddClip)),
             (.toggleShelf, settings.value(SettingKeys.shortcutsToggleShelf)),
             (.pasteQueue, settings.value(SettingKeys.shortcutsPasteQueue)),
         ]

@@ -35,7 +35,8 @@ public enum ItemKind: String, CaseIterable, Sendable {
 }
 
 public enum CaptureOrigin: Sendable, Equatable {
-    case pasteboard, shelfDrop, screenshotFile
+    /// `manual` is text the user typed into Add Clip (FR-004-19): it goes through the same ingest path as a copy.
+    case pasteboard, shelfDrop, screenshotFile, manual
 }
 
 public struct SourceApp: Sendable, Equatable {

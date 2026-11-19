@@ -47,6 +47,8 @@ public enum SettingKeys {
         owner: "FR-005-01", validator: { $0.isUsable })
     public static let shortcutsSaveClipboard = SettingKey(
         "shortcuts.saveClipboard", default: ChordBinding.none, owner: "FR-005-01", validator: { $0.isUsable })
+    public static let shortcutsAddClip = SettingKey(
+        "shortcuts.addClip", default: ChordBinding.none, owner: "FR-005-01", validator: { $0.isUsable })
     public static let shortcutsToggleShelf = SettingKey(
         "shortcuts.toggleShelf", default: ChordBinding.none, owner: "FR-005-01", validator: { $0.isUsable })
     /// Paste the next item of the paste queue (FR-005-01, FR-003-25). No default: the queue is unreachable until bound.
@@ -75,8 +77,8 @@ public enum SettingKeys {
     public static let all: [SettingDescriptor] = [
         captureMode.descriptor, captureAutoBundle.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
         shelfEnabled.descriptor, shelfPlacement.descriptor, shelfRevealOnEdgeHover.descriptor,
-        shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsToggleShelf.descriptor,
-        shortcutsPasteQueue.descriptor,
+        shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsAddClip.descriptor,
+        shortcutsToggleShelf.descriptor, shortcutsPasteQueue.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,

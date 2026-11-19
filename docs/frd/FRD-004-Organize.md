@@ -36,7 +36,7 @@ Give users light-weight control over history: keep what matters, label it, annot
 - **FR-004-06** Note. One plain-text note per item, at most 2,000 characters (`ORG-VAL-002`), edited in a popover (⌘N, context menu); Return inserts a newline, ⌘Return saves, Esc cancels without saving. Only a zero-length note removes it; a note of spaces or newlines is stored exactly as typed. Notes are searchable (FRD-003 FR-003-09). Notes have no effect on retention.
 
 **Edit text**
-- **FR-004-07** Editable kinds: `text`, `richText`, `link`, `color`, `phone`, `email`. Other kinds → `ORG-VAL-003`. Editing opens an in-panel editor (⌘E, context menu) showing the plain text; ⌘Return saves, Esc cancels. The saved text must contain a non-whitespace character (`ORG-VAL-003`) and be at most the text ceiling (FRD-007 FR-007-06; `ORG-LIM-003`). On save: the plain text is replaced; stored rich representations (RTF, HTML) are removed (the editor shows the notice `ui.organize.editFormattingRemoved` for richText items); the kind is re-detected with FR-001-09; the `contentKey` is recomputed (FR-001-15); `updatedAt` is set. `createdAt`, `lastCopiedAt`, tags, note, pin and shortcuts are unchanged. A trigger or hotkey on the item uses the new text from then on.
+- **FR-004-07** Editable kinds: `text`, `richText`, `link`, `color`, `phone`, `email`. Other kinds → `ORG-VAL-003`. Editing opens an in-panel editor (⌘E, context menu) showing the plain text; ⌘Return saves, Esc cancels. The saved text must contain a non-whitespace character (`ORG-VAL-003`) and be at most the text ceiling (FRD-007 FR-007-06; `ORG-LIM-003`); FR-004-19 applies the same two rules to a new clip. On save: the plain text is replaced; stored rich representations (RTF, HTML) are removed (the editor shows the notice `ui.organize.editFormattingRemoved` for richText items); the kind is re-detected with FR-001-09; the `contentKey` is recomputed (FR-001-15); `updatedAt` is set. `createdAt`, `lastCopiedAt`, tags, note, pin and shortcuts are unchanged. A trigger or hotkey on the item uses the new text from then on.
 - **FR-004-08** Duplicate keys after edit. An edit may make an item's `contentKey` equal to another item's; both are kept. For later captures, FR-001-15 bumps the matching item with the most recent `lastCopiedAt`.
 
 **Delete and ungroup**
@@ -53,6 +53,9 @@ Give users light-weight control over history: keep what matters, label it, annot
 **Atomicity and speed**
 - **FR-004-14** Every action in this FRD is one database transaction; on failure the whole action rolls back and shows `STO-DB-001`, leaving the UI as before. Single-item actions complete within 100 ms p95 with 10,000 items; actions on up to 500 selected items within 1 s.
 
+**Add a clip**
+- **FR-004-19** Add Clip. The menu-bar menu has "Add Clip…" (FRD-008 FR-008-16), and the optional global shortcut `shortcuts.addClip` (FRD-005 FR-005-01, no default) does the same. Either opens one small window with a multi-line text field and Add and Cancel buttons; opening it again brings the same window forward. ⌘Return adds, Esc and ⌘W close without adding; Add is disabled while the text has no visible character. The text must contain a non-whitespace character (`ORG-VAL-003`) and be at most the text ceiling (FRD-007 FR-007-06; `ORG-LIM-003`); these are the same two rules as FR-004-07 (one shared definition), shown inline in the window with the window left open and the text kept. On add, the text is stored as an ordinary item through the capture ingest path (FRD-001) as plain text, with the origin `manual`: the kind is detected with FR-001-09, a clip whose `contentKey` (FR-001-15) already exists is deduplicated (bumped) instead of duplicated, the source is Unknown, and the limits and retention of FRD-007 apply as for any capture. It is added in every capture mode (Active, Curated and Paused), because it is a deliberate action by the person, not a pasteboard observation; it is not held for Curated review, and it never reads or writes the system pasteboard. Success closes the window and shows the HUD `ui.settings.addClipDone` ("Clip added"). The new item behaves like any text item: it can be found, tagged, edited, given an item hotkey or a trigger (FRD-005), and used by them.
+
 ## 4. Data Requirements
 Fields owned by this FRD (schema in FRD-007): item `pinned`, `note`, `name` (bundles only; FR-004-42), `updatedAt`; tag `id`, `name`, `color`; item-tag link. Settings: `library.sort` (FRD-008 registry). Display text for confirmations from the catalogue.
 
@@ -68,12 +71,13 @@ Fields owned by this FRD (schema in FRD-007): item `pinned`, `note`, `name` (bun
 |---|---|---|
 | Tag name empty, over 32, or duplicate | ORG-VAL-001 | inline, rejected |
 | Note over 2,000 characters | ORG-VAL-002 | inline, rejected |
-| Edit on a non-text kind, a secure item, or empty text | ORG-VAL-003 | rejected |
+| Edit on a non-text kind, a secure item, or empty text; Add Clip with no visible character | ORG-VAL-003 | rejected |
 | More than 10 tags on an item | ORG-LIM-001 | assignment rejected |
 | More than 100 tags | ORG-LIM-002 | creation rejected |
 | Edited text over ceiling | ORG-LIM-003 | rejected inline |
 | Group needs 2 or more file, folder or bundle items and at most 500 members in all | ORG-VAL-004 | HUD, rejected, nothing changes |
 | Bundle name over 100 characters or with a control character | ORG-VAL-005 | inline, rejected |
+| Edited or added (Add Clip) text over ceiling | ORG-LIM-003 | rejected inline |
 | Transaction failed | STO-DB-001 | rolled back; surfaced per FRD-000 |
 
 An input rejection shown inline (ORG-VAL-001 to -003, ORG-VAL-005, ORG-LIM-001 to -003) is still logged and recorded, and never raises a HUD (FRD-000 FR-000-08 d).
@@ -96,6 +100,7 @@ An input rejection shown inline (ORG-VAL-001 to -003, ORG-VAL-005, ORG-LIM-001 t
 - **AC-004-41** (FR-004-41) Given a file, a folder and a 3-file bundle selected, with the file pinned and tagged "x" and the bundle tagged "y", then Group asks for confirmation, creates one bundle of 5 members in selection order (the bundle's own members in their order) at the top of Recent, tagged "x" and "y", with no pin, note, trigger or hotkey, selected; the three originals are gone and the files on disk remain; given one item, or a text item among the selection, or selections totalling 501 members, then it is rejected with `ORG-VAL-004` and nothing changes; an injected failure after the bundle insert leaves the 3 originals untouched and no bundle.
 - **AC-004-42** (FR-004-42) Given one bundle, then Rename opens a card showing its current name (empty when unnamed); saving "Receipts" shows "Receipts" as the row's primary line and the query `receipts` finds it; a 101-character name is rejected inline with `ORG-VAL-005`; a blank name clears the name and the row shows its member names again; renaming a file, a folder or several items does nothing.
 - **AC-004-14** (FR-004-05) Given a tagged but unpinned item older than the retention window, then it is removed by the sweep.
+- **AC-004-19** (FR-004-19) Given the menu item "Add Clip…" or the `shortcuts.addClip` chord, then one window opens (a second request brings it forward, not a second window); given "hello" added with ⌘Return in each of Active, Curated and Paused, then one text item with source Unknown exists, the pasteboard is untouched and the HUD "Clip added" shows; given "https://x.y" the kind is `link`; given the same text added again, then `copyCount` is bumped and no second row exists; given an item hotkey or a trigger set on the added item, then it pastes that text; given whitespace-only text, Add is disabled and a store-level attempt is rejected with `ORG-VAL-003`; given text over the ceiling, `ORG-LIM-003` shows inline with the window open and the text kept; Esc adds nothing.
 
 ## 8. UI Inventory
 | Element | Type | Where | Behavior |
@@ -107,6 +112,7 @@ An input rejection shown inline (ORG-VAL-001 to -003, ORG-VAL-005, ORG-LIM-001 t
 | Delete-tag confirmation | alert | panel | FR-004-04 |
 | Note popover | popover with multi-line field | anchored to selection (⌘N) | ⌘Return saves, Esc cancels, character counter near limit |
 | Text editor | in-panel multi-line editor with Save/Cancel | replaces results area | ⌘Return saves, Esc cancels; formatting-removed notice for richText |
+| Add Clip window | window with multi-line field, Add and Cancel, inline error | opened from the menu-bar menu or `shortcuts.addClip` | FR-004-19; ⌘Return adds, Esc cancels |
 | Delete confirmation | alert | panel | FR-004-09 |
 | Ungroup confirmation | alert | panel | FR-004-11 |
 | Group confirmation | alert | panel | FR-004-41 |
