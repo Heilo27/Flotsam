@@ -20,6 +20,8 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
         case stackedIcon(memberCount: Int)
         case swatch
         case kindIcon(ItemKind)
+        /// A secure clip (FR-006-21): the lock, with the mask as its text.
+        case secure
     }
 
     public let id: UUID
@@ -31,6 +33,10 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
     public let isPinned: Bool
     /// "Missing" badge for a file, folder or bundle item none of whose members exist (FR-006-07, FR-003-07).
     public let isMissing: Bool
+    /// A secure clip: `text` is the fixed mask, never the stored text, which a card cannot read anyway.
+    public let isSecure: Bool
+    /// "Unavailable" badge for a secure card whose Keychain key cannot be read (FR-006-07); nil otherwise.
+    public let unavailableBadge: String?
     /// The source app's name; the view draws its small icon. Nil when the source is unknown.
     public let sourceName: String?
     public let accessibilityLabel: String
@@ -45,10 +51,17 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
         kind = row.kind
         isPinned = row.isPinned
         self.isMissing = isMissing
+        isSecure = row.isSecure
+        unavailableBadge = row.isSecure && row.isUnavailable ? ShelfText.string(ShelfText.secureUnavailable) : nil
         sourceName = row.sourceName
         accessibilityLabel = ItemSpeech.label(for: row, now: now)
         accessibilityActions = ShelfCardAction.allCases
 
+        if row.isSecure {
+            visual = .secure
+            self.text = SecureClip.mask
+            return
+        }
         switch row.kind {
         case .image, .screenshot:
             visual = .thumbnail

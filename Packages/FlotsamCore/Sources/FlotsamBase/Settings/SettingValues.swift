@@ -111,9 +111,15 @@ public struct BundleIdentifierList: SettingValue {
 
     var isUsable: Bool { identifiers.allSatisfy { !$0.isEmpty && !$0.contains(where: \.isWhitespace) } }
 
-    /// FR-008-11: copies from these apps are never stored. Bundle identifiers are unverified against real installs
-    /// (FRD-008 §9 item 2; spike TASK-009), so a wrong one silently fails to protect that app.
-    public static let defaultIgnoredApps = BundleIdentifierList([
+    /// FR-008-11: copies from these apps are never stored. The default is empty: password managers' concealed copies are
+    /// kept encrypted (FRD-001 FR-001-04 gate 3), so the list is only what the user chooses to exclude. Bundle
+    /// identifiers are unverified against real installs (FRD-008 §9 item 2; spike TASK-009), so a wrong one silently
+    /// fails to protect that app.
+    public static let defaultIgnoredApps = BundleIdentifierList([])
+
+    /// The six password-manager apps the list held by default before secure clips (FR-008-11). Kept only so
+    /// `IgnoredAppsMigration` can recognise a list the user never customised.
+    static let retiredIgnoredAppsDefault = BundleIdentifierList([
         "com.apple.keychainaccess", "com.apple.Passwords", "com.1password.1password",
         "com.agilebits.onepassword7", "com.bitwarden.desktop", "org.keepassxc.keepassxc",
     ])

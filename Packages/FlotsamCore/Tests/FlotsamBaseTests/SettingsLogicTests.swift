@@ -176,11 +176,11 @@ private final class FakeLoginItem: LoginItemService, @unchecked Sendable {
         #expect((try? BundleIdentifierList.validated("com.example.app").get()) == "com.example.app")
     }
 
-    @Test func resetRestoresTheSixDefaults() {
+    @Test func resetRestoresTheEmptyDefault() {
         let settings = SettingsStore(store: MemoryKeyValueStore())
-        settings.set(BundleIdentifierList([]), for: SettingKeys.privacyIgnoredApps)
+        settings.set(BundleIdentifierList(["com.example.app"]), for: SettingKeys.privacyIgnoredApps)
         settings.set(SettingKeys.privacyIgnoredApps.defaultValue, for: SettingKeys.privacyIgnoredApps)
-        #expect(settings.value(SettingKeys.privacyIgnoredApps).identifiers.count == 6)
+        #expect(settings.value(SettingKeys.privacyIgnoredApps).identifiers.isEmpty)
     }
 }
 

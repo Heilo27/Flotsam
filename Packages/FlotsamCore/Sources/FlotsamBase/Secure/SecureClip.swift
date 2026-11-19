@@ -11,6 +11,18 @@ public enum SecureClip {
 
     /// The prefix of a secure item's `contentKey`. Never a bare hash of the text: see `SecureClipVaulting`.
     public static let contentKeyPrefix = "secure:"
+
+    /// What a revealed secure clip puts on a pasteboard (the general pasteboard on re-copy and paste-back, the drag
+    /// pasteboard on a Shelf drag-out): its plain text and `ConcealedType`, so other clipboard managers treat the
+    /// re-copy as the password it is, and so `{clipboard}` reads it as empty (FR-005-16). The ledger adds the
+    /// own-write markers to a general-pasteboard write, so Flotsam does not capture its own re-copy (FR-001-03). The
+    /// one home of this list: Paste and Shelf cannot disagree about what a re-copy carries.
+    public static func pasteboardRepresentations(revealing text: String) -> [PasteboardRepresentation] {
+        [
+            PasteboardRepresentation(uti: PasteboardUTI.plainText, data: Data(text.utf8)),
+            PasteboardRepresentation(uti: PasteboardMarkers.concealed, data: Data()),
+        ]
+    }
 }
 
 /// The Keychain, as the vault needs it (ADR-0011). One 32-byte key, this device only, never in the database, the logs
@@ -85,5 +97,17 @@ public struct SecureClipAccess: Sendable {
         let reason = FlotsamStrings.text(forKey: "ui.secure.authReason") ?? "copy a secure item"
         if case .failure(let error) = await authenticator.authenticate(reason: reason) { return .failure(error) }
         return vault.open(ciphertext)
+    }
+}
+
+extension Optional where Wrapped == SecureClipAccess {
+    /// `reveal` for a caller that may have no secure storage wired. Without it nothing can be decrypted, so the
+    /// answer is `LIB-DAT-002` (unavailable), never a plaintext fallback. The one home of that rule for Paste and
+    /// the Shelf.
+    public func reveal(ciphertext: Data) async -> FlotsamResult<String> {
+        guard let access = self else {
+            return .failure(FlotsamError(.libDat002, "Secure storage is not available"))
+        }
+        return await access.reveal(ciphertext: ciphertext)
     }
 }

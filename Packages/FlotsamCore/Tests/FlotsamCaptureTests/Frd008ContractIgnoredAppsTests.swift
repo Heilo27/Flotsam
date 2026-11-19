@@ -7,16 +7,24 @@ import FlotsamBase
 // FRD-008 contract tests, oracle OC-8070...OC-8074 and OC-8081: the Privacy pane's ignored-apps list against the real
 // capture pipeline and a real database (harness: FRD001ContractHarness.swift). The list lives in the settings
 // registry; like the app container, the rig reads it live: `syncIgnored` is that one line of wiring. Expected values are
-// literals from the oracle.
+// literals from the oracle. TASK-498 (FR-008-11): the default list is now empty, so the rig seeds the six password
+// managers the old default held, as a user's own list, to keep proving that a listed app's copies are dropped.
 
 @Suite(.serialized) @MainActor struct Frd008ContractIgnoredAppsTests {
     private static let onePassword = SourceApp(bundleId: "com.1password.1password", name: "1Password")
     private static let passwords = SourceApp(bundleId: "com.apple.Passwords", name: "Passwords")
     private static let textEdit = SourceApp(bundleId: "com.apple.TextEdit", name: "TextEdit")
 
-    /// Starts a rig whose ignored list is the registry's (fresh-install default), like the app container does.
+    /// The six apps the default list held before secure clips; the user's own list in these tests.
+    private static let passwordManagers = [
+        "com.apple.keychainaccess", "com.apple.Passwords", "com.1password.1password",
+        "com.agilebits.onepassword7", "com.bitwarden.desktop", "org.keepassxc.keepassxc",
+    ]
+
+    /// Starts a rig whose ignored list is the six password managers, read live like the app container does.
     private func withRig(frontmost: SourceApp, _ body: (ContractRig) async throws -> Void) async throws {
         let rig = try await ContractRig.make(frontmost: frontmost)
+        rig.settings.set(BundleIdentifierList(Self.passwordManagers), for: SettingKeys.privacyIgnoredApps)
         syncIgnored(rig)
         do { try await body(rig) } catch { await rig.finish(); throw error }
         await rig.finish()
@@ -26,12 +34,12 @@ import FlotsamBase
         rig.ignored = Set(rig.settings.value(SettingKeys.privacyIgnoredApps).identifiers)
     }
 
-    /// OC-8070. Fresh install, 1Password frontmost, copies 'oracle-pw': nothing stored, no row contains it, and the skip
+    /// OC-8070. 1Password on the user's list, frontmost, copies 'oracle-pw': nothing stored, no row contains it, and the skip
     /// raises no HUD and no Notice.
-    /// Red if the default list lacks 1Password, the skip stores the item, or the skip is surfaced to the user.
+    /// Red if the list lacks 1Password, the skip stores the item, or the skip is surfaced to the user.
     @Test func oc8070_onePasswordCopyIsNotStored() async throws {
         try await withRig(frontmost: Self.onePassword) { rig in
-            // given a fresh install (default ignored list)
+            // given 1Password on the user's ignored list
             try #expect(await rig.itemCount() == 0)
 
             // when 1Password copies the text
@@ -48,7 +56,7 @@ import FlotsamBase
         }
     }
 
-    /// OC-8071. Fresh install, Passwords frontmost, copies 'oracle-pw2': delta 0.
+    /// OC-8071. Passwords on the user's list, frontmost, copies 'oracle-pw2': delta 0.
     @Test func oc8071_passwordsAppCopyIsNotStored() async throws {
         try await withRig(frontmost: Self.passwords) { rig in
             // when Passwords copies the text
@@ -60,11 +68,11 @@ import FlotsamBase
         }
     }
 
-    /// OC-8072. Control: TextEdit is not on the default list, so its copy is stored (+1).
+    /// OC-8072. Control: TextEdit is not on the list, so its copy is stored (+1).
     /// Red if the ignore check is too broad (e.g. ignores everything once the list is non-empty).
     @Test func oc8072_textEditControlIsStored() async throws {
         try await withRig(frontmost: Self.textEdit) { rig in
-            // given the default list (TextEdit absent)
+            // given the list (TextEdit absent)
             #expect(!rig.ignored.contains("com.apple.TextEdit"))
 
             // when TextEdit copies the text
@@ -125,8 +133,9 @@ import FlotsamBase
         }
     }
 
-    /// OC-8081. The user removes all 6 defaults; the list is empty (no error), Reset to Defaults is still possible,
-    /// and TextEdit's copy is stored (+1). A 1Password copy is now stored too: an empty list means nothing is ignored.
+    /// OC-8081. The user removes all 6 defaults; the list is empty (no error), Reset to Defaults is still possible
+    /// (and leaves the list empty, FR-008-11), and TextEdit's copy is stored (+1). A 1Password copy is stored too once
+    /// nothing is ignored.
     @Test func oc8081_emptyListStoresEverything() async throws {
         try await withRig(frontmost: Self.textEdit) { rig in
             // given the six defaults removed one by one
@@ -145,12 +154,13 @@ import FlotsamBase
             try #expect(await rig.itemCount() == 1)
             try #expect(await rig.item(withText: "oracle-e1").count == 1)
 
-            // and Reset to Defaults brings the six back, so 1Password is ignored again
+            // and Reset to Defaults leaves the list empty (FR-008-11), so a 1Password copy is stored too
             rig.settings.set(SettingKeys.privacyIgnoredApps.defaultValue, for: SettingKeys.privacyIgnoredApps)
             syncIgnored(rig)
+            #expect(rig.ignored.isEmpty)
             rig.sourceApps.frontmost = Self.onePassword
             await rig.copyText("oracle-e2")
-            try #expect(await rig.itemCount() == 1, "after reset the password manager is ignored again")
+            try #expect(await rig.itemCount() == 2, "after reset no app is ignored, so the password manager's copy is stored")
         }
     }
 }

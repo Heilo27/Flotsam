@@ -14,6 +14,9 @@ public final class PasteService {
     private let keys: any KeyEventPoster
     private let clock: any WallClock
     private let ownWrites: OwnWriteLedger
+    /// Authenticates, then decrypts a secure item (FR-003-23). Nil when no secure storage is wired: a secure item then
+    /// fails `LIB-DAT-002` instead of being written.
+    private let secureAccess: SecureClipAccess?
     private let sink: any LogSink
     /// Set at the first paste attempt made without Accessibility, so the system prompt shows once, not on every choice.
     private var accessibilityPrompted = false
@@ -21,7 +24,7 @@ public final class PasteService {
     public init(
         store: any PasteItemStore, pasteboard: any PasteboardPort, files: any FileSystemPort,
         frontmost: any FrontmostAppProvider, accessibility: any PermissionProbe, keys: any KeyEventPoster,
-        clock: any WallClock, ownWrites: OwnWriteLedger,
+        clock: any WallClock, ownWrites: OwnWriteLedger, secureAccess: SecureClipAccess? = nil,
         sink: any LogSink = OSLogSink()
     ) {
         self.store = store
@@ -32,11 +35,14 @@ public final class PasteService {
         self.keys = keys
         self.clock = clock
         self.ownWrites = ownWrites
+        self.secureAccess = secureAccess
         self.sink = sink
     }
 
     /// Runs the sequence for one item. Failure codes: `LIB-IO-001` (data missing; the item is deleted), `LIB-DAT-001`
-    /// (all files gone; panel stays open), `LIB-OS-001` (target changed or ⌘V not posted; item stays on the pasteboard).
+    /// (all files gone; panel stays open), `LIB-OS-001` (target changed or ⌘V not posted; item stays on the pasteboard),
+    /// `LIB-OS-002` (a secure item whose owner check was cancelled or failed; nothing is written), `LIB-DAT-002` (a
+    /// secure item whose key is gone; no prompt is shown).
     public func paste(itemId: UUID, mode: PasteMode, target: FrontmostApp?, host: any PasteHost) async -> FlotsamResult<PasteOutcome> {
         FlotsamLog.log(Self.logEvent(mode: mode, outcome: .started), sink: sink)
         let result = await runPaste(itemId: itemId, mode: mode, target: target, host: host)
@@ -55,8 +61,16 @@ public final class PasteService {
         case .success(let loaded): content = loaded
         case .failure(let error): return .failure(error)
         }
+        // A secure item is revealed first, every time: cancel or failure ends the sequence before anything is written.
+        var revealed: String?
+        if let ciphertext = content.secureCiphertext {
+            switch await secureAccess.reveal(ciphertext: ciphertext) {
+            case .success(let text): revealed = text
+            case .failure(let error): return .failure(error)
+            }
+        }
         let representations: [PasteboardRepresentation]
-        switch PastePayload.representations(for: content, mode: mode, itemId: itemId, files: files) {
+        switch PastePayload.representations(for: content, mode: mode, itemId: itemId, files: files, revealedSecureText: revealed) {
         case .success(let built): representations = built
         case .failure(let error): return .failure(error)
         }
@@ -98,6 +112,8 @@ public final class PasteService {
         case .success(let loaded): content = loaded
         case .failure(let error): return .failure(error)
         }
+        // No `secureAccess.reveal` here, on purpose: a secure item never carries a hotkey or trigger, and `stage` refuses
+        // one (`TRG-VAL-006`) before any prompt, so a password is neither revealed nor run through variable expansion.
         let staged: PasteExpansion.Staged
         switch expansion.stage(content: content, itemId: itemId) {
         case .success(let value): staged = value

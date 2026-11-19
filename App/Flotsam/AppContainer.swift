@@ -68,6 +68,12 @@ final class AppContainer {
     private var permissionObserver: (any NSObjectProtocol)?
     /// Capture and paste share one ledger so a paste-back is not re-captured as a new copy (FR-001-03).
     private let ownWrites = OwnWriteLedger()
+    /// Seals and opens secure items with the Keychain key (ADR-0011). Capture seals with it, the database asks it whether
+    /// the key is readable (an unreadable one shows the row as unavailable), and `secureAccess` opens with it.
+    private let secureVault: SecureClipVault
+    /// Authenticate-then-decrypt for secure items (FR-003-23, FR-006-21); the one instance Paste and the Shelf share, so
+    /// "the owner confirms every time" is one rule.
+    private let secureAccess: SecureClipAccess
     /// The one recurring timer's tick (S5, ADR-0004): the pasteboard poll fires it, and the tap watchdog and the
     /// screenshot folder re-resolve run on it instead of owning timers.
     private let pollTick = PollTick()
@@ -82,11 +88,17 @@ final class AppContainer {
         self.presenter = presenter
         self.reporter = reporter
         importRecent = ImportRecentCoordinator(hud: { message in presenter.showHUD(message: message) })
+        // FR-008-11: before anything reads the list, so a never-customised old default does not keep the password managers
+        // ignored.
+        IgnoredAppsMigration.run(on: .standard)
         settings = SettingsStore(store: .standard) { _ in
             let error = FlotsamError(.setDat001, "A stored setting was invalid and was reset to its default")
             Task { await reporter.report(error, origin: .background) }
         }
         permissions = SystemPermissionProbe()
+        let vault = SecureClipVault(store: KeychainSecureKeyStore())
+        secureVault = vault
+        secureAccess = SecureClipAccess(vault: vault, authenticator: LocalAuthenticator())
         loginItem = LoginItemController(service: SMLoginItemService())
         // FR-002-12 / FR-008-04: the action exists from construction, so a click before pickup is wired is never a no-op.
         actions.importRecentScreenshots = { [weak self] in self?.importRecent.request() }
@@ -148,7 +160,7 @@ final class AppContainer {
     }
 
     private func openDatabase() async {
-        switch await FlotsamDatabase.open(folder: Self.dataFolder) {
+        switch await FlotsamDatabase.open(folder: Self.dataFolder, secureVault: secureVault) {
         case .success(let opened):
             database = opened
             startCapture(database: opened)
@@ -158,7 +170,7 @@ final class AppContainer {
             let keys = CGEventKeyPoster()
             let paster = PasteService(
                 store: opened, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
-                accessibility: permissions, keys: keys, clock: SystemClock(), ownWrites: ownWrites)
+                accessibility: permissions, keys: keys, clock: SystemClock(), ownWrites: ownWrites, secureAccess: secureAccess)
             startShelf(database: opened, paster: paster, frontmost: frontmost)
             startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
             startScreenshots(database: opened)
@@ -178,7 +190,7 @@ final class AppContainer {
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
-            access: SystemPasteboardAccess(), pollTick: pollTick)
+            access: SystemPasteboardAccess(), vault: secureVault, pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
         let presenter = presenter
@@ -255,7 +267,7 @@ final class AppContainer {
         // FR-006-10: drag-out reads the cards' content and counts a paste per accepted card.
         controller.dragOut.ports = .init(
             content: { await database.content(of: $0) }, recordPaste: { _ = await database.recordPaste(of: $0) },
-            files: LocalFileSystem(), report: effects.report)
+            files: LocalFileSystem(), secureAccess: secureAccess, report: effects.report)
         // FR-006-13: a drop is an ingest path. It goes through the same classifier and ingest actor as clipboard
         // capture; the controller reads the drag pasteboard and calls this.
         controller.dropService = ShelfDropService(
