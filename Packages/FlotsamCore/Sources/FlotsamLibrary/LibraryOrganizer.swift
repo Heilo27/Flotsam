@@ -18,6 +18,23 @@ public protocol LibraryOrganizeStore: Sendable {
     func editText(id: UUID, to text: String, classifiers: ItemClassifiers) async -> FlotsamResult<ItemKind?>
     func ungroup(bundle: UUID, classifiers: ItemClassifiers) async -> FlotsamResult<[UUID]>
     func delete(ids: [UUID]) async -> FlotsamResult<[UUID]>
+    func groupIntoBundle(ids: [UUID], classifiers: ItemClassifiers) async -> FlotsamResult<UUID?>
+    func renameBundle(id: UUID, to name: String) async -> FlotsamResult<Bool>
+    func bundleName(of id: UUID) async -> FlotsamResult<String?>
+}
+
+/// Group and rename arrived after the other commands; a store that does not provide them refuses rather than
+/// pretending (`SYS-INT-001`). `FlotsamDatabase` implements all three.
+extension LibraryOrganizeStore {
+    public func groupIntoBundle(ids: [UUID], classifiers: ItemClassifiers) async -> FlotsamResult<UUID?> {
+        .failure(FlotsamError(.sysInt001, "This store cannot group items"))
+    }
+
+    public func renameBundle(id: UUID, to name: String) async -> FlotsamResult<Bool> {
+        .failure(FlotsamError(.sysInt001, "This store cannot rename bundles"))
+    }
+
+    public func bundleName(of id: UUID) async -> FlotsamResult<String?> { .success(nil) }
 }
 
 extension FlotsamDatabase: LibraryOrganizeStore {}
@@ -52,6 +69,22 @@ public final class LibraryOrganizer {
     /// Ungroup: exactly one item, a bundle.
     public nonisolated static func canUngroup(_ rows: [ItemRow]) -> Bool {
         rows.count == 1 && rows[0].kind == .bundle
+    }
+
+    /// Group (FR-004-15): two or more items that all reference files (file, folder, bundle), at most `BundleLimits.maxMembers`
+    /// members between them.
+    public nonisolated static func canGroup(_ rows: [ItemRow]) -> Bool {
+        rows.count >= 2 && rows.allSatisfy { $0.kind.referencesFiles }
+            && rows.reduce(0) { $0 + max($1.memberCount, 1) } <= BundleLimits.maxMembers
+    }
+
+    /// Rename (FR-004-15): exactly one item, a bundle.
+    public nonisolated static func canRenameBundle(_ rows: [ItemRow]) -> Bool { canUngroup(rows) }
+
+    /// Group asks first when any item has something that is not carried over: a note, pin, trigger or hotkey (the
+    /// Ungroup rule, FR-004-11). Notes are not on the rows, so the caller passes whether any item has one.
+    public nonisolated static func groupNeedsConfirmation(_ rows: [ItemRow], anyHasNote: Bool) -> Bool {
+        anyHasNote || rows.contains { $0.isPinned || $0.hasTrigger || $0.hasShortcut }
     }
 
     /// Delete asks first only for more than one item, or any pinned item or one with a trigger or hotkey.
@@ -108,6 +141,13 @@ public final class LibraryOrganizer {
 
     /// The new items in the bundle's member order, or nil on failure.
     public func ungroup(bundle: UUID) async -> [UUID]? { unwrap(await store.ungroup(bundle: bundle, classifiers: classifiers)) }
+
+    /// The new bundle's id, or nil when the group was rejected or the items are gone.
+    public func group(_ ids: [UUID]) async -> UUID? { unwrap(await store.groupIntoBundle(ids: ids, classifiers: classifiers)) ?? nil }
+
+    public func renameBundle(_ id: UUID, to name: String) async -> Bool { unwrap(await store.renameBundle(id: id, to: name)) != nil }
+
+    public func bundleName(of id: UUID) async -> String? { unwrap(await store.bundleName(of: id)) ?? nil }
 
     /// The ids removed, or nil on failure.
     public func delete(_ ids: [UUID]) async -> [UUID]? { unwrap(await store.delete(ids: ids)) }

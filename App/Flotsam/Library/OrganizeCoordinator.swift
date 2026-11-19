@@ -19,6 +19,7 @@ enum OrganizeOverlay {
     case note(UUID)
     case edit(UUID, kind: ItemKind)
     case renameTag(Int64)
+    case renameBundle(UUID)
 }
 
 /// Drives the Organize UI (FRD-004): turns the Library's `.external` commands into confirmations and editors, runs the
@@ -57,7 +58,7 @@ final class OrganizeCoordinator {
     var isOverlayOpen: Bool { overlay != nil }
 
     /// The inline codes: a rejected tag name, note or edit stays in the open overlay. Everything else is a HUD.
-    private static let inlineCodes: Set<ErrorCode> = [.orgVal001, .orgVal002, .orgVal003, .orgLim001, .orgLim002, .orgLim003]
+    private static let inlineCodes: Set<ErrorCode> = [.orgVal001, .orgVal002, .orgVal003, .orgVal005, .orgLim001, .orgLim002, .orgLim003]
 
     /// The organizer's `report` closure (FR-004-14): a rejected input shows inline and is still logged and recorded
     /// (FR-000-08 d), any other failure is reported as a HUD.
@@ -81,6 +82,8 @@ final class OrganizeCoordinator {
         case .edit: openEdit(model)
         case .delete: requestDelete(model)
         case .ungroup: requestUngroup(model)
+        case .group: requestGroup(model)
+        case .renameBundle: openRenameBundle(model)
         case .shortcutAndTrigger: shortcutAndTrigger(ids)
         case .cycleSort: break  // the view model owns sort cycling
         }
@@ -148,6 +151,38 @@ final class OrganizeCoordinator {
             } else {
                 _ = await model.ungroupSelected(expecting: row.id)
             }
+        }
+    }
+
+    /// Notes are not on the rows, so they are read before deciding whether to ask; the originals' notes, pins, triggers and
+    /// hotkeys are not carried onto the bundle (FR-004-15).
+    private func requestGroup(_ model: LibraryViewModel) {
+        let rows = model.selectedRows
+        guard LibraryOrganizer.canGroup(rows), let organizer else { return }
+        let asked = Set(rows.map(\.id))
+        Task {
+            var anyHasNote = false
+            for row in rows where await organizer.note(of: row.id) != nil {
+                anyHasNote = true
+                break
+            }
+            if LibraryOrganizer.groupNeedsConfirmation(rows, anyHasNote: anyHasNote) {
+                confirm(message: LibraryText.string(LibraryText.confirmGroup), button: LibraryText.string(LibraryText.buttonGroup)) {
+                    _ = await model.groupSelected(expecting: asked)
+                }
+            } else {
+                _ = await model.groupSelected(expecting: asked)
+            }
+        }
+    }
+
+    private func openRenameBundle(_ model: LibraryViewModel) {
+        let rows = model.selectedRows
+        guard LibraryOrganizer.canRenameBundle(rows), let row = rows.first, let organizer else { return }
+        Task {
+            draft = await organizer.bundleName(of: row.id) ?? ""
+            validation = nil
+            overlay = .renameBundle(row.id)
         }
     }
 
@@ -247,6 +282,9 @@ final class OrganizeCoordinator {
         case .renameTag(let id):
             validation = nil
             Task { if await model.renameTag(id, to: draft) { close() } }
+        case .renameBundle(let id):
+            validation = nil
+            Task { if await model.renameSelectedBundle(id, to: draft) { close() } }
         }
     }
 
@@ -265,7 +303,8 @@ final class OrganizeCoordinator {
         guard stroke.input == .returnKey else { return false }
         switch overlay {
         case .confirm where stroke.modifiers.isEmpty, .note where stroke.modifiers == .command,
-             .edit where stroke.modifiers == .command, .renameTag where stroke.modifiers.isEmpty:
+             .edit where stroke.modifiers == .command, .renameTag where stroke.modifiers.isEmpty,
+             .renameBundle where stroke.modifiers.isEmpty:
             primaryAction()
             return true
         default: return false

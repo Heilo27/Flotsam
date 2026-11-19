@@ -43,7 +43,7 @@ struct OrganizeOverlayHost: View {
         case .tags: TagPickerCard(organize: organize, tags: model.sidebar?.tags ?? [])
         case .note: NoteCard(organize: organize)
         case .edit(_, let kind): EditCard(organize: organize, isRichText: kind == .richText)
-        case .renameTag: RenameTagCard(organize: organize)
+        case .renameTag, .renameBundle: RenameCard(organize: organize)
         }
     }
 }
@@ -226,7 +226,7 @@ private struct EditCard: View {
     }
 }
 
-private struct RenameTagCard: View {
+private struct RenameCard: View {
     let organize: OrganizeCoordinator
     @FocusState private var focused: Bool
 

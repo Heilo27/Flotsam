@@ -12,7 +12,7 @@ public enum LibraryDirection: Sendable, Equatable { case up, down, left, right }
 /// Commands whose behaviour belongs to FRD-004 (organise) and FRD-005 (triggers). The Library maps the key (FR-003-08)
 /// and hands the command on.
 public enum LibraryExternalCommand: Sendable, Equatable {
-    case pin, tags, note, edit, delete, cycleSort, ungroup, shortcutAndTrigger
+    case pin, tags, note, edit, delete, cycleSort, ungroup, group, renameBundle, shortcutAndTrigger
 
     /// The one item the shortcut-and-trigger editor opens for (FR-005-09), the one rule behind ⌘K, the "Shortcut and
     /// Trigger..." context-menu row and the Library's choice to hide for the editor: only that command, with exactly one
@@ -104,6 +104,8 @@ public enum LibraryKeyMap {
             LibraryKeyStroke(.delete, .command): .external(.delete),
             LibraryKeyStroke(.character("s"), .command): .external(.cycleSort),
             LibraryKeyStroke(.character("u"), [.command, .shift]): .external(.ungroup),
+            LibraryKeyStroke(.character("g"), [.command, .shift]): .external(.group),
+            LibraryKeyStroke(.character("r"), [.command, .shift]): .external(.renameBundle),
             LibraryKeyStroke(.character("k"), .command): .external(.shortcutAndTrigger),
         ]
         for digit in 1...9 {

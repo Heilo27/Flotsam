@@ -15,6 +15,12 @@ extension CaptureClassifier {
         ItemClassification(kind: memberKind(path: path, isDirectory: isDirectory), contentKey: ContentKey.files(paths: [path]))
     }
 
+    /// FR-004-15: the bundle Group builds from `paths`, in order. The kind and key a copy of the same files has when it
+    /// holds more than one (FR-001-12), so a later copy of the same set dedupes against it.
+    public static func classifyFileSet(paths: [String]) -> ItemClassification {
+        ItemClassification(kind: .bundle, contentKey: ContentKey.files(paths: paths))
+    }
+
     /// A directory is a `folder` unless it is a package (an app, a document bundle), which behaves as a `file`.
     static func memberKind(path: String, isDirectory: Bool) -> ItemKind {
         guard isDirectory,
@@ -28,5 +34,6 @@ extension ItemClassifiers {
     /// The classifiers the app uses: the capture rules themselves.
     public static let live = ItemClassifiers(
         editedText: { CaptureClassifier.classifyEditedText($0) },
-        fileMember: { CaptureClassifier.classifyMember(path: $0, isDirectory: $1) })
+        fileMember: { CaptureClassifier.classifyMember(path: $0, isDirectory: $1) },
+        fileSet: { CaptureClassifier.classifyFileSet(paths: $0) })
 }

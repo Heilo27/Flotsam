@@ -22,7 +22,8 @@ enum PrimaryLine {
     static let bundleNameLimit = 2
 
     static func text(
-        kind: ItemKind, plainText: String?, pixelWidth: Int?, pixelHeight: Int?, memberCount: Int, memberNames: [String]
+        kind: ItemKind, plainText: String?, pixelWidth: Int?, pixelHeight: Int?, memberCount: Int, memberNames: [String],
+        bundleName: String? = nil
     ) -> String {
         // Leading and trailing blank space is dropped first so a copy that starts with a newline does not yield an
         // empty first line.
@@ -40,7 +41,8 @@ enum PrimaryLine {
             return memberNames.first ?? trimmed
         case .bundle:
             let count = FlotsamStrings.formatted(forKey: "ui.row.bundleCount", [memberCount]) ?? String(memberCount)
-            let names = memberNames.prefix(bundleNameLimit).joined(separator: ", ")
+            // A bundle the user named shows that name in place of its first member names (FR-004-15).
+            let names = bundleName ?? memberNames.prefix(bundleNameLimit).joined(separator: ", ")
             return names.isEmpty ? count : "\(count) · \(names)"
         }
     }

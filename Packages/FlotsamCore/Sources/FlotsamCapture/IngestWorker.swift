@@ -11,6 +11,8 @@ struct IngestWorker: Sendable {
     let sink: any LogSink
     /// Seals concealed copies; nil rejects them (`CAP-POL-001`).
     var vault: (any SecureClipVaulting)? = nil
+    /// Whether a copy of several files becomes one bundle (`capture.autoBundle`, FR-001-12). Read once per payload.
+    var autoBundle: @Sendable () -> Bool = { true }
 
     /// Classifies and ingests `payload`. A failure is reported in the background unless `reportingFailure` is false
     /// (Save Clipboard shows it itself); it is returned either way, nil on success.
@@ -27,10 +29,22 @@ struct IngestWorker: Sendable {
             classification = value
         }
 
-        let candidate = IngestCandidate(
-            classification: classification, source: payload.source, origin: payload.origin,
-            occurredAt: payload.capturedAt)
+        // FR-001-12: with auto-bundling off a multi-file copy is one item per file. A member's time is the copy's
+        // minus its index in milliseconds, so Recent lists them in pasteboard order (as Ungroup does, FR-004-11).
+        let parts = autoBundle() ? [classification] : CaptureClassifier.splitIntoMembers(classification)
+        var firstFailure: FlotsamError?
+        for (index, part) in parts.enumerated() {
+            let candidate = IngestCandidate(
+                classification: part, source: payload.source, origin: payload.origin,
+                occurredAt: payload.capturedAt.addingTimeInterval(-Double(index) / 1000))
+            if let failure = await ingestOne(candidate, payload: payload, reportingFailure: reportingFailure) {
+                firstFailure = firstFailure ?? failure
+            }
+        }
+        return firstFailure
+    }
 
+    private func ingestOne(_ candidate: IngestCandidate, payload: CapturedPayload, reportingFailure: Bool) async -> FlotsamError? {
         switch await ingest.ingest(candidate) {
         case .failure(let error):
             // FR-001-22: this item is lost, the pipeline carries on with the next.
@@ -41,7 +55,7 @@ struct IngestWorker: Sendable {
             for warning in result.warnings { await reporter.report(warning, origin: .background) }
             FlotsamLog.log(
                 .pasteboardProcessed(
-                    kind: classification.kind, byteSize: payload.representations.reduce(0) { $0 + $1.data.count },
+                    kind: candidate.kind, byteSize: payload.representations.reduce(0) { $0 + $1.data.count },
                     outcome: result.outcome.isBump ? .deduped : .stored, policy: nil),
                 sink: sink)
             return nil

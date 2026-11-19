@@ -717,6 +717,20 @@ public final class LibraryViewModel {
         return await organize(selecting: { $0 }) { await $0.ungroup(bundle: id) }
     }
 
+    /// Replaces the selected file items with one bundle and selects it (FR-004-15). `expecting` is the selection the user
+    /// was asked about; when it has changed since, nothing happens (the originals are removed). Nil means "the selection now".
+    public func groupSelected(expecting confirmed: Set<UUID>? = nil) async -> UUID? {
+        let rows = selectedRows
+        guard LibraryOrganizer.canGroup(rows) else { return nil }
+        if let confirmed, selection != confirmed { return nil }
+        return await organize(selecting: { [$0] }) { await $0.group(rows.map(\.id)) }
+    }
+
+    /// Names the selected bundle (FR-004-15); blank clears the name. False when rejected.
+    public func renameSelectedBundle(_ id: UUID, to name: String) async -> Bool {
+        await organize { await $0.renameBundle(id, to: name) ? true : nil } ?? false
+    }
+
     /// Deletes the selection and selects the row after the last one removed (FR-004-09). The caller confirms first when
     /// `LibraryOrganizer.deleteNeedsConfirmation` says so. `expecting` is the selection the user confirmed: when the
     /// selection has changed since, nothing is deleted (a delete is permanent, FR-004-09). Nil means "the selection
