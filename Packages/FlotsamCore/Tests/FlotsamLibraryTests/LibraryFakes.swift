@@ -82,6 +82,16 @@ final class FakePreferences: LibraryPreferences, @unchecked Sendable {
         get { lock.withLock { _size } }
         set { lock.withLock { _size = newValue } }
     }
+    private var _compactSize = PanelSize(width: 520, height: 520)
+    var compactPanelSize: PanelSize {
+        get { lock.withLock { _compactSize } }
+        set { lock.withLock { _compactSize = newValue } }
+    }
+    private var _layout: LibraryLayoutMode = .standard
+    var layout: LibraryLayoutMode {
+        get { lock.withLock { _layout } }
+        set { lock.withLock { _layout = newValue } }
+    }
     private var _sort: LibrarySort = .recent
     var sort: LibrarySort {
         get { lock.withLock { _sort } }

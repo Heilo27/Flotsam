@@ -19,7 +19,7 @@ Surfaces:
 | Surface | Type | Image |
 |---|---|---|
 | Menu-bar item and menu | NSStatusItem + NSMenu | 08 |
-| Library | floating NSPanel, 760x480 (min 560x360) | 01, 02, 03, 04 |
+| Library | floating NSPanel, 760x480 (min 560x360); Compact layout 520x520 (min 480x400) | 01, 02, 03, 04 |
 | Shelf | edge NSPanel (left, right, bottom, menu bar) | 05 |
 | Settings | toolbar window, 6 panes | 06 |
 | Onboarding | window, 8 steps | 07 |
@@ -116,6 +116,8 @@ Library appears in 120 ms ease-out (scale 0.98 to 1, fade). Shelf slides 150 ms 
 ### 3.1 Library (images 01 to 04)
 
 760x480, centred on the pointer's screen, resizable to 560x360 minimum. Three columns: sidebar 168, results 312, preview 280 (preview collapses first below 700 wide, then sidebar below 620). Search field 36 pt at top. Footer hint bar 30 pt.
+
+Compact layout (FR-003-06, Settings > General): two columns, sidebar 168 and results, no preview column, 520x520 (min 480x400). Space or ⌘Y shows the preview in place of the results with the sidebar kept; Esc returns to the list. Tab order and VoiceOver order: search, sidebar, results (or the preview).
 
 - Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows 28 pt, count right-aligned, `accent-text` on selected row.
 - List rows: 44 pt, 32 pt lead icon or thumbnail, first line `t1` single line, second line `t2` (source app, age). Badges: pin, trigger, Missing (warn). Up to 3 tag chips then "+n". Quick-paste badge ⌘1 to ⌘9 on the first nine rows.

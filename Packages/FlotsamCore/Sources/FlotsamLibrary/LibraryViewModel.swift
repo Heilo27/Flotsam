@@ -38,6 +38,9 @@ public final class LibraryViewModel {
     public private(set) var isPreviewOpen = false
     public private(set) var preview: LibraryPreview?
     public private(set) var viewMode: LibraryViewMode
+    /// Standard or Compact, read from settings at each open (FR-003-06). Settings opens in its own window and the Library
+    /// hides first (FR-003-02), so the value cannot change while the panel is shown.
+    public private(set) var layout: LibraryLayoutMode
     /// Incremented whenever the list is reset to its top (open, new search, new filter), so the view scrolls there.
     public private(set) var scrollResetToken = 0
     /// Incremented when a fresh Accessibility read differs from the last one, so the footer re-renders without a
@@ -102,6 +105,7 @@ public final class LibraryViewModel {
         self.events = events
         self.clock = clock
         viewMode = preferences.viewMode
+        layout = preferences.layout
         sort = preferences.sort
     }
 
@@ -109,6 +113,9 @@ public final class LibraryViewModel {
 
     /// The rows on screen: the newest `visibleLimit` of what is loaded (FR-003-05).
     public var visibleRows: [ItemRow] { Array(loadedRows.prefix(visibleLimit)) }
+
+    /// Where the preview is drawn, if at all (FR-003-06, FR-003-14).
+    public var columns: LibraryColumns { LibraryColumns.resolve(layout: layout, previewOpen: isPreviewOpen) }
 
     public var sidebarEntries: [SidebarEntry] { sidebar.map(SidebarEntry.entries(from:)) ?? [] }
 
@@ -158,6 +165,7 @@ public final class LibraryViewModel {
         cursor = nil
         anchor = nil
         viewMode = preferences.viewMode
+        layout = preferences.layout
         sort = preferences.sort
         scrollResetToken += 1
         subscribeToChanges()

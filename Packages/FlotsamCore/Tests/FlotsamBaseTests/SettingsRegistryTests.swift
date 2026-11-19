@@ -23,7 +23,9 @@ import Testing
             ("storage.imageQuality", "ImageQuality", "original"),
             ("library.sort", "LibrarySort", "recent"),
             ("library.viewMode", "LibraryViewMode", "list"),
+            ("library.layout", "LibraryLayoutMode", "standard"),
             ("library.panelSize", "PanelSize", "760.0x480.0"),
+            ("library.compactPanelSize", "PanelSize", "520.0x520.0"),
             ("onboarding.completed", "Bool", "false"),
             ("settings.lastPane", "SettingsPane", "general"),
         ]

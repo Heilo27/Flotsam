@@ -64,6 +64,15 @@ public struct LoginItemPresentation: Equatable, Sendable {
     }
 }
 
+extension LibraryLayoutMode {
+    public var label: SettingsString {
+        switch self {
+        case .standard: .layoutStandard
+        case .compact: .layoutCompact
+        }
+    }
+}
+
 extension ShelfPlacement {
     public var label: SettingsString {
         switch self {

@@ -4,7 +4,7 @@ import FlotsamLibrary
 import SwiftUI
 
 /// The Library panel's content (FR-003-05): search field on top, sidebar on the left, list or grid in the middle, the
-/// preview pane on the right when open, the footer at the bottom. All state and behaviour live in `LibraryViewModel`.
+/// preview pane on the right when open (Compact: in place of the list), the footer at the bottom. All state and behaviour live in `LibraryViewModel`.
 struct LibraryView: View {
     let model: LibraryViewModel
     let organize: OrganizeCoordinator
@@ -18,11 +18,20 @@ struct LibraryView: View {
                 LibrarySidebar(model: model, organize: organize)
                     .frame(width: 170)
                 Divider()
-                content
-                if model.isPreviewOpen {
+                // Which columns exist is `LibraryColumns`' decision (FR-003-06); the view only draws it.
+                let columns = model.columns
+                switch columns.preview {
+                case .hidden:
+                    content
+                case .rightPane:
+                    content
                     Divider()
                     LibraryPreviewView(model: model)
                         .frame(minWidth: 200, idealWidth: 280, maxWidth: 360)
+                case .replacesList:
+                    // Compact: the preview takes the list's place and the sidebar stays; ↑/↓ still move the selection.
+                    LibraryPreviewView(model: model)
+                        .frame(maxWidth: .infinity)
                 }
             }
             Divider()

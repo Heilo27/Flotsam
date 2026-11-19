@@ -15,7 +15,7 @@ import Testing
 private final class RealHidePresenter: LibraryPanelPresenter {
     var isVisible = false
     var hideCount = 0
-    func show(at frame: CGRect) { isVisible = true }
+    func show(at frame: CGRect, minimumSize: PanelSize) { isVisible = true }
     func hide() { hideCount += 1; isVisible = false }
 }
 

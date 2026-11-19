@@ -50,6 +50,10 @@ public enum ImageQuality: String, SettingValue, CaseIterable { case original, ba
 public enum ShelfPlacement: String, SettingValue, CaseIterable { case rightEdge, leftEdge, bottomEdge, menuBar }
 public enum LibraryViewMode: String, SettingValue, CaseIterable { case list, grid }
 
+/// The Library's window layout (`library.layout`, FR-003-06): Standard has the optional preview pane on the right,
+/// Compact is sidebar and list only, in a nearly square window.
+public enum LibraryLayoutMode: String, SettingValue, CaseIterable { case standard, compact }
+
 /// The Settings window's panes in display order (FR-008-03). Also the value of `settings.lastPane`.
 public enum SettingsPane: String, SettingValue, CaseIterable { case general, shortcuts, triggers, privacy, storage, about }
 
@@ -159,7 +163,7 @@ public enum FolderOverride: SettingValue {
     }
 }
 
-/// A size in points (`library.panelSize`).
+/// A size in points (`library.panelSize`, `library.compactPanelSize`).
 public struct PanelSize: SettingValue {
     public let width: Double
     public let height: Double

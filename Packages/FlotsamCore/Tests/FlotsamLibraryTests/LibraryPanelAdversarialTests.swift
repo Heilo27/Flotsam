@@ -21,7 +21,7 @@ private final class AdvPresenter: LibraryPanelPresenter {
     /// A real NSPanel resigns key while it is ordered out; the notification reaches the driver mid-hide.
     var resignKeyDuringHide: (() -> Void)?
     var isVisible: Bool { visible }
-    func show(at frame: CGRect) {
+    func show(at frame: CGRect, minimumSize: PanelSize) {
         modelShownAtShow = model?.isShown
         frames.append(frame)
         visible = true

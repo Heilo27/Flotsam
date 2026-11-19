@@ -15,6 +15,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar
     case revealAtEdge, showSetupGuide, historyHelp
+    /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
+    case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
 
     // Shortcuts
     case shortcutOpenLibrary, shortcutSaveClipboard, shortcutToggleShelf

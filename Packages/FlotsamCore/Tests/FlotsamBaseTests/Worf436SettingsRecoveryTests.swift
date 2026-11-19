@@ -49,6 +49,10 @@ private final class WriteDroppingStore: KeyValueStore, @unchecked Sendable {
         ("library.panelSize", "-5x300", "760.0x480.0"),
         ("library.panelSize", "nanx300", "760.0x480.0"),
         ("library.panelSize", "infx300", "760.0x480.0"),
+        ("library.compactPanelSize", "0x0", "520.0x520.0"),
+        ("library.compactPanelSize", "nanx300", "520.0x520.0"),
+        ("library.layout", "tiny", "standard"),
+        ("library.layout", "COMPACT", "standard"),
         ("screenshots.folderOverride", "!!!not base64!!!", ""),
         ("screenshots.folderOverride", "AAAA", ""),  // decodes, but is not a resolvable bookmark
         ("privacy.ignoredApps", "not json", "DEFAULT-IGNORED"),
@@ -81,6 +85,8 @@ private final class WriteDroppingStore: KeyValueStore, @unchecked Sendable {
         case "shortcuts.saveClipboard": return go(SettingKeys.shortcutsSaveClipboard)
         case "shortcuts.toggleShelf": return go(SettingKeys.shortcutsToggleShelf)
         case "library.panelSize": return go(SettingKeys.libraryPanelSize)
+        case "library.compactPanelSize": return go(SettingKeys.libraryCompactPanelSize)
+        case "library.layout": return go(SettingKeys.libraryLayout)
         case "screenshots.folderOverride": return go(SettingKeys.screenshotsFolderOverride)
         case "privacy.ignoredApps": return go(SettingKeys.privacyIgnoredApps)
         case "triggers.excludedApps": return go(SettingKeys.triggersExcludedApps)

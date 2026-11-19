@@ -53,6 +53,12 @@ struct GeneralPane: View {
                     .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
             }
             Section {
+                Picker(selection: model.binding(SettingKeys.libraryLayout)) {
+                    ForEach(LibraryLayoutMode.allCases, id: \.self) { Text($0.label).tag($0) }
+                } label: { Text(.libraryLayout) }
+                Text(.libraryLayoutHelp).settingsCaption()
+            }
+            Section {
                 Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
             }
         }

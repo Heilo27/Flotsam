@@ -58,8 +58,11 @@ public enum SettingKeys {
     public static let storageImageQuality = SettingKey("storage.imageQuality", default: ImageQuality.original, owner: "FR-007-08")
     public static let librarySort = SettingKey("library.sort", default: LibrarySort.recent, owner: "FR-004-12")
     public static let libraryViewMode = SettingKey("library.viewMode", default: LibraryViewMode.list, owner: "FR-003-07")
+    public static let libraryLayout = SettingKey("library.layout", default: LibraryLayoutMode.standard, owner: "FR-003-06")
     public static let libraryPanelSize = SettingKey(
         "library.panelSize", default: PanelSize(width: 760, height: 480), owner: "FR-003-03", validator: { $0.isUsable })
+    public static let libraryCompactPanelSize = SettingKey(
+        "library.compactPanelSize", default: PanelSize(width: 520, height: 520), owner: "FR-003-03", validator: { $0.isUsable })
     public static let onboardingCompleted = SettingKey("onboarding.completed", default: false, owner: "FR-008-12")
     public static let settingsLastPane = SettingKey("settings.lastPane", default: SettingsPane.general, owner: "FR-008-03")
 
@@ -70,7 +73,8 @@ public enum SettingKeys {
         shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsToggleShelf.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
-        librarySort.descriptor, libraryViewMode.descriptor, libraryPanelSize.descriptor,
+        librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,
+        libraryCompactPanelSize.descriptor,
         onboardingCompleted.descriptor, settingsLastPane.descriptor,
     ]
 }

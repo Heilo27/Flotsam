@@ -89,7 +89,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
 
     var isVisible: Bool { panel.isVisible }
 
-    func show(at frame: CGRect) {
+    func show(at frame: CGRect, minimumSize: PanelSize) {
+        panel.contentMinSize = NSSize(width: minimumSize.width, height: minimumSize.height)
         panel.setFrame(frame, display: false)
         installKeyMonitor()
         panel.makeKeyAndOrderFront(nil)
@@ -109,7 +110,6 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
         panel.standardWindowButton(.closeButton)?.isHidden = true
         panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
         panel.standardWindowButton(.zoomButton)?.isHidden = true
-        panel.contentMinSize = NSSize(width: LibraryLayout.minimumSize.width, height: LibraryLayout.minimumSize.height)
         panel.setAccessibilityLabel(LibraryText.string(LibraryText.panelTitle))
         panel.delegate = self
 
@@ -152,7 +152,8 @@ final class LibraryPanelController: NSObject, PasteHost, NSWindowDelegate, Libra
     /// The size is remembered when a live resize ends (FR-003-03).
     func windowDidEndLiveResize(_ notification: Notification) {
         let size = panel.frame.size
-        preferences.panelSize = PanelSize(width: size.width, height: size.height)
+        // Into the layout the panel was opened in, so a Compact resize never overwrites the Standard size (FR-003-03).
+        preferences.setPanelSize(PanelSize(width: size.width, height: size.height), for: model.layout)
     }
 
     // MARK: Keys

@@ -20,8 +20,9 @@ public protocol LibraryScreenProvider {
 @MainActor
 public protocol LibraryPanelPresenter: AnyObject {
     var isVisible: Bool { get }
-    /// Places the panel at `frame` (not animated), starts watching keys, and makes it key and front.
-    func show(at frame: CGRect)
+    /// Places the panel at `frame` (not animated) with `minimumSize` as its smallest resize, starts watching keys, and
+    /// makes it key and front.
+    func show(at frame: CGRect, minimumSize: PanelSize)
     /// Stops watching keys, closes any organize overlay, and orders the panel out.
     func hide()
 }
@@ -85,13 +86,17 @@ public final class LibraryPanelDriver: PasteHost {
         let target = frontmost.frontmost()
         await captureNow()
         await model.open(target: target)
-        presenter?.show(at: frame(for: preferences.panelSize))
+        // The layout the model just loaded, so the frame, the minimum and the columns drawn cannot disagree (FR-003-06).
+        let layout = model.layout
+        presenter?.show(
+            at: frame(for: preferences.panelSize(for: layout), layout: layout),
+            minimumSize: LibraryLayout.minimumSize(for: layout))
     }
 
     /// The panel's frame on the pointer's screen (FR-003-03).
-    public func frame(for size: PanelSize) -> CGRect {
+    public func frame(for size: PanelSize, layout: LibraryLayoutMode = .standard) -> CGRect {
         let screen = LibraryLayout.screen(containing: screens.pointerLocation, in: screens.screens, main: screens.mainScreen)
-        return LibraryLayout.frame(in: screen?.visibleFrame ?? LibraryLayout.fallbackVisibleFrame, size: size)
+        return LibraryLayout.frame(in: screen?.visibleFrame ?? LibraryLayout.fallbackVisibleFrame, size: size, layout: layout)
     }
 
     // MARK: Hide triggers (FR-003-02)

@@ -143,11 +143,11 @@ import Testing
         #expect(!names.contains { $0.contains("login") || $0.contains("launch") }, "launch at login is not a registry value")
         #expect(!names.contains { $0.contains("lastScan") || $0.contains("watermark") }, "the scan watermark is database state")
         #expect(!names.contains { $0.contains("history") || $0.contains("items") }, "item data is database state")
-        #expect(names.count == 20)
+        #expect(names.count == 22)
     }
 
-    // OC-8009. The registry is exactly the 20 keys of the table, and each key name is spelled once in production code.
-    @Test func oc8009_registryIsTheTwentyKeysAndNothingReadsDefaultsAroundIt() throws {
+    // OC-8009. The registry is exactly the 22 keys of the table, and each key name is spelled once in production code.
+    @Test func oc8009_registryIsTheTwentyTwoKeysAndNothingReadsDefaultsAroundIt() throws {
         let expected: [String: (type: String, def: String)] = [
             "capture.mode": ("CaptureMode", "active"), "screenshots.enabled": ("Bool", "true"),
             "screenshots.folderOverride": ("FolderOverride", ""), "shelf.enabled": ("Bool", "true"),
@@ -157,10 +157,11 @@ import Testing
             "storage.retention": ("RetentionPreset", "d30"), "storage.imageBudget": ("ImageBudget", "gib2"),
             "storage.imageQuality": ("ImageQuality", "original"), "library.sort": ("LibrarySort", "recent"),
             "library.viewMode": ("LibraryViewMode", "list"), "library.panelSize": ("PanelSize", "760.0x480.0"),
+            "library.layout": ("LibraryLayoutMode", "standard"), "library.compactPanelSize": ("PanelSize", "520.0x520.0"),
             "onboarding.completed": ("Bool", "false"), "settings.lastPane": ("SettingsPane", "general"),
         ]
         let all = SettingKeys.all
-        #expect(all.count == 20)
+        #expect(all.count == 22)
         for (name, row) in expected {
             let descriptor = all.first { $0.name == name }
             #expect(descriptor?.valueType == row.type, "type of \(name)")
