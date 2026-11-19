@@ -37,20 +37,17 @@ final class SettingsWindowController: SettingsWindowPresenter {
 /// The driver's view of the `NSWindow`.
 @MainActor
 private final class SettingsWindowHandleAppKit: SettingsWindowHandle {
-    private let window: NSWindow
+    private let front: WindowFrontAdapter
     private let tabs: SettingsTabViewController
 
     init(window: NSWindow, tabs: SettingsTabViewController) {
-        self.window = window
+        front = WindowFrontAdapter(window: window)
         self.tabs = tabs
     }
 
     func select(_ pane: SettingsPane) { tabs.select(pane) }
 
-    func bringToFront() {
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
-    }
+    func bringToFront() { front.bringToFront() }
 }
 
 /// A toolbar-style tab controller with one hosting controller per pane. A pane's size is its SwiftUI content's size,

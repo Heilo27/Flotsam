@@ -8,6 +8,7 @@ import SwiftUI
 final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
     private let services: ItemBindingsEditorServices
     private var window: NSWindow?
+    private var front: WindowFrontAdapter?
     private var model: ItemBindingsEditorModel?
 
     init(services: ItemBindingsEditorServices) {
@@ -15,9 +16,8 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
     }
 
     func open(itemId: UUID) {
-        if let model, model.itemId == itemId, let window {
-            NSApp.activate()
-            window.makeKeyAndOrderFront(nil)
+        if let model, model.itemId == itemId, let front {
+            front.bringToFront()
             return
         }
         closeCurrent()
@@ -33,8 +33,10 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
         window.center()
         self.model = model
         self.window = window
-        NSApp.activate()
-        window.makeKeyAndOrderFront(nil)
+        // Opened from the Library panel, which never activates the app: the window must bring Flotsam forward itself.
+        let front = WindowFrontAdapter(window: window)
+        self.front = front
+        front.bringToFront()
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -42,6 +44,7 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
         model?.stopRecording()
         model = nil
         window = nil
+        front = nil
     }
 
     private func closeCurrent() {
@@ -49,6 +52,7 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
         let old = window
         model = nil
         window = nil
+        front = nil
         old?.delegate = nil
         old?.close()
     }
