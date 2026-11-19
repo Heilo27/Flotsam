@@ -1951,3 +1951,27 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 - **Spec.** FRD-003 adds FR-003-24 and AC-003-20 in the same commit. The FRD says a hidden panel schedules nothing, which agrees with FR-001-20. No drift.
 - **Defects:** none.
 - **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored, the suite plists were removed and TextEdit was closed unsaved.
+
+## TASK-524 round 2: obrien-524 @ b24af87 (2026-11-19)
+
+**Setup:** macOS 27.3 (26C5035r), Debug build, isolated launch. Each row ran 3 times. Evidence for each run: a screenshot, the front app, the window order and the AX main/focused state.
+
+**Results.** All PASS:
+
+- **Row 1** (Library open, then menu-bar "Settings…"): PASS. The Library hides; Settings comes to the front and is key.
+- **Row 2** (Settings minimized, then menu-bar "Settings…"): PASS. The Library hides; Settings un-minimizes and is front and key. Settings was minimized via the System Events AXMinimized attribute, because ⌘M does nothing on Settings (FR-008-19).
+- **Row 3** (the six round-1 rows as a regression, covering ⌘, and ⌘K with one, none and several items selected): PASS.
+- **Row 4** (⌘K with zero items selected, and with several selected via ⇧↑/⇧↓, "3 selected"): PASS. The Library stays open and no editor opens.
+- **Row 5** ("Show Setup Guide…"):
+  - From the menu bar: PASS. The Library hides and the guide comes to the front.
+  - From the Settings General button with the Library open behind: PASS. The Library hides and the guide comes to the front.
+
+**Run notes**
+- Row 4 (several selected), run 2: the first attempt was invalid because the Library was left over from run 1. It was redone from a clean state.
+- Row 5 (from the menu bar), runs 2 and 3: ⌘W does not close the guide or Settings while the Library is key, so the guide was closed through its AX close button. Those two runs therefore started with the guide already open behind TextEdit.
+
+**Spec:** FR-003-02 and AC-003-01a were edited in the same commits. FR-008-03, AC-008-03 and FR-005-09 are unchanged and not contradicted. No drift.
+
+**Defects:** none.
+
+**Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored, TextEdit was closed unsaved and the suite plist was removed.
