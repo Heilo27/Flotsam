@@ -11,18 +11,27 @@ import FlotsamPayload
 // oracle .claude/oracle/frd-001-contract.json: OC-1003, OC-1022, OC-1023.
 //
 // Capture has no Secure Event Input seam and the FRD says it must not have one (the Triggers module is the only
-// reader, FRD-005), so there is no provider to inject. The tests therefore turn the REAL system state on
-// (`EnableSecureEventInput`, process scoped, balanced by `DisableSecureEventInput`) around the real ClipboardCapture
-// pipeline, and assert the precondition `IsSecureEventInputEnabled() == true` before every copy, so a regression that
-// reads the system call in the poll, the gates or the read path turns them red. A regression that reads it through an
-// injected `KeyboardEnvironment` is caught by bin/check-architecture.sh (FR-001-21 rule). Only the ON state can be
-// forced: another process on the machine may already hold Secure Event Input, so the OFF state is not reachable from
-// a test and nothing here asserts it. The window is held only for the few milliseconds each copy needs.
+// reader, FRD-005), so there is no provider to inject. Two layers guard FR-001-21:
+//  1. ALWAYS ON: bin/check-architecture.sh (FR-001-21 rule) fails the build if any capture-path source mentions
+//     `SecureEventInput` or `KeyboardEnvironment`, and the default tests below run the real ClipboardCapture pipeline
+//     and assert that every copy, gate and secure item behaves as the contract says, leaving the machine's system
+//     state alone.
+//  2. OPT-IN: with FLOTSAM_REAL_SECURE_INPUT=1 the same bodies run with the REAL system state forced on
+//     (`EnableSecureEventInput`, process scoped, balanced by `DisableSecureEventInput` in a `defer`), asserting
+//     `IsSecureEventInputEnabled() == true` as the precondition. That is a machine-wide effect on a shared Mac (it
+//     suspends other apps' hotkeys and event taps while held), so a plain `swift test` never does it. Only the ON
+//     state can be forced: another process may already hold Secure Event Input, so OFF is never asserted.
+// The real-OS focused-password-field check belongs to TASK-518.
 
-/// Runs `body` with Secure Event Input really enabled for this process, and proves it was (the precondition the
-/// assertions in `body` depend on).
+/// True only when the run was started with `FLOTSAM_REAL_SECURE_INPUT=1`.
+private let realSecureInputEnabled = ProcessInfo.processInfo.environment["FLOTSAM_REAL_SECURE_INPUT"] == "1"
+
+/// Runs `body`. With `real` true, Secure Event Input is really enabled for this process around it and proven on (the
+/// precondition the assertions in `body` depend on); the `defer` releases it even when `body` throws. With `real`
+/// false the system state is not touched.
 @MainActor
-private func withSecureEventInput(_ body: @MainActor () async throws -> Void) async throws {
+private func withSecureEventInput(real: Bool, _ body: @MainActor () async throws -> Void) async throws {
+    guard real else { try await body(); return }
     EnableSecureEventInput()
     defer { DisableSecureEventInput() }
     #expect(IsSecureEventInputEnabled(), "precondition: Secure Event Input is really on")
@@ -45,11 +54,11 @@ struct FRD001SecureInputAndTrackingTests {
 
     /// OC-1022 (AC-001-17). given Active, a non-ignored source and Secure Event Input on, when text is copied, then it
     /// is stored as a new item (count +1) with its exact text and source, and the processed line says stored.
-    /// Mutation: in `ClipboardCapture.poll`, return early while `IsSecureEventInputEnabled()`: the count stays 0.
-    @Test("OC-1022: text copied while Secure Event Input is on is stored as a new item")
-    func oc1022() async throws {
+    /// Mutation: in `ClipboardCapture.poll`, return early while `IsSecureEventInputEnabled()`: the count stays 0 (red only
+    /// with FLOTSAM_REAL_SECURE_INPUT=1; by default the architecture rule catches the same edit).
+    private static func oc1022Body(real: Bool) async throws {
         try await withRig { rig in
-            try await withSecureEventInput {
+            try await withSecureEventInput(real: real) {
                 let text = "oc1022-password-field-focused-\(UUID().uuidString)"
                 try #expect(await rig.itemCount() == 0)
                 rig.pasteboard.copyText(text)
@@ -69,10 +78,9 @@ struct FRD001SecureInputAndTrackingTests {
     /// 60 s (the manual clock moves 12 s between copies, the poll runs each time), then all five are stored, each with
     /// its exact text, in order, and none was skipped or raised. Mutation: gate any poll on secure input (return before
     /// `gather`), or only after the first copy: fewer than five items.
-    @Test("OC-1023: five distinct texts copied during 60 s of Secure Event Input are all stored with their exact text")
-    func oc1023() async throws {
+    private static func oc1023Body(real: Bool) async throws {
         try await withRig { rig in
-            try await withSecureEventInput {
+            try await withSecureEventInput(real: real) {
                 let texts = (1...5).map { "oc1023-copy-\($0)-\(UUID().uuidString)" }
                 for text in texts {
                     rig.pasteboard.copyText(text)
@@ -93,8 +101,7 @@ struct FRD001SecureInputAndTrackingTests {
     /// secure-input windows, then every copy is stored: the state in force at the poll never decides. (Where another
     /// process already holds Secure Event Input the system state does not change at "off"; the assertion is the same.)
     /// Mutation: skip a poll while secure input is on and replay nothing: the in-window copies are lost.
-    @Test("OC-1023: copies before, during and between secure-input windows are all stored")
-    func oc1023Toggling() async throws {
+    private static func oc1023TogglingBody(real: Bool) async throws {
         try await withRig { rig in
             var texts: [String] = []
             @MainActor func copy(_ label: String) async {
@@ -104,9 +111,9 @@ struct FRD001SecureInputAndTrackingTests {
                 await rig.process()
             }
             await copy("before")
-            try await withSecureEventInput { await copy("window1") }
+            try await withSecureEventInput(real: real) { await copy("window1") }
             await copy("between")
-            try await withSecureEventInput { await copy("window2") }
+            try await withSecureEventInput(real: real) { await copy("window2") }
             await copy("after")
             let stored = try await rig.items()
             #expect(stored.map(\.plainText) == texts)
@@ -119,10 +126,9 @@ struct FRD001SecureInputAndTrackingTests {
     /// transient copy is dropped with CAP-POL-001 and a copy from an ignored app is dropped with CAP-POL-002: the
     /// gates decide exactly as they do with secure input off. Mutation: let secure input bypass a gate (store the
     /// transient copy), or drop the concealed copy: the counts or the codes change.
-    @Test("FR-001-21: under Secure Event Input the gates still decide alike: concealed sealed, transient and ignored-app dropped")
-    func gatesUnchangedUnderSecureInput() async throws {
+    private static func gatesUnchangedUnderSecureInputBody(real: Bool) async throws {
         try await withRig(withVault: true) { rig in
-            try await withSecureEventInput {
+            try await withSecureEventInput(real: real) {
                 let normal = "fr00121-normal-\(UUID().uuidString)"
                 let concealed = "secret-marker-fr00121-concealed-\(UUID().uuidString)"
                 let transient = "secret-marker-fr00121-transient-\(UUID().uuidString)"
@@ -158,6 +164,30 @@ struct FRD001SecureInputAndTrackingTests {
             }
         }
     }
+
+    @Test("OC-1022: text copied while Secure Event Input is on is stored as a new item (system state untouched)")
+    func oc1022() async throws { try await Self.oc1022Body(real: false) }
+
+    @Test("OC-1022: text copied while Secure Event Input is on is stored as a new item (REAL Secure Event Input, FLOTSAM_REAL_SECURE_INPUT=1)", .enabled(if: realSecureInputEnabled))
+    func oc1022Real() async throws { try await Self.oc1022Body(real: true) }
+
+    @Test("OC-1023: five distinct texts copied during 60 s of Secure Event Input are all stored with their exact text (system state untouched)")
+    func oc1023() async throws { try await Self.oc1023Body(real: false) }
+
+    @Test("OC-1023: five distinct texts copied during 60 s of Secure Event Input are all stored with their exact text (REAL Secure Event Input, FLOTSAM_REAL_SECURE_INPUT=1)", .enabled(if: realSecureInputEnabled))
+    func oc1023Real() async throws { try await Self.oc1023Body(real: true) }
+
+    @Test("OC-1023: copies before, during and between secure-input windows are all stored (system state untouched)")
+    func oc1023Toggling() async throws { try await Self.oc1023TogglingBody(real: false) }
+
+    @Test("OC-1023: copies before, during and between secure-input windows are all stored (REAL Secure Event Input, FLOTSAM_REAL_SECURE_INPUT=1)", .enabled(if: realSecureInputEnabled))
+    func oc1023TogglingReal() async throws { try await Self.oc1023TogglingBody(real: true) }
+
+    @Test("FR-001-21: under Secure Event Input the gates still decide alike: concealed sealed, transient and ignored-app dropped (system state untouched)")
+    func gatesUnchangedUnderSecureInput() async throws { try await Self.gatesUnchangedUnderSecureInputBody(real: false) }
+
+    @Test("FR-001-21: under Secure Event Input the gates still decide alike: concealed sealed, transient and ignored-app dropped (REAL Secure Event Input, FLOTSAM_REAL_SECURE_INPUT=1)", .enabled(if: realSecureInputEnabled))
+    func gatesUnchangedUnderSecureInputReal() async throws { try await Self.gatesUnchangedUnderSecureInputBody(real: true) }
 
     /// OC-1003 (AC-001-01). given Active, a non-ignored source, and the main run loop held in a tracking-style mode
     /// (what AppKit does while another app's Edit menu is open: a custom COMMON mode, never `.default`), when text T is
