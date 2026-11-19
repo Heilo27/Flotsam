@@ -1475,6 +1475,39 @@
       "source_verdict": "CONFIRMED",
       "must_verify": true,
       "added": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): new requirement text on main dc62701"
+    },
+    {
+      "id": "OC-5148",
+      "requirement": "AC-005-10,FR-005-11",
+      "given": "Trigger ':ab'; a Thai text field that deletes one mark per Backspace",
+      "when": "user types ':ab', then the Thai letter ก followed by a Thai combining mark, presses Backspace once, then Space",
+      "then": "no expansion and Flotsam deletes nothing (it posts no Backspace, no text and no paste); the Space is inserted as typed; the document holds only what the user typed minus what their own single Backspace removed; the clipboard and the item's count are unchanged",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-493 (Ryan's ruling: non-ASCII kills the word until the next boundary): new requirement text, FR-005-11 / AC-005-10"
+    },
+    {
+      "id": "OC-5149",
+      "requirement": "AC-005-10,FR-005-11",
+      "given": "Trigger ':ab'",
+      "when": "user types ':ab', then any non-ASCII character (an accent, a combining mark, a letter of another script, an emoji), then presses Backspace any number of times (including enough to leave only ':ab' or nothing in the field), then types ':ab' again and presses Space; and separately types a non-ASCII character first, then ':ab', with no Backspace, then Space",
+      "then": "no expansion in any case and the Space is inserted: the word stays dead through Backspace until the next boundary or reset; plain ASCII Backspace editing (':axx', Backspace twice, 'b', Space) still expands",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-493 (Ryan's ruling: non-ASCII kills the word until the next boundary): new requirement text, FR-005-11 / AC-005-10"
+    },
+    {
+      "id": "OC-5150",
+      "requirement": "AC-005-10,FR-005-11",
+      "given": "Trigger ':ab'; a word killed by a non-ASCII character",
+      "when": "the user ends that word with Space, Tab or Return (or Esc, an arrow key, a mouse click, a ⌘ chord, or 5 seconds idle), then types ':ab' and Space",
+      "then": "the key that ended the killed word is inserted as typed with no expansion; the next ':ab' Space expands normally, replacing exactly ':ab' (3 characters), and this repeats for every later word",
+      "class": "state",
+      "source_verdict": "CONFIRMED",
+      "must_verify": true,
+      "added": "2026-11-18 TASK-493 (Ryan's ruling: non-ASCII kills the word until the next boundary): new requirement text, FR-005-11 / AC-005-10"
     }
   ]
 }
