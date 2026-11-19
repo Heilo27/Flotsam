@@ -107,8 +107,9 @@ struct Frd000PasteboardCallsiteTests {
         #expect(count == [1])
     }
 
-    /// OC-0037's concealed half (TASK-503): a concealed copy now ends `stored` as a secure item, with its byte size and
-    /// kind in the line and none of its content anywhere. Mutation: restore the old drop (skipped + CAP-POL-001): the
+    /// OC-0037's concealed half (TASK-503): a concealed copy now ends `stored` as a secure item. Its line carries kind=text
+    /// and byteSize=0B (a secure item logs no size: the length of a password is not for the log), and none of its
+    /// content appears anywhere. Mutation: restore the old drop (skipped + CAP-POL-001): the
     /// outcome literal and the row count go red.
     @Test("OC-0037 a concealed copy logs stored as a secure item, no content")
     func concealedCopyLogsStored() async throws {
@@ -132,8 +133,7 @@ struct Frd000PasteboardCallsiteTests {
 
         let lines = sink.processed.map(\.publicText)
         #expect(lines.count == 1)
-        #expect(lines.first?.hasSuffix("outcome=stored") == true)
-        #expect(lines.first?.contains("CAP-POL-001") == false)
+        #expect(lines.first == "pasteboard.processed byteSize=0B kind=text outcome=stored")
         let everything = sink.all.map { "\($0.publicText) \($0.privateText)" }.joined(separator: "\n")
         #expect(!everything.contains("OC37-SECRET"))
         let secure = try await database.pool.read { try Int.fetchAll($0, sql: "SELECT COUNT(*) FROM item WHERE isSecure = 1") }
