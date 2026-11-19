@@ -1,0 +1,1 @@
+../../../../App/Flotsam/Shelf/ShelfPasteAdapter.swift

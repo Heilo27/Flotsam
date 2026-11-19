@@ -93,7 +93,7 @@ let package = Package(
             name: "FlotsamAppModelTests",
             dependencies: [
                 "FlotsamBase", "FlotsamStorage", "FlotsamPaste", "FlotsamShortcuts", "FlotsamTriggers",
-                "FlotsamLibrary", "FlotsamShelf",
+                "FlotsamLibrary", "FlotsamShelf", "FlotsamCapture", "FlotsamPayload",
             ]
         ),
     ]
