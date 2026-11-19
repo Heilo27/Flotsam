@@ -10,6 +10,9 @@ struct LibraryItemsView: View {
     let model: LibraryViewModel
     private static let cellWidth: CGFloat = 130
     private static let cellSpacing: CGFloat = 10
+    private static let hoverCardSize = CGSize(width: 280, height: 260)
+    private static let space = "libraryItems"
+    @State private var hoveredFrame: CGRect = .zero
 
     var body: some View {
         let rows = model.rowPresentations()
@@ -46,9 +49,33 @@ struct LibraryItemsView: View {
                 }
             }
         }
+        .coordinateSpace(name: Self.space)
+        .onPreferenceChange(HoveredRowFrameKey.self) { hoveredFrame = $0 }
+        .overlay(alignment: .topTrailing) { hoverCard }
         // Ages the rows' relative times while the panel is shown (FR-003-24). The model owns the watch task and cancels
         // it on a hide; the key restarts it on the next open or row change.
         .task(id: model.relativeTimeWatchKey) { await model.runRelativeTimeWatch() }
+    }
+
+    /// The hover preview (FR-003-39): the preview view for the hovered row, placed below that row, or above it when there
+    /// is no room, so it never covers the row or its action strip. It takes no pointer input, so it cannot steal the hover.
+    @ViewBuilder private var hoverCard: some View {
+        if let preview = model.hoverPreview {
+            GeometryReader { geometry in
+                let size = Self.hoverCardSize
+                let below = hoveredFrame.maxY + 4
+                let top = below + size.height <= geometry.size.height ? below : max(0, hoveredFrame.minY - 4 - size.height)
+                LibraryPreviewView(preview: preview)
+                    .frame(width: min(size.width, geometry.size.width - 16), height: size.height)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
+                    .shadow(radius: 6)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, 8)
+                    .padding(.top, top)
+            }
+            .allowsHitTesting(false)
+        }
     }
 
     private func pageIfLast(_ row: LibraryRowPresentation, in rows: [LibraryRowPresentation]) {
@@ -64,6 +91,8 @@ struct LibraryItemsView: View {
 private struct RowInteraction: ViewModifier {
     let model: LibraryViewModel
     let row: LibraryRowPresentation
+    /// Where the hover strip sits: trailing on a list row, top trailing on a grid cell.
+    let stripAlignment: Alignment
 
     func body(content: Content) -> some View {
         content
@@ -78,6 +107,9 @@ private struct RowInteraction: ViewModifier {
                 else if flags.contains(.shift) { model.extend(to: row.id) }
                 else { model.select(id: row.id) }
             }
+            .overlay(alignment: stripAlignment) { hoverStrip }
+            .onHover { model.pointer(row.id, isInside: $0) }
+            .background { hoverFrameReader }
             .contextMenu { contextMenu }
             .id(row.id)
             .accessibilityElement(children: .ignore)
@@ -103,6 +135,40 @@ private struct RowInteraction: ViewModifier {
         }
     }
 
+    /// Copy, Pin or Unpin and Delete on the hovered row (FR-003-38): the mouse path to the same commands as the context menu,
+    /// acting on the row the same way. VoiceOver and keyboard users have the keys and the menu, so the strip is hidden from
+    /// accessibility.
+    @ViewBuilder
+    private var hoverStrip: some View {
+        if model.hoveredRowID == row.id {
+            let actions = LibraryHover.actions(pinUnpins: model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned))
+            HStack(spacing: 2) {
+                ForEach(actions) { action in
+                    Button { act { model.perform(action.command) } } label: {
+                        Image(systemName: action.symbol).frame(width: 22, height: 22).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(action.isDestructive ? Color.red : Color.primary)
+                    .help(LibraryText.string(action.titleKey))
+                }
+            }
+            .padding(.horizontal, 4)
+            .background(.regularMaterial, in: Capsule())
+            .padding(4)
+            .accessibilityHidden(true)
+        }
+    }
+
+    /// Reports the hovered row's frame so the hover preview can sit beside it; only the hovered row reports.
+    @ViewBuilder
+    private var hoverFrameReader: some View {
+        if model.hoveredRowID == row.id {
+            GeometryReader { geometry in
+                Color.clear.preference(key: HoveredRowFrameKey.self, value: geometry.frame(in: .named("libraryItems")))
+            }
+        }
+    }
+
     /// A context-menu command acts on the row it was opened on (FR-003-22).
     private func act(_ command: () -> Void) {
         if !model.selection.contains(row.id) { model.select(id: row.id) }
@@ -110,9 +176,17 @@ private struct RowInteraction: ViewModifier {
     }
 }
 
+private struct HoveredRowFrameKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
+    }
+}
+
 private extension View {
-    func rowInteraction(model: LibraryViewModel, row: LibraryRowPresentation) -> some View {
-        modifier(RowInteraction(model: model, row: row))
+    func rowInteraction(model: LibraryViewModel, row: LibraryRowPresentation, stripAlignment: Alignment) -> some View {
+        modifier(RowInteraction(model: model, row: row, stripAlignment: stripAlignment))
     }
 }
 
@@ -192,7 +266,7 @@ struct LibraryListRow: View {
             rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
             in: RoundedRectangle(cornerRadius: 6)
         )
-        .rowInteraction(model: model, row: row)
+        .rowInteraction(model: model, row: row, stripAlignment: .trailing)
     }
 }
 
@@ -257,6 +331,6 @@ struct LibraryGridCell: View {
             guard row.kind == .image || row.kind == .screenshot else { return }
             if let data = await model.thumbnail(for: row.id, size: .grid) { thumbnail = NSImage(data: data) }
         }
-        .rowInteraction(model: model, row: row)
+        .rowInteraction(model: model, row: row, stripAlignment: .topTrailing)
     }
 }

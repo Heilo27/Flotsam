@@ -3,14 +3,15 @@ import FlotsamBase
 import FlotsamLibrary
 import SwiftUI
 
-/// The preview pane (FR-003-14): read-only content for the single selected row, then its fields.
+/// The preview pane (FR-003-14): read-only content for the single selected row, then its fields. The hover preview draws
+/// the same view for the hovered row (FR-003-27), so there is one renderer.
 struct LibraryPreviewView: View {
-    let model: LibraryViewModel
+    let preview: LibraryPreview?
     @State private var showingAll = false
 
     var body: some View {
         ScrollView {
-            if let preview = model.preview {
+            if let preview {
                 VStack(alignment: .leading, spacing: 10) {
                     if let data = preview.imageData, let image = NSImage(data: data) {
                         Image(nsImage: image).resizable().scaledToFit().frame(maxWidth: .infinity)
@@ -52,7 +53,7 @@ struct LibraryPreviewView: View {
                     .foregroundStyle(.secondary).padding(12).frame(maxWidth: .infinity)
             }
         }
-        .onChange(of: model.preview?.itemId) { _, _ in showingAll = false }
+        .onChange(of: preview?.itemId) { _, _ in showingAll = false }
     }
 
     /// The item's text. A rich text item keeps its formatting (bold, italics, colours, sizes) when its RTF reads; any
