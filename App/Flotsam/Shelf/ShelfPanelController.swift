@@ -76,6 +76,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     var menuBarIconFrame: (@MainActor () -> CGRect?)?
     /// Drag-out from the cards (FR-006-10). The app supplies its ports once the database is open.
     let dragOut = ShelfDragOut()
+    /// The system share picker a drop on the share zone opens (FR-006-42).
+    private let sharePicker = ShelfSharePicker()
 
     /// The model needs its host and the host needs the model, so the controller builds the model with its box as host.
     /// `makeModel` receives the box and returns the model wired to it.
@@ -583,6 +585,17 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
 extension ShelfPanelController: ShelfDropDelegate {
     func shelfDragUpdated(_ info: any NSDraggingInfo) -> NSDragOperation {
         reportPointer()
+        // FR-006-42: a drag of Flotsam's own clips shows the share zone, and the zone takes it.
+        if shareSource(of: info) != nil {
+            let onZone = shareZoneContains(info)
+            model.setShareZone(shown: true, targeted: onZone)
+            if onZone {
+                model.setDropTargeted(false)
+                return .copy
+            }
+        } else {
+            model.setShareZone(shown: false, targeted: false)
+        }
         let accepted = acceptance(of: info) == .accepted
         model.setDropTargeted(accepted)
         return accepted ? .copy : []
@@ -593,11 +606,13 @@ extension ShelfPanelController: ShelfDropDelegate {
     /// `shelfDragEnded` (or the mouse-up monitor).
     func shelfDragExited() {
         model.setDropTargeted(false)
+        model.setShareZone(shown: false, targeted: false)
         reportPointer()
     }
 
     func shelfDragEnded() {
         model.setDropTargeted(false)
+        model.setShareZone(shown: false, targeted: false)
         gestureEnded()
     }
 
@@ -605,6 +620,10 @@ extension ShelfPanelController: ShelfDropDelegate {
     /// operation's: AppKit is told the drop was taken, and a failure reaches the user as the HUD the service reports.
     func shelfPerformDrop(_ info: any NSDraggingInfo) -> Bool {
         model.setDropTargeted(false)
+        let shareSource = shareSource(of: info)
+        let onShareZone = shareSource != nil && shareZoneContains(info)
+        model.setShareZone(shown: false, targeted: false)
+        if let shareSource, onShareZone { return share(from: shareSource) }
         // The drop ends the gesture, and the mouse-up that follows may never reach the global monitor.
         gestureEnded()
         guard let dropService else { return false }
@@ -628,4 +647,35 @@ extension ShelfPanelController: ShelfDropDelegate {
     }
 
     func shelfPointerMoved() { reportPointer() }
+
+    // MARK: Share zone (FR-006-42)
+
+    /// The drag's source when it is a Flotsam drag-out (this Shelf's cards or a Library row) with items to share.
+    private func shareSource(of info: any NSDraggingInfo) -> ShelfDragOut? {
+        guard let source = info.draggingSource as? ShelfDragOut, source.canShare else { return nil }
+        return source
+    }
+
+    private func shareZoneContains(_ info: any NSDraggingInfo) -> Bool {
+        guard let view = panel.contentView else { return false }
+        let point = view.convert(info.draggingLocation, from: nil)
+        return ShelfLayout.shareZone(for: placement, in: view.bounds.size).contains(point)
+    }
+
+    /// Opens the system share picker with the drag's own items. A secure card was authenticated when the drag was
+    /// prepared (FR-006-21), so what is shared is only ever what that check released. The machine is told before the
+    /// gesture ends, so a transient Shelf never starts its hide clock under the picker, and the picker opens after
+    /// this drop callback returns.
+    private func share(from source: ShelfDragOut) -> Bool {
+        guard let shared = source.shareItems(), let view = panel.contentView else { return false }
+        send(.sharing(true))
+        gestureEnded()
+        let zone = ShelfLayout.shareZone(for: placement, in: view.bounds.size)
+        Task { @MainActor [weak self] in
+            self?.sharePicker.present(shared, from: view, rect: zone, preferredEdge: .maxY) { [weak self] in
+                self?.send(.sharing(false))
+            }
+        }
+        return true
+    }
 }

@@ -4457,6 +4457,16 @@
         }
       }
     },
+    "ui.shelf.share" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drop to share"
+          }
+        }
+      }
+    },
     "ui.shortcuts.notSavedConcealed" : {
       "localizations" : {
         "en" : {

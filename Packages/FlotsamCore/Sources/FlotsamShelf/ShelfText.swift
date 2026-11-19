@@ -12,6 +12,7 @@ public enum ShelfText {
 
     public static let empty = "ui.shelf.empty"
     public static let dropZone = "ui.shelf.drop"
+    public static let shareZone = "ui.shelf.share"
     public static let close = "ui.shelf.close"
     /// The collapsed edge bar's accessibility label (FR-006-37).
     public static let edgeBar = "ui.shelf.edgeBar"
