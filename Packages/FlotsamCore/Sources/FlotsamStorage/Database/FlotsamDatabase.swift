@@ -311,14 +311,17 @@ public final class FlotsamDatabase: Sendable {
     /// limited to regular files Flotsam created (`DataFolder.preMigrationCopyInfo`); the folder is user-visible, so any other
     /// file in it is left alone. Stale `-wal`/`-shm` files beside the new copy's name are pruned too, because SQLite
     /// would replay them into the fresh copy when it is opened.
+    ///
+    /// WHY (TASK-497): the copy is made with SQLite's online backup API, not by copying the main file after a
+    /// `wal_checkpoint(TRUNCATE)`. That pragma reports a blocked checkpoint in its result row (`busy = 1`) instead of
+    /// throwing, so a reader holding the WAL left committed frames in `-wal` and a copy of the main file alone silently
+    /// lacked them. The backup reads one snapshot through the pool (the main file plus the WAL, as any reader sees it),
+    /// so it holds every committed row whatever other connections do, and it never needs a checkpoint, which also
+    /// removes a write lock from the open path. It is built beside the final name (in `tmp/`) and renamed into place
+    /// only when complete, so a failure leaves no partial copy and does not touch an earlier one.
     private static func preMigrationCopy(
         pool: DatabasePool, layout: DataFolder, fromVersion: Int, fileSystem: any FileSystemPort
     ) -> FlotsamResult<Void> {
-        do {
-            try pool.writeWithoutTransaction { db in try db.execute(sql: "PRAGMA wal_checkpoint(TRUNCATE)") }
-        } catch {
-            return .failure(mapped(error))
-        }
         let backupFolder = layout.preMigrationURL
         if case .failure = fileSystem.createDirectory(at: backupFolder, permissions: DataFolder.folderPermissions) {
             return .failure(FlotsamError(.stoDb003, "Pre-migration folder could not be created"))
@@ -333,8 +336,7 @@ public final class FlotsamDatabase: Sendable {
             name = DataFolder.preMigrationCopyName(fromVersion: fromVersion, alternate: alternate)
         }
         let destination = backupFolder.appendingPathComponent(name)
-        if fileSystem.fileExists(at: destination) { _ = fileSystem.removeItem(at: destination) }
-        guard case .success = fileSystem.copyItem(at: layout.databaseURL, to: destination) else {
+        guard case .success = snapshot(of: pool, to: destination, layout: layout, fileSystem: fileSystem) else {
             return .failure(FlotsamError(.stoDb003, "Pre-migration copy failed"))
         }
         if case .success(let others) = fileSystem.contentsOfDirectory(at: backupFolder) {
@@ -345,6 +347,31 @@ public final class FlotsamDatabase: Sendable {
             }
         }
         return .success(())
+    }
+
+    /// Writes a complete snapshot of `pool` to `destination` (a regular file or nothing; an earlier stale copy is replaced
+    /// in one rename). The scratch directory in `tmp/` is Flotsam's own and is removed afterwards, success or not.
+    private static func snapshot(
+        of pool: DatabasePool, to destination: URL, layout: DataFolder, fileSystem: any FileSystemPort
+    ) -> FlotsamResult<Void> {
+        let scratch = layout.tmpURL.appendingPathComponent("premigration-\(UUID().uuidString)")
+        guard case .success = fileSystem.createDirectory(at: scratch, permissions: DataFolder.folderPermissions) else {
+            return .failure(FlotsamError(.stoDb003, "Pre-migration scratch folder could not be created"))
+        }
+        defer { _ = fileSystem.removeItem(at: scratch) }
+        let staged = scratch.appendingPathComponent(destination.lastPathComponent)
+        // Created 0600 before SQLite touches it: the copy is a full plaintext database (FR-007-01, FR-007-17).
+        guard case .success = fileSystem.writeFile(Data(), to: staged, permissions: DataFolder.filePermissions) else {
+            return .failure(FlotsamError(.stoDb003, "Pre-migration copy could not be created"))
+        }
+        do {
+            let target = try DatabaseQueue(path: staged.path)
+            defer { try? target.close() }
+            try pool.backup(to: target)
+        } catch {
+            return .failure(mapped(error))
+        }
+        return fileSystem.replaceItem(at: destination, with: staged)
     }
 
     // MARK: Diagnostics and error mapping
