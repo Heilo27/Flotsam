@@ -424,7 +424,7 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
         ])
         // `forcing:` appears only where the launch rule lives: the adapter's pass-through and the setup guide
         let forcing = try occurrences(of: #"forcing\s*:"#, under: "App")
-        #expect(forcing == ["App/Flotsam/WindowFrontAdapter.swift": 2, "App/Flotsam/OnboardingWindowController.swift": 1])
+        #expect(forcing == ["App/Flotsam/WindowFrontAdapter.swift": 2, "App/Flotsam/OnboardingWindowController.swift": 2])
         #expect(try occurrences(of: #"forcing\s*:\s*(true|false)"#, under: "App") == [:], "no call hard-codes the choice")
     }
 

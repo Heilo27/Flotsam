@@ -130,7 +130,8 @@ private func settle(_ condition: () -> Bool) async {
         ] {
             let code = try frd008Code(path)
             #expect(code.contains("WindowFrontAdapter(window: window)"), "\(path) builds the adapter")
-            #expect(code.contains("front.bringToFront()") || code.contains("front?.bringToFront()"), "\(path) fronts through it")
+            #expect(
+                code.contains("front.bringToFront(") || code.contains("front?.bringToFront("), "\(path) fronts through it")
             #expect(!code.contains("makeKeyAndOrderFront"), "\(path) must not order a window front itself")
             #expect(!code.contains(".activate("), "\(path) must not activate the app itself")
         }

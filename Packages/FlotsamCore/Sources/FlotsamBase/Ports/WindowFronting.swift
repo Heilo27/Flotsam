@@ -41,12 +41,15 @@ public final class WindowFronting {
     /// Every "show this window" call goes here: request activation first, then show, then check it took.
     /// `forcing` is true for a window the user asked for (⌘, the menu-bar row, a Notice action, ⌘K, "Show Setup Guide…"):
     /// only then may a refused request be escalated to the system's activation. The setup guide shown by Flotsam itself at
-    /// launch passes false, so a login-item start never takes the keyboard from the app the user is working in.
+    /// launch passes false, so a login-item start never takes the keyboard from the app the user is working in. A call
+    /// with `forcing: false` also never cancels a follow-up an earlier forcing call left pending.
     public func bringToFront(_ window: any FrontableWindow, forcing: Bool = true) {
-        followUp?.cancel()
         window.requestAppActivation()
         window.orderFrontAndMakeKey()
+        // A user's explicit open outranks a passive show: only a forcing call replaces a pending follow-up, so a
+        // non-forcing one arriving inside the grace leaves the user's forced follow-up to run.
         guard forcing else { return }
+        followUp?.cancel()
         followUp = Task { [clock] in
             await clock.sleep(for: Self.activationGrace)
             guard !Task.isCancelled, window.windowIsOpen, !window.appIsActive else { return }

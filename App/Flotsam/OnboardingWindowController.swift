@@ -18,7 +18,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
     /// `resuming`: the launch-time show continues an unfinished onboarding; "Show Setup Guide…" starts over.
     func show(resuming: Bool = false) {
         if window != nil {
-            front?.bringToFront()
+            // Same rule as a fresh show: only a user's open (not the launch-time resume) may force activation.
+            front?.bringToFront(forcing: !resuming)
             return
         }
         let model = OnboardingModel(container: container, resuming: resuming)
