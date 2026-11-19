@@ -1853,3 +1853,38 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 **Snapshot identity:** the real Flotsam never ran. The 16 real data files (sha1, including the DB, -wal and -shm), the prefs plist and the `defaults read` hash were identical before and after. The pasteboard was empty at start and left empty. The TextEdit scratch document was deleted unsaved. Only own PIDs were killed. The suite plist and temp data dir were removed.
 
 **Priority 2** (origin/main 669e1e1) is next.
+
+## Real-OS matrix, priority 2 — origin/main @ 669e1e1 (2026-11-19)
+
+**Setup:** macOS 27.3 (26C5035r). Debug build, unsigned, launched isolated per docs/AGENT-LAUNCH.md.
+
+**Results**
+- **Row 1, shelf drag:** PASS. Dragging in, out, and onto an untitled TextEdit document leaves no duplicate history entry.
+- **Row 2, relaunch reopens the last Settings pane (FR-008-03):** PASS.
+- **Row 3, Library window:**
+  - Over a full-screen app, and the toggle: PASS.
+  - Across multiple Spaces: needs Ryan. The Space-switch shortcut did nothing, and settings changes aren't allowed in this lane.
+- **Row 4, layout and thumbnails (list and grid):** PASS, with candidate defect D1 below.
+- **Row 5, spikes:**
+  - S-2, S-3 and S-7: PASS. For S-3, Accessibility trust was not confirmed independently.
+  - S-4 (text, file and image captured, no privacy warnings): partial. Concealed types were not tested.
+  - S-5 (hotkey registers and fires): partial. AX state is unconfirmed and the option-only rule was not tested.
+  - S-9: needs Ryan (TCC).
+  - S-1, S-6 and S-8: out of lane.
+- **Row 6, TASK-116 idle sample at 45 s (Debug only):** PASS on budget.
+  - Footprint 51 MB (peak 52) against a limit of 60.
+  - CPU 0.0% against 0.2%.
+  - About 2.0 wake-ups/s against 2.5, from top's IDLEW column (10 per 5 s), so the margin is thin.
+  - powermetrics needs sudo and was not run.
+
+**D1, candidate defect (cause unproven):** the relative-time label on Library rows may go stale while the panel stays open. Related code: `LibraryViewModel.swift:122`, `LibraryRows.swift:15`, `ItemSpeech.swift:34`, `LibraryPresentation.swift:53`. The lead comes from a screenshot only.
+
+**Observations**
+- Once, cmd-, opened Settings behind TextEdit. Not explained.
+- A synthetic drag that ended over a Terminal window typed text into its prompt. It was cleared with ctrl-U before anything was submitted. This is a harness hazard: future drag rows need an inert drop target.
+
+**Snapshot identity:**
+- Before and after are identical: 16 real data files (sha1), the prefs plist, and the `defaults read` hash.
+- The real Flotsam never ran.
+- Only the session's own PIDs were killed.
+- The pasteboard was restored, TextEdit closed unsaved, and the suite plist removed.
