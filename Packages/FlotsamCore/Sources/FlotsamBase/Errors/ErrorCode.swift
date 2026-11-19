@@ -155,6 +155,8 @@ public enum ErrorCode: String, CaseIterable, Sendable {
     case setPrm002 = "SET-PRM-002"
     /// Revert toggle; HUD.
     case setOs001 = "SET-OS-001"
+    /// The local AI access could not start; revert toggle; HUD (FRD-010).
+    case setOs002 = "SET-OS-002"
     /// Rejected.
     case setVal001 = "SET-VAL-001"
     /// Rejected.
@@ -172,7 +174,7 @@ public enum ErrorCode: String, CaseIterable, Sendable {
             .fatal
         case .sysInt001, .capIo001, .libOs001, .libIo001, .orgVal001, .orgVal002, .orgVal003, .orgVal004, .orgVal005,
              .orgLim001, .orgLim002, .orgLim003, .trgVal001, .trgVal002, .trgVal003, .trgVal004,
-             .trgOs001, .trgOs002, .trgVal006, .shfOs001, .stoDb001, .stoDb002, .stoDb004, .stoIo001, .setOs001,
+             .trgOs001, .trgOs002, .trgVal006, .shfOs001, .stoDb001, .stoDb002, .stoDb004, .stoIo001, .setOs001, .setOs002,
              .setVal001, .setVal002:
             .error
         case .capPrm001, .capOs001, .capLim001, .capLim003, .sspPrm001, .sspIo001, .sspIo003, .sspLim001,

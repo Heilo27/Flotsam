@@ -316,8 +316,13 @@ function finish(   L, t) {
     if (t ~ /(^|[^A-Za-z0-9_$])as!/) hit("FORCECAST", L)
     # localizedDescription can embed file paths (FR-000-01, FR-000-10); UnderlyingErrorInfo is the only way to carry a cause.
     if (t ~ /(^|[^A-Za-z0-9_$])localizedDescription/) hit("LOCDESC", L)
-    # Zero network in v1.0; UserDefaults only behind the SettingsStore adapter (ADR-0009); GRDB/SQLite only in Storage.
-    if (t ~ /(^|[^A-Za-z0-9_$])(URLSession|NWConnection|NWPathMonitor|WKWebView|CFNetwork|Sparkle)/) hit("NETWORK", L)
+    # No TCP/UDP/IP of any kind (FRD-008 FR-008-18, ADR-0013): no URL loading, no Network.framework (every NW* type), no
+    # CFNetwork / CFSocket / CFStream / NSStream, no name resolution, no AF_INET / AF_INET6 / PF_INET sockets or datagram
+    # sockets, no web view, no updater. The one local transport the local MCP server uses, an AF_UNIX socket in the
+    # user's data folder (ADR-0013), names none of these, so it passes; a TCP or UDP listener cannot be written without
+    # naming one. UserDefaults only behind the SettingsStore adapter (ADR-0009); GRDB/SQLite only in Storage.
+    if (t ~ /(^|[^A-Za-z0-9_$])(URLSession|URLRequest|NSURLSession|NSURLConnection|URLConnection|NW[A-Z][A-Za-z]*|WKWebView|CFNetwork|CFSocket|CFStream|CFHost|NSStream|NSNetService|Sparkle|getaddrinfo|gethostbyname|AF_INET|PF_INET|SOCK_DGRAM|sockaddr_in|IPPROTO_)/ || \
+        t ~ /(^|[^A-Za-z0-9_$])import[ \t]+(Network|CFNetwork)([^A-Za-z0-9_]|$)/) hit("NETWORK", L)
     if (t ~ /(^|[^A-Za-z0-9_$])UserDefaults/) hit("USERDEFAULTS", L)
     # Drop the try! / as! tokens (their own rules report them), then flag a ! that follows an identifier char, ) or ]
     # and is not the start of !=.
@@ -382,6 +387,7 @@ allowed_for() {
     FlotsamPaste) echo "Foundation FlotsamBase FlotsamStorage" ;;
     FlotsamCapture|FlotsamScreenshots|FlotsamShelf) echo "Foundation FlotsamBase FlotsamStorage FlotsamPayload" ;;
     FlotsamLibrary|FlotsamShortcuts|FlotsamTriggers) echo "Foundation FlotsamBase FlotsamStorage FlotsamPaste" ;;
+    FlotsamMCP) echo "Foundation FlotsamBase FlotsamStorage" ;;
     *) echo "" ;;
   esac
 }
@@ -407,7 +413,7 @@ hits=$(lint_hits FATAL)
 hits=$(lint_hits LOCDESC)
 [ -n "$hits" ] && fail "localizedDescription used (use UnderlyingErrorInfo)" "$hits"
 hits=$(lint_hits NETWORK)
-[ -n "$hits" ] && fail "network API referenced" "$hits"
+[ -n "$hits" ] && fail "network API referenced (TCP/UDP/IP is banned; a local AF_UNIX socket is the only transport, ADR-0013)" "$hits"
 hits=$(lint_hits GRDBIMPORT | grep "^$SRC/" | grep -v "^$SRC/FlotsamStorage/")
 [ -n "$hits" ] && fail "GRDB/SQLite3 imported outside Storage" "$hits"
 

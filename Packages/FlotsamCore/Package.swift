@@ -17,6 +17,7 @@ let package = Package(
         .library(name: "FlotsamShortcuts", targets: ["FlotsamShortcuts"]),
         .library(name: "FlotsamTriggers", targets: ["FlotsamTriggers"]),
         .library(name: "FlotsamShelf", targets: ["FlotsamShelf"]),
+        .library(name: "FlotsamMCP", targets: ["FlotsamMCP"]),
     ],
     dependencies: [
         // The only third-party dependency (ADR-0010). Exact pin; Package.resolved is committed.
@@ -77,6 +78,12 @@ let package = Package(
             dependencies: ["FlotsamBase", "FlotsamStorage", "FlotsamPayload"]
         ),
         .testTarget(name: "FlotsamShelfTests", dependencies: ["FlotsamShelf", "FlotsamBase", "FlotsamStorage", "FlotsamPayload"]),
+        // Local MCP server logic (FRD-010, ADR-0013): approval gate, protocol handler, line framing. No socket code here;
+        // the AF_UNIX server is an App adapter, and the stdio helper links FlotsamBase only.
+        .target(
+            name: "FlotsamMCP",
+            dependencies: ["FlotsamBase", "FlotsamStorage"]
+        ),
         // S2 perf harnesses (opt-in, measurement only): every test is gated on FLOTSAM_PERF=1, so a plain `swift test`
         // skips them. Sources symlink the storage fixture and the App's SystemPasteboard so nothing is copied; see bin/perf.sh.
         // Exception: Oc2067Oc2068PerformanceTests (OC-2067 / OC-2068 / AC-002-11) is NOT gated; it asserts the screenshot

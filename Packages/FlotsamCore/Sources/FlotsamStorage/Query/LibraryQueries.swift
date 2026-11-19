@@ -95,6 +95,11 @@ extension FlotsamDatabase {
         let sql: String
         let arguments: StatementArguments
 
+        init(sql: String, arguments: StatementArguments) {
+            self.sql = sql
+            self.arguments = arguments
+        }
+
         init(filter: LibraryFilter, text: String) {
             var clauses: [String] = []
             var arguments = StatementArguments()
@@ -315,7 +320,7 @@ extension FlotsamDatabase {
         }
     }
 
-    private static func tagNames(_ db: Database, itemIds: [String]) throws -> [String: [String]] {
+    static func tagNames(_ db: Database, itemIds: [String]) throws -> [String: [String]] {
         guard !itemIds.isEmpty else { return [:] }
         let placeholders = itemIds.map { _ in "?" }.joined(separator: ",")
         let rows = try Row.fetchAll(

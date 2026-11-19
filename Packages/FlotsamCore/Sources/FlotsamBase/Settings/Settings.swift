@@ -62,6 +62,12 @@ public enum SettingKeys {
         validator: { $0.isUsable })
     public static let privacyIgnoredApps = SettingKey(
         "privacy.ignoredApps", default: BundleIdentifierList.defaultIgnoredApps, owner: "FR-008-11", validator: { $0.isUsable })
+    /// Local MCP server for AI clients (FRD-010): off by default; the only setting that can let clip text leave this Mac,
+    /// and only through a client the user approved.
+    public static let mcpEnabled = SettingKey("mcp.enabled", default: false, owner: "FR-010-01")
+    /// The approved MCP clients (FR-010-05). Revoking removes the entry; an empty list approves nobody.
+    public static let mcpApprovals = SettingKey(
+        "mcp.approvals", default: MCPApprovalList.empty, owner: "FR-010-05", validator: { $0.isUsable })
     public static let storageRetention = SettingKey("storage.retention", default: RetentionPreset.d30, owner: "FR-007-09")
     public static let storageImageBudget = SettingKey("storage.imageBudget", default: ImageBudget.gib2, owner: "FR-007-08")
     public static let storageImageQuality = SettingKey("storage.imageQuality", default: ImageQuality.original, owner: "FR-007-08")
@@ -89,6 +95,7 @@ public enum SettingKeys {
         shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsAddClip.descriptor,
         shortcutsToggleShelf.descriptor, shortcutsPasteQueue.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
+        mcpEnabled.descriptor, mcpApprovals.descriptor,
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,
         libraryCompactPanelSize.descriptor,
