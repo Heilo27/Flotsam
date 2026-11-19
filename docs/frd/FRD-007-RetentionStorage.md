@@ -74,7 +74,7 @@ Persist every item durably and cheaply, keep the library inside the user's chose
 - Bytes of files held by reference are never counted and never deleted.
 - Dedupe is global and age-independent (FRD-001 FR-001-15): a retention-deleted item does not block re-capture because it no longer exists.
 - Every path that creates items goes through FR-007-05; every path that removes items goes through FR-007-15.
-- Secure items follow the same retention as any other item (FR-007-09; age from `lastCopiedAt`, the user's setting, 30 days by default) and are exempt only when pinned. Delete, retention and Clear history remove the row and with it the ciphertext (`secure_delete` is on, FR-007-02). Reconcile (FR-007-16) never treats a secure row as empty for lacking plain text. A secure item whose key cannot be read stays in the library as an unavailable row; nothing about it is an error at launch.
+- Secure items follow the same retention as any other item (FR-007-09; age from `lastCopiedAt`, the user's setting, 30 days by default) and are exempt only when pinned. Delete, retention and Clear history remove the row and with it the ciphertext (`secure_delete` is on, FR-007-02). Reconcile (FR-007-13) never treats a secure row as empty for lacking plain text. A secure item whose key cannot be read stays in the library as an unavailable row; nothing about it is an error at launch.
 - Nothing here makes a network call. The module has no networking imports.
 
 ## 6. Error States (codes in FRD-000 §7)
