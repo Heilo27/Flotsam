@@ -35,9 +35,24 @@ public protocol LibraryPreferences: Sendable {
     var layout: LibraryLayoutMode { get nonmutating set }
     /// The sort FR-004-12 remembers: ⌘S writes it, the panel reads it on open.
     var sort: LibrarySort { get nonmutating set }
+    /// The look and behaviour settings of FR-008-25, read when the panel opens. Defaults below keep a conformer that does
+    /// not care (a test fake) on the original behaviour.
+    var background: LibraryBackground { get }
+    var previewPreset: LibraryPreviewPreset { get }
+    var closeAfterPaste: Bool { get }
+    var resumeOnReopen: Bool { get }
+    var display: LibraryDisplay { get }
+    var typeOrder: TypeOrder { get }
 }
 
 extension LibraryPreferences {
+    public var background: LibraryBackground { SettingKeys.libraryBackground.defaultValue }
+    public var previewPreset: LibraryPreviewPreset { SettingKeys.libraryPreviewPreset.defaultValue }
+    public var closeAfterPaste: Bool { SettingKeys.libraryCloseAfterPaste.defaultValue }
+    public var resumeOnReopen: Bool { SettingKeys.libraryResumeOnReopen.defaultValue }
+    public var display: LibraryDisplay { SettingKeys.libraryDisplay.defaultValue }
+    public var typeOrder: TypeOrder { SettingKeys.libraryTypes.defaultValue }
+
     /// The remembered size for `layout`; the one place that picks between the two size keys.
     public func panelSize(for layout: LibraryLayoutMode) -> PanelSize {
         switch layout {
@@ -83,6 +98,13 @@ public struct SettingsLibraryPreferences: LibraryPreferences {
         get { settings.value(SettingKeys.librarySort) }
         nonmutating set { settings.set(newValue, for: SettingKeys.librarySort) }
     }
+
+    public var background: LibraryBackground { settings.value(SettingKeys.libraryBackground) }
+    public var previewPreset: LibraryPreviewPreset { settings.value(SettingKeys.libraryPreviewPreset) }
+    public var closeAfterPaste: Bool { settings.value(SettingKeys.libraryCloseAfterPaste) }
+    public var resumeOnReopen: Bool { settings.value(SettingKeys.libraryResumeOnReopen) }
+    public var display: LibraryDisplay { settings.value(SettingKeys.libraryDisplay) }
+    public var typeOrder: TypeOrder { settings.value(SettingKeys.libraryTypes) }
 }
 
 /// Everything the view model asks of its surroundings that is not storage or paste: error reporting, Finder, Settings,

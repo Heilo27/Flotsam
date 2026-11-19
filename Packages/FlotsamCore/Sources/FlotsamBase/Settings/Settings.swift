@@ -70,6 +70,12 @@ public enum SettingKeys {
         "library.panelSize", default: PanelSize(width: 760, height: 480), owner: "FR-003-03", validator: { $0.isUsable })
     public static let libraryCompactPanelSize = SettingKey(
         "library.compactPanelSize", default: PanelSize(width: 520, height: 520), owner: "FR-003-03", validator: { $0.isUsable })
+    public static let libraryBackground = SettingKey("library.background", default: LibraryBackground.system, owner: "FR-003-21")
+    public static let libraryPreviewPreset = SettingKey("library.previewPreset", default: LibraryPreviewPreset.closed, owner: "FR-003-04")
+    public static let libraryCloseAfterPaste = SettingKey("library.closeAfterPaste", default: true, owner: "FR-003-15")
+    public static let libraryResumeOnReopen = SettingKey("library.resumeOnReopen", default: false, owner: "FR-003-04")
+    public static let libraryDisplay = SettingKey("library.display", default: LibraryDisplay.pointer, owner: "FR-003-03")
+    public static let libraryTypes = SettingKey("library.types", default: TypeOrder.default, owner: "FR-003-12")
     public static let onboardingCompleted = SettingKey("onboarding.completed", default: false, owner: "FR-008-12")
     public static let settingsLastPane = SettingKey("settings.lastPane", default: SettingsPane.general, owner: "FR-008-03")
 
@@ -83,7 +89,18 @@ public enum SettingKeys {
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,
         libraryCompactPanelSize.descriptor,
+        libraryBackground.descriptor, libraryPreviewPreset.descriptor, libraryCloseAfterPaste.descriptor,
+        libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
         onboardingCompleted.descriptor, settingsLastPane.descriptor,
+    ]
+
+    /// What "Restore Library Defaults" resets (FR-008-25): how the Library looks, opens and behaves. Deliberately not
+    /// capture, privacy, storage (retention prunes history), shortcuts, triggers, the Shelf or setup state: a reset must
+    /// never delete data, loosen a privacy rule or unbind a hotkey.
+    public static let resettable: [SettingDescriptor] = [
+        libraryLayout.descriptor, libraryViewMode.descriptor, librarySort.descriptor, libraryPanelSize.descriptor,
+        libraryCompactPanelSize.descriptor, libraryBackground.descriptor, libraryPreviewPreset.descriptor,
+        libraryCloseAfterPaste.descriptor, libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
     ]
 }
 
@@ -142,8 +159,18 @@ public struct SettingsStore: Sendable {
     /// Stores `value` and delivers the change. The caller is the settings control that made the change; a failed apply
     /// must not call this (FR-008-02: the control reverts). Writing never reads, so it does not count as a read of the key.
     public func set<Value: SettingValue>(_ value: Value, for key: SettingKey<Value>) {
-        store.setString(value.persisted, forKey: key.name)
-        let change = SettingChange(name: key.name, persisted: value.persisted)
+        write(persisted: value.persisted, name: key.name)
+    }
+
+    /// Writes every `SettingKeys.resettable` row back to its default and delivers each change, so open windows and
+    /// panels follow (FR-008-25).
+    public func resetToDefaults() {
+        for descriptor in SettingKeys.resettable { write(persisted: descriptor.defaultPersisted, name: descriptor.name) }
+    }
+
+    private func write(persisted: String, name: String) {
+        store.setString(persisted, forKey: name)
+        let change = SettingChange(name: name, persisted: persisted)
         // Snapshot under the lock, call outside it: a handler may subscribe or unsubscribe without deadlocking.
         let handlers = hub.withLock { Array($0.handlers.values) }
         for handler in handlers { handler(change) }

@@ -6,6 +6,7 @@ import SwiftUI
 struct GeneralPane: View {
     let model: SettingsModel
     @State private var loginStatus: LoginItemStatus
+    @State private var confirmingReset = false
 
     init(model: SettingsModel) {
         self.model = model
@@ -57,6 +58,21 @@ struct GeneralPane: View {
                     ForEach(LibraryLayoutMode.allCases, id: \.self) { Text($0.label).tag($0) }
                 } label: { Text(.libraryLayout) }
                 Text(.libraryLayoutHelp).settingsCaption()
+                Picker(selection: model.binding(SettingKeys.libraryBackground)) {
+                    ForEach(LibraryBackground.allCases, id: \.self) { Text($0.label).tag($0) }
+                } label: { Text(.libraryBackground) }
+                Picker(selection: model.binding(SettingKeys.libraryPreviewPreset)) {
+                    ForEach(LibraryPreviewPreset.allCases, id: \.self) { Text($0.label).tag($0) }
+                } label: { Text(.previewPreset) }
+                Text(.previewPresetHelp).settingsCaption()
+                Picker(selection: model.binding(SettingKeys.libraryDisplay)) {
+                    ForEach(LibraryDisplay.allCases, id: \.self) { Text($0.label).tag($0) }
+                } label: { Text(.libraryDisplay) }
+                Toggle(isOn: model.binding(SettingKeys.libraryCloseAfterPaste)) { Text(.closeAfterPaste) }
+                Text(.closeAfterPasteHelp).settingsCaption()
+                Toggle(isOn: model.binding(SettingKeys.libraryResumeOnReopen)) { Text(.resumeOnReopen) }
+                Text(.resumeOnReopenHelp).settingsCaption()
+                Button { confirmingReset = true } label: { Text(.resetLibraryDefaults) }
             }
             Section {
                 Toggle(isOn: model.binding(SettingKeys.captureAutoBundle)) { Text(.autoBundle) }
@@ -67,6 +83,12 @@ struct GeneralPane: View {
             }
         }
         .settingsPaneChrome()
+        .confirmationDialog(Text(.resetLibraryTitle), isPresented: $confirmingReset) {
+            Button { model.env.settings.resetToDefaults() } label: { Text(.resetLibraryConfirm) }
+            Button(role: .cancel) {} label: { Text(.cancel) }
+        } message: {
+            Text(.resetLibraryMessage)
+        }
         .onAppear { loginStatus = model.env.login.status }
     }
 

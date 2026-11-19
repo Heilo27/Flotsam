@@ -55,7 +55,63 @@ public enum LibraryViewMode: String, SettingValue, CaseIterable { case list, gri
 public enum LibraryLayoutMode: String, SettingValue, CaseIterable { case standard, compact }
 
 /// The Settings window's panes in display order (FR-008-03). Also the value of `settings.lastPane`.
-public enum SettingsPane: String, SettingValue, CaseIterable { case general, shortcuts, triggers, privacy, storage, about }
+public enum SettingsPane: String, SettingValue, CaseIterable { case general, shortcuts, types, triggers, privacy, storage, tips, about }
+
+/// The Library's panel background (`library.background`, FR-003-21): follow the system appearance, or force light or dark.
+public enum LibraryBackground: String, SettingValue, CaseIterable { case system, light, dark }
+
+/// How the Library opens (`library.previewPreset`, FR-003-04): Closed is the original behaviour; Open starts with the
+/// preview showing; Roomy also opens at least `roomyFloor` so the preview has room. Compact ignores every preset: it has
+/// no preview column and stays one glance (FR-003-06). The two rules below are the one home of what a preset does.
+public enum LibraryPreviewPreset: String, SettingValue, CaseIterable {
+    case closed, open, roomy
+
+    /// The size Roomy raises the remembered Standard size to. The remembered size itself is not changed.
+    public static let roomyFloor = PanelSize(width: 960, height: 600)
+
+    public func opensPreview(in layout: LibraryLayoutMode) -> Bool {
+        layout == .standard && self != .closed
+    }
+
+    /// `size` as the panel opens: raised to `roomyFloor` by Roomy in Standard, otherwise as remembered.
+    public func openingSize(from size: PanelSize, in layout: LibraryLayoutMode) -> PanelSize {
+        guard layout == .standard, self == .roomy else { return size }
+        return PanelSize(width: max(size.width, Self.roomyFloor.width), height: max(size.height, Self.roomyFloor.height))
+    }
+}
+
+/// Which display the Library opens on (`library.display`, FR-003-03): the one under the pointer, or the one holding the
+/// focused window of the app that was frontmost (the paste target).
+public enum LibraryDisplay: String, SettingValue, CaseIterable { case pointer, focus }
+
+/// The item types the Library's Types rows and the Shelf's pills show, in order (`library.types`, FR-003-12). A type
+/// absent from the list is hidden there; its items stay in All and in search. Persisted as a JSON list of kind names.
+public struct TypeOrder: SettingValue {
+    public var kinds: [ItemKind]
+
+    public init(_ kinds: [ItemKind]) { self.kinds = kinds }
+
+    /// Every type, in `ItemKind.displayOrder`.
+    public static let `default` = TypeOrder(ItemKind.displayOrder)
+
+    public init?(persisted: String) {
+        guard let data = persisted.data(using: .utf8), let names = try? JSONDecoder().decode([String].self, from: data) else { return nil }
+        let kinds = names.compactMap(ItemKind.init(rawValue:))
+        // An unknown name or a repeated type is not something the Types pane could have written.
+        guard kinds.count == names.count, Set(kinds).count == kinds.count else { return nil }
+        self.kinds = kinds
+    }
+
+    public var persisted: String {
+        // Encoding an array of strings cannot fail; the empty-list fallback keeps this non-throwing.
+        guard let data = try? JSONEncoder().encode(kinds.map(\.rawValue)), let text = String(data: data, encoding: .utf8) else { return "[]" }
+        return text
+    }
+
+    /// The types to show: the listed ones, in list order, that have at least one item. The one place the sidebar and the
+    /// Shelf's pills apply the setting.
+    public func shown(counts: [ItemKind: Int]) -> [ItemKind] { kinds.filter { (counts[$0] ?? 0) > 0 } }
+}
 
 extension LibrarySort: SettingValue {}
 

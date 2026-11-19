@@ -73,15 +73,15 @@ public struct SidebarEntry: Equatable, Identifiable {
 
     /// The sidebar in order: All, Pinned, Notes, Shortcuts (each dimmed at zero); the types that have items, Videos after Screenshots; tags alphabetically; the top apps by count. The
     /// query layer already orders tags and caps apps (`SidebarCounts`), so this only labels them.
-    public static func entries(from counts: SidebarCounts) -> [SidebarEntry] {
+    public static func entries(from counts: SidebarCounts, typeOrder: TypeOrder = .default) -> [SidebarEntry] {
         var entries = [
             SidebarEntry(filter: .all, section: .top, title: LibraryText.string("ui.library.sidebarAll"), count: counts.all, isDimmed: counts.all == 0),
             SidebarEntry(filter: .pinned, section: .top, title: LibraryText.string("ui.library.sidebarPinned"), count: counts.pinned, isDimmed: counts.pinned == 0),
             SidebarEntry(filter: .hasNote, section: .top, title: LibraryText.string("ui.library.sidebarNotes"), count: counts.notes, isDimmed: counts.notes == 0),
             SidebarEntry(filter: .hasShortcut, section: .top, title: LibraryText.string("ui.library.sidebarShortcuts"), count: counts.shortcuts, isDimmed: counts.shortcuts == 0),
         ]
-        for kind in typeOrder {
-            guard let count = counts.kinds[kind], count > 0 else { continue }
+        for kind in typeOrder.shown(counts: counts.kinds) {
+            let count = counts.kinds[kind] ?? 0
             entries.append(SidebarEntry(filter: .kind(kind), section: .types, title: LibraryText.typeTitle(kind), count: count, isDimmed: false))
             // Videos are not a kind (they are files), so their row sits right after Screenshots, hidden when empty.
             if kind == .screenshot, counts.videos > 0 {
@@ -96,9 +96,6 @@ public struct SidebarEntry: Equatable, Identifiable {
         }
         return entries
     }
-
-    /// The Types rows in FR-003-12's order; the order itself lives in `ItemKind.displayOrder`, shared with the Shelf's pills.
-    static let typeOrder: [ItemKind] = ItemKind.displayOrder
 
     private static func appTitle(_ app: SidebarCounts.AppCount) -> String {
         switch app.identity {

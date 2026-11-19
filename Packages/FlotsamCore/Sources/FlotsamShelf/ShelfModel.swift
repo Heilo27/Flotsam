@@ -50,7 +50,7 @@ public final class ShelfModel {
     /// query inputs (`LibraryQuery.text`, `LibraryFilter.kind`), so the Shelf has no matcher of its own.
     public private(set) var searchText = ""
     public private(set) var kindFilter: ItemKind?
-    /// The kinds that have an item, in the Library's Types order: the pills after All.
+    /// The kinds that have an item and are shown in Settings, Types, in that order: the pills after All.
     public private(set) var availableKinds: [ItemKind] = []
 
     // MARK: Collaborators
@@ -281,7 +281,7 @@ public final class ShelfModel {
         let counts = await source.sidebarCounts()
         guard !Task.isCancelled, generation == self.generation else { return }
         switch counts {
-        case .success(let counts): availableKinds = ItemKind.displayOrder.filter { (counts.kinds[$0] ?? 0) > 0 }
+        case .success(let counts): availableKinds = effects.typeOrder().shown(counts: counts.kinds)
         case .failure(let error): effects.report(error)
         }
     }

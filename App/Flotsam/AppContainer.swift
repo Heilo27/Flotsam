@@ -314,10 +314,12 @@ final class AppContainer {
     private func startShelf(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
         let reporter = reporter
         let capture = capture
+        let settings = settings
         let effects = ShelfEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             captureNow: { capture?.captureNow() },
-            confirmDelete: { message in Self.confirmDelete(message) })
+            confirmDelete: { message in Self.confirmDelete(message) },
+            typeOrder: { settings.value(SettingKeys.libraryTypes) })
         let controller = ShelfPanelController(
             settings: settings, frontmost: frontmost, thumbnail: { await database.thumbnail(itemId: $0, size: .grid) },
             makeModel: { host in
