@@ -2701,12 +2701,32 @@
         }
       }
     },
+    "ui.settings.clearCounting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Counting items…"
+          }
+        }
+      }
+    },
+    "ui.settings.clearCountFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t count the items in this range."
+          }
+        }
+      }
+    },
     "ui.settings.clearDelete" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete"
+            "value" : "Delete Items"
           }
         }
       }
@@ -2768,7 +2788,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Also delete pinned items and items with a shortcut"
+            "value" : "Also delete pinned and shortcut items"
           }
         }
       }
@@ -3593,6 +3613,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Remove app"
+          }
+        }
+      }
+    },
+    "ui.settings.deleteAction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
           }
         }
       }

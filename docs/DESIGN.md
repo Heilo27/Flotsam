@@ -381,6 +381,9 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.settings.confirmShorten` | This permanently deletes {n} item(s) older than {period}. Pinned items and items with a shortcut are kept. (plural: one, other) | (104/150) |
 | `storage.confirm.clear.title` | Clear all history? | (18/40) |
 | `ui.settings.clearCount` | This permanently deletes {n} item(s). This can’t be undone. (plural: one, other) | (57/150) |
+| `ui.settings.deleteAction` | Delete (confirm button of the shorten-history and lower-image-budget alerts) | (6/15) |
+| `ui.settings.clearCounting` | Counting items… | (15/150) |
+| `ui.settings.clearCountFailed` | Couldn’t count the items in this range. (shown when the count fails; Delete stays disabled) | (39/150) |
 | `ui.settings.clearDone` | {n} item(s) deleted (plural: one, other) | (15/40) |
 | `ui.settings.confirmBudget` | Lowering the image budget removes {n} older image(s) ({size}). Pinned and shortcut items are kept. (plural: one, other) | (90/150) |
 | `ui.row.bundleCount` | 1 item / {n} items (plural: one, other) | (7/40) |

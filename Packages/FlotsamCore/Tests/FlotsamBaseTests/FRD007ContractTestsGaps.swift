@@ -141,30 +141,6 @@ import Testing
 
 @Suite("FRD-007 contract: halves with no seam (disabled)")
 struct FRD007ContractNoSeamTests {
-    /// OC-7062. Red if ever enabled without a real test (the body records an issue).
-    @Test("OC-7062 no-seam half", .disabled("no seam: the Cancel button of the lower-budget confirmation popup: the popup reading 10 GB again; App-target SwiftUI (StorageChangeCoordinator + Settings view), no test target imports the App target. Core half (value unchanged after relaunch, delta 0) is in FlotsamStorageTests"))
-    func oc7062_noSeamHalf() {
-        Issue.record("OC-7062: no-seam half has no test; write it before removing .disabled")
-    }
-
-    /// OC-7063. Red if ever enabled without a real test (the body records an issue).
-    @Test("OC-7063 no-seam half", .disabled("no seam: the confirm button and the popup then reading 2 GB: App-target SwiftUI (StorageChangeCoordinator + Settings view), no UI test seam. Core half (delta -n, exempt rows kept) is in FlotsamStorageTests"))
-    func oc7063_noSeamHalf() {
-        Issue.record("OC-7063: no-seam half has no test; write it before removing .disabled")
-    }
-
-    /// OC-7080. Red if ever enabled without a real test (the body records an issue).
-    @Test("OC-7080 no-seam half", .disabled("no seam: the Cancel button of the shorten-retention alert: popup reading Forever again; App-target SwiftUI (StorageChangeCoordinator + Settings view), no UI seam. Core half (stays Forever after relaunch, delta 0, no 7-day sweep) is in FlotsamStorageTests"))
-    func oc7080_noSeamHalf() {
-        Issue.record("OC-7080: no-seam half has no test; write it before removing .disabled")
-    }
-
-    /// OC-7081. Red if ever enabled without a real test (the body records an issue).
-    @Test("OC-7081 no-seam half", .disabled("no seam: the Delete button of the shorten-retention alert and the popup then reading 7 days: App-target SwiftUI (StorageChangeCoordinator + Settings view), no UI seam. Core half (delta -k, 4 exempt rows remain) is in FlotsamStorageTests"))
-    func oc7081_noSeamHalf() {
-        Issue.record("OC-7081: no-seam half has no test; write it before removing .disabled")
-    }
-
     /// OC-7065. Red if ever enabled without a real test (the body records an issue).
     @Test("OC-7065 no-seam half", .disabled("no seam: the rendered popups (Image storage limit, Image quality) of Settings > Storage: App-target SwiftUI, no view-inspection seam. The values and the offered option lists are asserted in FlotsamBaseTests"))
     func oc7065_noSeamHalf() {
@@ -181,12 +157,6 @@ struct FRD007ContractNoSeamTests {
     @Test("OC-7109 no-seam half", .disabled("no seam: the rendered Capture mode segmented control and its caption: App-target SwiftUI, no view-inspection seam. Default Active and the offered modes are asserted in FlotsamBaseTests"))
     func oc7109_noSeamHalf() {
         Issue.record("OC-7109: no-seam half has no test; write it before removing .disabled")
-    }
-
-    /// OC-7088. Red if ever enabled without a real test (the body records an issue).
-    @Test("OC-7088 no-seam half", .disabled("no seam: the rendered Clear History sheet layout (range popup, unchecked checkbox, count label, Cancel): App-target SwiftUI sheet, no view seam. Core half is in FlotsamStorageTests (the 'Delete' vs 'Delete {n} Items' wording is a known issue there)"))
-    func oc7088_noSeamHalf() {
-        Issue.record("OC-7088: no-seam half has no test; write it before removing .disabled")
     }
 
     /// OC-7011. Red if ever enabled without a real test (the body records an issue).

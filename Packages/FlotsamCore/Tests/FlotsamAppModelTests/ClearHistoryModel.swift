@@ -1,0 +1,1 @@
+../../../../App/Flotsam/Settings/ClearHistoryModel.swift

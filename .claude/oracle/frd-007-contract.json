@@ -885,7 +885,7 @@
       "requirement": "FR-007-11",
       "given": "Settings › Storage",
       "when": "The user clicks 'Clear History…'",
-      "then": "A sheet opens with a range popup offering exactly Last hour, Last 24 hours, All time; an UNCHECKED checkbox 'Also delete pinned and shortcut items'; a count label; Cancel; a destructive-styled button 'Delete {n} Items' with n = the count",
+      "then": "A sheet opens with a range popup offering exactly Last hour, Last 24 hours, All time; an UNCHECKED checkbox 'Also delete pinned and shortcut items'; a count label; Cancel; a destructive-styled button 'Delete Items' (15-character button limit; the count is not on the button), with the count 'This permanently deletes {n} items. This can\u2019t be undone.' in the sheet text above it ('Counting items\u2026' and Delete disabled until the count for the current range and option has loaded)",
       "class": "layout",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -945,7 +945,7 @@
       "requirement": "FR-007-11",
       "given": "Clear sheet open on 'All time' with 45 non-exempt and 5 exempt items",
       "when": "The user checks the option, then switches range to Last hour (with 2 items in that hour)",
-      "then": "Count label and button go 45 -> 50 when checked, then to the in-range number for Last hour; the button text always equals 'Delete {count} Items'",
+      "then": "Count label and button go 45 -> 50 when checked, then to the in-range number for Last hour; the button text always equals 'Delete Items' (the count is in the sheet text, DESIGN.md btn.deleteN)",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true

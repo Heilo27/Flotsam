@@ -6,16 +6,17 @@ import FlotsamBase
 
 // FRD-007 8T contract tests, slice S1: the confirm/cancel halves of the destructive Settings > Storage changes
 // (OC-7062, OC-7063, OC-7080, OC-7081), the Clear History sheet's core half (OC-7088), screenshot originals (OC-7125)
-// and the storage usage figures (OC-7151). The popup, alert and sheet widgets are App-target SwiftUI (no test
-// target); each of those halves is a disabled stub in FRD007ContractTestsGaps.swift. What is asserted here is what
-// the widgets are built from: the preview count, the settings value, the rows and files that remain, read back
-// through a FRESH read-only connection and a FRESH SettingsStore over the same key-value store. Expected values are
-// literals.
+// and the storage usage figures (OC-7151). The popup, alert and sheet widgets are App-target SwiftUI; their
+// decisions (ask first, write and sweep only after the answer, what Delete passes and announces) are tested in
+// FlotsamAppModelTests/FRD007ContractTestsStorageConfirm.swift against StorageChangeModel and ClearHistoryModel.
+// What is asserted here is what the widgets are built from: the preview count, the settings value, the rows and files
+// that remain, read back through a FRESH read-only connection and a FRESH SettingsStore over the same key-value
+// store. Expected values are literals.
 
 @Suite struct FRD007ContractRetentionTests {
-    /// What `StoragePane.confirm` does for a reducing change: write the setting, then sweep with the settings' values.
-    /// It lives in the App target, so this mirror is the seam gap recorded in the Gaps file; everything it calls is the
-    /// real core.
+    /// What `StorageChangeModel.confirm` does for a reducing change: write the setting, then sweep with the settings'
+    /// values. The model lives in the App target (its own sequence is tested in FlotsamAppModelTests against a fake
+    /// storage); this mirror runs the same two steps against the real core, so the rows that go and stay are checked.
     private func confirmChange(_ store: Store, _ settings: SettingsStore) async throws -> SweepOutcome {
         try await store.database.runRetentionSweep(
             preset: settings.value(SettingKeys.storageRetention), budget: settings.value(SettingKeys.storageImageBudget)
@@ -200,21 +201,21 @@ import FlotsamBase
         #expect(try store.presentIds() == Set(1...7))
     }
 
-    /// OC-7088 (strings). FR-007-11 names the destructive button "Delete {n} Items" and the option "Also delete pinned
-    /// and shortcut items"; the shipped catalogue has "Delete" (the count sits in the sentence above it) and "Also
-    /// delete pinned items and items with a shortcut". FRD-008 FR-008-08 hands both to FRD-007, so FRD-007 is the
-    /// owner and the product differs from it.
-    /// Product defect, Minor. Repro: Settings > Storage > Clear History..., read the button and the checkbox.
-    @Test("OC-7088 the Delete button reads 'Delete {n} Items' and the option reads 'Also delete pinned and shortcut items'")
-    func oc7088_clearSheetStrings() {
-        // Red if the catalogue gains the count placeholder and the option wording (then this known issue must go).
-        withKnownIssue("OC-7088 product defect: ui.settings.clearDelete is 'Delete' and clearIncludeExempt is reworded vs FR-007-11") {
-            // given the sheet shows 12 items
-            // when the button and checkbox text are built
-            // then they read as FR-007-11 states
-            #expect(SettingsString.clearDelete.text([.count(12)]) == "Delete 12 Items")
-            #expect(SettingsString.clearIncludeExempt.text == "Also delete pinned and shortcut items")
-        }
+    /// OC-7088 (checkbox string). FR-007-11 names the option "Also delete pinned and shortcut items".
+    /// Red if the catalogue rewords it.
+    @Test("OC-7088 the option reads 'Also delete pinned and shortcut items'")
+    func oc7088_clearSheetCheckboxString() {
+        #expect(SettingsString.clearIncludeExempt.text == "Also delete pinned and shortcut items")
+    }
+
+    /// OC-7088 (button string). FR-007-11 names the destructive button "Delete Items": the count is stated in the sheet
+    /// text above it (`clearCount`), and a count on the button would break the 15-character limit (docs/DESIGN.md
+    /// section 10, `btn.deleteN`). Red if the button text changes or takes a count.
+    @Test("OC-7088 the Delete button reads 'Delete Items' and the count sits in the sheet text")
+    func oc7088_clearSheetButtonString() {
+        #expect(SettingsString.clearDelete.text == "Delete Items")
+        #expect(SettingsString.clearDelete.text.count <= 15)
+        #expect(SettingsString.clearCount.text([.count(12)]).contains("12 items"))
     }
 
     // MARK: Screenshot originals (FR-007-15)
