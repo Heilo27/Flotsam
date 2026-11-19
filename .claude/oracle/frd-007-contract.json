@@ -1055,7 +1055,7 @@
       "requirement": "FR-007-12,AC-007-10",
       "given": "Capture mode Paused",
       "when": "Flotsam is quit and relaunched",
-      "then": "Mode is still Paused (Settings › Storage segmented control shows Paused); the menu-bar icon is in its paused state with accessibility label 'Flotsam, paused'; the menu shows 'Resume Capture'; copying text still creates no item",
+      "then": "Mode is still Paused (Settings › Storage segmented control shows Paused); the menu-bar icon is in its paused state with accessibility label 'Flotsam, capture paused'; the menu shows 'Resume Capture'; copying text still creates no item",
       "class": "persistence",
       "source_verdict": "CONFIRMED",
       "must_verify": true

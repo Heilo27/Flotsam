@@ -55,20 +55,17 @@ import Testing
         #expect(MenuBarModel.icon(mode: .active, hasWarning: false).accessibilityKeys == ["ui.menu.iconActive"])
     }
 
-    /// OC-7105 wording. The contract and docs/DESIGN.md name the paused label 'Flotsam, paused'; the shipped catalogue
-    /// string `ui.menu.iconPaused` is 'Flotsam, capture paused'. No FRD fixes this wording (FRD-008 pins the shipped
-    /// one only through its own contract test), so this is contract wording not in the FRD: unverified, not a proven
-    /// product defect. Red (known issue goes unrecorded) the moment the label is made to match.
-    @Test("OC-7105 the paused icon's accessibility label reads 'Flotsam, paused'")
+    /// OC-7105 wording. The paused icon's VoiceOver label is the shipped catalogue string `ui.menu.iconPaused`,
+    /// 'Flotsam, capture paused' (docs/DESIGN.md and the contract say the same; Frd008ContractMenuTests pins all three).
+    /// Red if the paused label's wording changes.
+    @Test("OC-7105 the paused icon's accessibility label reads 'Flotsam, capture paused'")
     func oc7105_pausedLabelWording() {
         // given the paused icon
         let key = MenuBarModel.icon(mode: .paused, hasWarning: false).accessibilityKeys[0]
 
         // when its VoiceOver label is read
-        // then it is the contract's wording
-        withKnownIssue("OC-7105 contract wording not in FRD; unverified: ui.menu.iconPaused is 'Flotsam, capture paused'; contract and DESIGN.md say 'Flotsam, paused'") {
-            #expect(FlotsamStrings.text(forKey: key) == "Flotsam, paused")
-        }
+        // then it is the shipped wording
+        #expect(FlotsamStrings.text(forKey: key) == "Flotsam, capture paused")
     }
 
     /// OC-7108. In every mode the menu has exactly one capture-mode row, it is Pause or Resume Capture, and no number
