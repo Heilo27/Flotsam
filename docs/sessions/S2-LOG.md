@@ -1888,3 +1888,21 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 - The real Flotsam never ran.
 - Only the session's own PIDs were killed.
 - The pasteboard was restored, TextEdit closed unsaved, and the suite plist removed.
+
+## TASK-524 real-OS check: obrien-524 @ 4cfce1f, 6/6 rows PASS (2026-11-19)
+
+**Setup.** macOS 27.3 (26C5035r). Debug build, launched isolated per docs/AGENT-LAUNCH.md, with 3 items seeded. Each row ran 3 times.
+
+**Results**
+- **Row 1** (Library open, Settings closed, ⌘,): PASS. The Library hid and Settings came forward on top.
+- **Row 2** (Settings open behind an untitled TextEdit, ⌘,): PASS. The Library hid and Settings came above TextEdit. The "Settings behind TextEdit" result seen in P2 at 669e1e1, which predates TASK-521, did not recur in any of the 18 runs.
+- **Row 3** (Settings minimized, ⌘,): PASS. The Library hid and Settings came out of the Dock. ⌘M does nothing on Settings (FR-008-19), so the window was minimized through System Events.
+- **Row 4** (⌘K, one item selected): PASS. The Library hid and the editor opened.
+- **Row 5** (⌘K, nothing selected, via a search with no matches): PASS. The Library stayed up and no editor opened.
+- **Row 6** (⌘K, several items selected with ⇧↑/⇧↓, FR-003-08): PASS. The Library stayed up.
+
+**Spec.** The ruling is in FRD-003, FR-003-02 and AC-003-01a, in the diff at 4cfce1f. FRD-008 FR-008-03 and AC-008-03 are unchanged and not contradicted. No drift.
+
+**Not covered.** The key window was inferred from the front app, the window order and screenshots, not read from AppKit. The context-menu route to the editor was not tested.
+
+**Snapshot identity.** The real data, prefs plist and `defaults read` hash were identical before and after. The real Flotsam never ran. The pasteboard was restored, TextEdit was closed unsaved, and the suite plist was removed.
