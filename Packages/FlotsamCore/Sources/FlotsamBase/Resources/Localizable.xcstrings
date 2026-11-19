@@ -3507,6 +3507,16 @@
         }
       }
     },
+    "ui.settings.placementTopCenter" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top Center"
+          }
+        }
+      }
+    },
     "ui.settings.projectPage" : {
       "localizations" : {
         "en" : {

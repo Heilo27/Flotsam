@@ -47,7 +47,7 @@ public enum CaptureMode: String, SettingValue, CaseIterable {
 public enum RetentionPreset: String, SettingValue, CaseIterable { case d7, d30, d90, y1, forever }
 public enum ImageBudget: String, SettingValue, CaseIterable { case mib500, gib2, gib10, unlimited }
 public enum ImageQuality: String, SettingValue, CaseIterable { case original, balanced, efficient }
-public enum ShelfPlacement: String, SettingValue, CaseIterable { case rightEdge, leftEdge, bottomEdge, menuBar }
+public enum ShelfPlacement: String, SettingValue, CaseIterable { case rightEdge, leftEdge, bottomEdge, menuBar, topCenter }
 public enum LibraryViewMode: String, SettingValue, CaseIterable { case list, grid }
 
 /// The Settings window's panes in display order (FR-008-03). Also the value of `settings.lastPane`.

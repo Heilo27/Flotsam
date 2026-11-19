@@ -71,6 +71,7 @@ extension ShelfPlacement {
         case .leftEdge: .placementLeftEdge
         case .bottomEdge: .placementBottomEdge
         case .menuBar: .placementMenuBar
+        case .topCenter: .placementTopCenter
         }
     }
 }
