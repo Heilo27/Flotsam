@@ -150,18 +150,29 @@ struct Frd008ContractMenuTests {
         #expect(MenuBarModel.icon(mode: mode, hasWarning: false).accessibilityKeys == ["ui.menu.iconActive"])
     }
 
-    // Rule 9. `CaptureMode.afterMenuToggle` is a second copy of the menu-toggle rule (its comment claims the menu label
-    // and action both come from it; the menu uses MenuBarModel.captureToggle). The copies disagree for Curated, and
-    // FRD-007 FR-007-12 and FRD-008 FR-008-16 disagree too: [Spec Drift], reported to Friday, no FRD edited here.
-    @Test("Rule 9: the menu toggle rule has one home: both definitions agree for every mode")
+    // Rule 9 (TASK-473). The Pause/Resume Capture rule has one home, MenuBarModel.captureToggle(for:). The menu row is
+    // built from it, so the label a user reads and the mode a click sets cannot diverge, in every mode including Curated
+    // (FR-008-16: Curated reads "Resume Capture" and sets Active; FR-007-12 agrees).
+    @Test("Rule 9: the menu row's label and next mode come from captureToggle(for:) for every mode, Curated resumes to Active")
     func menuToggleRuleHasOneHome() {
-        let disagreeing = CaptureMode.allCases.filter {
-            MenuBarModel.captureToggle(for: $0).next != $0.afterMenuToggle
+        let expected: [CaptureMode: (titleKey: String, next: CaptureMode)] = [
+            .active: ("ui.menu.pauseCapture", .paused),
+            .paused: ("ui.menu.resumeCapture", .active),
+            .curated: ("ui.menu.resumeCapture", .active),
+        ]
+        #expect(Set(CaptureMode.allCases) == Set(expected.keys))
+        for mode in CaptureMode.allCases {
+            let rule = MenuBarModel.captureToggle(for: mode)
+            #expect(rule.titleKey == expected[mode]?.titleKey, "label for \(mode)")
+            #expect(rule.next == expected[mode]?.next, "next mode for \(mode)")
+            let rows = MenuBarModel.entries(mode: mode, shelfEnabled: false, openLibrary: openLibraryChord, saveClipboard: .none, toggleShelf: .none)
+            let toggles = rows.compactMap { row -> (String, CaptureMode)? in
+                if case .captureToggle(let key, let next) = row { return (key, next) }
+                return nil
+            }
+            #expect(toggles.count == 1, "exactly one toggle row for \(mode)")
+            #expect(toggles.first?.0 == rule.titleKey && toggles.first?.1 == rule.next, "row matches the rule for \(mode)")
         }
-        withKnownIssue("DEFECT (Rule 9): CaptureMode.afterMenuToggle and MenuBarModel.captureToggle disagree for .curated") {
-            #expect(disagreeing.isEmpty)
-        }
-        #expect(disagreeing == [.curated])
     }
 
     // OC-8130 (labels). Red if two modes share a VoiceOver label or a label's wording drifts.
