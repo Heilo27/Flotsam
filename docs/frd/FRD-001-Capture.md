@@ -143,4 +143,4 @@ Capture has no window of its own. Elements it contributes to, owned elsewhere:
 3. Phone detection is intentionally conservative; international formats beyond E.164-like strings may classify as `text`.
 
 ## 10. Out of Scope
-Screenshot-file pickup (FRD-002). OCR or image content analysis (A3). Capturing file contents or file promises. Syncing or sharing clips (A1). Per-app capture rules beyond the ignored list. Capturing multiple pasteboard items as separate entries.
+Screenshot-file pickup (FRD-002). Image content analysis of any kind other than the on-device text recognition that feeds search (FRD-007 FR-007-23; A3 as amended 2026-11-19). Capturing file contents or file promises. Syncing or sharing clips (A1). Per-app capture rules beyond the ignored list. Capturing multiple pasteboard items as separate entries.

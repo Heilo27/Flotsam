@@ -7,7 +7,7 @@
 ## Truth Test
 - Serves: S2 — screenshots from the system folder join history automatically, so a screenshot is recallable like any clip.
 - Supports: P1 — "anything you ... screenshotted ... in the past 30 days" is part of the primary truth; this is the only path that makes folder screenshots recallable, entirely locally.
-- Violates: none. A3 ("not a screenshot tool") is respected: pickup only reads files the system already wrote. No capture, annotation, recording or OCR.
+- Violates: none. A3 ("not a screenshot tool") is respected: pickup only reads files the system already wrote. No capture, annotation or recording. A picked-up screenshot is an ordinary image item: the text in it is read on this Mac for search only, like any image (FRD-007 FR-007-23), and is never shown, edited or exported.
 - Verdict: KEEP
 
 ## 1. Purpose
@@ -105,4 +105,4 @@ Notice screenshots that macOS saves to disk and add them to history as `screensh
 4. Backfill default (checked) is a product choice made here to serve P1's 30 days; it can be flipped to unchecked without touching other FRs.
 
 ## 10. Out of Scope
-Capturing, annotating, recording or OCR of screenshots (A3). Screen recordings (CUT, see CUT.md). Watching more than one folder. Importing non-screenshot images from folders. Removing or moving original files. Screenshots taken by third-party tools unless they set the screen-capture attribute or use a recognised name.
+Capturing, annotating or recording screenshots (A3). Showing, editing, exporting or copying out the text recognised in a screenshot (A3: it is read for search only, FRD-007 FR-007-23). Screen recordings (CUT, see CUT.md). Watching more than one folder. Importing non-screenshot images from folders. Removing or moving original files. Screenshots taken by third-party tools unless they set the screen-capture attribute or use a recognised name.
