@@ -1975,3 +1975,16 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
 **Defects:** none.
 
 **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored, TextEdit was closed unsaved and the suite plist was removed.
+
+## AC-001-05 pause half and a real ignored-app copy: main @ 2e73758 (2026-11-19)
+
+**OS:** macOS 27.3 (26C5035r). Debug build, isolated launch. Each row ran 3 times with distinct dummy texts.
+
+- **Row 1, paused then copying 3 distinct items: PASS.** The count did not change, and every copy logged CAP-POL-003 skipped (9 in all). Covers FR-001-04 gate 1, FR-007-12 and AC-001-05.
+- **Row 2, resumed then copying 1 item: PASS.** The count rose by 1 each run, and the copy was logged as stored.
+- **Row 3, real copy from an ignored app: PASS.** com.apple.TextEdit was added to privacy.ignoredApps, in the isolated suite only. Selecting all and pressing ⌘C in an untitled TextEdit document stored nothing and logged CAP-POL-002 each run. Covers FR-001-04 gate 4 and FR-008-11.
+  - **Control:** with an empty ignored list, the same real copy was stored 3/3, as richText from com.apple.TextEdit.
+  - The ignored list was read live, with no relaunch needed.
+- **Pause route: needs Ryan.** The pause was set by writing capture.mode to the isolated suite, which the running app picks up live. The menu-bar Pause/Resume item (FR-008-16) could not be driven here: clicking the status item opened no menu. Settings › Storage also needs a hand check.
+- **Defects:** none. **Spec drift:** none.
+- **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was empty before the run and empty after. TextEdit was closed unsaved, and the suite plist was removed.
