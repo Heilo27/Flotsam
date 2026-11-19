@@ -1,5 +1,6 @@
 import AppKit
 import FlotsamBase
+import FlotsamStorage
 
 /// The menu-bar item and its menu (FR-008-16). Both are drawn from `MenuBarModel`, which holds the order, the
 /// chord rows and the Pause/Resume rule; this class only turns that model into AppKit objects. The menu is rebuilt
@@ -65,12 +66,42 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             case .separator: menu.addItem(.separator())
             case .captureToggle(let titleKey, let next):
                 menu.addItem(row(titleKey, run: { [container] in container.settings.set(next, for: SettingKeys.captureMode) }))
+            case .pauseFor: menu.addItem(pauseForItem())
+            case .clearRecent: menu.addItem(clearRecentItem())
             case .notices: menu.addItem(noticesItem())
             case .settings: menu.addItem(row("ui.menu.settings", key: ",", run: container.actions.openSettings))
             case .setupGuide: menu.addItem(row("ui.menu.setupGuide", run: showSetupGuide))
             case .quit: menu.addItem(row("ui.menu.quit", key: "q", run: { NSApplication.shared.terminate(nil) }))
             }
         }
+    }
+
+    /// Pause For submenu (FR-007-12, FR-008-16): each choice pauses capture and sets when it ends.
+    private func pauseForItem() -> NSMenuItem {
+        let parent = NSMenuItem(title: FlotsamStrings.text(forKey: "ui.menu.pauseFor") ?? "", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        for duration in PauseDuration.allCases {
+            submenu.addItem(row(duration.titleKey, run: { [container] in container.timedPause.pause(for: duration) }))
+        }
+        parent.submenu = submenu
+        return parent
+    }
+
+    /// Clear Recent submenu (FR-007-11, FR-008-16): each choice opens the confirmation; nothing is deleted from the menu itself.
+    private func clearRecentItem() -> NSMenuItem {
+        let parent = NSMenuItem(title: FlotsamStrings.text(forKey: "ui.menu.clearRecent") ?? "", action: nil, keyEquivalent: "")
+        let submenu = NSMenu()
+        submenu.autoenablesItems = false
+        for range in ClearRange.recentMenuRanges {
+            let entry = NSMenuItem(title: range.label.text, action: nil, keyEquivalent: "")
+            entry.target = self
+            entry.action = #selector(fire(_:))
+            entry.representedObject = ActionBox { [container] in container.clearRecent(range) }
+            submenu.addItem(entry)
+        }
+        parent.submenu = submenu
+        return parent
     }
 
     /// Notices submenu (FRD-000 section 9, FR-000-08 b): newest first, the code after the message, then "Dismiss all".

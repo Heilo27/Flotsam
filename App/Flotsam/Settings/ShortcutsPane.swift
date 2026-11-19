@@ -20,6 +20,9 @@ struct ShortcutsPane: View {
                 ShortcutRow(
                     model: model, label: .shortcutToggleShelf, id: .toggleShelf, key: SettingKeys.shortcutsToggleShelf,
                     allowClear: true)
+                ShortcutRow(
+                    model: model, label: .shortcutPasteQueue, id: .pasteQueue, key: SettingKeys.shortcutsPasteQueue,
+                    allowClear: true)
             } footer: {
                 Text(.shortcutsFootnote).settingsCaption()
             }

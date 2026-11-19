@@ -3,13 +3,13 @@ import FlotsamStorage
 import Foundation
 
 /// The preview pane's content for one item (FR-003-14): read-only, nothing fetched from the network.
-public struct LibraryPreview: Equatable {
+public struct LibraryPreview: Equatable, Sendable {
     /// Text beyond this many characters is behind "Show more" (FR-003-14).
     public static let textLimit = 20_000
     /// File and folder members listed before "and n more".
     public static let memberLimit = 20
 
-    public struct Field: Equatable, Identifiable {
+    public struct Field: Equatable, Identifiable, Sendable {
         public let label: String
         public let value: String
         /// Set on a tag row: the colour of its dot.

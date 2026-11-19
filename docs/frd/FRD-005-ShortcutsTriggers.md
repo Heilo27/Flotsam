@@ -31,6 +31,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
   | openLibrary | `shortcuts.openLibrary` | ⌃⌘V | toggle the Library (FRD-003 FR-003-02) |
   | saveClipboard | `shortcuts.saveClipboard` | none | FR-005-06 |
   | toggleShelf | `shortcuts.toggleShelf` | none | show or hide the Shelf (FRD-006) |
+  | pasteQueue | `shortcuts.pasteQueue` | none | paste the next item of the paste queue (FRD-003 FR-003-25); like item hotkeys it is off while a Flotsam window is key (FR-005-05) |
   | item hotkey (one per item, optional) | stored on the item | none | FR-005-05 |
 
   Only `openLibrary` has a default. The default is provisional until the conflict spike in Assumptions is done. A binding can be cleared (action unreachable by hotkey, still reachable from the menu bar menu) except `openLibrary`, which can be changed but not cleared (the Library must stay reachable from the keyboard).
@@ -130,7 +131,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
 | Element | Type | Where | Behavior |
 |---|---|---|---|
 | Shortcut recorder | key-capture control | Settings › Shortcuts, item editor | FR-005-04 |
-| Shortcuts pane list (Open Library, Save Clipboard, Toggle Shelf) | settings rows | Settings › Shortcuts (FRD-008) | one recorder per registry row |
+| Shortcuts pane list (Open Library, Save Clipboard, Toggle Shelf, Paste Queue) | settings rows | Settings › Shortcuts (FRD-008) | one recorder per registry row |
 | Shortcut and Trigger editor | popover (⌘K) | anchored to selected item | recorder, trigger field, variable help line, inline validation |
 | Variable help line | caption | editor | lists `{date}`, `{time}`, `{clipboard}` and format examples (catalogue strings) |
 | Trigger and hotkey badges | icons | Library rows (FRD-003) | show item has a binding |

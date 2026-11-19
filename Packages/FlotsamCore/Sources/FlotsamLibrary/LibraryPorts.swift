@@ -100,6 +100,13 @@ public struct LibraryEffects {
     /// The footer's "Enable" button (FR-008-14): opens the Accessibility pane of System Settings through the shared
     /// `PermissionProbe`, the same path as onboarding and the Triggers pane.
     public var openAccessibilitySettings: @MainActor () -> Void
+    /// Return with several rows selected (FR-003-25): lines the ids up as the paste queue, in the order given. True when
+    /// a queue now exists, so the panel closes; false (for example no paste-queue shortcut is set) leaves it open.
+    public var startQueue: @MainActor ([UUID]) -> Bool
+    /// How many items are still queued, for the footer (FR-003-25). Zero when there is no queue.
+    public var queueRemaining: @MainActor () -> Int
+    /// Esc in the Library (FR-003-08, FR-003-25): drops the queue. True when there was one.
+    public var cancelQueue: @MainActor () -> Bool
 
     public init(
         report: @escaping @MainActor (FlotsamError) -> Void = { _ in },
@@ -107,7 +114,10 @@ public struct LibraryEffects {
         openSettings: @escaping @MainActor () -> Void = {},
         external: @escaping @MainActor (LibraryExternalCommand, [UUID]) -> Void = { _, _ in },
         isAccessibilityTrusted: @escaping @MainActor () -> Bool = { true },
-        openAccessibilitySettings: @escaping @MainActor () -> Void = {}
+        openAccessibilitySettings: @escaping @MainActor () -> Void = {},
+        startQueue: @escaping @MainActor ([UUID]) -> Bool = { _ in false },
+        queueRemaining: @escaping @MainActor () -> Int = { 0 },
+        cancelQueue: @escaping @MainActor () -> Bool = { false }
     ) {
         self.report = report
         self.reveal = reveal
@@ -115,5 +125,8 @@ public struct LibraryEffects {
         self.external = external
         self.isAccessibilityTrusted = isAccessibilityTrusted
         self.openAccessibilitySettings = openAccessibilitySettings
+        self.startQueue = startQueue
+        self.queueRemaining = queueRemaining
+        self.cancelQueue = cancelQueue
     }
 }

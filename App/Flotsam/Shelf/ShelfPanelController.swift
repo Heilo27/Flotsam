@@ -247,7 +247,9 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             return ShelfLayout.contentWidth(itemCount: sections.reduce(0) { $0 + $1.cards.count })
         }
         func count(_ kind: ShelfSection.Kind) -> Int { sections.first { $0.kind == kind }?.cards.count ?? 0 }
-        return ShelfLayout.contentHeight(pinnedCount: count(.pinned), recentCount: count(.recent))
+        return ShelfLayout.contentHeight(
+            pinnedCount: count(.pinned), recentCount: count(.recent),
+            headerHeight: model.showsSearch ? ShelfLayout.searchHeaderHeight(for: placement) : 0)
     }
 
     // MARK: Screens
@@ -520,13 +522,18 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     /// Returns nil when the Shelf consumed the key.
     private func handle(_ event: NSEvent) -> NSEvent? {
         guard event.window === panel, machine.canBecomeKey else { return event }
+        // An input method composing text owns every key until it commits.
+        if let editor = panel.firstResponder as? NSTextView, editor.hasMarkedText() { return event }
         guard let stroke = LibraryKeyTranslator.stroke(for: event) else { return event }
-        // Esc hides a sticky Shelf (FR-006-04); the machine owns the decision.
+        // Esc first clears the search, then the type filter; with neither it hides the Shelf (FR-006-04, FR-006-22).
+        // The machine owns the hide decision.
         if stroke == KeyStroke(.escape) {
-            send(.escape)
+            if !model.clearSearchState() { send(.escape) }
             return nil
         }
-        return model.handle(stroke) ? nil : event
+        // ⌘C copies the field's own selected text, not the card, when there is one (FR-006-22).
+        let selectionLength = (panel.firstResponder as? NSTextView)?.selectedRange().length ?? 0
+        return model.handle(stroke, searchHasSelection: selectionLength > 0) ? nil : event
     }
 }
 

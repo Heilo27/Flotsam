@@ -113,6 +113,7 @@ extension ClearRange {
     /// The popup's label for each range (FR-007-11).
     var label: SettingsString {
         switch self {
+        case .last5Minutes: .rangeLast5Minutes
         case .lastHour: .rangeLastHour
         case .last24Hours: .rangeLast24Hours
         case .allTime: .rangeAllTime
