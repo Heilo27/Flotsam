@@ -5,22 +5,22 @@ import Foundation
 // non-activating panel, so when ⌘, or ⌘K is pressed in the Library another app is still the active one. On macOS 14 and
 // later `NSApp.activate()` is only a request, and the system refuses it when the user is working in another app: the
 // window then opens behind that app and the next key goes to it. So the sequence is fixed here, once, for every window:
-// ask for activation, put the window in front and key, and if the app is still not active a moment later, force it.
+// ask for activation, put the window in front and key, and if Flotsam is still not the frontmost app a moment later,
+// have the system activate it the way a launch does.
 
 /// The App's view of one window and of the application, as `WindowFronting` needs them.
 @MainActor
 public protocol FrontableWindow: AnyObject {
-    /// Whether Flotsam is the active application right now.
+    /// Whether Flotsam is the frontmost application right now (what the system says, not what AppKit believes: a
+    /// non-activating panel can make `NSApp.isActive` true while another app is still frontmost).
     var appIsActive: Bool { get }
     /// The ordinary, cooperative request that Flotsam become the active application (`NSApp.activate()`).
     func requestAppActivation()
     /// Orders the window in front of every other window, even while Flotsam is not yet active, and makes it key.
     func orderFrontAndMakeKey()
-    /// The stronger request used when the plain one was refused: the app takes a regular activation policy so the
-    /// system lets it activate, then activates.
+    /// The stronger request used when the plain one was refused: ask the system (LaunchServices) to activate the app,
+    /// as when it is opened from Finder. The activation policy is not touched, so there is no Dock icon.
     func forceAppActivation()
-    /// Undoes `forceAppActivation`: back to an agent app with no Dock icon.
-    func endForcedActivation()
 }
 
 /// One per window. Owns the "is it active yet" follow-up so a second open cancels the first one's.
@@ -28,8 +28,6 @@ public protocol FrontableWindow: AnyObject {
 public final class WindowFronting {
     /// How long the plain request gets before it counts as refused.
     public static let activationGrace: Duration = .milliseconds(200)
-    /// How long a forced activation keeps the regular policy before it is undone.
-    public static let forcedHold: Duration = .milliseconds(500)
 
     private let clock: any WallClock
     private var followUp: Task<Void, Never>?
@@ -48,9 +46,6 @@ public final class WindowFronting {
             guard !Task.isCancelled, !window.appIsActive else { return }
             window.forceAppActivation()
             window.orderFrontAndMakeKey()
-            await clock.sleep(for: Self.forcedHold)
-            // Undone even when a newer open cancelled this one: the policy must never stay changed.
-            window.endForcedActivation()
         }
     }
 }

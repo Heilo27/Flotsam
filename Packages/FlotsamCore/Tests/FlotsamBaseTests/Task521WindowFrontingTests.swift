@@ -39,7 +39,6 @@ private final class FakeFrontable: FrontableWindow {
     func requestAppActivation() { log.append("request") }
     func orderFrontAndMakeKey() { log.append("front") }
     func forceAppActivation() { log.append("force") }
-    func endForcedActivation() { log.append("end") }
 }
 
 @MainActor
@@ -56,7 +55,7 @@ private func settle(_ condition: () -> Bool) async {
         #expect(window.log == ["request", "front"])
     }
 
-    @Test("an activation the system accepted is left alone: no force, no policy change")
+    @Test("an activation the system accepted is left alone: no force")
     func acceptedActivation() async {
         let clock = ParkedClock(), window = FakeFrontable()
         let fronting = WindowFronting(clock: clock)
@@ -70,7 +69,7 @@ private func settle(_ condition: () -> Bool) async {
         #expect(clock.requested == [WindowFronting.activationGrace])
     }
 
-    @Test("a refused activation is forced, the window is ordered front again, and the policy is restored after the hold")
+    @Test("a refused activation is forced once the grace period ends, then the window is ordered front again")
     func refusedActivationIsForced() async {
         let clock = ParkedClock(), window = FakeFrontable()
         let fronting = WindowFronting(clock: clock)
@@ -78,12 +77,9 @@ private func settle(_ condition: () -> Bool) async {
         await settle { clock.parked == 1 }
         #expect(window.log == ["request", "front"], "nothing is forced before the grace period ends")
         clock.releaseAll()
-        await settle { clock.parked == 1 }
+        await settle { window.log.count == 4 }
         #expect(window.log == ["request", "front", "force", "front"])
-        #expect(clock.requested == [WindowFronting.activationGrace, WindowFronting.forcedHold])
-        clock.releaseAll()
-        await settle { window.log.last == "end" }
-        #expect(window.log == ["request", "front", "force", "front", "end"])
+        #expect(clock.requested == [WindowFronting.activationGrace])
     }
 
     @Test("opening again while the first follow-up waits cancels it: one force, not two")
@@ -95,28 +91,10 @@ private func settle(_ condition: () -> Bool) async {
         fronting.bringToFront(window)
         await settle { clock.parked == 2 }
         clock.releaseAll()
-        await settle { clock.parked == 1 }
+        await settle { window.log.contains("force") }
+        for _ in 0..<50 { await Task.yield() }
         #expect(window.log.filter { $0 == "force" }.count == 1)
-        clock.releaseAll()
-        await settle { window.log.last == "end" }
         #expect(window.log.filter { $0 == "request" }.count == 2)
-        #expect(window.log.filter { $0 == "end" }.count == 1)
-    }
-
-    @Test("a forced policy is always restored, even when a newer open cancels the follow-up during the hold")
-    func policyRestoredWhenCancelledDuringHold() async {
-        let clock = ParkedClock(), window = FakeFrontable()
-        let fronting = WindowFronting(clock: clock)
-        fronting.bringToFront(window)
-        await settle { clock.parked == 1 }
-        clock.releaseAll()
-        await settle { clock.parked == 1 }
-        #expect(window.log.contains("force"))
-        window.active = true
-        fronting.bringToFront(window)
-        clock.releaseAll()
-        await settle { window.log.contains("end") }
-        #expect(window.log.filter { $0 == "end" }.count == 1)
     }
 
     // The sequence has one home. Every App window that must come in front goes through it; none calls AppKit directly.
@@ -138,8 +116,12 @@ private func settle(_ condition: () -> Bool) async {
         #expect(adapter.contains("func requestAppActivation() { NSApp.activate() }"))
         #expect(adapter.contains("window.orderFrontRegardless()"))
         #expect(adapter.contains("window.makeKeyAndOrderFront(nil)"))
-        #expect(adapter.contains("NSApp.setActivationPolicy(.regular)"))
-        #expect(adapter.contains("func endForcedActivation() { NSApp.setActivationPolicy(.accessory) }"))
+        // The forced step is LaunchServices opening the app's own bundle with `activates`; it never touches the policy,
+        // so no Dock icon appears. (In-process activation variants were refused on macOS 26.)
+        #expect(adapter.contains("NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL"))
+        #expect(adapter.contains("configuration.activates = true"))
+        #expect(!adapter.contains("setActivationPolicy"))
+        #expect(adapter.contains("NSWorkspace.shared.frontmostApplication?.processIdentifier"))
     }
 
     // ⌘, in the Library, the menu-bar row and any "Open Settings" action all end at `actions.openSettings`, which is the
