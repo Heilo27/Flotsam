@@ -180,6 +180,7 @@ Empty (images 02, 05), no results (02), inline error with Retry (02, STO-DB-004)
 | Return | paste |
 | ⌥Return | paste as plain text |
 | ⇧Return | copy only |
+| ⌘C | copy the selected item only (same as ⇧Return); copies the search field's text instead when it has a selection |
 | ⌘1 to ⌘9 | quick paste row n |
 | Space (empty search) or ⌘Y | preview |
 | Esc | first press that applies: clear search if non-empty; else close preview if open; else, with several rows selected, reduce to one row; else close panel |
@@ -327,7 +328,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.hintPreview` | Preview | (7/15) |
 | `ui.library.hintClose` | Close | (5/15) |
 | `ui.library.hintClearSelection` | Clear selection | (15/15) |
-| `ui.library.keyReturn`, `keyOptionReturn`, `keyShiftReturn`, `keySpace`, `keyEsc` | Return, ⌥Return, ⇧Return, Space, Esc | (footer key caps) |
+| `ui.library.keyReturn`, `keyOptionReturn`, `keyShiftReturn`, `keyCommandC`, `keySpace`, `keyEsc` | Return, ⌥Return, ⇧Return, ⌘C, Space, Esc | (footer key caps) |
 | `ui.library.sidebarAll`, `sidebarPinned` | All, Pinned | (3/15, 6/15) |
 | `ui.library.sectionTypes`, `sectionTags`, `sectionApps` | Types, Tags, Apps | (5/15, 4/15, 4/15) |
 | `ui.library.appAnotherDevice`, `appUnknown` | Another device, Unknown | (14/15, 7/15) |

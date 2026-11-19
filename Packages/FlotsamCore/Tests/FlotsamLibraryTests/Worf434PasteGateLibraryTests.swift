@@ -185,15 +185,15 @@ struct Worf434PasteGateLibraryTests {
     }
 
     /// FR-003-18 / OC-8119. given Accessibility untrusted, then the footer notice reads 'Press ⌘V to paste' and the
-    /// second hint is ⇧Return Copy; given trusted, no notice and the second hint is ⌥Return Plain text. Red if the
+    /// second hint is ⌘C Copy; given trusted, no notice and the second hint is ⌥Return Plain text. Red if the
     /// footer stops asking the shared probe extension, or swaps the branches.
-    @Test("footer: untrusted shows the copy-only notice and the ⇧Return hint; trusted shows neither")
+    @Test("footer: untrusted shows the copy-only notice and the ⌘C hint; trusted shows neither")
     func footerFollowsAccessibility() {
         let untrusted = W434Rig(accessibility: false).model.footer()
         let trusted = W434Rig(accessibility: true).model.footer()
 
         #expect(untrusted.notice == "Press ⌘V to paste")
-        #expect(untrusted.hints.map(\.key) == ["Return", "⇧Return", "Space"])
+        #expect(untrusted.hints.map(\.key) == ["Return", "⌘C", "Space"])
         #expect(untrusted.hints[1].label == "Copy")
         #expect(trusted.notice == nil)
         #expect(trusted.hints[1].key == "⌥Return")
