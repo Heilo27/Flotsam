@@ -60,6 +60,21 @@ public enum ShelfLayout {
         isHorizontal(placement) ? searchRowHeight : searchRowHeight * 2
     }
 
+    // MARK: Share zone (FR-006-42)
+
+    /// The share zone's thickness: a strip along the bottom of a vertical panel, along the trailing edge of a horizontal
+    /// one. It exists only while a clip drag is over the panel.
+    public static let shareZoneThickness: CGFloat = 64
+
+    /// The share zone in the panel's own coordinates (origin bottom left, like the rest of this file). The view draws the
+    /// zone on the same edge with the same thickness, so what is drawn is what takes the drop.
+    public static func shareZone(for placement: ShelfPlacement, in size: CGSize) -> CGRect {
+        if isHorizontal(placement) {
+            return CGRect(x: size.width - shareZoneThickness, y: 0, width: shareZoneThickness, height: size.height)
+        }
+        return CGRect(x: 0, y: 0, width: size.width, height: shareZoneThickness)
+    }
+
     // MARK: Motion (FR-006-05)
 
     public static let slideInDuration: TimeInterval = 0.150

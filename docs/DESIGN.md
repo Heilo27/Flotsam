@@ -429,6 +429,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.shelf.empty` | Shelf is empty. Copy something, or drag an item here to pin it. | (63/150) |
 | `ui.shelf.drop` | Drop to pin | (11/15) |
 | `ui.shelf.sectionRecent` | Recent | (6/15) |
+| `ui.shelf.share` | Drop to share | (13/15) |
 
 The Pinned section label reuses `ui.library.pinned` (Library table).
 

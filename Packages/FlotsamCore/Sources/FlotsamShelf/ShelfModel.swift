@@ -43,6 +43,11 @@ public final class ShelfModel {
     public private(set) var isOpen = false
     /// A drag that the Shelf would accept is over the panel: the drop zone is highlighted (FR-006-12).
     public private(set) var isDropTargeted = false
+    /// A drag of Flotsam's own clips (from this Shelf or a Library row) is over the panel: the share zone is drawn
+    /// (FR-006-42).
+    public private(set) var isShareZoneShown = false
+    /// The pointer of such a drag is on the share zone: it is highlighted and takes the drop.
+    public private(set) var isShareTargeted = false
     /// The card a successful drop stored or bumped, highlighted for `ShelfLayout.dropHighlightDuration` and scrolled
     /// into view (FR-006-15). Set by `highlight(_:)`; cleared by `clearHighlight(of:)`.
     public private(set) var highlightedItemId: UUID?
@@ -158,6 +163,8 @@ public final class ShelfModel {
     public func didHide() {
         isOpen = false
         isDropTargeted = false
+        isShareZoneShown = false
+        isShareTargeted = false
         highlightedItemId = nil
         unsubscribe?()
         unsubscribe = nil
@@ -403,6 +410,14 @@ public final class ShelfModel {
 
     public func setDropTargeted(_ targeted: Bool) {
         if isDropTargeted != targeted { isDropTargeted = targeted }
+    }
+
+    /// The share zone is drawn while `shown`, and highlighted while `targeted` (FR-006-42). A zone that is not drawn
+    /// cannot be targeted.
+    public func setShareZone(shown: Bool, targeted: Bool) {
+        if isShareZoneShown != shown { isShareZoneShown = shown }
+        let effective = shown && targeted
+        if isShareTargeted != effective { isShareTargeted = effective }
     }
 
     public func highlight(_ id: UUID) { highlightedItemId = id }

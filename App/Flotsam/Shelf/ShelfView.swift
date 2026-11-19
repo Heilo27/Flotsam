@@ -26,6 +26,7 @@ struct ShelfView: View {
                 content
             }
             if model.isDropTargeted { dropZone }
+            if model.isShareZoneShown { shareZone }
             Button(action: close) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
                 .buttonStyle(.plain)
                 .padding(6)
@@ -93,6 +94,29 @@ struct ShelfView: View {
             .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
             .overlay { Text(verbatim: ShelfText.string(ShelfText.dropZone)).font(.callout.bold()).foregroundStyle(Color.accentColor) }
             .padding(4)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// The share zone while a drag of Flotsam's own clips is over the panel (FR-006-42): a strip on the trailing edge of
+    /// the horizontal placements and along the bottom of the vertical ones, where `ShelfLayout.shareZone` tests the
+    /// pointer. It never takes clicks; the panel's drag destination takes the drop.
+    private var shareZone: some View {
+        let shape = RoundedRectangle(cornerRadius: 10)
+        let label = VStack(spacing: 4) {
+            Image(systemName: "square.and.arrow.up")
+            Text(verbatim: ShelfText.string(ShelfText.shareZone)).font(.caption.bold()).multilineTextAlignment(.center)
+        }
+        .foregroundStyle(Color.accentColor)
+        .padding(4)
+        return shape
+            .fill(Color.accentColor.opacity(model.isShareTargeted ? 0.35 : 0.15))
+            .overlay(shape.strokeBorder(Color.accentColor, lineWidth: model.isShareTargeted ? 3 : 1.5))
+            .overlay { label }
+            .frame(
+                width: horizontal ? ShelfLayout.shareZoneThickness : nil,
+                height: horizontal ? nil : ShelfLayout.shareZoneThickness)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: horizontal ? .trailing : .bottom)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }

@@ -63,6 +63,9 @@ public struct ShelfRevealMachine: Sendable, Equatable {
         case pasted
         /// A drop was processed and stored (FR-006-15).
         case dropCompleted
+        /// The system share picker, opened from the share zone, is up (`true`) or done (`false`), FR-006-42. The pointer
+        /// is on the picker's popover, not the panel, so a transient Shelf must not hide under it.
+        case sharing(Bool)
         case spaceChanged
         case libraryOpened
         case screensChanged
@@ -90,6 +93,7 @@ public struct ShelfRevealMachine: Sendable, Equatable {
     private var pointer: Pointer = .away
     private var isDragging = false
     private var isButtonDown = false
+    private var isSharing = false
     private var visible: Visible?
     private var dwell: Dwell?
     private var awaySince: Date?
@@ -188,6 +192,8 @@ public struct ShelfRevealMachine: Sendable, Equatable {
             hide(into: &commands)
         case .dropCompleted:
             if visible != nil { holdUntil = now.addingTimeInterval(Self.dropHold) }
+        case .sharing(let sharing):
+            isSharing = sharing && visible != nil
         }
     }
 
@@ -200,6 +206,7 @@ public struct ShelfRevealMachine: Sendable, Equatable {
     }
 
     private mutating func hide(into commands: inout [Command]) {
+        isSharing = false
         dwell = nil
         awaySince = nil
         holdUntil = nil
@@ -221,7 +228,7 @@ public struct ShelfRevealMachine: Sendable, Equatable {
         } else {
             dwell = nil
         }
-        let wantsAway = visible?.trigger.mode == .transient && pointer != .onShelf && !isDragging
+        let wantsAway = visible?.trigger.mode == .transient && pointer != .onShelf && !isDragging && !isSharing
         if wantsAway {
             if awaySince == nil { awaySince = now }
         } else {
