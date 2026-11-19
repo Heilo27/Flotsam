@@ -626,11 +626,14 @@ final class Rig {
     // rescans the whole library per item, or the 500-item tag loops with one read per item.
     @Test("OC-4230 given 10,000 items, when pin, tag and delete repeat through the model, then p95 is under 100 ms and tagging 500 is under 1 s")
     func modelPerformanceAtTenThousand() async throws {
-        // Every run asserts the work done; only the timing is best-of-three (TASK-447: wall-clock figures of a debug build
-        // lost to scheduler stalls under a full-suite run). Bounds unchanged: the metric is the worst figure as a fraction
-        // of its own bound, so < 1 means every command's p95 < 100 ms and the 500-item tag < 1000 ms. Code that is truly
-        // over the bound is over it on all three runs. (Same shape as `bestOfThree` in FlotsamStorageTests; test targets
-        // cannot share a helper, so the loop is inline here.)
+        // Every run asserts the work done; only the timing is best-of-three and load-normalized (TASK-447, TASK-496). The
+        // metric is the worst figure as a fraction of its own bound, so < 1 means every command's p95 < 100 ms and the
+        // 500-item tag < 1000 ms: bounds unchanged. Best-of-three alone does not survive a load that outlasts the three
+        // runs (the same wall-clock figure under a loaded machine reads 5x over budget three times running), so each
+        // run's fraction is also scaled by the CPU share a spinning probe thread was given while the commands ran
+        // (`loadNormalized`, TASK-481): on a quiet machine the share is 1.0 and the fraction is read unchanged; code
+        // that is truly slow is CPU-bound, takes the same share, and stays over the bound on all three runs. Only the
+        // commands are inside the probe's window, not the 10,000-item setup.
         var figures = ""
         var worstFraction = Double.infinity
         for _ in 1...3 {
@@ -642,26 +645,31 @@ final class Rig {
             func millis(_ d: Duration) -> Double { Double(d.components.seconds) * 1000 + Double(d.components.attoseconds) / 1e15 }
             func p95(_ samples: [Double]) -> Double { samples.sorted()[Int((Double(samples.count) * 0.95).rounded(.up)) - 1] }
 
-            var pin: [Double] = [], toggle: [Double] = [], delete: [Double] = []
-            for step in 1...20 {
-                rig.model.select(id: n(step * 10))
-                pin.append(millis(await clock.measure { _ = await rig.model.togglePinSelected() }))
-                rig.model.select(id: n(step * 10 + 1))
-                toggle.append(millis(await clock.measure { _ = await rig.model.toggleTagOnSelection(tag) }))
-                rig.model.select(id: n(step * 10 + 2))
-                delete.append(millis(await clock.measure { _ = await rig.model.deleteSelected() }))
+            var rawFigures = ""
+            let fraction = await loadNormalized { () async -> Double in
+                var pin: [Double] = [], toggle: [Double] = [], delete: [Double] = []
+                for step in 1...20 {
+                    rig.model.select(id: n(step * 10))
+                    pin.append(millis(await clock.measure { _ = await rig.model.togglePinSelected() }))
+                    rig.model.select(id: n(step * 10 + 1))
+                    toggle.append(millis(await clock.measure { _ = await rig.model.toggleTagOnSelection(tag) }))
+                    rig.model.select(id: n(step * 10 + 2))
+                    delete.append(millis(await clock.measure { _ = await rig.model.deleteSelected() }))
+                }
+                rig.model.select(id: n(5_001))
+                for value in 5_002...5_500 { rig.model.toggle(id: n(value)) }
+                #expect(rig.model.selection.count == 500)
+                let bulk = millis(await clock.measure { _ = await rig.model.toggleTagOnSelection(tag) })
+                rawFigures = "pin p95 \(p95(pin)) ms, tag p95 \(p95(toggle)) ms, delete p95 \(p95(delete)) ms, bulk tag \(bulk) ms"
+                return max(p95(pin) / 100, p95(toggle) / 100, p95(delete) / 100, bulk / 1000)
             }
-            rig.model.select(id: n(5_001))
-            for value in 5_002...5_500 { rig.model.toggle(id: n(value)) }
-            #expect(rig.model.selection.count == 500)
-            let bulk = millis(await clock.measure { _ = await rig.model.toggleTagOnSelection(tag) })
 
             #expect(try rig.fresh { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item WHERE pinned = 1") } == 20)
             #expect(try rig.count("item") == 9_980)
             #expect(try rig.count("itemTag") == 520)
             #expect(rig.reported.errors.isEmpty)
-            figures = "pin p95 \(p95(pin)) ms, tag p95 \(p95(toggle)) ms, delete p95 \(p95(delete)) ms, bulk tag \(bulk) ms"
-            worstFraction = min(worstFraction, max(p95(pin) / 100, p95(toggle) / 100, p95(delete) / 100, bulk / 1000))
+            figures = "\(rawFigures); load-normalized fraction of budget \(fraction)"
+            worstFraction = min(worstFraction, fraction)
             if worstFraction < 1 { break }
         }
         #expect(worstFraction < 1, "over budget on all 3 runs; last run: \(figures)")
