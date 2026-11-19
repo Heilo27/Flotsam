@@ -46,6 +46,9 @@ struct LibraryItemsView: View {
                 }
             }
         }
+        // Ages the rows' relative times while the panel is shown (FR-003-24). The model owns the watch task and cancels
+        // it on a hide; the key restarts it on the next open or row change.
+        .task(id: model.relativeTimeWatchKey) { await model.runRelativeTimeWatch() }
     }
 
     private func pageIfLast(_ row: LibraryRowPresentation, in rows: [LibraryRowPresentation]) {
