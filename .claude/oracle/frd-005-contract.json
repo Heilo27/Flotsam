@@ -355,13 +355,13 @@
     {
       "id": "OC-5036",
       "requirement": "AC-005-06",
-      "given": "Content marked Concealed is on the clipboard; item count N",
+      "given": "Content marked Concealed is on the clipboard; the secure vault is available; item count N",
       "when": "user presses the Save Clipboard chord",
-      "then": "count stays N; no item contains the content; the matching CAP-* HUD (concealed) appears",
+      "then": "count becomes N+1 with one secure item (masked, no plain text stored); no item contains the content in plain text; the saved HUD appears and no CAP-* HUD",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
-      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth): SPEC CONFLICT, not edited: AC-005-06 / FR-005-06 still say Save Clipboard saves nothing for Concealed content, but FR-005-06 runs capture gates 2 to 5 and FR-001-04 gate 3 now makes a concealed copy a secure item (production saves it). Friday to resolve in FRD-005 FR-005-06, then this `then` follows."
+      "amended": "2026-11-18 TASK-498 (Ryan's ruling: concealed copies are stored encrypted, masked, behind owner auth); spec conflict resolved 2026-11-18 TASK-503: FR-005-06 / AC-005-06 now say Save Clipboard stores a concealed copy as a secure item with the saved HUD."
     },
     {
       "id": "OC-5037",

@@ -43,7 +43,9 @@ public enum MenuBarModel {
         MenuIcon(mode: mode, warning: hasWarning)
     }
 
-    /// Active pauses; paused and curated both resume to active.
+    /// The one home of the Pause/Resume Capture rule (FR-008-16, FR-007-12): the menu label and the mode a click
+    /// sets both come from here. Active offers Pause (-> Paused); Paused and Curated offer Resume (-> Active).
+    /// Curated is chosen in Settings only, so the menu never produces it.
     public static func captureToggle(for mode: CaptureMode) -> (titleKey: String, next: CaptureMode) {
         switch mode {
         case .active: ("ui.menu.pauseCapture", .paused)
