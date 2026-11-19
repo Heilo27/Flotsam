@@ -143,10 +143,10 @@ Menu-bar glyph (template image, 18 pt, adapts to the menu-bar tint). Shape diffe
 
 | State | Glyph | Accessibility label |
 |---|---|---|
-| Active | tilted plank over a wave | Flotsam, recording |
+| Active | tilted plank over a wave | Flotsam, capturing |
 | Paused | two pause bars | Flotsam, capture paused |
-| Curated | dashed plank over a wave | Flotsam, recording pinned items only |
-| Warning | active glyph plus a dot | Flotsam, recording, needs attention |
+| Curated | dashed plank over a wave | Flotsam, curated capture |
+| Warning | active glyph plus a dot | the mode's label, then Needs attention |
 
 ## 4. Components and states
 
