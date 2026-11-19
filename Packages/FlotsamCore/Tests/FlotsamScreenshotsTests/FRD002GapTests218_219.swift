@@ -98,6 +98,13 @@ struct LaunchReconcileGapTests {
         #expect(copiesBefore.count == 20 && copiesBefore.values.allSatisfy { $0 == 1 })
         #expect(mark1 > mark, "the launch advanced the persisted watermark")
         // when Flotsam relaunches with no new files
+        // TASK-501 (OC-2040 flake): a relaunch is a new process, so the first launch has to be gone first. Its last imports
+        // are still settling at this point, and a settle reads the clock when it runs: one that ran after the clock step
+        // below wrote the later time over the watermark under test (the persisted value was then 60 s past mark1).
+        // Switching pickup off ends the first launch (its settles stop at the `active` guard); it is back on for the next.
+        rig.settings.set(false, for: SettingKeys.screenshotsEnabled)
+        await rig.watcher.settingsDidChange()
+        rig.settings.set(true, for: SettingKeys.screenshotsEnabled)
         try await rig.relaunch()
         rig.clock.advance(by: 60)
         #expect(try await rig.watermark() == mark1, "the fresh handle reads back the watermark the first launch persisted")

@@ -33,6 +33,32 @@ extension ScreenshotImportSignpostTests {
         return Set(begun.map(\.id)).subtracting(ended)
     }
 
+    /// Waits until every interval that began in the window has ended (and at least `minimum` have begun), then the 1.5 s
+    /// settle for an unexpected extra end, and returns that snapshot. TASK-501 (OC-WORF457-02 flake): the window is open
+    /// ended on the begin side only, so another suite's import that begins inside it and is still running at the moment of
+    /// the snapshot counts as an interval that "ended 0 times". `collect(atLeast:)` could not help: it counts events
+    /// process-wide, so it returns the moment anyone's events reach the count, and its fixed settle then races the
+    /// stream's delivery under load. A begin that has no end yet is a pickup in flight, not an error, so this waits for it;
+    /// the assertions run on a snapshot in which nothing in the window is still open.
+    private func settledMarks(
+        _ probe: SignpostProbe, from windowStart: Date, atLeastBegun minimum: Int
+    ) async throws -> (begun: [SignpostProbe.Mark], ends: [SignpostProbe.Mark]) {
+        var snapshot = advMarks(probe, from: windowStart)
+        for _ in 0..<3 {
+            for _ in 0..<200 {
+                let current = advMarks(probe, from: windowStart)
+                let ended = Set(current.ends.map(\.id))
+                if current.begun.count >= minimum, current.begun.allSatisfy({ ended.contains($0.id) }) { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            try await Task.sleep(for: .seconds(1.5))
+            snapshot = advMarks(probe, from: windowStart)
+            let ended = Set(snapshot.ends.map(\.id))
+            if snapshot.begun.count >= minimum, snapshot.begun.allSatisfy({ ended.contains($0.id) }) { break }
+        }
+        return snapshot
+    }
+
     /// OC-WORF457-01. given a pickup whose ingest is held, then its interval is OPEN while the ingest runs (it covers
     /// "the stability check to the ingest result", FR-002-14) and closes once the ingest returns. Red if the end is
     /// moved ahead of the ingest (for example `span.end()` right after the begin, or after only the stability wait).
@@ -92,8 +118,7 @@ extension ScreenshotImportSignpostTests {
             #expect(ingest.heldIngests == 2)
             ingest.releaseIngests()
             for job in jobs { _ = await job.value }
-            _ = try await probe.collect(atLeast: 4)
-            let (begun, ends) = advMarks(probe, from: windowStart)
+            let (begun, ends) = try await settledMarks(probe, from: windowStart, atLeastBegun: 2)
             await probe.stop()
             let begunIDs = begun.map(\.id)
             #expect(begunIDs.count >= 2, "begins in window \(begunIDs.count)")
