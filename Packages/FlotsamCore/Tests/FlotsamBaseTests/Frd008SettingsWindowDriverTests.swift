@@ -332,8 +332,8 @@ private func labelProblem(_ control: ScannedControl) -> String? {
             "window.setFrameAutosaveName(\"\")",
             "window.center()",
             "func select(_ pane: SettingsPane) { tabs.select(pane) }",
-            "NSApp.activate()",
-            "window.makeKeyAndOrderFront(nil)",
+            "front = WindowFrontAdapter(window: window)",  // activation and ordering front: WindowFrontAdapter (TASK-521)
+            "func bringToFront() { front.bringToFront() }",
             "didSelect(items[index].pane)",
             "driver = SettingsWindowDriver(settings: env.settings)",
             "driver.presenter = self",

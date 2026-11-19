@@ -8,6 +8,7 @@ import SwiftUI
 final class OnboardingWindowController: NSObject, NSWindowDelegate {
     private let container: AppContainer
     private var window: NSWindow?
+    private var front: WindowFrontAdapter?
     private var model: OnboardingModel?
 
     init(container: AppContainer) {
@@ -16,9 +17,8 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
 
     /// `resuming`: the launch-time show continues an unfinished onboarding; "Show Setup Guide…" starts over.
     func show(resuming: Bool = false) {
-        if let window {
-            window.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate()
+        if window != nil {
+            front?.bringToFront()
             return
         }
         let model = OnboardingModel(container: container, resuming: resuming)
@@ -32,14 +32,16 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
         window.center()
         self.window = window
         self.model = model
-        window.makeKeyAndOrderFront(nil)
         // An agent app has no active window of its own, so it must activate to bring this one forward.
-        NSApplication.shared.activate()
+        let front = WindowFrontAdapter(window: window)
+        self.front = front
+        front.bringToFront()
     }
 
     func windowWillClose(_ notification: Notification) {
         model?.markCompleted()
         window = nil
+        front = nil
         model = nil
     }
 }
