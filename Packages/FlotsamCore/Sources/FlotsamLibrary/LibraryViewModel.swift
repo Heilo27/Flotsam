@@ -23,7 +23,12 @@ public final class LibraryViewModel {
     // MARK: Observable state
 
     public private(set) var loadState: LoadState = .loading
-    public private(set) var loadedRows: [ItemRow] = []
+    public private(set) var loadedRows: [ItemRow] = [] { didSet { rowsRevision += 1 } }
+    /// Incremented whenever `loadedRows` is replaced or extended; part of `relativeTimeWatchKey`.
+    private var rowsRevision = 0
+    /// Incremented each time `watchRelativeTimes` wakes after a row label's text is due to change. `rowPresentations()`
+    /// reads it, so the rows re-render with a fresh `now` (FR-003-07).
+    public private(set) var timeRevision = 0
     public private(set) var totalCount = 0
     public private(set) var visibleLimit = LibraryViewModel.rowsPerStep
     public private(set) var searchText = ""
@@ -55,6 +60,8 @@ public final class LibraryViewModel {
     /// Storage's change feed (FR-004-13): while the panel is shown, a capture or any commit reloads the list and the
     /// sidebar counts at once. Nil in tests that do not exercise it.
     @ObservationIgnored private let events: ItemEventBus?
+    /// The one time source for every row's relative time and its VoiceOver label (FR-003-07, FR-003-21).
+    @ObservationIgnored private let clock: any WallClock
     @ObservationIgnored private var unsubscribeEvents: (@Sendable () -> Void)?
     /// A reload is running; a change that arrives meanwhile is queued, never allowed to cancel it, so an Organize
     /// command's own `refresh(selecting:)` keeps the selection it asked for.
@@ -82,7 +89,7 @@ public final class LibraryViewModel {
     public init(
         source: any LibraryDataSource, paster: any PastePerforming, host: any PasteHost,
         preferences: any LibraryPreferences, effects: LibraryEffects = LibraryEffects(),
-        organizer: LibraryOrganizer? = nil, events: ItemEventBus? = nil
+        organizer: LibraryOrganizer? = nil, events: ItemEventBus? = nil, clock: any WallClock = SystemClock()
     ) {
         self.source = source
         self.paster = paster
@@ -91,6 +98,7 @@ public final class LibraryViewModel {
         self.effects = effects
         self.organizer = organizer
         self.events = events
+        self.clock = clock
         viewMode = preferences.viewMode
         sort = preferences.sort
     }
@@ -119,8 +127,12 @@ public final class LibraryViewModel {
     /// The active sort, for the header's sort menu (FR-004-12).
     public var activeSort: LibrarySort { sort }
 
-    public func rowPresentations(now: Date = Date()) -> [LibraryRowPresentation] {
-        visibleRows.enumerated().map { LibraryRowPresentation(row: $1, position: $0, now: now) }
+    /// Every row is formatted against one `now` from the model's clock: the visible relative time and the VoiceOver label
+    /// cannot disagree. Reading `timeRevision` subscribes the view to `watchRelativeTimes` (FR-003-07).
+    public func rowPresentations() -> [LibraryRowPresentation] {
+        _ = timeRevision
+        let now = clock.now()
+        return visibleRows.enumerated().map { LibraryRowPresentation(row: $1, position: $0, now: now) }
     }
 
     /// The empty history state, as opposed to "no matches" (FR-003-11): nothing stored at all.
@@ -189,6 +201,36 @@ public final class LibraryViewModel {
             try? await Task.sleep(for: interval)
         }
     }
+
+    /// What `watchRelativeTimes` depends on: restart it when the panel shows or hides, or when the rows on screen change.
+    public struct RelativeTimeWatchKey: Hashable, Sendable {
+        let isShown: Bool
+        let rowsRevision: Int
+        let visibleLimit: Int
+    }
+
+    public var relativeTimeWatchKey: RelativeTimeWatchKey {
+        RelativeTimeWatchKey(isShown: isShown, rowsRevision: rowsRevision, visibleLimit: visibleLimit)
+    }
+
+    /// Keeps the rows' relative times current while the panel is shown (FR-003-07). It sleeps until the soonest visible
+    /// label is due to read differently (every second for a copy under a minute old, then every minute, hour or day,
+    /// `ItemSpeech.secondsUntilRelativeTimeChanges`), then bumps `timeRevision`. Returns when the panel hides, the
+    /// caller's task is cancelled, or no visible label can change again (all dated), so a hidden panel costs no wakeups
+    /// and a panel of old rows sleeps. The caller restarts it when `relativeTimeWatchKey` changes.
+    public func watchRelativeTimes() async {
+        while !Task.isCancelled, isShown {
+            let now = clock.now()
+            let due = visibleRows.compactMap { ItemSpeech.secondsUntilRelativeTimeChanges($0.lastCopiedAt, now: now) }.min()
+            guard let due else { return }
+            await clock.sleep(for: .seconds(due + Self.relativeTimeSlack))
+            guard !Task.isCancelled, isShown else { return }
+            timeRevision += 1
+        }
+    }
+
+    /// Added to each sleep so the wake lands just after a label's boundary, never just before it.
+    static let relativeTimeSlack: TimeInterval = 0.05
 
     /// The footer's "Enable" button: open the Accessibility pane (FR-008-14). It does not prompt; the grant is
     /// noticed by `refreshAccessibility`.

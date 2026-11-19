@@ -45,5 +45,16 @@ public enum ItemSpeech {
         return phrase == yesterday ? phrase.localizedCapitalized : phrase
     }
 
+    /// Seconds until `relativeTime(date, now:)` next reads differently, or nil when it never will again (a dated copy, more
+    /// than 7 days old). The label's finest step is the one the formatter shows for the copy's age: seconds under a
+    /// minute ("5s ago"), then minutes, hours and days, each cut off (never rounded) at its step. This is the one rule for
+    /// how often a visible label needs a fresh `now` (FR-003-07).
+    public static func secondsUntilRelativeTimeChanges(_ date: Date, now: Date) -> TimeInterval? {
+        let age = now.timeIntervalSince(min(date, now))
+        if age > relativeWindow { return nil }
+        let step: TimeInterval = age < 60 ? 1 : age < 3_600 ? 60 : age < 86_400 ? 3_600 : 86_400
+        return step - age.truncatingRemainder(dividingBy: step)
+    }
+
     private static func template(_ key: String) -> String { FlotsamStrings.text(forKey: key) ?? "" }
 }
