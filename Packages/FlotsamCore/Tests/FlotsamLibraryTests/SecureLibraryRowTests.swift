@@ -27,4 +27,25 @@ import Testing
         #expect(presented.unavailableBadge == LibraryText.string("ui.library.secureUnavailable"))
         #expect(presented.unavailableBadge?.isEmpty == false)
     }
+
+    /// FR-003-21 / FR-003-23: VoiceOver never reads the mask (eight "bullet"s) or the kind word for a secure row. It
+    /// says "Secure item", then the source app and the age.
+    @Test func aSecureRowIsSpokenAsSecureItemNotAsItsMask() {
+        let now = Date(timeIntervalSince1970: 1_000_100)
+        let label = ItemSpeech.label(for: row(unavailable: false), now: now)
+        let secure = FlotsamStrings.text(forKey: "ui.library.spokenSecure") ?? ""
+        #expect(!secure.isEmpty)
+        #expect(label.hasPrefix(secure + ", "))
+        #expect(!label.contains(SecureClip.mask))
+        #expect(!label.contains("\u{2022}"))
+        #expect(!label.contains(KindLabel.text(for: .text)))
+        #expect(label.contains("1Password"))
+    }
+
+    @Test func anUnavailableSecureRowIsSpokenWithItsUnavailableWord() {
+        let label = ItemSpeech.label(for: row(unavailable: true), now: Date(timeIntervalSince1970: 1_000_100))
+        let secure = FlotsamStrings.text(forKey: "ui.library.spokenSecure") ?? ""
+        #expect(label.hasPrefix(secure + ", Unavailable, "))
+        #expect(!label.contains(SecureClip.mask))
+    }
 }
