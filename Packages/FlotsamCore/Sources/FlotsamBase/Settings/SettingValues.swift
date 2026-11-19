@@ -112,9 +112,9 @@ public struct BundleIdentifierList: SettingValue {
     var isUsable: Bool { identifiers.allSatisfy { !$0.isEmpty && !$0.contains(where: \.isWhitespace) } }
 
     /// FR-008-11: copies from these apps are never stored. The default is empty: password managers' concealed copies are
-    /// kept encrypted (FRD-001 FR-001-04 gate 3), so the list is only what the user chooses to exclude. Bundle
-    /// identifiers are unverified against real installs (FRD-008 §9 item 2; spike TASK-009), so a wrong one silently
-    /// fails to protect that app.
+    /// kept encrypted (FRD-001 FR-001-04 gate 3), so the list is only what the user chooses to exclude. Identifiers the
+    /// user types are unverified, so a wrong one silently fails to protect that app; `passwordManagerPreset` holds only
+    /// identifiers verified against a source (FRD-008 §9 item 2).
     public static let defaultIgnoredApps = BundleIdentifierList([])
 
     /// The six password-manager apps the list held by default before secure clips (FR-008-11). Kept only so
@@ -122,6 +122,21 @@ public struct BundleIdentifierList: SettingValue {
     static let retiredIgnoredAppsDefault = BundleIdentifierList([
         "com.apple.keychainaccess", "com.apple.Passwords", "com.1password.1password",
         "com.agilebits.onepassword7", "com.bitwarden.desktop", "org.keepassxc.keepassxc",
+    ])
+
+    /// FR-008-11: the "Add Password Managers" preset, the one home of the list. Static and never fetched. Every
+    /// identifier was checked against the vendor's or Homebrew's published bundle identifier, or the app's own
+    /// Info.plist (FRD-008 section 9 item 2). An app not listed here, or installed under another identifier, is added
+    /// by hand.
+    public static let passwordManagerPreset = BundleIdentifierList([
+        "com.apple.Passwords",  // Passwords (macOS 15+, /System/Applications)
+        "com.apple.keychainaccess",  // Keychain Access
+        "com.1password.1password",  // 1Password 8
+        "com.bitwarden.desktop",  // Bitwarden
+        "org.keepassxc.keepassxc",  // KeePassXC
+        "me.proton.pass.electron",  // Proton Pass
+        "com.nordsec.nordpass",  // NordPass
+        "com.keepersecurity.passwordmanager",  // Keeper
     ])
 
     /// FR-005-13: typed triggers do not expand in these apps. FRD-005 owns the list; it is declared here because the

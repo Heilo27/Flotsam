@@ -15,17 +15,75 @@ struct ShelfView: View {
     let dragOut: ShelfDragOut
     let close: @MainActor () -> Void
 
+    @FocusState private var searchFocused: Bool
+
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            content
+            VStack(spacing: 0) {
+                if model.showsSearch { searchHeader }
+                content
+            }
             if model.isDropTargeted { dropZone }
             Button(action: close) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
                 .buttonStyle(.plain)
                 .padding(6)
                 .accessibilityLabel(Text(verbatim: ShelfText.string(ShelfText.close)))
         }
+    }
+
+    /// The search field and type pills of a sticky Shelf (FR-006-22): one row in the horizontal placements, the field
+    /// above the pills in the vertical ones. The right edge stays clear of the close button.
+    private var searchHeader: some View {
+        let layout = horizontal ? AnyLayout(HStackLayout(spacing: 12)) : AnyLayout(VStackLayout(spacing: 0))
+        return layout {
+            searchField
+            typePills
+        }
+        .padding(.leading, ShelfLayout.contentPadding)
+        .padding(.trailing, ShelfLayout.contentPadding + 24)
+        .frame(height: ShelfLayout.searchHeaderHeight(for: placement))
+        .onAppear { searchFocused = true }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+            TextField(
+                ShelfText.string(ShelfText.searchPlaceholder),
+                text: Binding(get: { model.searchText }, set: { model.setSearchText($0) })
+            )
+            .textFieldStyle(.plain)
+            .focused($searchFocused)
+            .accessibilityLabel(ShelfText.string(ShelfText.searchPlaceholder))
+        }
+        .frame(width: horizontal ? 220 : nil, height: ShelfLayout.searchRowHeight)
+    }
+
+    /// All, then each type that has an item, in the Library's Types order. A pill is a button, so it is also reachable
+    /// by Tab and VoiceOver; ⌥↑ / ⌥↓ step through them without leaving the field.
+    private var typePills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                pill(title: ShelfText.string(ShelfText.filterAll), kind: nil)
+                ForEach(model.availableKinds, id: \.self) { kind in
+                    pill(title: ShelfText.typeTitle(kind), kind: kind)
+                }
+            }
+        }
+        .frame(height: ShelfLayout.searchRowHeight)
+    }
+
+    private func pill(title: String, kind: ItemKind?) -> some View {
+        let selected = model.kindFilter == kind
+        return Button { model.setKindFilter(kind) } label: {
+            Text(verbatim: title).font(.caption).lineLimit(1)
+                .padding(.horizontal, 10).padding(.vertical, 4)
+                .background(Capsule().fill(selected ? Color.accentColor.opacity(0.28) : Color.primary.opacity(0.06)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     /// The drop zone while an acceptable drag is over the panel (FR-006-12). It never takes clicks.
@@ -57,7 +115,15 @@ struct ShelfView: View {
 
     @ViewBuilder private var content: some View {
         let sections = model.sections()
-        if sections.isEmpty {
+        if sections.isEmpty && model.isFiltering {
+            // A search or type filter that matches nothing; the empty-history text would be wrong here (FR-006-22).
+            VStack(spacing: 4) {
+                Text(verbatim: ShelfText.noResultsTitle(query: model.searchText)).font(.headline)
+                Text(verbatim: ShelfText.string(ShelfText.noResultsBody)).font(.subheadline)
+            }
+            .foregroundStyle(.secondary).multilineTextAlignment(.center).padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if sections.isEmpty {
             Text(verbatim: ShelfText.string(ShelfText.empty))
                 .foregroundStyle(.secondary).multilineTextAlignment(.center).padding()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,6 +134,7 @@ struct ShelfView: View {
                         ForEach(sections.flatMap(\.cards)) { card in cardView(card) }
                     }.padding(ShelfLayout.contentPadding)
                 }
+                .id(queryIdentity)
                 .onChange(of: scrollKey(sections)) { _, key in reveal(key, in: proxy, anchor: .leading) }
             }
         } else {
@@ -82,14 +149,18 @@ struct ShelfView: View {
                         }
                     }.padding(ShelfLayout.contentPadding)
                 }
+                .id(queryIdentity)
                 .onChange(of: scrollKey(sections)) { _, key in reveal(key, in: proxy, anchor: .top) }
             }
         }
     }
 
+    /// A new search or type filter starts the list at its first card (FR-006-22): the scroll view is rebuilt per query.
+    private var queryIdentity: String { "\(model.kindFilter?.rawValue ?? "")|\(model.searchText)" }
+
     private func cardView(_ card: ShelfCardPresentation) -> some View {
         ShelfCardView(
-            card: card, model: model, size: ShelfLayout.cardSize(for: placement), horizontal: horizontal,
+            card: card, model: model, size: ShelfLayout.cardSize(for: placement, showsSearch: model.showsSearch), horizontal: horizontal,
             thumbnail: thumbnail, dragOut: dragOut)
     }
 }

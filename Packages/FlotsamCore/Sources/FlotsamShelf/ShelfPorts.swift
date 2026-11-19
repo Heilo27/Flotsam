@@ -14,6 +14,15 @@ public protocol ShelfDataSource: Sendable {
     func setPinned(ids: [UUID], pinned: Bool) async -> FlotsamResult<Bool>
     /// Deletes the items; returns the ids actually removed (FRD-004 FR-004-09).
     func delete(ids: [UUID]) async -> FlotsamResult<[UUID]>
+    /// The per-kind counts the Library's sidebar reads; the type pills show only kinds that have an item (FR-006-22).
+    func sidebarCounts() async -> FlotsamResult<SidebarCounts>
+}
+
+extension ShelfDataSource {
+    /// A source that does not count (a test fake) offers no type pills.
+    public func sidebarCounts() async -> FlotsamResult<SidebarCounts> {
+        .success(SidebarCounts(all: 0, pinned: 0, kinds: [:], tags: [], apps: []))
+    }
 }
 
 extension FlotsamDatabase: ShelfDataSource {}

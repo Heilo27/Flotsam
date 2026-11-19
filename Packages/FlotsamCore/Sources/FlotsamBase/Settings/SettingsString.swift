@@ -40,6 +40,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
 
     // Lists (Triggers and Privacy)
     case addApp, removeApp, resetToDefaults, chooseApp, chooseAppPrompt, notInstalled
+    /// The one-tap password-manager preset on the ignored-apps list (FR-008-11).
+    case addPasswordManagers, addPasswordManagersHelp
     case confirmResetIgnoredTitle, confirmResetIgnored, resetAction
 
     // Privacy
@@ -53,8 +55,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case qualityOriginalHelp, qualityBalancedHelp, qualityEfficientHelp
     case captureMode, modeActive, modePaused, modeCurated, modeActiveHelp, modePausedHelp, modeCuratedHelp
     case usageItems, usageImages, usageDatabase, usageUnavailable
-    case clearHistory, clearRange, rangeLastHour, rangeLast24Hours, rangeAllTime
-    case clearIncludeExempt, clearCounting, clearNothing, clearCountFailed, clearCount, clearDelete, clearDeleting, clearDone, cancel
+    case clearHistory, clearRange, rangeLast5Minutes, rangeLastHour, rangeLast24Hours, rangeAllTime
+    case clearIncludeExempt, clearCounting, clearNothing, clearCountFailed, clearCount, clearDelete, clearDeleting, clearDone, clearRecentTitle, cancel
     case confirmShortenTitle, confirmShorten, confirmBudgetTitle, confirmBudget, deleteAction
     case revealDataFolder
 

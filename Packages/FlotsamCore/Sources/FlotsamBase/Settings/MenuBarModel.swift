@@ -31,6 +31,10 @@ public enum MenuEntry: Equatable, Sendable {
     case separator
     /// "Pause Capture" or "Resume Capture"; choosing it writes `next` to `capture.mode`.
     case captureToggle(titleKey: String, next: CaptureMode)
+    /// The "Pause For" submenu (`PauseDuration.allCases`); offered only while capture is Active (FR-008-16).
+    case pauseFor
+    /// The "Clear Recent" submenu (`ClearRange.recentMenuRanges`); each choice asks for confirmation (FR-007-11).
+    case clearRecent
     case notices
     case settings
     case setupGuide
@@ -68,7 +72,9 @@ public enum MenuBarModel {
         let toggle = captureToggle(for: mode)
         var rows: [MenuEntry] = [.openLibrary(openLibrary), .saveClipboard(saveClipboard)]
         if shelfEnabled { rows.append(.toggleShelf(toggleShelf)) }
-        rows += [.separator, .captureToggle(titleKey: toggle.titleKey, next: toggle.next), .notices, .separator]
+        rows += [.separator, .captureToggle(titleKey: toggle.titleKey, next: toggle.next)]
+        if mode == .active { rows.append(.pauseFor) }
+        rows += [.clearRecent, .notices, .separator]
         rows += [.settings, .setupGuide, .separator, .quit]
         return rows
     }

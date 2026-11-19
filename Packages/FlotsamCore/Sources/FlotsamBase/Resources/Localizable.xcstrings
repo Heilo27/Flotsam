@@ -1253,12 +1253,42 @@
         }
       }
     },
+    "ui.library.sidebarNotes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notes"
+          }
+        }
+      }
+    },
     "ui.library.sidebarPinned" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pinned"
+          }
+        }
+      }
+    },
+    "ui.library.sidebarShortcuts" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shortcuts"
+          }
+        }
+      }
+    },
+    "ui.library.sidebarVideos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videos"
           }
         }
       }
@@ -1493,6 +1523,16 @@
         }
       }
     },
+    "ui.menu.clearRecent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Recent"
+          }
+        }
+      }
+    },
     "ui.menu.dismissAll" : {
       "localizations" : {
         "en" : {
@@ -1573,12 +1613,52 @@
         }
       }
     },
+    "ui.menu.pause15Minutes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 Minutes"
+          }
+        }
+      }
+    },
+    "ui.menu.pause1Hour" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Hour"
+          }
+        }
+      }
+    },
     "ui.menu.pauseCapture" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pause Capture"
+          }
+        }
+      }
+    },
+    "ui.menu.pauseFor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause For"
+          }
+        }
+      }
+    },
+    "ui.menu.pauseUntilTomorrow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Until Tomorrow"
           }
         }
       }
@@ -2629,6 +2709,26 @@
         }
       }
     },
+    "ui.settings.addPasswordManagers" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add Password Managers"
+          }
+        }
+      }
+    },
+    "ui.settings.addPasswordManagersHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adds the common password managers to this list. Flotsam then stores nothing copied from them, not even encrypted."
+          }
+        }
+      }
+    },
     "ui.settings.autoBundle" : {
       "localizations" : {
         "en" : {
@@ -2879,6 +2979,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Range"
+          }
+        }
+      }
+    },
+    "ui.settings.clearRecentTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear recent history?"
           }
         }
       }
@@ -3673,6 +3783,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Last 24 hours"
+          }
+        }
+      }
+    },
+    "ui.settings.rangeLast5Minutes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 5 minutes"
           }
         }
       }

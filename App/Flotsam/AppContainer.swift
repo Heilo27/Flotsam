@@ -25,6 +25,9 @@ final class AppContainer {
     let settings: SettingsStore
     /// The resume point of an unfinished onboarding; progress, not a preference, so it is not in the registry.
     let onboardingProgress: OnboardingProgress
+    /// Menu-bar timed pause (FR-007-12): one one-shot timer while a pause has an end, none otherwise.
+    let timedPause: TimedPause
+    private var wakeObserver: (any NSObjectProtocol)?
     /// The data folder, the settings store and the secure-item services this launch uses (TASK-519).
     private let environment: AppEnvironment
     let permissions: any PermissionProbe
@@ -100,6 +103,7 @@ final class AppContainer {
             let error = FlotsamError(.setDat001, "A stored setting was invalid and was reset to its default")
             Task { await reporter.report(error, origin: .background) }
         }
+        timedPause = TimedPause(settings: settings, store: environment.settingsStore)
         permissions = SystemPermissionProbe()
         let vault = SecureClipVault(store: environment.secureKeys)
         secureVault = vault
@@ -107,8 +111,38 @@ final class AppContainer {
         loginItem = LoginItemController(service: SMLoginItemService())
         // FR-002-12 / FR-008-04: the action exists from construction, so a click before pickup is wired is never a no-op.
         actions.importRecentScreenshots = { [weak self] in self?.importRecent.request() }
+        // A pause that ended while the app was not running resumes now; one still pending is timed again (FR-007-12).
+        timedPause.reconcile()
+        let timedPause = timedPause
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated { timedPause.reconcile() }
+        }
         Task { await openDatabase() }
         startPermissionLogging()
+    }
+
+    /// The Storage calls Settings and the menu-bar Clear Recent share. The database is asked for on each call.
+    private lazy var settingsStorage = SettingsStorage(database: { [weak self] in self?.database })
+    /// What a user-initiated result does: an error shows as a HUD (FR-000-04), a success is one line.
+    private var reportUserInitiated: @MainActor @Sendable (FlotsamError) -> Void {
+        let reporter = reporter
+        return { error in Task { await reporter.report(error, origin: .userInitiated) } }
+    }
+    private var showHUD: @MainActor @Sendable (String) -> Void {
+        let presenter = presenter
+        return { message in presenter.showHUD(message: message) }
+    }
+
+    /// Menu-bar Clear Recent (FR-007-11): the same count, confirmation and delete as Settings' Clear History, for one of
+    /// the short ranges and never touching pinned or shortcut items.
+    func clearRecent(_ range: ClearRange) {
+        let model = ClearHistoryModel(
+            storage: settingsStorage, report: reportUserInitiated, hud: showHUD, onClose: {})
+        model.range = range
+        let hud = showHUD
+        Task { await ClearRecentConfirmation.run(model, hud: hud) }
     }
 
     /// FR-000-11: logs a permission flipping. The first `check()` records the launch state as the baseline; each return
@@ -139,7 +173,7 @@ final class AppContainer {
         let presenter = presenter
         let settings = settings
         let permissions = permissions
-        let storage = SettingsStorage(database: { [weak self] in self?.database })
+        let storage = settingsStorage
         let loginItem = loginItem
         let dataFolder = environment.dataFolder
         let settingsEnvironment = SettingsEnvironment(
@@ -147,8 +181,8 @@ final class AppContainer {
             openLoginItems: { loginItem.openLoginItemsSettings() },
             permissions: permissions, shortcuts: shortcuts, storage: storage, dataFolder: dataFolder,
             revealDataFolder: { NSWorkspace.shared.open(dataFolder) },
-            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
-            hud: { message in presenter.showHUD(message: message) },
+            report: reportUserInitiated,
+            hud: showHUD,
             showSetupGuide: showSetupGuide,
             importRecentScreenshots: { [weak self] in self?.actions.importRecentScreenshots?() },
             copyDiagnostics: {

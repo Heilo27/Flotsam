@@ -161,7 +161,7 @@ Minimum macOS is 26 (Ryan, 2026-11-18, TRUTHS amendment log): spikes S-2, S-3, S
 | S-3 | TASK-006 | Can the Shelf detect a global drag without Accessibility? | App Shelf panel; FRD-006 FR-006-03 | Fall back to hotkey or hover reveal: FRD change, no module change |
 | S-4 | TASK-007 | Pasteboard privacy behaviour on current macOS | FR-001-18; `PasteboardPort` adapter | Adapter and FR-001-18 wording only |
 | S-5 | TASK-008 | Carbon hotkeys without Accessibility; the option-only rule | ADR-0006; FR-008-14, FR-005-02 | Registrar adapter and FR-008-14 line |
-| S-6 | TASK-009 | Default ignored-app bundle IDs | Base registry default (FR-008-11) | Edit one default list |
+| S-6 | TASK-009 | Default ignored-app bundle IDs and the password-manager preset | Base registry default and `BundleIdentifierList.passwordManagerPreset` (FR-008-11) | Edit one list in `SettingValues.swift` |
 | S-7 | TASK-010 | Text input in a non-activating `NSPanel` | App Library panel (load-bearing for FRD-003) | Panel type changes inside App; `PasteService` unchanged ([ADR-0005](adr/0005-paste-back.md)) |
 | S-8 | TASK-011 | Screenshot attribute timing and localised prefixes | ADR-0008; `ScreenshotNamePrefixes` | Prefix list becomes primary signal; one-file change |
 | S-9 | TASK-012 | Permissions the active tap needs | ADR-0007; FR-005-10, FR-008-14 | `PermissionProbe` requirements only |
