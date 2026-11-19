@@ -14,7 +14,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// The always-available backfill button (FR-002-12).
     case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
-    case revealAtEdge, showSetupGuide, historyHelp
+    case revealAtEdge, edgeBar, showSetupGuide, historyHelp
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
     /// The auto-bundle row (FR-001-12, FR-008-04): label and caption.

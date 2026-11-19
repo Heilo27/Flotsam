@@ -13,6 +13,8 @@ public enum ShelfText {
     public static let empty = "ui.shelf.empty"
     public static let dropZone = "ui.shelf.drop"
     public static let close = "ui.shelf.close"
+    /// The collapsed edge bar's accessibility label (FR-006-37).
+    public static let edgeBar = "ui.shelf.edgeBar"
     public static let sectionPinned = "ui.library.pinned"
     public static let sectionRecent = "ui.shelf.sectionRecent"
     public static let menuPaste = "ui.library.menuPaste"

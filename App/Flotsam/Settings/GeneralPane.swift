@@ -52,6 +52,8 @@ struct GeneralPane: View {
                 .disabled(!shelfEnabled)
                 Toggle(isOn: model.binding(SettingKeys.shelfRevealOnEdgeHover)) { Text(.revealAtEdge) }
                     .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
+                Toggle(isOn: model.binding(SettingKeys.shelfEdgeBar)) { Text(.edgeBar) }
+                    .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
             }
             Section {
                 Picker(selection: model.binding(SettingKeys.libraryLayout)) {

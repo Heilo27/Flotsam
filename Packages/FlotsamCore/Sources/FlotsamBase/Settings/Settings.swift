@@ -41,6 +41,8 @@ public enum SettingKeys {
     public static let shelfEnabled = SettingKey("shelf.enabled", default: true, owner: "FR-006-01")
     public static let shelfPlacement = SettingKey("shelf.placement", default: ShelfPlacement.rightEdge, owner: "FR-006-01")
     public static let shelfRevealOnEdgeHover = SettingKey("shelf.revealOnEdgeHover", default: false, owner: "FR-006-01")
+    /// The collapsed bar at the Shelf's edge: opt-in, off by default (FR-006-37).
+    public static let shelfEdgeBar = SettingKey("shelf.edgeBar", default: false, owner: "FR-006-37")
     /// Open Library defaults to ⌃⌘V (key code 9 is V).
     public static let shortcutsOpenLibrary = SettingKey(
         "shortcuts.openLibrary", default: ChordBinding.chord(Chord(keyCode: 9, modifiers: [.control, .command])),
@@ -83,6 +85,7 @@ public enum SettingKeys {
     public static let all: [SettingDescriptor] = [
         captureMode.descriptor, captureAutoBundle.descriptor, screenshotsEnabled.descriptor, screenshotsFolderOverride.descriptor,
         shelfEnabled.descriptor, shelfPlacement.descriptor, shelfRevealOnEdgeHover.descriptor,
+        shelfEdgeBar.descriptor,
         shortcutsOpenLibrary.descriptor, shortcutsSaveClipboard.descriptor, shortcutsAddClip.descriptor,
         shortcutsToggleShelf.descriptor, shortcutsPasteQueue.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
