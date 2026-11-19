@@ -132,7 +132,7 @@ public final class LibraryViewModel {
         _ = accessibilityRevision
         return LibraryFooter(
             totalCount: totalCount, selectionCount: selection.count, isPreviewOpen: isPreviewOpen,
-            isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort)
+            isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort, queueRemaining: effects.queueRemaining())
     }
 
     /// The active sort, for the header's sort menu (FR-004-12).
@@ -585,11 +585,13 @@ public final class LibraryViewModel {
     }
 
     /// The Esc ladder (FR-003-08): clear the search, then close the preview, then (with several rows selected) fall back
-    /// to one, then close the panel. The selection step is DESIGN's "clear selection"; see the FRD note in the commit.
+    /// to one, then cancel a paste queue that is waiting (FR-003-25), then close the panel. The selection step is
+    /// DESIGN's "clear selection"; see the FRD note in the commit.
     private func escape() {
         if !searchText.isEmpty { setSearchText(String()); return }
         if isPreviewOpen { setPreviewOpen(false); return }
         if selection.count > 1, let cursor { select(id: cursor); return }
+        if effects.cancelQueue() { return }
         host.hidePanel()
     }
 
@@ -608,7 +610,12 @@ public final class LibraryViewModel {
     // MARK: Paste
 
     private func pasteSelected(mode: PasteMode) {
-        // With two or more rows selected the paste keys are disabled and the footer says so (FR-003-08).
+        // With two or more rows selected Return lines them up as the paste queue (FR-003-25); ⌥Return, ⇧Return and ⌘C
+        // are disabled and the footer says so (FR-003-08).
+        if selection.count >= 2 {
+            if mode == .paste, effects.startQueue(selectedRows.map(\.id)) { host.hidePanel() }
+            return
+        }
         guard let row = selectedRow else { return }
         startPaste(of: row.id, mode: mode)
     }

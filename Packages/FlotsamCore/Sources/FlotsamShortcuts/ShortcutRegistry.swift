@@ -6,12 +6,17 @@ public enum ShortcutID: Sendable, Hashable {
     case openLibrary
     case saveClipboard
     case toggleShelf
+    case pasteQueue
     case item(UUID)
 
     var isItem: Bool {
         if case .item = self { return true }
         return false
     }
+
+    /// Off while a Flotsam panel or the Settings window is key (FR-005-05, FR-003-25): the press would otherwise paste
+    /// into Flotsam itself. An item hotkey and the paste-queue key act on the app in front, so both follow this rule.
+    var suspendsWithFlotsamWindows: Bool { isItem || self == .pasteQueue }
 }
 
 /// Where a binding stands. `failed` keeps the chord and shows the warning badge (FR-005-03, TRG-OS-001).
@@ -101,7 +106,7 @@ public final class ShortcutRegistry {
         failed.remove(id)
     }
 
-    /// Loads the three global bindings from their settings (launch, and when a setting changes). A stored value that
+    /// Loads the four global bindings from their settings (launch, and when a setting changes). A stored value that
     /// no longer validates is left unbound and reported through the return value, never crashing the load. With the
     /// Shelf turned off in Settings, `toggleShelf` is unregistered (FR-005-07); its setting is kept.
     @discardableResult
@@ -111,6 +116,7 @@ public final class ShortcutRegistry {
             (.openLibrary, settings.value(SettingKeys.shortcutsOpenLibrary)),
             (.saveClipboard, settings.value(SettingKeys.shortcutsSaveClipboard)),
             (.toggleShelf, settings.value(SettingKeys.shortcutsToggleShelf)),
+            (.pasteQueue, settings.value(SettingKeys.shortcutsPasteQueue)),
         ]
         for (id, binding) in wanted {
             let chord: Chord?
@@ -176,12 +182,12 @@ public final class ShortcutRegistry {
         if recorders == 0 { reregisterAll() }
     }
 
-    /// Item hotkeys are off while a Flotsam panel or the Settings window is key (FR-005-05).
+    /// Item hotkeys and the paste-queue key are off while a Flotsam panel or the Settings window is key (FR-005-05).
     public func setItemHotkeysSuspended(_ suspended: Bool) {
         guard suspended != itemsSuspended else { return }
         itemsSuspended = suspended
         if suspended {
-            for id in registrations.keys where id.isItem { unregister(id) }
+            for id in registrations.keys where id.suspendsWithFlotsamWindows { unregister(id) }
         } else {
             reregisterAll()
         }
@@ -205,7 +211,7 @@ public final class ShortcutRegistry {
 
     private func register(_ id: ShortcutID) -> FlotsamResult<Void> {
         guard let chord = bindings[id] else { return .success(()) }
-        if recorders > 0 || (itemsSuspended && id.isItem) { return .success(()) }
+        if recorders > 0 || (itemsSuspended && id.suspendsWithFlotsamWindows) { return .success(()) }
         unregister(id)
         let result = registrar.register(chord) { [weak self] in self?.actions[id]?() }
         switch result {

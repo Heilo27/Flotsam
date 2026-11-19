@@ -340,6 +340,15 @@ final class AppContainer {
                 hud: { presenter.showHUD(message: $0) }))
         itemEditor = editor
 
+        // The paste queue (FR-003-25): the Library lines it up, the Paste Queue hotkey pastes one item per press. It pastes
+        // through the one `PasteService` (FR-003-15..17), so copy-only without Accessibility needs no second path.
+        let queue = PasteQueue(
+            paster: paster, frontmost: frontmost,
+            report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
+            hud: { presenter.showHUD(message: $0) })
+        shortcuts.setAction(.pasteQueue) { Task { await queue.pasteNext() } }
+        let queueSettings = settings
+
         let effects = LibraryEffects(
             report: { error in Task { await reporter.report(error, origin: .userInitiated) } },
             reveal: { paths in
@@ -349,7 +358,17 @@ final class AppContainer {
             // Pin, tags, note, edit, delete and ungroup are FRD-004; ⌘K reaches FRD-005 through `actions`.
             external: { [weak organize] command, ids in organize?.perform(command, ids: ids) },
             isAccessibilityTrusted: { probe.isAccessibilityTrusted },
-            openAccessibilitySettings: { probe.openSystemSettings(.accessibility) })
+            openAccessibilitySettings: { probe.openSystemSettings(.accessibility) },
+            startQueue: { ids in
+                // Without a Paste Queue shortcut there is nothing to advance the queue with: say so, keep the panel open.
+                if case .none = queueSettings.value(SettingKeys.shortcutsPasteQueue) {
+                    presenter.showHUD(message: PasteQueue.noShortcutMessage)
+                    return false
+                }
+                return queue.start(ids)
+            },
+            queueRemaining: { queue.remaining },
+            cancelQueue: { queue.cancel() })
         let capture = capture
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
@@ -500,7 +519,7 @@ final class AppContainer {
 
         let names: Set<String> = [
             SettingKeys.shortcutsOpenLibrary.name, SettingKeys.shortcutsSaveClipboard.name,
-            SettingKeys.shortcutsToggleShelf.name, SettingKeys.shelfEnabled.name,
+            SettingKeys.shortcutsToggleShelf.name, SettingKeys.shortcutsPasteQueue.name, SettingKeys.shelfEnabled.name,
         ]
         unsubscribeShortcuts = settings.subscribe { [weak self] change in
             guard names.contains(change.name) else { return }

@@ -19,7 +19,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
 
     // Shortcuts
-    case shortcutOpenLibrary, shortcutSaveClipboard, shortcutToggleShelf
+    case shortcutOpenLibrary, shortcutSaveClipboard, shortcutToggleShelf, shortcutPasteQueue
     case shortcutNotSet, shortcutRecord, shortcutRecording, shortcutClear, shortcutNeedsModifier, shortcutsFootnote
 
     // Item editor: shortcut and trigger (FR-005-09)
