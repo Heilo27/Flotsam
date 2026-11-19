@@ -344,7 +344,7 @@ import Testing
     @Test func oc8054_nothingToClearText() {
         #expect(SettingsString.clearNothing.text == "Nothing to clear in this range.")
         #expect(SettingsString.rangeLastHour.text == "Last hour")
-        #expect(SettingsString.clearDelete.text == "Delete")
+        #expect(SettingsString.clearDelete.text == "Delete Items")
     }
 
     // MARK: - About (OC-8058...8061)

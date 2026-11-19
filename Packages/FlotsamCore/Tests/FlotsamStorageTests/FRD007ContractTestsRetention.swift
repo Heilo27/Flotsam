@@ -208,20 +208,14 @@ import FlotsamBase
         #expect(SettingsString.clearIncludeExempt.text == "Also delete pinned and shortcut items")
     }
 
-    /// OC-7088 (button string). FR-007-11 names the destructive button "Delete {n} Items"; the shipped catalogue has
-    /// "Delete" (the count sits in the sentence above it). FRD-008 does not word the button (FR-008-08 hands it to
-    /// FRD-007); docs/DESIGN.md section 10 records a deliberate deviation (`btn.deleteN` becomes "Delete Items" for
-    /// the 15-character button limit) that the product does not follow either. Spec conflict, left for the owner.
-    /// Product defect, Minor. Repro: Settings > Storage > Clear History..., read the button.
-    @Test("OC-7088 the Delete button reads 'Delete {n} Items'")
+    /// OC-7088 (button string). FR-007-11 names the destructive button "Delete Items": the count is stated in the sheet
+    /// text above it (`clearCount`), and a count on the button would break the 15-character limit (docs/DESIGN.md
+    /// section 10, `btn.deleteN`). Red if the button text changes or takes a count.
+    @Test("OC-7088 the Delete button reads 'Delete Items' and the count sits in the sheet text")
     func oc7088_clearSheetButtonString() {
-        // Red if the catalogue gains the count placeholder (then this known issue must go).
-        withKnownIssue("OC-7088 product defect: ui.settings.clearDelete is 'Delete' vs FR-007-11 'Delete {n} Items'") {
-            // given the sheet shows 12 items
-            // when the button text is built
-            // then it reads as FR-007-11 states
-            #expect(SettingsString.clearDelete.text([.count(12)]) == "Delete 12 Items")
-        }
+        #expect(SettingsString.clearDelete.text == "Delete Items")
+        #expect(SettingsString.clearDelete.text.count <= 15)
+        #expect(SettingsString.clearCount.text([.count(12)]).contains("12 items"))
     }
 
     // MARK: Screenshot originals (FR-007-15)
