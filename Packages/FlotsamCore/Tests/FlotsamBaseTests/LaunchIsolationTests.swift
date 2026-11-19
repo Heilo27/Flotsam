@@ -143,15 +143,66 @@ struct LaunchIsolationResolutionTests {
         #expect(refusal(["FLOTSAM_DATA_DIR": real])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
         #expect(refusal(["FLOTSAM_DATA_DIR": real + "/"])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
         #expect(refusal(["FLOTSAM_DATA_DIR": real + "/../Flotsam"])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
-        // A sibling or a child is a different folder.
+        // A sibling is a different folder; a folder inside the real one is not acceptable (QA, Worf).
         #expect(resolved(["FLOTSAM_DATA_DIR": real + "-519"]) != nil)
-        #expect(resolved(["FLOTSAM_DATA_DIR": real + "/child"]) != nil)
+        #expect(refusal(["FLOTSAM_DATA_DIR": real + "/child"])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
+        #expect(refusal(["FLOTSAM_DATA_DIR": real + "/blobs/x/"])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
     }
 
-    @Test("the process answer in this (Debug) test build reads the environment dictionary the same way")
-    func fromProcessMatchesResolve() {
-        let expected = LaunchIsolation.resolve(environment: ProcessInfo.processInfo.environment, isDebugBuild: true)
-        #expect(LaunchIsolation.fromProcess() == expected)
+    @Test("a symlink to the real folder, and a symlink's parent that is the real folder, are refused")
+    func symlinkedRealFolderRefused() throws {
+        // Given a throwaway folder holding a link to the real folder and a link to a folder inside it.
+        let real = LaunchIsolation.realDataFolder
+        let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("task519-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: scratch) }
+        let link = scratch.appendingPathComponent("link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+        // When the link, the link with a trailing slash and a path through it are given
+        // Then each names the real folder and is refused.
+        #expect(refusal(["FLOTSAM_DATA_DIR": link.path])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
+        #expect(refusal(["FLOTSAM_DATA_DIR": link.path + "/"])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
+        #expect(refusal(["FLOTSAM_DATA_DIR": link.path + "/blobs"])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
+    }
+
+    @Test("a different-case spelling of the real folder is refused")
+    func caseVariantRealFolderRefused() {
+        let real = LaunchIsolation.realDataFolder.path
+        #expect(refusal(["FLOTSAM_DATA_DIR": real.lowercased()])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
+        #expect(refusal(["FLOTSAM_DATA_DIR": real.uppercased()])?.hasPrefix("FLOTSAM_DATA_DIR") == true)
+    }
+
+    @Test("a defaults suite that names the app's own domain is refused: exact, other case, or as a file path")
+    func ownDomainSuiteRefused() {
+        let own = "io.example.Own"
+        func suite(_ name: String) -> String? {
+            if case .failure(let error) = LaunchIsolation.resolve(
+                environment: ["FLOTSAM_DEFAULTS_SUITE": name], isDebugBuild: true, appDomain: own) { return "\(error.internalMessage)" }
+            return nil
+        }
+        #expect(suite(own)?.hasPrefix("FLOTSAM_DEFAULTS_SUITE") == true)
+        #expect(suite("IO.EXAMPLE.OWN")?.hasPrefix("FLOTSAM_DEFAULTS_SUITE") == true)
+        #expect(suite("/Users/someone/Library/Preferences/io.example.Own")?.hasPrefix("FLOTSAM_DEFAULTS_SUITE") == true)
+        #expect(suite("../Preferences/io.example.Own")?.hasPrefix("FLOTSAM_DEFAULTS_SUITE") == true)
+        // A different name is fine, including one that merely contains the app's id.
+        #expect(suite("io.example.Own.agent") == nil)
+        #expect(suite("io.example.Other") == nil)
+        // And a Release build never reads the variable at all.
+        #expect(LaunchIsolation.resolve(
+            environment: ["FLOTSAM_DEFAULTS_SUITE": own], isDebugBuild: false, appDomain: own) == .success(.real))
+    }
+
+    @Test("the process answer in this (Debug) test build reads the real process environment")
+    func fromProcessReadsTheEnvironment() {
+        // Given the variables set in this process (the only test that touches them)
+        setenv("FLOTSAM_FAKE_SECURE", "1", 1)
+        setenv("FLOTSAM_FAKE_AUTH", "deny", 1)
+        defer { unsetenv("FLOTSAM_FAKE_SECURE"); unsetenv("FLOTSAM_FAKE_AUTH"); unsetenv("FLOTSAM_DEFAULTS_SUITE") }
+        // When the process answer is asked for
+        // Then it carries what the environment said, not the real launch
+        if case .success(let isolation) = LaunchIsolation.fromProcess() {
+            #expect(isolation.fakeSecure && isolation.authScript == .deny)
+        } else { Issue.record("a valid environment must resolve") }
     }
 }
 
@@ -211,6 +262,39 @@ struct LaunchIsolationEffectsTests {
     }
 }
 
+@Suite("TASK-519 secure services selection")
+struct LaunchIsolationSecureServicesTests {
+    private struct RealKeys: SecureKeyStore {
+        func readKey() -> FlotsamResult<Data?> { .success(nil) }
+        func storeKeyIfAbsent(_ key: Data) -> FlotsamResult<Data> { .success(key) }
+    }
+    private struct RealAuth: UserAuthenticator {
+        func authenticate(reason: String) async -> FlotsamResult<Void> { .success(()) }
+    }
+
+    @Test("fake secure builds the fakes and never constructs the real Keychain or LocalAuthentication services")
+    func fakeNeverBuildsReal() {
+        // Given a launch with the fakes on and a counter on the real factory
+        var realBuilt = 0
+        let isolation = LaunchIsolation(dataFolderOverride: nil, defaultsSuite: nil, fakeSecure: true, authScript: .deny)
+        // When the services are chosen
+        let services = isolation.secureServices { realBuilt += 1; return (RealKeys(), RealAuth()) }
+        // Then the real factory ran zero times and the fakes came back, scripted as asked
+        #expect(realBuilt == 0)
+        #expect(services.keys is InMemorySecureKeyStore)
+        #expect((services.authenticator as? ScriptedAuthenticator)?.script == .deny)
+    }
+
+    @Test("without fake secure the real services are used, built exactly once")
+    func realUsedOtherwise() {
+        var realBuilt = 0
+        let services = LaunchIsolation.real.secureServices { realBuilt += 1; return (RealKeys(), RealAuth()) }
+        #expect(realBuilt == 1)
+        #expect(services.keys is RealKeys)
+        #expect(services.authenticator is RealAuth)
+    }
+}
+
 @Suite("TASK-519 single resolution home (source scan)")
 struct LaunchIsolationSourceScanTests {
     private static let production = ["Packages/FlotsamCore/Sources", "App"]
@@ -220,12 +304,22 @@ struct LaunchIsolationSourceScanTests {
         ("UserDefaults.standard", ["Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift": "the one UserDefaults adapter (ADR-0009)"]),
         ("UserDefaults(", ["Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift": "the one UserDefaults adapter (ADR-0009)"]),
         (".applicationSupportDirectory", ["Packages/FlotsamCore/Sources/FlotsamBase/Launch/LaunchIsolation.swift": "the data folder's home"]),
+        ("realDataFolder", ["Packages/FlotsamCore/Sources/FlotsamBase/Launch/LaunchIsolation.swift": "the data folder's home"]),
         ("KeychainSecureKeyStore(", ["App/Flotsam/AppEnvironment.swift": "the secure store is chosen here"]),
         ("LocalAuthenticator(", ["App/Flotsam/AppEnvironment.swift": "the authenticator is chosen here"]),
         ("UserDefaultsStore(", ["Packages/FlotsamCore/Sources/FlotsamBase/Ports/Adapters.swift": "the adapter and the launch's settingsStore()"]),
         ("SecItemCopyMatching(", ["App/Platform/SystemKeychainKeyItem.swift": "the Keychain adapter, reached only through KeychainSecureKeyStore"]),
         ("SecItemAdd(", ["App/Platform/SystemKeychainKeyItem.swift": "the Keychain adapter, reached only through KeychainSecureKeyStore"]),
         ("LAContext", ["App/Platform/LocalAuthenticator.swift": "the LocalAuthentication adapter, reached only through LocalAuthenticator"]),
+        // Spellings the plain patterns above would miss (QA, Worf): none may appear in production at all.
+        ("NSUserDefaults", [:]), ("UserDefaults.init", [:]), ("UserDefaults .standard", [:]), ("UserDefaults.self", [:]),
+        (": UserDefaults = .standard", [:]), ("AppStorage", [:]), ("SceneStorage", [:]), ("NSUserDefaultsController", [:]),
+        ("CFPreferencesSetAppValue", [:]), ("CFPreferencesSetValue", [:]), ("CFPreferencesSetMultiple", [:]),
+        ("NSHomeDirectory", [:]), ("NSSearchPathForDirectoriesInDomains", [:]), (".libraryDirectory", [:]),
+        (".cachesDirectory", [:]), (".documentDirectory", [:]), ("SecItemUpdate", [:]), ("SecItemDelete", [:]),
+        ("kSecClass", ["App/Platform/SystemKeychainKeyItem.swift": "the Keychain adapter"]),
+        ("import LocalAuthentication", ["App/Platform/LocalAuthenticator.swift": "the LocalAuthentication adapter"]),
+        ("autosaveName", [:]),
         // Exempt by design (docs/AGENT-LAUNCH.md): the screenshot folder is the user's real one and is not isolated.
         ("homeDirectoryForCurrentUser", ["App/Flotsam/AppContainer.swift": "screenshot pickup resolves the real ~/Desktop; shared, documented"]),
     ]
@@ -245,9 +339,26 @@ struct LaunchIsolationSourceScanTests {
             let found = files.filter { code($0.text).contains(rule.pattern) }.map(\.path).sorted()
             #expect(found.allSatisfy { rule.homes[$0] != nil }, "\(rule.pattern) used outside \(rule.homes.keys.sorted()): \(found)")
             // The home must still use it, so a stale entry cannot hide a moved use.
-            // Only a ban may go unused (the spelling is already gone from production).
-            #expect(!found.isEmpty || rule.pattern == "UserDefaults.standard", "\(rule.pattern) is no longer used anywhere: drop its rule")
+            // Only a ban (a rule with no home) may go unused: the spelling is already gone from production.
+            #expect(!found.isEmpty || rule.homes.isEmpty || rule.pattern == "UserDefaults.standard", "\(rule.pattern) is no longer used anywhere: drop its rule")
         }
+    }
+
+    @Test("AppEnvironment resolves the process and takes every value from the resolution, nothing from the real machine")
+    func environmentUsesResolution() throws {
+        let file = try #require(swiftSources(under: "App/Flotsam").first { $0.path.hasSuffix("/AppEnvironment.swift") })
+        let text = code(file.text)
+        for needed in ["LaunchIsolation.fromProcess()", "isolation.dataFolder", "isolation.settingsStore()", "isolation.secureServices"] {
+            #expect(text.contains(needed), "AppEnvironment no longer uses \(needed)")
+        }
+        #expect(!text.contains("realDataFolder"))
+        #expect(!text.contains(".success(.real)"))
+    }
+
+    @Test("the suite check defaults to the running app's bundle id (a test process has none, so it is pinned in the source)")
+    func appDomainDefaultsToBundleId() throws {
+        let file = try #require(swiftSources(under: "Packages/FlotsamCore/Sources/FlotsamBase/Launch").first { $0.path.hasSuffix("LaunchIsolation.swift") })
+        #expect(code(file.text).contains("appDomain: String? = Bundle.main.bundleIdentifier"))
     }
 
     @Test("the composition root takes the folder, the settings and the secure services from AppEnvironment")

@@ -36,12 +36,12 @@ defaults delete "$SUITE"; rm -rf "$DIR"
 
 | Variable | Effect |
 | --- | --- |
-| `FLOTSAM_DATA_DIR` | Absolute path used as the data folder itself (database, `blobs/`, `thumbs/`, `tmp/`). Not `~`-expanded. The real folder is refused. |
-| `FLOTSAM_DEFAULTS_SUITE` | A separate defaults domain (`~/Library/Preferences/<suite>.plist`) for every setting and the onboarding resume point. Not the app's own bundle id. |
+| `FLOTSAM_DATA_DIR` | Absolute path used as the data folder itself (database, `blobs/`, `thumbs/`, `tmp/`). Not `~`-expanded. The real folder, a link to it and any folder inside it are refused. |
+| `FLOTSAM_DEFAULTS_SUITE` | A separate defaults domain (`~/Library/Preferences/<suite>.plist`) for every setting and the onboarding resume point. A plain domain name: not the app's own bundle id (in any case) and not a path (a name containing `/` is a preferences file path to the system). |
 | `FLOTSAM_FAKE_SECURE=1` | Secure (concealed) items use an in-memory key and a scripted authenticator: no Keychain call, no Touch ID or password prompt. The key dies with the process, so secure items sealed in one run cannot be opened in the next. `0` or unset leaves it off. |
 | `FLOTSAM_FAKE_AUTH` | With `FLOTSAM_FAKE_SECURE=1`: `allow` (default) confirms every secure paste, `deny` fails each one with `LIB-OS-002`. Ignored without the fake. |
 
-A variable that is set but unusable (relative path, empty value, `FLOTSAM_FAKE_SECURE=yes`, the real data folder) makes
+A variable that is set but unusable (relative path, empty value, `FLOTSAM_FAKE_SECURE=yes`, the real data folder or a folder inside it, the app's own defaults domain, a path as a suite) makes
 the app print the reason on stderr and exit 64. It never falls back to the real data.
 
 With none of the variables set, a Debug build behaves exactly as a Release build does.

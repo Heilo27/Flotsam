@@ -27,26 +27,12 @@ struct AppEnvironment {
     }
 
     static func make(_ isolation: LaunchIsolation) -> FlotsamResult<AppEnvironment> {
-        #if DEBUG
-        // The system refuses the app's own bundle id as a suite; checking here keeps isolation from depending on that
-        // refusal being documented behaviour.
-        if let suite = isolation.defaultsSuite, suite == Bundle.main.bundleIdentifier {
-            return .failure(FlotsamError(.sysInt001, "FLOTSAM_DEFAULTS_SUITE is the app's own defaults domain"))
-        }
-        #endif
         guard let store = isolation.settingsStore() else {
             return .failure(FlotsamError(.sysInt001, "the defaults suite is not usable"))
         }
-        var keys: any SecureKeyStore = KeychainSecureKeyStore()
-        var authenticator: any UserAuthenticator = LocalAuthenticator()
-        #if DEBUG
-        if isolation.fakeSecure {
-            keys = InMemorySecureKeyStore()
-            authenticator = ScriptedAuthenticator(script: isolation.authScript)
-        }
-        #endif
+        let secure = isolation.secureServices { (KeychainSecureKeyStore(), LocalAuthenticator()) }
         return .success(AppEnvironment(
-            dataFolder: isolation.dataFolder, settingsStore: store, secureKeys: keys, authenticator: authenticator))
+            dataFolder: isolation.dataFolder, settingsStore: store, secureKeys: secure.keys, authenticator: secure.authenticator))
     }
 
     private static func refuse(_ error: FlotsamError) -> Never {

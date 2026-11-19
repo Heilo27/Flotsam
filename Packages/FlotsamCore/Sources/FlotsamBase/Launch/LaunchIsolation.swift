@@ -44,6 +44,20 @@ public struct LaunchIsolation: Equatable, Sendable {
     }
 }
 
+extension LaunchIsolation {
+    /// The key store and authenticator for this launch. With `fakeSecure` (Debug only) the in-memory key and the
+    /// scripted authenticator, and `real` is never called, so no Keychain or LocalAuthentication object is built;
+    /// otherwise whatever `real` makes. `real` is a closure so the real services are not even constructed for a fake launch.
+    public func secureServices(
+        real: () -> (keys: any SecureKeyStore, authenticator: any UserAuthenticator)
+    ) -> (keys: any SecureKeyStore, authenticator: any UserAuthenticator) {
+        #if DEBUG
+        if fakeSecure { return (InMemorySecureKeyStore(), ScriptedAuthenticator(script: authScript)) }
+        #endif
+        return real()
+    }
+}
+
 /// A launch override that cannot be honoured is a `SYS-INT-001` whose message names the variable. The launch refuses
 /// to start rather than fall back to the real data: a typo in an isolation variable must never turn an isolated launch
 /// into one that touches the user's files.
@@ -75,7 +89,7 @@ extension LaunchIsolation {
     ///
     /// A variable that is set but unusable is an error, never a fallback to the real thing.
     public static func resolve(
-        environment: [String: String], isDebugBuild: Bool
+        environment: [String: String], isDebugBuild: Bool, appDomain: String? = Bundle.main.bundleIdentifier
     ) -> FlotsamResult<LaunchIsolation> {
         guard isDebugBuild else { return .success(.real) }
 
@@ -86,8 +100,11 @@ extension LaunchIsolation {
             }
             let url = URL(fileURLWithPath: raw, isDirectory: true).standardizedFileURL
             let real = realDataFolder.standardizedFileURL.resolvingSymlinksInPath()
-            guard url.resolvingSymlinksInPath().path != real.path else {
-                return .failure(FlotsamError(.sysInt001, "FLOTSAM_DATA_DIR is the real data folder"))
+            // The real folder and anything inside it: a folder under it would put an unknown tree in the user's blob and
+            // thumbnail stores, where the next real launch's reconcile may treat it as an orphan.
+            let resolved = url.resolvingSymlinksInPath().path
+            guard resolved != real.path, !resolved.hasPrefix(real.path + "/") else {
+                return .failure(FlotsamError(.sysInt001, "FLOTSAM_DATA_DIR is the real data folder or inside it"))
             }
             folder = url
         }
@@ -96,6 +113,11 @@ extension LaunchIsolation {
         if let raw = environment[defaultsSuiteVariable] {
             guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return .failure(FlotsamError(.sysInt001, "FLOTSAM_DEFAULTS_SUITE must not be empty"))
+            }
+            switch suiteRefusal(raw, appDomain: appDomain) {
+            case .path: return .failure(FlotsamError(.sysInt001, "FLOTSAM_DEFAULTS_SUITE must be a plain domain name, not a path"))
+            case .ownDomain: return .failure(FlotsamError(.sysInt001, "FLOTSAM_DEFAULTS_SUITE is the app's own defaults domain"))
+            case nil: break
             }
             suite = raw
         }
@@ -118,6 +140,18 @@ extension LaunchIsolation {
 
         return .success(LaunchIsolation(
             dataFolderOverride: folder, defaultsSuite: suite, fakeSecure: fakeSecure, authScript: script))
+    }
+
+    /// Why a suite name must not be used, nil when it is fine. The system treats a name containing `/` as the path of a
+    /// preferences file (so `/Users/x/Library/Preferences/<bundle id>` would be the real domain), and it matches domain
+    /// names without regard to case (so `IO.GITHUB.X.FLOTSAM` is the real domain too). Both reach the user's real
+    /// settings, so the app's own domain is refused in every spelling.
+    enum SuiteRefusal { case path, ownDomain }
+
+    static func suiteRefusal(_ name: String, appDomain: String?) -> SuiteRefusal? {
+        if name.contains("/") { return .path }
+        if let appDomain, name.caseInsensitiveCompare(appDomain) == .orderedSame { return .ownDomain }
+        return nil
     }
 }
 #endif
