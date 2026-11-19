@@ -11,8 +11,8 @@ import Testing
     private let target = FrontmostApp(bundleId: "com.apple.TextEdit", processId: 4242)
     private let menuTitle = LibraryText.menuShortcutAndTrigger
 
-    private func menuOffersEditor(_ row: ItemRow) -> Bool {
-        LibraryContextMenu.entries(kind: row.kind, pinUnpins: false, singleTarget: true, isSecure: row.isSecure)
+    private func menuOffersEditor(_ row: ItemRow, singleTarget: Bool = true) -> Bool {
+        LibraryContextMenu.entries(kind: row.kind, pinUnpins: false, singleTarget: singleTarget, isSecure: row.isSecure)
             .contains { entry in
                 if case .item(let key, _, _) = entry { return key == menuTitle }
                 return false
@@ -60,5 +60,27 @@ import Testing
                 #expect(opens == !secure, "kind \(kind) secure \(secure)")
             }
         }
+    }
+
+    // FR-003-22 ruling: with several items selected the menu has no "Shortcut and Trigger..." row, because ⌘K opens
+    // nothing for them. Red if the row returns for a multi-item target, for any kind, secure or not.
+    @Test func menuHasNoEditorRowForSeveralItems() {
+        for kind in ItemKind.allCases {
+            for secure in [false, true] {
+                #expect(!menuOffersEditor(makeRow(5, kind: kind, secure: secure), singleTarget: false), "kind \(kind) secure \(secure)")
+            }
+        }
+    }
+
+    // The same selection through ⌘K: two ordinary rows open nothing, which is why the row above is absent.
+    @Test func commandKWithSeveralOrdinaryItemsDoesNothing() async {
+        let rows = [makeRow(6), makeRow(7)]
+        let h = Harness(rows: rows)
+        await h.model.open(target: target)
+        h.model.select(id: rows[0].id)
+        h.model.perform(.extend(.down))
+        #expect(h.model.selectedRows.count == 2)
+        h.model.handle(LibraryKeyStroke(.character("k"), .command))
+        #expect(h.reported.external.isEmpty)
     }
 }

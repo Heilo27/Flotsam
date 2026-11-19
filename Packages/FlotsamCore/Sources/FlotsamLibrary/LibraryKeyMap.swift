@@ -20,17 +20,17 @@ public enum LibraryExternalCommand: Sendable, Equatable {
     /// a secure item opens nothing.
     public func shortcutEditorTarget(selection rows: [ItemRow]) -> UUID? {
         guard self == .shortcutAndTrigger, rows.count == 1, let row = rows.first,
-            ShortcutEditorRule.allows(isSecure: row.isSecure)
+            ShortcutEditorRule.allows(isSingleItem: true, isSecure: row.isSecure)
         else { return nil }
         return row.id
     }
 }
 
-/// Which items may open the shortcut-and-trigger editor (FR-005-09). One home, read by `shortcutEditorTarget` (⌘K) and
-/// by `LibraryContextMenu` (the menu row), so the keyboard and the menu cannot disagree. A secure item (FRD-001
-/// FR-001-25) can carry no hotkey and no trigger, so the editor does not open for it.
+/// When the shortcut-and-trigger editor may open (FR-005-09, FR-003-22). One home, read by `shortcutEditorTarget` (⌘K)
+/// and by `LibraryContextMenu` (the menu row), so the keyboard and the menu cannot disagree: exactly one item, and not a
+/// secure one (FRD-001 FR-001-25 items can carry no hotkey and no trigger). Several items, or none, open nothing.
 public enum ShortcutEditorRule {
-    public static func allows(isSecure: Bool) -> Bool { !isSecure }
+    public static func allows(isSingleItem: Bool, isSecure: Bool) -> Bool { isSingleItem && !isSecure }
 }
 
 public enum LibraryCommand: Sendable, Equatable {
@@ -47,6 +47,18 @@ public enum LibraryCommand: Sendable, Equatable {
     case revealInFinder
     case openSettings
     case external(LibraryExternalCommand)
+
+    /// The one rule for "this command opens a Flotsam window" (FR-003-02): Settings (⌘,) and the shortcut-and-trigger
+    /// editor (⌘K, the context-menu row) open an ordinary window, and the Library hides first so the window is never
+    /// covered, whatever state that window was in. The editor counts only when it will open: a selection that is not
+    /// exactly one item opens nothing (FR-005-09), so the Library stays.
+    public func opensFlotsamWindow(selection rows: [ItemRow]) -> Bool {
+        switch self {
+        case .openSettings: true
+        case .external(let command): command.shortcutEditorTarget(selection: rows) != nil
+        default: false
+        }
+    }
 }
 
 /// FR-003-08 as data: the one definition of what each key does. The panel, the footer hints and the tests read it here.

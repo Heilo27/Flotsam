@@ -1,7 +1,9 @@
 # TRUTHS — Flotsam
 
 Open-source, local-first macOS clipboard + screenshot history. Functional reference: LinkHiv
-(linkhiv.com, closed, US$79). We match its workflow, not its name, copy, art or look.
+(linkhiv.com, closed, US$79). We match its form factor (layout, placement, sizing, interaction model) and reach functional
+parity or better, reverse-engineered by black-box observation only: no source, no assets. We never
+take its name, copy, icon, art or visual skin.
 
 ## PRIMARY TRUTH
 **Anything you copied or screenshotted on this Mac in the past 30 days is back in the app you're
@@ -53,3 +55,4 @@ light/dark · Mac App Store build (sandbox breaks paste-back & accessibility).
 | 2026-11-16 | Initial truths; primary confirmed by Ryan | — | — |
 | 2026-11-17 | Added S5 "Invisible on the machine" (resource budget, pithy code) | Ryan: runs constantly; must be light on resources, most efficient method wins | all FRDs re-tested in TASK-373 (docs/research/S5-resource-audit.md): CPU and idle memory held; wake-ups are 2.0/s for the poll alone and 2.7 to 2.9/s with the watchdog and re-resolve as separate timers (over 2.5); FR-001-20, AC-001-01/16, FR-003-13, FR-007-07 edited; periodic-timer consolidation and Paused-timer changes ticketed |
 | 2026-11-18 | Minimum macOS raised from 14 to 26 (macOS 14 and 15 dropped) | Ryan, 2026-11-18: skip macOS 14/15 test environments; ship macOS 26+ only | all FRDs re-read under TASK-487: meaning changes in FRD-001 FR-001-18 (pasteboard gate now unconditional), FRD-008 FR-008-12/13 and §7 tables (onboarding step 2 and the Privacy row always shown), FRD-005 FR-005-02 rationale; assumption rows narrowed to macOS 26 in FRD-003, 005, 006, 007, 008 (spikes S-2, S-3, S-5, S-9 lose their 14/15 matrix rows); FRD-009 FR-009-11 added; FRD-002, 004, 000 unchanged |
+| 2026-11-19 | Reference clause: form factor and functional parity (or better) with LinkHiv, by black-box reverse engineering; visual skin stays original | Ryan, 2026-11-19: "it needs to have a form factor that is similar, and functional parity, or even better operation. this is a true reverse engineer cause we dont have any access to its source material" | parity dossier + gap matrix against every FRD under TASK-532 |

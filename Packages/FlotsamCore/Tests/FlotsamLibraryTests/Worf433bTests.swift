@@ -43,11 +43,12 @@ import Testing
         #expect(titles(.bundle) == bundle)
     }
 
-    // Red if a multi-selection menu keeps Note/Edit/Ungroup or loses a separator.
-    @Test("OC-3091 W433-M2 multi-item target: no Note, Edit or Ungroup, separators intact, for file and text kinds")
+    // Red if a multi-selection menu keeps Note/Edit/Shortcut and Trigger/Ungroup or loses a separator. Shortcut and
+    // Trigger left the multi-item menu with the TASK-526 ruling (FR-003-22): ⌘K opens nothing for several items.
+    @Test("OC-3091 W433-M2 multi-item target: no Note, Edit, Shortcut and Trigger or Ungroup, separators intact, for file and text kinds")
     func multiTargetExact() {
-        #expect(titles(.text, single: false) == head + ["Pin", "Tags…", "Shortcut and Trigger…", "-", "Delete"])
-        #expect(titles(.bundle, single: false) == head + ["Pin", "Tags…", "Shortcut and Trigger…", "-", "Reveal in Finder", "-", "Delete"])
+        #expect(titles(.text, single: false) == head + ["Pin", "Tags…", "-", "Delete"])
+        #expect(titles(.bundle, single: false) == head + ["Pin", "Tags…", "-", "Reveal in Finder", "-", "Delete"])
     }
 
     // Red if an item is wired to the wrong action (Plain Text pastes rich, Copy pastes, Reveal does nothing).
