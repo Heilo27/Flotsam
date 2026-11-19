@@ -91,27 +91,21 @@ struct Adversarial000Task367bBlindTests {
 
     // MARK: pinned gaps (withKnownIssue). Each is a lint blind spot found by this round; none is a regression of the accepted limit.
 
-    // OC: FR-000-05. TASK-367 regression. Before the left boundary `Button(`/`MenuButton(` matched by substring; now these two real SwiftUI
-    // views (both take a LocalizedStringKey title, per the macOS SDK swiftinterface) end in a listed name but are not themselves listed.
-    @Test("KNOWN TASK-367: SwiftUI views MenuButton and NewDocumentButton escape USTRING since the left boundary")
+    // OC: FR-000-05. TASK-367 regression, closed by TASK-516. Before the left boundary `Button(`/`MenuButton(` matched by substring; these two
+    // real SwiftUI views (both take a LocalizedStringKey title, per the macOS SDK swiftinterface) end in a listed name, so they are listed by name.
+    @Test("TASK-516: SwiftUI views MenuButton and NewDocumentButton are linted by USTRING")
     func suffixedViewsMissingFromList() async throws {
         for shape in ["let v = MenuButton(\"Go\") { }", "let v = NewDocumentButton(\"New\") { }"] {
-            let code = try await status(shape)
-            withKnownIssue("a real SwiftUI view that ends in Button is not in the view list: \(shape.debugDescription)") {
-                #expect(code == 1)
-            }
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
         }
     }
 
-    // OC: FR-000-05. Pre-existing. SwiftUI views with a LocalizedStringKey title init that are in no pattern (SDK interface scan).
-    @Test("KNOWN: TableColumn, SharePreview and AccessibilityRotorEntry titles are not linted")
+    // OC: FR-000-05. Closed by TASK-516. SwiftUI views with a LocalizedStringKey title init that were in no pattern (SDK interface scan).
+    @Test("TASK-516: TableColumn, SharePreview and AccessibilityRotorEntry titles are linted")
     func neverListedViews() async throws {
         for shape in ["let v = TableColumn(\"Name\", value: \\.name)", "let v = SharePreview(\"Name\")",
                       "let v = AccessibilityRotorEntry(\"Name\", id: i)"] {
-            let code = try await status(shape)
-            withKnownIssue("a literal title to a view outside the USTRING list passes: \(shape.debugDescription)") {
-                #expect(code == 1)
-            }
+            #expect(try await status(shape) == 1, "\(shape.debugDescription)")
         }
     }
 
