@@ -1921,3 +1921,14 @@ Item 1 (the ScreenshotWatcher race) is S1's and is not touched here.
   - Control: ⌃⌥B is accepted, registered and fires a shelf reveal with no TCC grant, but only with Flotsam frontmost.
   - Firing with another app frontmost was not tested, so FR-008-14 is unverified here. **Needs Ryan.**
 - **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored and the suite plist removed.
+
+## S-4 capture gaps: main @ 7482269 (2026-11-19)
+
+**OS:** macOS 27.3 (26C5035r). Fresh Debug build, isolated launch. Dummy pasteboard values only. Each row ran 3 times.
+
+- **Own-write: PASS.** A Library paste-back into an untitled TextEdit document was not re-captured. Each run logged CAP-POL-004 skipped. The item count, copyCount and lastCopiedAt stayed the same, and only pasteCount went from 0 to 1 (FR-001-03, FR-001-04 gate 2).
+- **Ignored source: PASS.** `com.flotsam.qa.ignored` was added to privacy.ignoredApps, in the isolated suite only. Copies from that source were not stored, and CAP-POL-002 was logged each time. The non-ignored control was stored 3/3 (AC-001-05 ignored half, FR-008-11, AC-008-06).
+  - Not tested: a real copy from an ignored app. The source came from the `org.nspasteboard.source` marker. The pause half of AC-001-05 is also out of scope.
+- **Blank concealed: PASS.** ConcealedType was copied as both an empty string and whitespace only, 3 runs each. Nothing was stored, with no secure or blank rows. The app stayed alive, and CAP-POL-001 was logged 6 times (FR-001-04 gate 3).
+- **Defects:** none.
+- **Snapshot identity:** the real data, the prefs plist and the `defaults read` hash are identical before and after. The real Flotsam never ran. The pasteboard was restored, TextEdit was closed unsaved, and the suite plist was removed.
