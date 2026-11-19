@@ -328,8 +328,13 @@ final class WatcherRig: @unchecked Sendable {
             report: { notices.raise($0) }, clear: { notices.clear($0) }, pollTick: pollTick, sink: sink)
     }
 
-    /// A new launch: a fresh watcher over the same folders, watermark and ingest.
-    func relaunch() { watcher = makeWatcher() }
+    /// A new launch: the old watcher is stopped first (TASK-510; it used to be left running beside its replacement, both
+    /// reading one folder, and one of its imports could still be writing the watermark the new launch reads), then a
+    /// fresh watcher over the same folders, watermark and ingest. `stop()` returns once the old one has nothing running.
+    func relaunch() async {
+        await watcher.stop()
+        watcher = makeWatcher()
+    }
 
     func cleanUp() {
         // A test may leave a folder or file unreadable on purpose.
@@ -370,6 +375,16 @@ final class WatcherRig: @unchecked Sendable {
 }
 
 extension ScreenshotWatcher {
+    /// True once no import is running (every accepted pickup has ended, watermark write included), within `timeout`.
+    func untilIdle(_ timeout: Duration = .seconds(20)) async -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if await importsRunning == 0 { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return await importsRunning == 0
+    }
+
     /// `importRecent()`'s created count for the tests that predate its `FlotsamResult`; a failed run is -1, so it can
     /// never equal a count an existing test expects. Bounded (TASK-479): a press that never resolves records an issue
     /// at the caller's line and returns -1, instead of hanging the suite.
@@ -416,6 +431,25 @@ func finishes(within timeout: Duration = .seconds(10), _ work: @escaping @Sendab
         ended.set(true)
     }
     return await eventually(timeout: timeout) { ended.value == true }
+}
+
+/// TASK-509: a press "coincides with live pickup" only if it has begun while the reconcile's imports are still in
+/// flight; left to the scheduler (a loaded machine runs the whole reconcile before the press starts) it counted 0. The
+/// reconcile's ingests are held, the press is started and held inside its folder listing (its batch is registered
+/// before the listing, so it is already counting), and only then are the ingests and the listing released. Returns
+/// whether the press resolved. Call with `rig.ingest.holdIngests()` already on and the reconcile already begun.
+func pressWhileJobsHeld(_ rig: WatcherRig, _ press: @escaping @Sendable () async -> Void) async -> Bool {
+    let resolved = Handoff<Bool>()
+    rig.fileSystem.holdNextListing()
+    Task {
+        await press()
+        resolved.set(true)
+    }
+    let listing = await eventually(timeout: .seconds(20)) { rig.fileSystem.listingIsHeld }
+    rig.ingest.releaseIngests()
+    rig.fileSystem.releaseListing()
+    guard listing else { return false }
+    return await eventually(timeout: .seconds(20)) { resolved.value == true }
 }
 
 extension ScreenshotWatcher {

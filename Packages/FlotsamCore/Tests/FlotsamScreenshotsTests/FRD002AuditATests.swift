@@ -402,7 +402,7 @@ struct FRD002AuditATests {
 
         // then: not imported after resume; nor after quit and relaunch
         #expect(rig.ingest.candidates.isEmpty)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await rig.watcher.didBecomeActive()
         await letItSettle()

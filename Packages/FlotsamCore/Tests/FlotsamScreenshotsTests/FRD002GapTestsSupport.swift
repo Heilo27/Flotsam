@@ -139,6 +139,7 @@ final class RealIngestRig: @unchecked Sendable {
     /// A new launch: a FRESH database handle over the same data folder (so nothing in memory survives), a new watcher
     /// over the same watched folders and settings. Opening the second handle sweeps `data/tmp`, as a real launch does.
     func relaunch() async throws {
+        await watcher.stop()
         database = try await FlotsamDatabase.open(folder: dataFolder, clock: clock, logSink: sink).get()
         ingest = IngestActor(database: database, settings: settings)
         marks = DatabaseWatermarkStore(database: database)

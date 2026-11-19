@@ -12,8 +12,13 @@ final class SignpostProbe: @unchecked Sendable {
     private let outputURL: URL
     private let pidFileURL: URL
     private var started = false
+    /// TASK-510: when set, `marks()` keeps only the intervals opened with `Signposts.begin(_:scope:)` under this scope
+    /// (the id's high 32 bits), so a test judges its own intervals and never another suite's that shares the process.
+    /// Nil sees every interval, as before.
+    let scope: UInt32?
 
-    init() {
+    init(scope: UInt32? = nil) {
+        self.scope = scope
         let unique = UUID().uuidString
         outputURL = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-signpost-\(unique).ndjson")
         pidFileURL = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-signpost-\(unique).pid")
@@ -70,7 +75,7 @@ final class SignpostProbe: @unchecked Sendable {
         process.standardError = sink
         try process.run()
         started = true
-        for _ in 0..<100 {
+        for _ in 0..<50 {
             if (try? String(contentsOf: outputURL, encoding: .utf8))?.contains("Filtering the log data") == true { break }
             try await Task.sleep(for: .milliseconds(100))
         }
@@ -79,7 +84,7 @@ final class SignpostProbe: @unchecked Sendable {
         // So instead of a fixed pause, emit a beacon until the stream hands one back; seeing any beacon proves attachment.
         let beacon = OSSignposter(subsystem: FlotsamLog.subsystem, category: Self.beaconCategory)
         let began = Date()
-        for _ in 0..<300 where !beaconSeen {
+        for _ in 0..<120 where !beaconSeen {
             beacon.emitEvent("probe.ready")
             try await Task.sleep(for: .milliseconds(100))
             _ = marks()
@@ -128,16 +133,51 @@ final class SignpostProbe: @unchecked Sendable {
             guard line.first == UInt8(ascii: "{"), line.range(of: Data("\"signpostName\"".utf8)) != nil,
                   let object = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { continue }
             // Checked before the id is read: an event's exclusive id does not fit in an Int, so the cast below would skip it.
-            if object["category"] as? String == Self.beaconCategory { beaconSeen = true; continue }
+            if object["category"] as? String == Self.beaconCategory {
+                beaconSeen = true
+                if object["signpostName"] as? String == Self.syncName, let token = object["signpostID"] as? Int { syncSeen.insert(token) }
+                continue
+            }
             guard let name = object["signpostName"] as? String, let type = object["signpostType"] as? String,
                   let category = object["category"] as? String, let id = object["signpostID"] as? Int,
                   let stamp = object["timestamp"] as? String, let at = Self.timestampFormat.date(from: stamp) else { continue }
+            if let scope, id >> 32 != Int(scope) { continue }
             seen.append(Mark(event: Event(name: name, type: type, category: category), id: id, at: at))
         }
         return seen
     }
 
     func events() -> [Event] { marks().map(\.event) }
+
+    private static let syncName = "probe.sync"
+    private var syncSeen: Set<Int> = []
+    private var syncTokens = 0
+
+    /// Waits (up to 10 s) until the stream hands back a marker emitted after this call began, so what the process had
+    /// already emitted has been delivered too. A condition with a deadline in place of a fixed settle pause. Throws if
+    /// the stream never returns the marker.
+    func flush() async throws {
+        syncTokens += 1
+        let token = syncTokens
+        let marker = OSSignposter(subsystem: FlotsamLog.subsystem, category: Self.beaconCategory)
+        for _ in 0..<100 {
+            marker.emitEvent("probe.sync", id: OSSignpostID(UInt64(token)))
+            try await Task.sleep(for: .milliseconds(100))
+            _ = marks()
+            if lock.withLock({ syncSeen.contains(token) }) { return }
+        }
+        throw ProbeError.streamNeverAttached
+    }
+
+    /// Polls (up to `timeout`) until `condition` holds over this probe's marks; true if it did.
+    func wait(timeout: Duration = .seconds(10), until condition: ([Mark]) -> Bool) async throws -> Bool {
+        let deadline = ContinuousClock.now + timeout
+        while ContinuousClock.now < deadline {
+            if condition(marks()) { return true }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        return condition(marks())
+    }
 
     /// Waits until at least `count` events have been seen (up to 20 s), then a further settle window so an unexpected
     /// extra event has time to show up.
@@ -153,5 +193,17 @@ final class SignpostProbe: @unchecked Sendable {
         for _ in 0..<50 where process.isRunning { try? await Task.sleep(for: .milliseconds(100)) }
         try? FileManager.default.removeItem(at: outputURL)
         try? FileManager.default.removeItem(at: pidFileURL)
+    }
+}
+
+/// Hands each test its own signpost scope (see `Signposts.begin(_:scope:)`), so two tests never share one.
+enum SignpostScopes {
+    private static let counter = NSLock()
+    nonisolated(unsafe) private static var last: UInt32 = 0
+    static func next() -> UInt32 {
+        counter.lock()
+        defer { counter.unlock() }
+        last += 1
+        return last
     }
 }

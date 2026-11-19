@@ -202,7 +202,12 @@ struct Worf466AdversarialTests {
         #expect(result == nil, "a hung press reports nothing")
         #expect(ContinuousClock.now - started < .seconds(3), "the bound is honoured")
         // and the same press resolves normally once released, so a slow press is not mistaken for a hung one
+        // The abandoned press is still running, so the file's import is whatever it left. Let it finish, then add a file
+        // nothing is running for: the press must now come back with that one (TASK-509: pressing straight after the
+        // release raced the abandoned press's import, which counted 0 whenever it had already finished).
         rig.ingest.releaseIngests()
+        #expect(await rig.watcher.untilIdle(), "the released import never ended")
+        try rig.shot(in: rig.desktop, "Screenshot after.png")
         #expect(await rig.watcher.importRecentWithin() == .success(1))
     }
 }

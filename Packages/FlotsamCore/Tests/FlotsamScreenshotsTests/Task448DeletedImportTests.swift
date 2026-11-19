@@ -39,7 +39,7 @@ struct Task448DeletedImportTests {
 
         // when: the user deleted A's item; B becomes readable; Flotsam relaunches with no scan in between
         try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: b.path)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         #expect(await eventually { rig.ingest.names.contains(b.lastPathComponent) })
         await letItSettle()

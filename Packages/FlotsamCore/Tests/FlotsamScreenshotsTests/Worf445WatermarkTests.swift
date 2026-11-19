@@ -31,7 +31,7 @@ struct Worf445LiveImportWatermarkTests {
         #expect(await eventually { (rig.marks.value ?? .distantPast) >= born.addingTimeInterval(slack - tolerance) })
 
         // when: Flotsam is quit and relaunched with no scan in between (the item was deleted, so only the watermark remembers)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
 
@@ -55,7 +55,7 @@ struct Worf445LiveImportWatermarkTests {
 
         // then: the watermark is at least born + 5 s (now alone, ~born - 1.5 s, would let the slack select it again)
         #expect(await eventually { (rig.marks.value ?? .distantPast) >= born.addingTimeInterval(slack - tolerance) })
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
         #expect(rig.ingest.names == [name(file)])
@@ -104,7 +104,7 @@ struct Worf445HoldbackTests {
         await rig.tick()
         let heldAt = try #require(rig.marks.value)
         let final = try renameIntoScreenshot(hidden)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
 
         // then: the watermark stayed at or before the temp's birth, and the relaunch imported the renamed file once
@@ -130,7 +130,7 @@ struct Worf445HoldbackTests {
         await rig.tick()
         let heldAt = try #require(rig.marks.value)
         let final = try renameIntoScreenshot(hidden)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
 
         // then: the tick did not carry the watermark past the temp's birth, and the renamed file is imported once
@@ -154,7 +154,7 @@ struct Worf445HoldbackTests {
             await rig.tick()
             let marked = try #require(rig.marks.value)
             _ = try renameIntoScreenshot(hidden)
-            rig.relaunch()
+            await rig.relaunch()
             await rig.watcher.start()
             await letItSettle()
 
@@ -188,7 +188,7 @@ struct Worf445HoldbackTests {
         // then: held at its birth; so that once it can be read, a relaunch still finds it
         #expect(try #require(rig.marks.value) <= born.addingTimeInterval(tolerance))
         try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: stuck.path)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         let imported = await eventually { rig.ingest.names == [name(stuck)] }
         #expect(imported, "names \(rig.ingest.names) marks \(String(describing: rig.marks.value)) born \(born) notices \(rig.notices.entries)")

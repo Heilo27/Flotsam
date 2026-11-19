@@ -25,7 +25,7 @@ struct Task461ExactlyOnceTests {
         await rig.watcher.didBecomeActive()
         #expect(await eventually { rig.ingest.candidates.count == 4 })
         // The last import ends (and leaves `pending`) a moment after its ingest returns.
-        await letItSettle()
+        #expect(await rig.watcher.untilIdle())
         #expect(await rig.watcher.importRecentWithin() == .success(0))
         await letItSettle()
         #expect(rig.ingest.candidates.count == 4, "the press must not ingest what the reconcile already did")
@@ -35,13 +35,15 @@ struct Task461ExactlyOnceTests {
     func pressDuringReconcile() async throws {
         let rig = try WatcherRig(watermark: Date().addingTimeInterval(-60))
         defer { rig.cleanUp() }
+        rig.ingest.holdIngests()
         await rig.watcher.start()
         try makeFiles(rig, count: 4)
         await rig.watcher.didBecomeActive()
         let log = await OnceHUDLog()
         let watcher = rig.watcher!
-        #expect(await finishes { await watcher.importRecentAnnouncing { m in log.messages.append(m) } }, "the press must resolve")
-        await letItSettle()
+        let pressBegan = await pressWhileJobsHeld(rig) { await watcher.importRecentAnnouncing { m in log.messages.append(m) } }
+        #expect(pressBegan, "the press must resolve")
+        #expect(await rig.watcher.untilIdle())
         #expect(await log.messages == ["Imported 4"])
         #expect(rig.ingest.candidates.count == 4)
     }
@@ -50,12 +52,16 @@ struct Task461ExactlyOnceTests {
     func pressTwice() async throws {
         let rig = try WatcherRig(watermark: Date().addingTimeInterval(-60))
         defer { rig.cleanUp() }
+        rig.ingest.holdIngests()
         await rig.watcher.start()
         try makeFiles(rig, count: 4)
         await rig.watcher.didBecomeActive()
-        #expect(await rig.watcher.importRecentWithin() == .success(4))
+        let first = Handoff<FlotsamResult<Int>>()
+        let watcher = rig.watcher!
+        #expect(await pressWhileJobsHeld(rig) { first.set(await watcher.importRecent()) }, "the first press must resolve")
+        #expect(first.value == .success(4))
         #expect(await rig.watcher.importRecentWithin() == .success(0))
-        await letItSettle()
+        #expect(await rig.watcher.untilIdle())
         #expect(rig.ingest.candidates.count == 4)
     }
 }

@@ -11,6 +11,7 @@ FR-002-04 specifies an FSEvents stream with file-level events, 0.3 s latency, no
 - Recognition is one function, `ScreenshotRecognizer`, holding the one `ScreenshotNamePrefixes` list and the attribute check; "Import recent screenshots" (FR-002-12) and live pickup both call it.
 - Reading the attribute goes through the `FileSystemPort` (`extendedAttribute(named:)`); birth date and entry kind (regular, directory, link) come from its `fileInfo(at:)`.
 - The system `location` and `name` preferences come from a `ScreenCapturePreferences` port in Base, read fresh on every resolution; its CFPreferences adapter is Foundation-only, so it sits beside `LocalFileSystem` in Base.
+- `ScreenshotWatcher.stop()` ends a watcher for good: it cuts new work, lets imports already accepted finish (their watermark writes land), then deactivates; every later event, tick, wake, activation, settings change, start or press does nothing. The app never calls it (the watcher lives for the process), so product behaviour is unchanged; it exists so a test that relaunches the watcher can retire the old one instead of leaking a live watcher that races the new one (TASK-510).
 
 ## Alternatives rejected
 - **`DispatchSource` vnode watching.** Directory vnode events report that something changed, not which file or whether it finished writing, and need one file descriptor per folder; we would rescan on every event.

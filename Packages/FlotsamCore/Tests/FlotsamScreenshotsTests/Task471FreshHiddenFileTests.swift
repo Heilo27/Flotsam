@@ -80,7 +80,7 @@ struct Task471FreshHiddenFileTests {
         #expect(await eventually { rig.ingest.names == [shot.lastPathComponent] })
 
         // when: Flotsam relaunches inside the window
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         #expect(await eventually { rig.ingest.names.count == 2 })
         await letItSettle()
@@ -93,7 +93,7 @@ struct Task471FreshHiddenFileTests {
         await rig.tick()
         await rig.tick()
         await rig.tick()
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
         // then: nothing is offered a third time

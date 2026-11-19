@@ -85,6 +85,12 @@ public actor ScreenshotWatcher {
     /// Paths queued or in flight, so repeated events for one file cost one import.
     private var pending: Set<String> = []
     private var inFlight = 0
+    /// Imports started and not yet fully finished (`inFlight` drops at the start of `finish`, before its watermark write
+    /// and notices; this drops at its end). What `stop()` waits on.
+    private var running = 0
+    private var idleWaiters: [CheckedContinuation<Void, Never>] = []
+    /// Set by `stop()`: this watcher is finished for good and never starts pickup again.
+    private var stopped = false
     private var batches: [UUID: Batch] = [:]
     /// Presses waiting on a path that was queued or in flight when their scan returned (live pickup or a reconcile
     /// got there first). The job's own result counts toward each of them when it ends.
@@ -131,12 +137,42 @@ public actor ScreenshotWatcher {
     /// Launch (FR-002-02, FR-002-08): starts pickup when the setting is on. The existing watermark is kept, so
     /// screenshots taken while Flotsam was not running are caught by the reconcile scan.
     public func start() async {
-        guard !active, settings.value(SettingKeys.screenshotsEnabled) else { return }
+        guard !stopped, !active, settings.value(SettingKeys.screenshotsEnabled) else { return }
         await activate(freshWatermark: false)
+    }
+
+    /// Ends this watcher for good: the owner is quitting or replacing it (TASK-510). New work stops at once: the watch is
+    /// torn down (an event or scan already on its way is discarded), the poll timer is cancelled, and the watcher never
+    /// starts pickup again whatever `start()`, `settingsDidChange()`, a wake or an event says; `importRecent()` fails as
+    /// paused. Imports already accepted then run to their end, so their watermark writes land (a quit that dropped them
+    /// would have the next launch select those files again), and finally pickup goes off as `deactivate` does (FR-002-05).
+    /// When this returns the watcher has nothing running and writes nothing more. Nothing in the app calls it yet, so no
+    /// product behaviour changes.
+    public func stop() async {
+        stopped = true
+        cancelTick?()
+        cancelTick = nil
+        teardown()
+        while running > 0 {
+            await withCheckedContinuation { idleWaiters.append($0) }
+        }
+        await deactivate()
+    }
+
+    /// Imports started and not yet fully finished. Internal, for tests that must know a pickup has gone quiet.
+    var importsRunning: Int { running }
+
+    private func importEnded() {
+        running -= 1
+        guard running == 0 else { return }
+        let waiters = idleWaiters
+        idleWaiters.removeAll()
+        for waiter in waiters { waiter.resume() }
     }
 
     /// One of `screenshots.enabled`, `screenshots.folderOverride` or `capture.mode` changed.
     public func settingsDidChange() async {
+        guard !stopped else { return }
         let enabled = settings.value(SettingKeys.screenshotsEnabled)
         if enabled && !active {
             await activate(freshWatermark: true)
@@ -156,13 +192,13 @@ public actor ScreenshotWatcher {
 
     /// FR-002-02, FR-002-03, FR-002-08.
     public func didBecomeActive() async {
-        guard active else { return }
+        guard active, !stopped else { return }
         await evaluate(reconcile: true)
     }
 
     /// FR-002-08: a reconcile scan on wake from sleep.
     public func didWake() async {
-        guard active else { return }
+        guard active, !stopped else { return }
         await evaluate(reconcile: true)
     }
 
@@ -208,6 +244,7 @@ public actor ScreenshotWatcher {
     /// already in the library. None is ingested a second time, so each file is ingested once.
     /// A joined live job that capture mode or pickup-off drops from the queue is imported by the press itself.
     public func importRecent() async -> FlotsamResult<Int> {
+        guard !stopped else { return .failure(Self.pausedError) }
         // Registered before the first suspension, so a live import that ends while the press scans is noted for it.
         let id = UUID()
         batches[id] = Batch(total: 0, remaining: 0)
@@ -266,6 +303,7 @@ public actor ScreenshotWatcher {
     // MARK: Activation
 
     private func activate(freshWatermark: Bool) async {
+        guard !stopped else { return }
         active = true
         lastMode = settings.value(SettingKeys.captureMode)
         let mine = session
@@ -316,7 +354,7 @@ public actor ScreenshotWatcher {
     /// Ticks never overlap: the work suspends (listing, the folder-access prompt, the watermark write), so a tick that
     /// fires while the previous one is unfinished is dropped; the next tick does the work.
     func tickFired() async {
-        guard active, !tickRunning else { return }
+        guard active, !stopped, !tickRunning else { return }
         tickRunning = true
         defer { tickRunning = false }
         await evaluate(reconcile: false)
@@ -662,6 +700,7 @@ public actor ScreenshotWatcher {
         while inFlight < Self.maxInFlight, !queue.isEmpty {
             let job = queue.removeFirst()
             inFlight += 1
+            running += 1
             let importer = importer
             Task {
                 let attempt = await importer.run(job.file, countsAsCopy: job.batch == nil)
@@ -710,6 +749,7 @@ public actor ScreenshotWatcher {
         }
         complete(job, joined: joined, created: created, failure: failure)
         pump()
+        importEnded()
     }
 
     /// FR-002-05: a live job of a session that has ended reports nothing, whatever its outcome: the notice would stand

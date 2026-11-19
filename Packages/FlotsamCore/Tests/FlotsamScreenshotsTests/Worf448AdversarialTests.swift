@@ -94,11 +94,12 @@ struct Worf448WatcherTests {
         let marked = try #require(rig.marks.value)
         #expect(marked <= bornA.addingTimeInterval(0.01), "watermark \(marked) passed the unfinished file's birth")
         try readable(b)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         // then: B arrives exactly once; (A may be re-selected here: the documented hold-wins case, absorbed by dedupe)
         #expect(await eventually { rig.ingest.names.contains(b.lastPathComponent) })
-        await letItSettle()
+        // Stopping runs every import the relaunch's scan accepted to its end, so what follows is the complete count.
+        await rig.watcher.stop()
         #expect(rig.ingest.names.filter { $0 == b.lastPathComponent }.count == 1)
     }
 
@@ -122,21 +123,24 @@ struct Worf448WatcherTests {
         // when: A imports; relaunch #1 with B still unreadable; then A2 imports on the new watcher
         rig.event(a)
         #expect(await eventually { rig.ingest.names == [a.lastPathComponent] })
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
         rig.event(a2)
         #expect(await eventually { rig.ingest.names.contains(a2.lastPathComponent) })
+        // The watermark is written after the ingest returns, so wait for it to reach A2's slack (a condition, same bound).
+        let a2Slack = bornA.addingTimeInterval(6 - 0.01)
+        #expect(await eventually(timeout: .seconds(20)) { (rig.marks.value ?? .distantPast) >= a2Slack }, "watermark never reached A2's slack")
         let marked = try #require(rig.marks.value)
         #expect(marked >= bornA.addingTimeInterval(6 - 0.01), "watermark \(marked) inside A2's slack")
         #expect(marked < bornA.addingTimeInterval(3 + 5), "watermark \(marked) past B's window")
 
         // when: B settles; relaunch #2
         try readable(b)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         #expect(await eventually { rig.ingest.names.contains(b.lastPathComponent) })
-        await letItSettle()
+        await rig.watcher.stop()
 
         // then: three distinct files, each ingested once, in total
         let names = rig.ingest.names

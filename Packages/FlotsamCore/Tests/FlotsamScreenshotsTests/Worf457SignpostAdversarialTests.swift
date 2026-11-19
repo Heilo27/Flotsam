@@ -11,52 +11,15 @@ import FlotsamBase
 // Declared as an EXTENSION of that suite on purpose: a Swift Testing suite's tests run in parallel with other suites',
 // and the hold tests here keep an interval open for seconds. As a separate suite they landed inside ScreenshotImportSignpostTests'
 // time window and made it red ("an interval began and never ended"). In the same `.serialized` suite they cannot overlap it.
-// Same window discipline as there: only intervals that BEGIN in a test's own time window are judged.
+// Same discipline as there (TASK-510): each test gives its importer its own signpost scope and judges only its own intervals.
 extension ScreenshotImportSignpostTests {
-    private func advImporter(_ ingest: IngestRecorder) -> ScreenshotImporter {
-        let fileSystem = LocalFileSystem()
-        return ScreenshotImporter(fileSystem: fileSystem, stability: StabilityCheck(fileSystem: fileSystem, clock: ManualClock()), ingest: ingest)
-    }
-
     private func advFile(_ url: URL) -> ScreenshotFile {
         ScreenshotFile(url: url, folder: url.deletingLastPathComponent(), createdAt: Date(), byteSize: 4)
     }
 
-    private func advMarks(_ probe: SignpostProbe, from windowStart: Date) -> (begun: [SignpostProbe.Mark], ends: [SignpostProbe.Mark]) {
-        let marks = probe.marks().filter { $0.event.name == "screenshot.import" }
-        return (marks.filter { $0.event.type == "begin" && $0.at >= windowStart }, marks.filter { $0.event.type == "end" })
-    }
-
-    private func advOpenIDs(_ probe: SignpostProbe, from windowStart: Date) -> Set<Int> {
-        let (begun, ends) = advMarks(probe, from: windowStart)
-        let ended = Set(ends.map(\.id))
-        return Set(begun.map(\.id)).subtracting(ended)
-    }
-
-    /// Waits until every interval that began in the window has ended (and at least `minimum` have begun), then the 1.5 s
-    /// settle for an unexpected extra end, and returns that snapshot. TASK-501 (OC-WORF457-02 flake): the window is open
-    /// ended on the begin side only, so another suite's import that begins inside it and is still running at the moment of
-    /// the snapshot counts as an interval that "ended 0 times". `collect(atLeast:)` could not help: it counts events
-    /// process-wide, so it returns the moment anyone's events reach the count, and its fixed settle then races the
-    /// stream's delivery under load. A begin that has no end yet is a pickup in flight, not an error, so this waits for it;
-    /// the assertions run on a snapshot in which nothing in the window is still open.
-    private func settledMarks(
-        _ probe: SignpostProbe, from windowStart: Date, atLeastBegun minimum: Int
-    ) async throws -> (begun: [SignpostProbe.Mark], ends: [SignpostProbe.Mark]) {
-        var snapshot = advMarks(probe, from: windowStart)
-        for _ in 0..<3 {
-            for _ in 0..<200 {
-                let current = advMarks(probe, from: windowStart)
-                let ended = Set(current.ends.map(\.id))
-                if current.begun.count >= minimum, current.begun.allSatisfy({ ended.contains($0.id) }) { break }
-                try await Task.sleep(for: .milliseconds(100))
-            }
-            try await Task.sleep(for: .seconds(1.5))
-            snapshot = advMarks(probe, from: windowStart)
-            let ended = Set(snapshot.ends.map(\.id))
-            if snapshot.begun.count >= minimum, snapshot.begun.allSatisfy({ ended.contains($0.id) }) { break }
-        }
-        return snapshot
+    private func advOpenIDs(_ probe: SignpostProbe) -> Set<Int> {
+        let (begun, ends) = importMarks(probe)
+        return Set(begun.map(\.id)).subtracting(Set(ends.map(\.id)))
     }
 
     /// OC-WORF457-01. given a pickup whose ingest is held, then its interval is OPEN while the ingest runs (it covers
@@ -69,27 +32,28 @@ extension ScreenshotImportSignpostTests {
         let real = try temp.file("shots/Screenshot held.png")
         let ingest = IngestRecorder()
         ingest.holdIngest(named: "Screenshot held.png")
-        let probe = SignpostProbe()
+        let scope = SignpostScopes.next()
+        let probe = SignpostProbe(scope: scope)
         do {
             try await probe.start()
-            let subject = advImporter(ingest)
-            let windowStart = Date().addingTimeInterval(-0.05)
+            let subject = importer(scope: scope, ingest: ingest)
             let job = Task { await subject.run(advFile(real), countsAsCopy: true) }
-            // Wait until the pickup is inside the ingest, then let the stream catch up with what it has begun.
-            for _ in 0..<200 where ingest.heldIngests < 1 { try await Task.sleep(for: .milliseconds(25)) }
-            #expect(ingest.heldIngests == 1)
-            for _ in 0..<100 where self.advMarks(probe, from: windowStart).begun.isEmpty { try await Task.sleep(for: .milliseconds(100)) }
-            try await Task.sleep(for: .seconds(1.5))
-            let openWhileHeld = advOpenIDs(probe, from: windowStart)
+            // Wait until the pickup is inside the ingest, then until the stream has delivered what it has begun.
+            #expect(await eventually(timeout: .seconds(20)) { ingest.heldIngests == 1 }, "the pickup never reached the ingest")
+            let begunSeen = try await probe.wait { !$0.filter { $0.event.name == "screenshot.import" && $0.event.type == "begin" }.isEmpty }
+            #expect(begunSeen, "the signpost stream never delivered the begin of the held pickup's interval")
+            try await probe.flush()
+            let openWhileHeld = advOpenIDs(probe)
             ingest.releaseIngest(named: "Screenshot held.png")
             let attempt = await job.value
-            for _ in 0..<100 where !openWhileHeld.isDisjoint(with: self.advOpenIDs(probe, from: windowStart)) { try await Task.sleep(for: .milliseconds(100)) }
-            try await Task.sleep(for: .seconds(1.5))
-            let openAfter = advOpenIDs(probe, from: windowStart)
+            _ = try await settledImportMarks(probe, atLeastBegun: 1)
+            let openAfter = advOpenIDs(probe)
             await probe.stop()
             guard case .imported = attempt else { Issue.record("expected imported, got \(attempt)"); return }
             #expect(!openWhileHeld.isEmpty, "no interval was open while the ingest was held")
             #expect(!openWhileHeld.subtracting(openAfter).isEmpty, "the interval that was open during the ingest never closed after it")
+            let (begun, ends) = importMarks(probe)
+            #expect(Set((begun + ends).map(\.event.category)) == ["perf"], "the real signpost is not in category perf")
         } catch {
             ingest.releaseIngest(named: "Screenshot held.png")
             await probe.stop()
@@ -108,34 +72,32 @@ extension ScreenshotImportSignpostTests {
         let second = try temp.file("shots/Screenshot two.png", bytes: Data([0x89, 0x50, 0x4E, 0x47, 2]))
         let ingest = IngestRecorder()
         ingest.holdIngests()
-        let probe = SignpostProbe()
-        do {
-            try await probe.start()
-            let subject = advImporter(ingest)
-            let windowStart = Date().addingTimeInterval(-0.05)
-            let jobs = [Task { await subject.run(advFile(first), countsAsCopy: true) }, Task { await subject.run(advFile(second), countsAsCopy: true) }]
-            for _ in 0..<200 where ingest.heldIngests < 2 { try await Task.sleep(for: .milliseconds(25)) }
-            #expect(ingest.heldIngests == 2)
+        let scope = SignpostScopes.next()
+        let tap = IntervalTap(scope: scope)
+        defer {
             ingest.releaseIngests()
-            for job in jobs { _ = await job.value }
-            let (begun, ends) = try await settledMarks(probe, from: windowStart, atLeastBegun: 2)
-            await probe.stop()
-            let begunIDs = begun.map(\.id)
-            #expect(begunIDs.count >= 2, "begins in window \(begunIDs.count)")
-            #expect(Set(begunIDs).count == begunIDs.count, "two intervals began with the same signpost id: \(begunIDs)")
-            for id in begunIDs {
-                #expect(ends.filter { $0.id == id }.count == 1, "interval \(id) ended \(ends.filter { $0.id == id }.count) times")
-            }
-        } catch {
-            ingest.releaseIngests()
-            await probe.stop()
-            throw error
+            tap.stop()
+        }
+        let subject = importer(scope: scope, ingest: ingest)
+        let jobs = [Task { await subject.run(advFile(first), countsAsCopy: true) }, Task { await subject.run(advFile(second), countsAsCopy: true) }]
+        #expect(await eventually(timeout: .seconds(20)) { ingest.heldIngests == 2 }, "the two pickups never both reached the ingest")
+        ingest.releaseIngests()
+        for job in jobs { _ = await job.value }
+        let (begun, ends) = tap.importEdges()
+        #expect(begun.count == 2, "begins \(begun.count)")
+        #expect(Set(begun).count == begun.count, "two intervals began with the same id: \(begun)")
+        for id in begun {
+            #expect(ends.filter { $0 == id }.count == 1, "interval \(id) ended \(ends.filter { $0 == id }.count) times")
         }
     }
 
     /// OC-WORF457-03. given the outcomes the S2 suite does not drive, an ingest that fails (STO-DB-001), an ingest that
     /// rejects (SSP-LIM-001) and a pickup cancelled while it waits, then each opens and closes an interval. Red if the
     /// end is only on a success path, or only on the paths before the ingest.
+    ///
+    /// The cancelled pickup waits on a clock that parks every sleep until the task is cancelled, and the test cancels it
+    /// only once it is parked, so it is cancelled while waiting on every run (cancelling straight after `Task {}` raced the
+    /// pickup: on a fast scheduler it had already finished and came back imported).
     @Test("OC-WORF457-03 a failed, a rejected and a cancelled pickup each close their interval")
     func lateOutcomesCloseTheirInterval() async throws {
         let temp = try TempFolder()
@@ -146,29 +108,40 @@ extension ScreenshotImportSignpostTests {
         let ingest = IngestRecorder()
         ingest.fail("Screenshot fails.png", with: FlotsamError(.stoDb001, "scripted"))
         ingest.fail("Screenshot big.png", with: FlotsamError(.sspLim001, "scripted"))
-        let probe = SignpostProbe()
-        do {
-            try await probe.start()
-            let subject = advImporter(ingest)
-            let windowStart = Date().addingTimeInterval(-0.05)
-            let failedAttempt = await subject.run(advFile(failing), countsAsCopy: true)
-            let rejectedAttempt = await subject.run(advFile(tooBig), countsAsCopy: true)
-            let task = Task { await subject.run(advFile(cancelled), countsAsCopy: true) }
-            task.cancel()
-            let cancelledAttempt = await task.value
-            _ = try await probe.collect(atLeast: 6)
-            let (begun, ends) = advMarks(probe, from: windowStart)
-            await probe.stop()
-            guard case .failed = failedAttempt, case .rejected = rejectedAttempt, case .unstable = cancelledAttempt else {
-                Issue.record("expected failed, rejected, unstable; got \(failedAttempt) \(rejectedAttempt) \(cancelledAttempt)")
-                return
-            }
-            let endedIDs = Set(ends.map(\.id))
-            #expect(begun.count >= 3, "begins in window \(begun.count)")
-            #expect(begun.allSatisfy { endedIDs.contains($0.id) }, "an interval began and never ended: \(begun.filter { !endedIDs.contains($0.id) }.count)")
-        } catch {
-            await probe.stop()
-            throw error
+        let scope = SignpostScopes.next()
+        let tap = IntervalTap(scope: scope)
+        defer { tap.stop() }
+        let parked = ParkingClock()
+        let subject = importer(scope: scope, ingest: ingest)
+        let failedAttempt = await subject.run(advFile(failing), countsAsCopy: true)
+        let rejectedAttempt = await subject.run(advFile(tooBig), countsAsCopy: true)
+        let waiting = importer(scope: scope, ingest: ingest, clock: parked)
+        let task = Task { await waiting.run(advFile(cancelled), countsAsCopy: true) }
+        #expect(await eventually(timeout: .seconds(20)) { parked.parkedCount == 1 }, "the pickup never reached its wait")
+        task.cancel()
+        let cancelledAttempt = await task.value
+        guard case .failed = failedAttempt, case .rejected = rejectedAttempt, case .unstable = cancelledAttempt else {
+            Issue.record("expected failed, rejected, unstable; got \(failedAttempt) \(rejectedAttempt) \(cancelledAttempt)")
+            return
         }
+        let (begun, ends) = tap.importEdges()
+        #expect(begun.count == 3, "begins \(begun.count)")
+        #expect(begun.allSatisfy { ends.contains($0) }, "an interval began and never ended: \(begun.filter { !ends.contains($0) }.count)")
+        #expect(ends.count == 3, "ends \(ends.count)")
+    }
+}
+
+/// A clock whose every sleep parks until the sleeping task is cancelled, so a test can cancel a pickup exactly while it
+/// is waiting. `now()` is fixed.
+final class ParkingClock: WallClock, @unchecked Sendable {
+    private let lock = NSLock()
+    private var parked = 0
+    private let at = Date()
+    var parkedCount: Int { lock.withLock { parked } }
+    func now() -> Date { at }
+    func sleep(for duration: Duration) async {
+        lock.withLock { parked += 1 }
+        // Returns on cancellation (the WallClock contract); the loop ends the first time the task is cancelled.
+        while !Task.isCancelled { try? await Task.sleep(for: .milliseconds(5)) }
     }
 }

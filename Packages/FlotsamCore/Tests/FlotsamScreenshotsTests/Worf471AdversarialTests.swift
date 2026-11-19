@@ -58,7 +58,7 @@ struct Worf471WatcherTests {
         #expect(await eventually { (rig.marks.value ?? .distantPast) >= born.addingTimeInterval(5 - tolerance) })
         let marked = try #require(rig.marks.value)
         #expect(marked <= born.addingTimeInterval(5 + tolerance), "watermark \(marked) not at 5 s past the imported birth")
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
         #expect(rig.ingest.names == [finalURL.lastPathComponent])
@@ -76,7 +76,7 @@ struct Worf471WatcherTests {
 
         rig.event(temp)
         await letItSettle()
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
 
@@ -128,7 +128,7 @@ struct Worf471WatcherTests {
         await letItSettle()
         try FileManager.default.removeItem(at: second)
         rig.clock.advance(by: 10)
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         #expect(await eventually { (rig.marks.value ?? .distantPast) >= born.addingTimeInterval(71 - tolerance) })
     }

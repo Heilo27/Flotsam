@@ -48,12 +48,15 @@ struct ScreenshotImporter: Sendable {
     let fileSystem: any FileSystemPort
     let stability: StabilityCheck
     let ingest: any ScreenshotIngesting
+    /// Test seam for `Signposts.begin(_:scope:)`: a test that observes the `screenshot.import` intervals sets it so it
+    /// sees only its own importer's. The watcher never sets it (0 = the system's ids, as before).
+    var signpostScope: UInt32 = 0
 
     /// Off the caller's executor: the read and the 0.5 s waits must not hold the watcher actor.
     @concurrent
     func run(_ file: ScreenshotFile, countsAsCopy: Bool) async -> ScreenshotImportAttempt {
         // FR-000-12 / FR-002-14: one interval per pickup; `defer` closes it on every return below, failures included.
-        let span = Signposts.begin(.screenshotImport)
+        let span = Signposts.begin(.screenshotImport, scope: signpostScope)
         defer { span.end() }
         let info: FileInfo
         switch await stability.waitUntilStable(file.url) {

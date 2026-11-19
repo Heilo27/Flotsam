@@ -106,9 +106,9 @@ struct FRD002AuditBTests {
         let watermark = try #require(rig.marks.value)
 
         // when: relaunched over the same folder and watermark, no new files
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
-        await letItSettle()
+        await rig.watcher.stop()
 
         // then: count delta 0 and the same 20 names; the persisted watermark did not go backwards
         #expect(rig.ingest.candidates.count == 20)

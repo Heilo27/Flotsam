@@ -189,9 +189,7 @@ private final class PipelineRig: @unchecked Sendable {
 
     /// Quit: pickup stops, the database instance is dropped. Everything durable is on disk.
     func quit() async {
-        settings.set(false, for: SettingKeys.screenshotsEnabled)
-        await watcher.settingsDidChange()
-        settings.set(true, for: SettingKeys.screenshotsEnabled)
+        await watcher.stop()
         watcher = nil
         database = nil
     }

@@ -188,11 +188,16 @@ import Testing
     /// the interval (X309: no end events) or the category changes (X310: events under another category).
     @Test("OC-0041 OC-0042 each interval emits one begin and one end under category perf")
     func beginEndPerInterval() async throws {
-        let probe = SignpostProbe()
+        // TASK-510: scoped, so another test's intervals in this process are not counted; the wait is on the 18 events
+        // this test emitted, then a flush so an extra event emitted before it would have been delivered too.
+        let scope = SignpostScopes.next()
+        let probe = SignpostProbe(scope: scope)
         do {
             try await probe.start()
-            for interval in PerfInterval.allCases { Signposts.begin(interval).end() }
-            let events = try await probe.collect(atLeast: 18)
+            for interval in PerfInterval.allCases { Signposts.begin(interval, scope: scope).end() }
+            _ = try await probe.wait { $0.count >= 18 }
+            try await probe.flush()
+            let events = probe.events()
             await probe.stop()
             #expect(PerfInterval.allCases.map(\.rawValue) == SignpostTests.names)
             #expect(events.count == 18, "\(events)")
@@ -211,11 +216,14 @@ import Testing
     /// one end, the begin first. Turns red if `measure` leaves the lane open (X309 via `defer { span.end() }`).
     @Test("OC-0041 measure returns the result and closes its interval exactly once")
     func measureClosesInterval() async throws {
-        let probe = SignpostProbe()
+        let scope = SignpostScopes.next()
+        let probe = SignpostProbe(scope: scope)
         do {
             try await probe.start()
-            let result = Signposts.measure(.librarySearch) { 6 * 7 }
-            let events = try await probe.collect(atLeast: 2)
+            let result = Signposts.measure(.librarySearch, scope: scope) { 6 * 7 }
+            _ = try await probe.wait { $0.count >= 2 }
+            try await probe.flush()
+            let events = probe.events()
             await probe.stop()
             #expect(result == 42)
             #expect(events == [

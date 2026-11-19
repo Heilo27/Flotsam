@@ -234,7 +234,7 @@ struct WatcherImportTests {
         #expect(await eventually { rig.ingest.names == [fresh.lastPathComponent] })
         #expect(try #require(rig.marks.value) > mark)
 
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await letItSettle()
         #expect(rig.ingest.candidates.count == 1, "the watermark persisted across the launch")
@@ -502,7 +502,7 @@ struct WatcherSettingsTests {
         rig.clock.advance(by: 60)
         rig.settings.set(CaptureMode.active, for: SettingKeys.captureMode)
         await rig.watcher.settingsDidChange()
-        rig.relaunch()
+        await rig.relaunch()
         await rig.watcher.start()
         await rig.watcher.didBecomeActive()
         await letItSettle()
