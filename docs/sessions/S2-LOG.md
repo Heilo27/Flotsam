@@ -2194,3 +2194,28 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
 - **Closed items:** the footprint-vs-RSS drift from A3 is resolved at 02b0ce7 (S1 ruled footprint; AC-003-65 fixed). Launch at Login defaulting to on is per spec (FR-008-12, onboarding step 7), so I withdraw S1's "worth a look" from the A3 entry.
 - **Side effect, unattributed:** a "Login Item Added: Flotsam" banner was on screen at 22:19 and still at 22:23. I can't tell who registered it. This instance never ran onboarding or the Settings toggle (it registers only there), and the suite holds no launch-at-login change. The banner may be A3's, left on screen, but that isn't confirmed. `sfltool dumpbtm` hangs here (killed at 100 s), so the background-task store is unverified. Legacy login items list no Flotsam. Ryan should still check System Settings > Login Items.
 - **Real state:** real data dir (16 files), real prefs plist and `defaults` hash all match before and after; no Flotsam diagnostic reports. Pasteboard saved (empty) and restored. Instance quit (exit 0), suite plists deleted, no Flotsam running.
+
+## A5: screenshot round 1 at ca738a8, plus prefs cleanup and BTM check (2026-11-19)
+
+- **Verdict: NOT published.** No s2/shots SHA; the branch was not created. All 16 passes reported ok, but two pairs can't go public.
+- **Capture mode:** region (`screencapture -R`) worked for all 16 passes here. The app was prebuilt with bin/build.sh.
+- **Blockers:**
+  - 05-menu-bar-menu (light and dark): private terminal text from this session shows behind the menu.
+  - 04-shelf (light and dark): the "Login Item Added" banner overlays the frame.
+- **Other defects:**
+  - 01, 02 and 03 library light: a bright white blob behind the glass.
+  - Library, onboarding and menu frames: stray pixels at top left.
+  - Known issues seen again: the Shelf image card is oversized, and the menu follows the system appearance.
+- **Translucency:** real materials in the Library (light and dark), the Shelf and the Menu. Settings, Onboarding and the Shortcut editor are opaque chrome.
+- **Harness gap:** bin/shots.sh:95-97 doesn't set CFFIXED_USER_HOME. I ran it through an env wrapper and left the harness unedited (QA reports, doesn't fix).
+- **Round 2 needs:** a fixed backdrop or a cleared desktop for the menu shot, and Do Not Disturb or banner suppression. Those are harness or host changes, so I didn't make them.
+- **Real state:** real data and prefs hashes match before and after, the pasteboard was untouched, no Flotsam is running, and no new plists were created.
+- **Leaked test prefs (S1-approved):**
+  - What: 1,224 plists matched by exact name: `flotsam.frd008.(contract|settings|pane|folder|empty|clear|apply).*`, `flotsam-7004-*` and `flotsam.task454.*`. 183 were dated 11-17 and 1,041 were dated 11-18.
+  - Action: I listed them first, then moved them to the session scratchpad with `mv -n`, so the move is reversible.
+  - Result: only the real Flotsam prefs plist remains.
+- **BTM (read-only):**
+  - `sfltool dumpbtm` hangs here (240 s, empty output).
+  - The backgroundtaskmanagementd log shows one item: identifier `2.Flotsam`, uuid 9D7D2297-0E24-474F-B672-EC0F9EAF34E6. It is registered to the A3 a1-clone Debug build path. Disposition is [disabled, allowed, notified], so it is not enabled.
+  - At 22:40:51 the A5 clone's new path was queried right after that item was updated. This supports S1's hypothesis that a stale registration is re-announced at each new app path.
+  - BTM was not reset. Ryan can remove the item under Login Items / Allow in the Background.
