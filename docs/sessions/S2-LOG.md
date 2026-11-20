@@ -2083,3 +2083,21 @@ Isolated Debug build only. The first agent hit its context cap after rows 1 to 4
 - **Defects:** none. **Spec drift:** none.
 - **Harness notes:** `CFFIXED_USER_HOME` does not redirect `defaults write`, so the suite plist lands in the real Preferences folder; use a unique suite name and delete it after. AppleScript to TextEdit fails with -1743, so drive it through System Events. ScreenshotLocationResolver falls back to `homeDirectoryForCurrentUser` (App/Flotsam/AppContainer.swift:344), so the OCR row needs `screenshots.folderOverride`.
 - **Snapshot identity:** real data and prefs hashes unchanged; the real Flotsam never ran; the pasteboard was restored.
+
+## Full pass A2: real-OS smoke on main @ 59340b9, part 2 (2026-11-19)
+
+Rows 5 to 12 ran on a fresh isolated instance.
+
+- **Row 5, Compact Library: PASS (FR-003-06).** The sidebar is 170 pt by AX frame at Standard (760x480) and at Compact (520x520). Resizing clamps at the minimum and nothing collapses.
+- **Row 6, Settings: PASS.** It opens from the menu and closes with ⌘W. ⌘, from the open Library opens it and hides the Library.
+- **Row 7, Shortcut and Trigger editor: BLOCKED, needs Ryan (FR-005-09, AC-005-08a).** System Events treated TextEdit as frontmost while lsappinfo reported Flotsam, so the synthetic ⌘K, context menu and right-click never reached the panel. The 525/526 run had ⌘K working, so this reads as the harness, not the app. Esc and ⌘W were not reached.
+- **Row 8, Add Clip: PASS.** One text item was stored with copyCount=1 and isSecure=0.
+- **Row 9, capture cue: PASS (FR-001-30, AC-001-46/47/48).** With `capture.cue` on, an 85x28 cue showed for about 1.6 s. With it off there was no cue across 8 samples over 3.2 s, and the item was still captured.
+- **Row 10, OCR: NEEDS RYAN.** A security-scoped bookmark written into `screenshots.folderOverride` did not resolve in the unsigned Debug build (error 259). The app reset the key, and the screenshot with the marker word was never imported. Only the real Choose… panel path can set it.
+- **Row 11, onboarding: PASS.** On a fresh profile the 8-step Setup appeared and was walked through with Continue, granting nothing.
+- **Row 12, memory: INCONCLUSIVE (AC-003-65).** With only 3 text items, phys_footprint was 58 MB with the Library open and 57 MB 30 s after close; RSS was 140.6 then 140.3 MB. The open value is under the 150 MB budget. The S5 condition (10,000 items, 1,000 images browsed, 10 min idle, RSS ≤ 60 MB) was not run; that is TASK-383's measurement.
+- **Quit:** exit 0 on all three runs, with no crash report.
+- **Defects:** none.
+- **[Spec Drift]:** the 170 pt sidebar is hard-coded at App/Flotsam/Library/LibraryView.swift:20, but no FRD or design doc states a sidebar width.
+- **Snapshot identity:** real data and prefs hashes unchanged; both test suites were deleted (`defaults delete` left the plist files, so they were removed by hand); the pasteboard was restored.
+- **A2 overall:** 9 rows pass. Needs Ryan: Shelf drags (row 4), the editor (row 7) and OCR (row 10). Row 12 is inconclusive against S5.
