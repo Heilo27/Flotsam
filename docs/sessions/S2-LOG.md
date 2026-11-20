@@ -2133,3 +2133,22 @@ The run used a clean clone, and its git status was empty both before and after.
   - OC-7132 (Unmapped007TimingTests.swift:110): not in the failure set.
   - The 5 OC-2080 known issues at FRD002AuditBTests.swift:364-368 are marked known in the tests themselves.
   - **None of the 67 failures is known noise.**
+
+## Full pass A3: perf on main @ f959507 (2026-11-19)
+
+Debug build, M1 Max, macOS 27.3. Isolated instance (temp home, data dir and suite, FAKE_SECURE=1); screenshots and triggers off, so the idle numbers exclude the folder watcher and event tap. Debug overstates Release. Real DB, prefs and pasteboard hashes are unchanged; cleanup is done.
+
+| Row | Budget | Measured | Verdict |
+|---|---|---|---|
+| shelf.reveal, empty DB (menu trigger, n=21) | p95 ≤120 ms | p50 27.1 / p95 36.3 / max 40.7 ms | PASS |
+| shelf.reveal, 10k DB (menu trigger, n=25) | p95 ≤120 ms | p50 57.7 / p95 75.0 / max 99.3 ms | PASS |
+| Idle wake-ups, empty DB, 9 min | ≤2.5/s | 0.13/s | PASS |
+| Idle CPU, empty DB | ≤0.2 % | 0.19–0.26 % (cputime delta) | BORDERLINE, Debug |
+| Idle memory, empty DB | ≤60 MB footprint | 23 MB footprint (RSS 89 MB) | PASS |
+| Panel open, 10k items / 1,000 images browsed | ≤150 MB footprint | 93 MB footprint peak (RSS 185.5 MB) | PASS |
+| After close + 10 min idle, 10k DB | ≤60 MB footprint | 61 MiB = 64.0 MB footprint (RSS 177 MB); CPU 0.098 %; 0.018 wake-ups/s | **FAIL (marginal, Debug)** |
+
+- **Memory after close:** the footprint fell from 84 to 61 MiB when the panel closed, but it didn't return to the 23 MB empty baseline. The cause isn't diagnosed. A seeded DB's idle baseline with no panel opened wasn't measured, so I can't separate retained memory from DB-size cost. Needs a Release re-measure before it's called a defect.
+- **[Spec Drift]:** PRD.md:25 states the S5 budgets as physical footprint, while AC-003-65 (FRD-003:152) says RSS. By RSS every memory row fails (Debug RSS includes mapped shared-cache pages); by footprint only the after-close row fails. One home for the metric is needed. Not edited here.
+- **TASK-556:** the earlier p95 of 176 ms didn't reproduce, but the trigger was different. Neither the dwell trigger nor the drag trigger fired (likely Accessibility isn't trusted on the Debug build; not confirmed), so the dwell-to-reveal span in AC-006-18 wasn't exercised. Needs Ryan or a trusted build.
+- **Side effect:** the Debug build registered itself as a login item (macOS showed "Login Item Added: Flotsam", since Launch at Login defaults to on). The agent turned the in-app toggle off. Legacy login items list no Flotsam, and the `sfltool dumpbtm` capture came back empty, so the background-task store wasn't verified. Ryan should check System Settings > Login Items for a stray Flotsam entry. Separately, launch at login defaulting to on for an unsigned dev build is worth a look.
