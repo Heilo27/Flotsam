@@ -243,7 +243,7 @@ private enum Worf497 {
         #expect(published.count == 1)
         #expect(published.first?.stagedIds == Set(1...203), "the copy was not whole when it was moved into place")
         #expect(published.first?.stagedVersion == 1)
-        #expect(try await upgraded.diagnostics().get().userVersion == 2)
+        #expect(try await upgraded.pragmaFacts().userVersion == 2)
         withExtendedLifetime(writer) {}
     }
 
@@ -362,7 +362,7 @@ private enum Worf497 {
 
         let retry = try await FlotsamDatabase.open(
             folder: root, fileSystem: LocalFileSystem(), migrations: Migrations.baseline + [Worf497.addProbe], busyTimeout: 0.3).get()
-        #expect(try await retry.diagnostics().get().userVersion == 2)
+        #expect(try await retry.pragmaFacts().userVersion == 2)
         let copy = try Worf497.read(fileAlone: folder.appendingPathComponent("flotsam-v1.sqlite"))
         #expect(copy.ids == [1, 2, 3], "\(fault)")
         #expect(copy.version == 1, "\(fault)")
@@ -402,7 +402,7 @@ private enum Worf497 {
         #expect(Worf497.mode(root.appendingPathComponent("pre-migration/flotsam-v1.sqlite")) == 0o600)
         #expect(Worf497.names(in: root.appendingPathComponent("pre-migration")) == ["flotsam-v1.sqlite", "notes.txt"])
         #expect(Worf497.names(in: root.appendingPathComponent("tmp")).filter { $0.hasPrefix("premigration-") }.isEmpty)
-        #expect(try await upgraded.diagnostics().get().userVersion == 2)
+        #expect(try await upgraded.pragmaFacts().userVersion == 2)
     }
 
     /// OC-WORF497-06 / AC-007-22. Given a copy name taken by a folder (the user's), when the open migrates, then the

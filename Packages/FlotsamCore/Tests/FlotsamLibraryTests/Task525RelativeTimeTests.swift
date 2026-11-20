@@ -141,8 +141,8 @@ final class Flag: @unchecked Sendable {
 
         await model.open(target: nil)
         model.panelDidHide()
-        #expect(!model.loadedRows.isEmpty, "rows stay loaded after a hide, so only isShown can stop the watch")
-        #expect(await returns(Task { await model.watchRelativeTimes() }), "hidden with rows loaded: returns at once")
+        #expect(model.loadedRows.isEmpty, "a hide releases the held rows (FR-003-05)")
+        #expect(await returns(Task { await model.watchRelativeTimes() }), "hidden: returns at once")
         #expect(clock.sleeps.isEmpty)
 
         await model.open(target: nil)
