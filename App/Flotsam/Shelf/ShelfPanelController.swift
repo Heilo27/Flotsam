@@ -642,7 +642,8 @@ extension ShelfPanelController: ShelfDropDelegate {
             representations = snapshot.representations
         }
         // FR-006-13: the source is the frontmost app at drop time. Capture mode and the ignored-apps list do not apply
-        // (an explicit drop is an explicit save); the capture classifier's never-store gates still do.
+        // (an explicit drop is an explicit save); the capture classifier's never-store gates still do. Ingest stores no bundle id for
+        // a drop from an ignored app, so the read-time hide never matches it (FR-008-42, `IgnoredAppsGate`).
         let source = SystemSourceApps().frontmostApp()
         Task { [weak self] in
             let result = await dropService.drop(
