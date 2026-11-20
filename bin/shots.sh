@@ -31,6 +31,15 @@ APPEARANCES=(light dark)
 
 die() { echo "shots: $*" >&2; exit 1; }
 
+# Publish scratch worktree. Script-global on purpose: the EXIT trap runs after publish() has returned (or from die's
+# exit inside it), when a `local` is already gone and `set -u` would abort the cleanup with "unbound variable".
+PUBLISH_WORK=""
+cleanup_publish() {
+  [[ -n "$PUBLISH_WORK" ]] || return 0
+  git -C "$ROOT" worktree remove --force "$PUBLISH_WORK" >/dev/null 2>&1 || true
+  git -C "$ROOT" branch -D s2/shots-new >/dev/null 2>&1 || true
+}
+
 publish() {
   local round="${1:-}" outdir="${2:-}"
   [[ "$round" =~ ^[0-9]+$ ]] || die "--publish needs a round number"
@@ -45,7 +54,8 @@ publish() {
   ((${#pngs[@]} == 16)) || echo "shots: warning: ${#pngs[@]} of 16 files in $outdir" >&2
 
   local work="$ROOT/.claude/worktrees/shots-publish-$$"
-  trap 'git -C "$ROOT" worktree remove --force "$work" >/dev/null 2>&1 || true; git -C "$ROOT" branch -D s2/shots-new >/dev/null 2>&1 || true' EXIT
+  PUBLISH_WORK="$work"
+  trap cleanup_publish EXIT
   if git ls-remote --exit-code --heads origin s2/shots >/dev/null 2>&1; then
     git fetch --quiet origin s2/shots
     git worktree add --quiet --detach "$work" origin/s2/shots
@@ -77,7 +87,11 @@ ONLY=""
 if [[ "${1:-}" == "--only" ]]; then ONLY="${2:-}"; [[ -n "$ONLY" ]] || die "--only needs a screen"; fi
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
-: > "$OUT/NOTES.txt"
+# This run's notes go to a scratch file and are merged into NOTES.txt at the end: a full run replaces NOTES.txt, an
+# --only run replaces just its own screens' lines and keeps the rest (docs/SCREENSHOTS.md).
+NEW_NOTES="$OUT/.notes.new"
+: > "$NEW_NOTES"
+SELECTED=()
 
 # A real Flotsam shares the Carbon hotkeys and the pasteboard; do not run next to one.
 if pgrep -x Flotsam >/dev/null 2>&1; then die "a Flotsam is already running; quit it first (the harness never kills a process it did not start)"; fi
@@ -169,23 +183,40 @@ failures=0
 for entry in "${SCREENS[@]}"; do
   name="${entry%%:*}"; stage="${entry##*:}"
   [[ -z "$ONLY" || "$ONLY" == "$name" || "$ONLY" == "$stage" ]] || continue
+  SELECTED+=("$name")
   for appearance in "${APPEARANCES[@]}"; do
     png="$OUT/$name-$appearance.png"
     rm -f "$OUT/.mode"
     result="$(pass "$stage" "$appearance" "$png")"
     if [[ "$result" != ok* && "$stage" == "menu" ]]; then
       echo "shots: $name-$appearance: real menu not captured ($result); using the staged copy"
-      echo "$name-$appearance: staged copy of the menu rows in a window, not the real NSMenu ($result)" >> "$OUT/NOTES.txt"
+      echo "$name-$appearance: staged copy of the menu rows in a window, not the real NSMenu ($result)" >> "$NEW_NOTES"
       result="$(pass menu-staged "$appearance" "$png")"
     fi
-    [[ "$result" == ok* && -f "$OUT/.mode" ]] && echo "$name-$appearance: capture mode: $(cat "$OUT/.mode")" >> "$OUT/NOTES.txt"
+    [[ "$result" == ok* && -f "$OUT/.mode" ]] && echo "$name-$appearance: capture mode: $(cat "$OUT/.mode")" >> "$NEW_NOTES"
     if [[ "$result" == "ok-window" ]]; then
       echo "shots: $name-$appearance ok (region capture failed; window-only capture, blur is flat)"
-      echo "$name-$appearance: window-only capture (-l); region capture was not available, so materials are not blurred over the backdrop" >> "$OUT/NOTES.txt"
+      echo "$name-$appearance: window-only capture (-l); region capture was not available, so materials are not blurred over the backdrop" >> "$NEW_NOTES"
     elif [[ "$result" == "ok" ]]; then echo "shots: $name-$appearance ok"
-    else echo "shots: $name-$appearance FAILED: $result" >&2; echo "$name-$appearance: FAILED $result" >> "$OUT/NOTES.txt"; failures=$((failures + 1)); fi
+    else echo "shots: $name-$appearance FAILED: $result" >&2; echo "$name-$appearance: FAILED $result" >> "$NEW_NOTES"; failures=$((failures + 1)); fi
   done
 done
+
+if [[ -n "$ONLY" && -f "$OUT/NOTES.txt" ]]; then
+  # Keep every line that does not belong to a screen this run re-captured, then add the fresh lines; stable sort by
+  # screen number keeps the file in screen order.
+  kept="$OUT/.notes.kept"; : > "$kept"
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    drop=0
+    for n in ${SELECTED[@]+"${SELECTED[@]}"}; do [[ "$line" == "$n-"* ]] && drop=1; done
+    ((drop)) || printf '%s\n' "$line" >> "$kept"
+  done < "$OUT/NOTES.txt"
+  cat "$kept" "$NEW_NOTES" | sort -s -t- -k1,1n > "$OUT/NOTES.txt"
+  rm -f "$kept"
+else
+  cp "$NEW_NOTES" "$OUT/NOTES.txt"
+fi
+rm -f "$NEW_NOTES"
 
 echo "$OUT" > build/.shots-last
 echo

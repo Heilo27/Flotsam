@@ -7,7 +7,7 @@
 
 ```sh
 bin/shots.sh ~/flotsam-shots              # build Debug if needed, 16 passes, prints the folder and file list
-bin/shots.sh ~/flotsam-shots --only shelf # one screen (name or stage)
+bin/shots.sh ~/flotsam-shots --only shelf # one screen (name or stage); NOTES.txt keeps the other screens
 bin/shots.sh --publish 3 [<outdir>]       # commit the PNGs to the orphan branch s2/shots under round-3/ and push
 ```
 
@@ -86,6 +86,8 @@ two pinned items, one note and one item with a shortcut. All invented; nothing r
   on the build Mac (display locked or asleep) and is unverified on S2. `SHOTS_CAPTURE=window` forces the fallback.
 - The menu-bar menu follows the system menu appearance, not the forced light or dark, so both menu files may look alike.
   If the real menu cannot be captured, a staged copy of its rows in a window is used and NOTES.txt says so.
+- NOTES.txt: a full run rewrites it. An `--only` run replaces only the lines of the screens it re-captured and keeps
+  the rest, so the notes from the full run survive a single-screen retake.
 - The preview's absolute "Copied" time is wall-clock and differs between runs. Relative times ("12m ago") are fixed.
 - Onboarding step 2 shows the host's real paste permission state ("Granted" or not).
 - Pixel size follows the display scale.
