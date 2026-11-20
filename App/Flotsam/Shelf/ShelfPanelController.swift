@@ -175,7 +175,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         showTask?.cancel()
         let target = frontmost.frontmost()
         let sticky = trigger.mode == .sticky
-        // From the trigger to the panel fully visible with content (FR-006-17).
+        // From the trigger (the dwell's completion, the hotkey or the menu item) to the panel on screen with content (FR-006-17).
         let span = Signposts.begin(.shelfReveal)
         showTask = Task { [weak self] in
             guard let self else { span.end(); return }
@@ -218,9 +218,11 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             case .fade: panel.animator().alphaValue = 1
             case .slide: panel.animator().setFrame(frame, display: true)
             }
-        }, completionHandler: {
-            span.end()
         })
+        // The panel is on screen with its content loaded and the motion has begun: that is "fully visible with content"
+        // (FR-006-17). The span does not wait for the slide or fade to finish; the 150 ms slide (FR-006-05) alone is over
+        // the 120 ms budget, so a span that ended with the motion could never meet it (TASK-556).
+        span.end()
         // The machine last heard `.edgeZone` (or the icon) from the dwell that revealed the Shelf. A pointer that has not
         // moved since sits on the panel now, and no further event would say so: tell the machine, or it hides the Shelf
         // 600 ms after it appeared (FR-006-04). The collapsed bars step aside first (FR-006-37).
