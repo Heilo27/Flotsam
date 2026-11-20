@@ -95,9 +95,9 @@ M = measured here, S = spec-only (code does not exist yet or was not isolated).
 | 007 | FR-007-07 ingest thumbnails | CHANGE | M: file only, never the memory cache (edited and coded here) |
 | 007 | FR-007-09 hourly retention sweep, launch and wake sweeps | KEEP | M: about 1 s CPU at launch; not periodic-heavy |
 | 007 | FR-007-13 `quick_check` at launch | KEEP | S, once per launch |
-| 007 | BlobStore fsync on every write | KEEP, low-priority ticket | S, no measured cost; only ingest-time |
-| 007 | SQLite cache_size, mmap, wal_autocheckpoint left at defaults | KEEP, low-priority ticket | S, no measured cost |
-| 007 | `ThumbnailCache.touch` is O(n) | KEEP, low-priority ticket | S, n is bounded by 64 MB of 20 KB thumbnails |
+| 007 | BlobStore fsync on every write | KEEP, no change (TASK-384) | S. Measured on a scratch harness (20 KB file, write+fsync+rename, internal SSD): about 1 ms per write with `fsync`; `F_FULLFSYNC` is not used. Ingest-time only, so no win worth the crash-safety loss |
+| 007 | SQLite cache_size, mmap, wal_autocheckpoint left at defaults | KEEP, no change (TASK-384) | S. No win shown: a pragma change needs the 10k-item harness (idle RSS/CPU, browse latency), which is owed to the test pass. Defaults stay until then |
+| 007 | `ThumbnailCache.touch` is O(n) | KEEP, no change (TASK-384) | S. Measured on a scratch harness, n=3300 (64 MB of 20 KB thumbnails), -O: about 20 us per touch, so 1,000 thumbnails scrolled cost about 20 ms in total. Not a win worth a second data structure |
 | 008 | Permission re-read every 2 s only while Settings is visible | KEEP | S, not idle |
 | 008 | Settings change stream, `UserDefaults` | KEEP | S, event-driven |
 
