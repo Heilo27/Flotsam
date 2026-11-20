@@ -127,7 +127,7 @@ private final class Task497FileSystem: FileSystemPort, @unchecked Sendable {
         #expect(copy.ids == [1, 2, 3, 4, 5])
         let mode = try FileManager.default.attributesOfItem(atPath: copyURL.path)[.posixPermissions] as? Int
         #expect(mode == 0o600)
-        #expect(try await upgraded.diagnostics().get().userVersion == 2)
+        #expect(try await upgraded.pragmaFacts().userVersion == 2)
         withExtendedLifetime(writer) {}
     }
 

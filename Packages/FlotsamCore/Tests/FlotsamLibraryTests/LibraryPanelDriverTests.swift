@@ -199,9 +199,11 @@ struct LibraryPanelDriverTests {
         #expect(rig.frontmost.reads == 2)
     }
 
-    // A second press while the first is still opening (captureNow in flight) must not start a second open.
-    @Test("FR-003-02 a second hotkey press while the first open is in flight does not capture or show twice")
-    func pressWhileOpeningIgnored() async {
+    // A second press while the first is still opening (captureNow in flight) is a hide (FR-003-02, AC-003-60): it does
+    // not start a second open, and it cancels the first, so the Library never appears. Nothing was on screen, so the
+    // presenter is never asked to hide.
+    @Test("AC-003-60 a second hotkey press while the first open is in flight cancels it: one capture, never shown")
+    func pressWhileOpeningCancelsTheOpen() async {
         let rig = PanelRig()
         let gate = CaptureGate()
         rig.capture.onRun = { await gate.hold() }
@@ -214,7 +216,7 @@ struct LibraryPanelDriverTests {
         await first?.value
         await second?.value
         #expect(rig.capture.count == 1)
-        #expect(rig.presenter.shows.count == 1)
+        #expect(rig.presenter.shows.count == 0)
         #expect(rig.presenter.hideCount == 0)
     }
 

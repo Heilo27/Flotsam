@@ -63,7 +63,7 @@ import FlotsamBase
         #expect(try Data(contentsOf: preserved).count == sizeBefore)
         #expect(try sha256(preserved) == before)
         #expect(database.openNotice?.code == .stoDb002)
-        #expect(try await database.diagnostics().get().userVersion == 1)
+        #expect(try await database.pragmaFacts().userVersion == 1)
     }
 
     /// Given the same damaged database with -wal and -shm files beside it, when it is opened, then the database and the -wal

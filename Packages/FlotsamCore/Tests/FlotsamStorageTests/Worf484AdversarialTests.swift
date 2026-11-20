@@ -77,7 +77,7 @@ struct Worf484AdversarialTests {
 
         #expect(preMigrationNames(root) == ["flotsam-v1.sqlite"])
         #expect(exists(oldQuarantine))
-        #expect(try await db.diagnostics().get().userVersion == 2)
+        #expect(try await db.pragmaFacts().userVersion == 2)
     }
 
     /// OC-484-02 (M1). Given a migration that takes the database 1 -> 2 on a launch with an *unrelated* stale copy

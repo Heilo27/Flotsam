@@ -199,7 +199,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         let moved = try folders.flatMap { try FileManager.default.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil) }
         #expect(moved.contains { (try? Data(contentsOf: $0)) == garbage })
         #expect(database.openNotice?.code == .stoDb002)
-        let diagnostics = try await database.diagnostics().get()
+        let diagnostics = try await database.pragmaFacts()
         #expect(diagnostics.userVersion == 1)
         let store = Store(root: root, clock: ManualClock(), database: database)
         #expect(try store.count("item") == 0)
@@ -314,7 +314,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         #expect(try sha256(folder.appendingPathComponent("flotsam.sqlite-wal")) == walHash)
         #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent("flotsam.sqlite-shm").path))
         #expect(database.openNotice?.code == .stoDb002)
-        let diagnostics = try await database.diagnostics().get()
+        let diagnostics = try await database.pragmaFacts()
         #expect(diagnostics.userVersion == 1)
         let fresh = Store(root: root, clock: ManualClock(), database: database)
         #expect(try fresh.count("item") == 0)
@@ -392,7 +392,7 @@ private let tenMinMs: Int64 = 10 * 60_000
         #expect(copy.version == 1)
         #expect(copy.items == 3)
         #expect(!copy.hasProbe)
-        let live = try await upgraded.diagnostics().get()
+        let live = try await upgraded.pragmaFacts()
         #expect(live.userVersion == 2)
         #expect(try Store(root: root, clock: ManualClock(), database: upgraded).count("item") == 3)
     }

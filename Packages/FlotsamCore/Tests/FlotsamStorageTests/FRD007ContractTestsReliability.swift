@@ -72,7 +72,7 @@ struct FRD007ContractReliabilityTests {
             "database.integrityCheck outcome=passed", "database.open outcome=opened",
         ])
         // and the migration really ran: version 1, the legacy row kept, a v0 copy taken before it
-        let diagnostics = try await database.diagnostics().get()
+        let diagnostics = try await database.pragmaFacts()
         #expect(diagnostics.userVersion == 1)
         let legacy = try await database.pool.read { try String.fetchAll($0, sql: "SELECT x FROM legacy") }
         #expect(legacy == ["keep-me"])

@@ -200,7 +200,7 @@ import FlotsamBase
         let copy = try readOnlyCopy(of: destination.appendingPathComponent("pre-migration/flotsam-v1.sqlite"))
         #expect(copy.version == 1)
         #expect(copy.itemIds == [1, 2, 3])
-        let diagnostics = try await upgraded.diagnostics().get()
+        let diagnostics = try await upgraded.pragmaFacts()
         #expect(diagnostics.userVersion == 2)
         let liveStore = Store(root: destination, clock: ManualClock(), database: upgraded)
         #expect(try liveStore.presentIds() == [1, 2, 3])

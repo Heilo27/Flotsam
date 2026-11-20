@@ -37,7 +37,7 @@ import FlotsamBase
         #expect(!FileManager.default.fileExists(atPath: root.path))
 
         let database = try await FlotsamDatabase.open(folder: root).get()
-        _ = try await database.diagnostics().get()
+        _ = try await database.pragmaFacts()
 
         #expect(try mode(root) == 0o700)
         let entries = everyEntry(under: root)

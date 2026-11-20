@@ -379,7 +379,7 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
         let reader = try DatabaseQueue(path: crashed.appendingPathComponent("flotsam.sqlite").path)
         let total = try await reader.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item")! }
         let marked = try await reader.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM item WHERE plainText = 'MARK-K1'")! }
-        let diagnostics = try await relaunched.diagnostics().get()
+        let diagnostics = try await relaunched.pragmaFacts()
 
         // then N+1 items are there, the marked text exists once, and the relaunched database is healthy
         #expect(total == 3)
