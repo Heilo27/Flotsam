@@ -2070,3 +2070,16 @@ The run used a clean clone.
   - LibraryContextMenu.entries compiles, because `targetRows` now defaults to `[]` (LibraryContextMenu.swift:23).
   - The toggle-while-opening tests and Task525RelativeTimeTests are runtime assertions. Their result is unknown until the Storage tests compile.
 - **Unexpected errors:** none.
+
+## Full pass A2: real-OS smoke on main @ 59340b9, part 1 (2026-11-19)
+
+Isolated Debug build only. The first agent hit its context cap after rows 1 to 4; rows 5 to 12 go to a fresh agent.
+
+- **Row 1, capture: PASS.** Text, link, image (256 and 512 thumbs) and file rows stored. The file came from a real Finder ⌘C; text, URL and image were put on the pasteboard by a script.
+- **Row 2, concealed copy: PASS (AC-001-25).** `isSecure=1`, empty plainText, 92-byte ciphertext. The marker had 0 hits (UTF-8 and UTF-16) in the DB, WAL, blobs and the app log; the row shows the mask.
+- **Row 3, Library: PASS with a caveat.** Hotkey and menu open and close; search filters; the first Esc clears the query and the second closes. Paste-back lands in TextEdit with no extra item stored. Four double-presses 20 to 120 ms apart each left the Library hidden (AC-003-60); osascript timing is not a precise 50 ms.
+- **Row 4, Shelf: placement PASS, drags needs Ryan.** Frame (460,33) 592x140, centred on a 1512 pt screen under the menu bar (TASK-533). A synthetic HID drag from TextEdit did not drop (count stayed 5), so drag in, drag out and the ignored-app drop are unverified.
+- **Row 13, quit: PASS (incidental).** Menu Quit exited 0 with no new crash report.
+- **Defects:** none. **Spec drift:** none.
+- **Harness notes:** `CFFIXED_USER_HOME` does not redirect `defaults write`, so the suite plist lands in the real Preferences folder; use a unique suite name and delete it after. AppleScript to TextEdit fails with -1743, so drive it through System Events. ScreenshotLocationResolver falls back to `homeDirectoryForCurrentUser` (App/Flotsam/AppContainer.swift:344), so the OCR row needs `screenshots.folderOverride`.
+- **Snapshot identity:** real data and prefs hashes unchanged; the real Flotsam never ran; the pasteboard was restored.
