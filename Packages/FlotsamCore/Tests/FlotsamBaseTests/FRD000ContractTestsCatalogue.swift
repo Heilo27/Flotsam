@@ -93,32 +93,32 @@ private func hits(of needle: String, in files: [SourceFile]) -> [String] {
         #expect(files.count > 100)
     }
 
-    // OC-0074. Red if either retired code returns to ErrorCode, or its catalogue key or text returns.
-    @Test("OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text")
-    func retiredCodesAbsentFromCodeAndCatalogue() throws {
+    // OC-0074, as changed by TASK-539 (FRD-000 section 7, FRD-004 FR-004-41/42: ORG-VAL-004 and -005 reinstated
+    // 2026-11-19). Red if either code, its catalogue key or its section 7 text is missing, or the pre-retirement
+    // wordings come back.
+    @Test("OC-0074 OC-0075 given the reinstated codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode and the catalogue hold both with the section 7 text and neither pre-retirement wording")
+    func reinstatedCodesPresentInCodeAndCatalogue() throws {
         let catalogue = try Repo.catalogue()
 
-        #expect(ErrorCode(rawValue: "ORG-VAL-004") == nil)
-        #expect(ErrorCode(rawValue: "ORG-VAL-005") == nil)
-        #expect(FlotsamStrings.text(forKey: "error.ORG-VAL-004") == nil)
-        #expect(FlotsamStrings.text(forKey: "error.ORG-VAL-005") == nil)
-        #expect(catalogue["error.ORG-VAL-004"] == nil)
-        #expect(catalogue["error.ORG-VAL-005"] == nil)
+        #expect(ErrorCode(rawValue: "ORG-VAL-004") != nil)
+        #expect(ErrorCode(rawValue: "ORG-VAL-005") != nil)
+        #expect(FlotsamStrings.text(forKey: "error.ORG-VAL-004") == "Choose 2 to 500 files or folders to group.")
+        #expect(FlotsamStrings.text(forKey: "error.ORG-VAL-005") == "Bundle names can be up to 100 characters.")
+        #expect(catalogue["error.ORG-VAL-004"] == "Choose 2 to 500 files or folders to group.")
+        #expect(catalogue["error.ORG-VAL-005"] == "Bundle names can be up to 100 characters.")
         #expect(!catalogue.values.contains("Select at least two files, folders or images to group."))
         #expect(!catalogue.values.contains("Names must be 1 to 80 characters."))
-        // The live ORG-VAL codes are still there, so the checks above are not vacuous.
         #expect(ErrorCode(rawValue: "ORG-VAL-001") != nil)
-        #expect(ErrorCode(rawValue: "ORG-VAL-003") != nil)
         #expect(catalogue["error.ORG-VAL-001"] == "Tag names must be 1 to 32 characters and unique.")
     }
 
-    // OC-0075. Red if any shipped file (Swift source, catalogue, plist) names a retired code or text. The source tree is
+    // OC-0075, as changed by TASK-539: the codes are live again, so only the two pre-retirement wordings are scanned
+    // for. Red if any shipped file (Swift source, catalogue, plist) carries one. The source tree is
     // what the Release executable and compiled catalogue are built from; the built binary itself is in the Gaps file.
-    @Test("OC-0075 given the shipped sources and catalogue, then 0 occurrences of the retired codes, catalogue keys and texts")
+    @Test("OC-0075 given the shipped sources and catalogue, then 0 occurrences of the pre-retirement ORG-VAL-004 and ORG-VAL-005 texts")
     func retiredStringsAbsentFromShippedFiles() throws {
         let files = try shippedFiles()
         let retired = [
-            "ORG-VAL-004", "ORG-VAL-005", "error.ORG-VAL-004", "error.ORG-VAL-005",
             "Select at least two files, folders or images to group.", "Names must be 1 to 80 characters.",
         ]
 

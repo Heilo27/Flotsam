@@ -143,11 +143,11 @@ import Testing
         #expect(!names.contains { $0.contains("login") || $0.contains("launch") }, "launch at login is not a registry value")
         #expect(!names.contains { $0.contains("lastScan") || $0.contains("watermark") }, "the scan watermark is database state")
         #expect(!names.contains { $0.contains("history") || $0.contains("items") }, "item data is database state")
-        #expect(names.count == 22)
+        #expect(names.count == 33)
     }
 
-    // OC-8009. The registry is exactly the 22 keys of the table, and each key name is spelled once in production code.
-    @Test func oc8009_registryIsTheTwentyTwoKeysAndNothingReadsDefaultsAroundIt() throws {
+    // OC-8009. The registry is exactly the 33 keys of the FR-008-01 table, and each key name is spelled once in production code.
+    @Test func oc8009_registryIsTheThirtyThreeKeysAndNothingReadsDefaultsAroundIt() throws {
         let expected: [String: (type: String, def: String)] = [
             "capture.mode": ("CaptureMode", "active"), "screenshots.enabled": ("Bool", "true"),
             "screenshots.folderOverride": ("FolderOverride", ""), "shelf.enabled": ("Bool", "true"),
@@ -159,9 +159,14 @@ import Testing
             "library.viewMode": ("LibraryViewMode", "list"), "library.panelSize": ("PanelSize", "760.0x480.0"),
             "library.layout": ("LibraryLayoutMode", "standard"), "library.compactPanelSize": ("PanelSize", "520.0x520.0"),
             "onboarding.completed": ("Bool", "false"), "settings.lastPane": ("SettingsPane", "general"),
+            "capture.autoBundle": ("Bool", "true"), "capture.cue": ("Bool", "true"), "shelf.edgeBar": ("Bool", "false"),
+            "shortcuts.addClip": ("ChordBinding", "none"), "shortcuts.pasteQueue": ("ChordBinding", "none"),
+            "library.background": ("LibraryBackground", "system"), "library.previewPreset": ("LibraryPreviewPreset", "closed"),
+            "library.closeAfterPaste": ("Bool", "true"), "library.resumeOnReopen": ("Bool", "false"),
+            "library.display": ("LibraryDisplay", "pointer"), "library.types": ("TypeOrder", TypeOrder.default.persisted),
         ]
         let all = SettingKeys.all
-        #expect(all.count == 22)
+        #expect(all.count == 33)
         for (name, row) in expected {
             let descriptor = all.first { $0.name == name }
             #expect(descriptor?.valueType == row.type, "type of \(name)")
@@ -414,7 +419,7 @@ import Testing
         let forbidden = ["export", "import", "sync", "icloud"]
 
         let titles = SettingsPane.allCases.map { $0.title.text.lowercased() }
-        #expect(titles == ["general", "shortcuts", "triggers", "privacy", "storage", "about"])
+        #expect(titles == ["general", "shortcuts", "types", "triggers", "privacy", "storage", "tips", "about"])
         for word in forbidden {
             #expect(!titles.contains { $0.contains(word) }, "pane title mentions \(word)")
             // The two exceptions are not settings transfer: .clearDone is a deletion message, and .importRecentScreenshots
@@ -424,6 +429,6 @@ import Testing
                     "a Settings string mentions \(word)")
         }
         let rows = entries.filter { $0 != .separator }
-        #expect(rows.count == 8, "eight actionable rows (3 shortcuts, pause, notices, settings, setup guide, quit); none transfers settings")
+        #expect(rows.count == 11, "eleven actionable rows (4 shortcuts, pause, pause for, clear recent, notices, settings, setup guide, quit); none transfers settings")
     }
 }

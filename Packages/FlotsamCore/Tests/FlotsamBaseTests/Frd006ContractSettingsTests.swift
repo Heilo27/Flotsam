@@ -85,12 +85,12 @@ import Testing
     }
 
     // OC-6119 (testable half: no Shelf usage counter is stored; the no-network clause has no seam, manual).
-    // given the whole settings registry, then the only `shelf.*` keys are the three configuration keys, and no key in
+    // given the whole settings registry, then the only `shelf.*` keys are the four configuration keys (FR-006-01), and no key in
     // the registry is a counter or usage statistic.
-    @Test("OC-6119 the only Shelf settings are enabled, placement and revealOnEdgeHover; no usage counter exists")
+    @Test("OC-6119 the only Shelf settings are enabled, placement, revealOnEdgeHover and edgeBar; no usage counter exists")
     func oc6119_noShelfUsageCounter() {
         let shelfKeys = SettingKeys.all.map(\.name).filter { $0.hasPrefix("shelf.") }.sorted()
-        #expect(shelfKeys == ["shelf.enabled", "shelf.placement", "shelf.revealOnEdgeHover"])
+        #expect(shelfKeys == ["shelf.edgeBar", "shelf.enabled", "shelf.placement", "shelf.revealOnEdgeHover"])
         let counterLike = SettingKeys.all.map(\.name).filter {
             let lower = $0.lowercased()
             return lower.contains("count") || lower.contains("usage") || lower.contains("stat") || lower.contains("telemetry")

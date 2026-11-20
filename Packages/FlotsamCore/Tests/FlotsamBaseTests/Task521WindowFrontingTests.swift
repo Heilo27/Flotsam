@@ -169,13 +169,16 @@ private func settle(_ condition: () -> Bool) async {
         #expect(status.contains("run: container.actions.openSettings"))
     }
 
-    // Only the two non-activating panels may order themselves front without the shared sequence.
+    // Only the two non-activating panels (and the HUD panel) may order themselves front without the shared sequence. The
+    // two modal alerts, FatalAlert and ClearRecentConfirmation (TASK-541), are not windows Flotsam keeps: each activates
+    // for the length of its own `runModal` and returns. The FRD does not say how such an alert comes forward when the
+    // system refuses a plain activation; that is reported as an open question, not decided here.
     @Test("no other App file orders a window front or activates the app")
     func noOtherActivation() throws {
         let root = try frd008SourceRoot().appendingPathComponent("App/Flotsam")
         let allowed: Set<String> = [
             "WindowFrontAdapter.swift", "LibraryPanelController.swift", "ShelfPanelController.swift",
-            "ErrorPresenterAdapter.swift", "FatalAlert.swift",
+            "ErrorPresenterAdapter.swift", "FatalAlert.swift", "ClearRecentConfirmation.swift",
         ]
         var offenders: [String] = []
         let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)

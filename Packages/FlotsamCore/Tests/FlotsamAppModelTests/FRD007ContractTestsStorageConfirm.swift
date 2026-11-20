@@ -347,8 +347,8 @@ private let gib: Int64 = 1024 * 1024 * 1024
     func oc7088_initialState() {
         let rig = Rig(previewCount: 12)
         let model = rig.model
-        #expect(model.ranges == [.lastHour, .last24Hours, .allTime])
-        #expect(model.ranges.map { $0.label.text } == ["Last hour", "Last 24 hours", "All time"])
+        #expect(model.ranges == [.last5Minutes, .lastHour, .last24Hours, .allTime])
+        #expect(model.ranges.map { $0.label.text } == ["Last 5 minutes", "Last hour", "Last 24 hours", "All time"])
         #expect(model.range == .lastHour)
         #expect(model.includeExempt == false)
         #expect(model.count == 0)

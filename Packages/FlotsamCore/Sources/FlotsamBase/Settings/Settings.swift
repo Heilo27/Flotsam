@@ -92,10 +92,10 @@ public enum SettingKeys {
         shortcutsToggleShelf.descriptor, shortcutsPasteQueue.descriptor,
         triggersEnabled.descriptor, triggersExcludedApps.descriptor, privacyIgnoredApps.descriptor,
         storageRetention.descriptor, storageImageBudget.descriptor, storageImageQuality.descriptor,
-        librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor, libraryPanelSize.descriptor,
-        libraryCompactPanelSize.descriptor,
+        librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor,
         libraryBackground.descriptor, libraryPreviewPreset.descriptor, libraryCloseAfterPaste.descriptor,
         libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
+        libraryPanelSize.descriptor, libraryCompactPanelSize.descriptor,
         onboardingCompleted.descriptor, settingsLastPane.descriptor,
     ]
 

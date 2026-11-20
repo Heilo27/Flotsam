@@ -54,10 +54,11 @@ import Testing
     @Test("FR-000-05 no count string outside the plural set puts a count in front of a noun")
     func noPluralisableCountIsLeftPlain() throws {
         // A "%lld" followed by a word is a count of something. Words that are not nouns are fine ("5 more", "3 selected",
-        // "2 of 5"). CAP-LIM-003 is the one noun left plain: it only ever reports a copy trimmed to the first 500, so the
-        // count is always above 500 and never 1.
-        let notNouns: Set<String> = ["of", "more", "selected"]
-        let exempt: Set<String> = ["error.CAP-LIM-003"]
+        // "2 of 5", "3 queued"). Two nouns are left plain because their count can never be 1: CAP-LIM-003 only ever reports a
+        // copy trimmed to the first 500, and ui.queue.ready only shows for a queue of two or more (PasteQueue.start refuses
+        // fewer, FR-003-25).
+        let notNouns: Set<String> = ["of", "more", "selected", "queued"]
+        let exempt: Set<String> = ["error.CAP-LIM-003", "ui.queue.ready"]
         let regex = try Regex(#"%lld\s+([A-Za-z]+)"#)
         for (key, entry) in try Self.shippedEntries() where !entry.base.contains("%#@") && !exempt.contains(key) {
             for match in entry.base.matches(of: regex) {

@@ -4792,7 +4792,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Layout, view, sort, size, background, preview, display, close after paste, resume and the type list return to their original values. History, privacy, storage and shortcuts are not changed."
+            "value" : "Library layout, view, sort, size, look and type list return to their defaults. History, privacy, storage and shortcuts are not changed."
           }
         }
       }
