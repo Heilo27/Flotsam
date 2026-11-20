@@ -172,7 +172,7 @@ import FlotsamBase
     /// App `@State`, see Gaps).
     /// Red if a range is added or dropped, a range's label changes, or the preview counts exempt items while the option
     /// is off.
-    @Test("OC-7088 Clear History offers Last hour, Last 24 hours and All time, and counts exempt items only with the option")
+    @Test("OC-7088 Clear History offers Last 5 minutes, Last hour, Last 24 hours and All time, and counts exempt items only with the option")
     func oc7088_clearSheetCore() async throws {
         // given 7 items: 3 plain (1h, 2h and 3 days old), a pinned one, a trigger one, a hotkey one, all within the hour...
         // and one more plain item 2 days old
@@ -184,10 +184,11 @@ import FlotsamBase
             Spec(n: 6, ageMs: hourMs / 5, hotkey: 4), Spec(n: 7, ageMs: 2 * dayMs),
         ])
 
-        // then the popup offers exactly three ranges, in order, with these labels
-        #expect(ClearRange.allCases == [.lastHour, .last24Hours, .allTime])
+        // then the popup offers exactly four ranges, in order, with these labels (FR-007-11; Last 5 minutes added by TASK-541)
+        #expect(ClearRange.allCases == [.last5Minutes, .lastHour, .last24Hours, .allTime])
         #expect(
-            [SettingsString.rangeLastHour, .rangeLast24Hours, .rangeAllTime].map(\.text) == ["Last hour", "Last 24 hours", "All time"])
+            [SettingsString.rangeLast5Minutes, .rangeLastHour, .rangeLast24Hours, .rangeAllTime].map(\.text)
+                == ["Last 5 minutes", "Last hour", "Last 24 hours", "All time"])
         #expect(SettingsString.clearHistory.text == "Clear History…")
 
         // and the count label per range with the option off excludes the three exempt items (4, 5, 6)

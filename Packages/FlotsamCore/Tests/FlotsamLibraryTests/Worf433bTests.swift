@@ -29,7 +29,7 @@ import Testing
         let textual = head + ["Pin", "Tags…", "Note…", "Edit…", "Shortcut and Trigger…", "-", "Delete"]
         let noEdit = head + ["Pin", "Tags…", "Note…", "Shortcut and Trigger…", "-", "Delete"]
         let file = head + ["Pin", "Tags…", "Note…", "Shortcut and Trigger…", "-", "Reveal in Finder", "-", "Delete"]
-        let bundle = head + ["Pin", "Tags…", "Note…", "Shortcut and Trigger…", "Ungroup", "-", "Reveal in Finder", "-", "Delete"]
+        let bundle = head + ["Pin", "Tags…", "Note…", "Shortcut and Trigger…", "Rename", "Ungroup", "-", "Reveal in Finder", "-", "Delete"]
         #expect(titles(.text) == textual)
         #expect(titles(.richText) == textual)
         #expect(titles(.link) == textual)
@@ -59,7 +59,7 @@ import Testing
         let commands: [LibraryCommand?] = entries.map { if case .item(_, let c, _) = $0 { c } else { nil } }
         #expect(commands == [
             .paste(.paste), .paste(.plainText), .paste(.copyOnly), .togglePreview, nil,
-            .external(.pin), .external(.tags), .external(.note), .external(.shortcutAndTrigger), .external(.ungroup), nil,
+            .external(.pin), .external(.tags), .external(.note), .external(.shortcutAndTrigger), .external(.renameBundle), .external(.ungroup), nil,
             .revealInFinder, nil,
             .external(.delete),
         ])
