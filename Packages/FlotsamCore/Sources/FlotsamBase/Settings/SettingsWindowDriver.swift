@@ -46,7 +46,7 @@ public final class SettingsWindowDriver {
         self.settings = settings
     }
 
-    /// Every "Open Settings" caller (⌘, from the Library, the menu-bar row, a Notice or alert) ends here. The first call
+    /// Every "Open Settings" caller (⌘, from the Library, the menu-bar row; FR-008-03) ends here. The first call
     /// builds the window; every later call reuses it, selects the pane last used and brings it to the front.
     public func open() {
         // Read before the window exists: a window that reports its own initial selection while it is built must not
