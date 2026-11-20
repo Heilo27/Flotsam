@@ -163,12 +163,12 @@ private struct RowInteraction: ViewModifier {
         }
     }
 
-    /// Copy, Pin or Unpin and Delete on the hovered row (FR-003-38): the mouse path to the same commands as the context menu,
-    /// acting on the row the same way. VoiceOver and keyboard users have the keys and the menu, so the strip is hidden from
-    /// accessibility.
+    /// Copy, Pin or Unpin and Delete on the selected row (FR-003-38, hill-climb r6: it was the hovered row, which left two rows
+    /// reading as active): the mouse path to the same commands as the context menu, acting on the row the same way.
+    /// VoiceOver and keyboard users have the keys and the menu, so the strip is hidden from accessibility.
     @ViewBuilder
     private var hoverStrip: some View {
-        if model.hoveredRowID == row.id {
+        if model.selection.contains(row.id) {
             let actions = LibraryHover.actions(pinUnpins: model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned))
             HStack(spacing: 2) {
                 ForEach(actions) { action in
@@ -251,6 +251,8 @@ func symbolName(for kind: ItemKind) -> String {
     }
 }
 
+/// A selected row is the one accent fill; the keyboard cursor and the pointer resting on a row share the one quiet wash
+/// (`DesignToken.cursorFill`), so a row under the pointer never reads as a second active row (FR-003-38).
 private func rowBackground(selected: Bool, cursor: Bool) -> some ShapeStyle {
     selected ? DesignToken.selectionFill : (cursor ? DesignToken.cursorFill : Color.clear)
 }
@@ -303,7 +305,6 @@ struct LibraryListRow: View {
     let dragOut: ShelfDragOut
 
     var body: some View {
-        let hovered = model.hoveredRowID == row.id
         let selected = model.selection.contains(row.id)
         // No stack spacing: gaps are explicit paddings, so an absent trailing cluster takes no room and the title
         // truncates by the width actually left, not by a character count (an empty subview still gets a gap from `spacing`).
@@ -319,10 +320,11 @@ struct LibraryListRow: View {
             }
             .padding(.leading, 10)
             Spacer(minLength: 8)
-            // While the hover strip shows, its room is reserved here (the strip itself is the interaction overlay, above the
-            // row's drag view) and the row's own badges and number give way to it, so the row never shows a second pin
-            // beside the strip's Pin (FR-003-38). The title truncates before this slot, not under the strip.
-            if hovered {
+            // The action strip shows on the selected row only, so its room is reserved here and on no other row (the strip itself
+            // is the interaction overlay, above the row's drag view); the row's own badges and number give way to it, so the
+            // row never shows a second pin beside the strip's Pin (FR-003-38). The title truncates before this slot, not
+            // under the strip.
+            if selected {
                 Color.clear.frame(width: LibraryLayout.hoverStripReserve - 8, height: 1)
             } else if row.hasStatusBadges || row.shortcutBadge != nil {
                 HStack(spacing: 6) {
@@ -338,7 +340,7 @@ struct LibraryListRow: View {
         .padding(.horizontal, 8)
         .frame(height: LibraryLayout.listRowHeight)
         .background(
-            rowBackground(selected: selected, cursor: model.cursorID == row.id),
+            rowBackground(selected: selected, cursor: model.cursorID == row.id || model.hoveredRowID == row.id),
             in: RoundedRectangle(cornerRadius: DesignToken.Radius.row)
         )
         .rowInteraction(model: model, row: row, stripAlignment: .trailing, dragOut: dragOut)
@@ -413,7 +415,7 @@ struct LibraryGridCell: View {
         }
         .padding(6)
         .background(
-            rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
+            rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id || model.hoveredRowID == row.id),
             in: RoundedRectangle(cornerRadius: DesignToken.Radius.row)
         )
         .task(id: row.id) {

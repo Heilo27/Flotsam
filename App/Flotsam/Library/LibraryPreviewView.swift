@@ -66,10 +66,6 @@ struct LibraryPreviewView: View {
     /// The header block's tallest size: past this it scrolls, so a clip with many fields never squeezes the content away.
     private static let metadataMaxHeight: CGFloat = 150
 
-    /// The width of the fade at the right edge of a sideways-scrolling block (FR-003-14, hill-climb r5): wide enough that no
-    /// partly visible glyph reads as a stray mark, and transparent at the edge.
-    private static let trailingFade: CGFloat = 40
-
     /// The metadata as one compact header line (FR-003-14, hill-climb r5): kind, source app, copied time and size on one line
     /// in the secondary colour (two at the narrowest), the colour's hex and rgb and the tag chips under it, and every other
     /// field (first copied, counts, pixel size, note) folded behind a chevron until it is opened.
@@ -119,12 +115,13 @@ struct LibraryPreviewView: View {
 
     /// The item's text. A rich text item keeps its formatting (bold, italics, colours, sizes) when its RTF reads; any
     /// other text, and a rich text item whose RTF does not read, is plain monospaced text.
-    /// Indented text (code) is not soft-wrapped: its lines keep their indentation and the block scrolls sideways (FR-003-14).
+    /// Indented text (code) soft-wraps with a hanging indent: its lines keep their indentation, and a continuation line
+    /// indents to its line's leading whitespace plus one step (FR-003-14, `CodeWrap`). There is no sideways scroll.
     @ViewBuilder private func textBody(_ text: String, rtf: Data?, indented: Bool) -> some View {
         if let rtf, let styled = Self.attributedText(rtf: rtf) {
             Text(styled).textSelection(.enabled)
         } else if indented {
-            SidewaysText(text: text, fade: Self.trailingFade)
+            WrappedCodeText(text: text)
         } else {
             Text(verbatim: text).font(.callout.monospaced()).textSelection(.enabled)
         }
@@ -136,32 +133,53 @@ struct LibraryPreviewView: View {
     }
 }
 
-/// Indented text (code): monospaced, never soft-wrapped, scrolls sideways. When the lines are wider than the pane the right edge
-/// fades over `fade` points, so the cut reads as a deliberate scroll cue; a trailing pad of the same width lets the longest line
-/// scroll clear of the fade.
-private struct SidewaysText: View {
+/// Indented text (code): monospaced, soft-wrapped, every continuation line hanging under its line's indentation plus one
+/// step (`CodeWrap`). SwiftUI's `Text` has no hanging indent, so this is a read-only, selectable `NSTextView` that reports its
+/// wrapped height for the width it is offered.
+private struct WrappedCodeText: NSViewRepresentable {
     let text: String
-    let fade: CGFloat
-    @State private var viewportWidth: CGFloat = 0
-    @State private var contentWidth: CGFloat = 0
-    @State private var hovering = false
 
-    var body: some View {
-        let overflows = contentWidth > viewportWidth
-        ScrollView(.horizontal) {
-            Text(verbatim: text).font(.callout.monospaced()).fixedSize(horizontal: true, vertical: true).textSelection(.enabled)
-                .padding(.trailing, overflows ? fade : 0)
-                .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { contentWidth = $0 - (overflows ? fade : 0) }
+    func makeNSView(context: Context) -> NSTextView {
+        let view = NSTextView(frame: .zero)
+        view.isEditable = false
+        view.isSelectable = true
+        view.drawsBackground = false
+        view.textContainerInset = .zero
+        view.textContainer?.lineFragmentPadding = 0
+        view.textContainer?.widthTracksTextView = true
+        view.isHorizontallyResizable = false
+        view.isVerticallyResizable = true
+        return view
+    }
+
+    func updateNSView(_ view: NSTextView, context: Context) {
+        view.textStorage?.setAttributedString(Self.attributed(text))
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView view: NSTextView, context: Context) -> CGSize? {
+        let width = max(proposal.width ?? 280, 1)
+        guard let container = view.textContainer, let layout = view.layoutManager else { return nil }
+        container.containerSize = NSSize(width: width, height: .greatestFiniteMagnitude)
+        layout.ensureLayout(for: container)
+        return CGSize(width: width, height: ceil(layout.usedRect(for: container).height))
+    }
+
+    /// The text in the callout monospaced font, each line's paragraph style hanging by `CodeWrap.continuationColumns`.
+    private static func attributed(_ text: String) -> NSAttributedString {
+        let font = NSFont.monospacedSystemFont(ofSize: NSFont.preferredFont(forTextStyle: .callout).pointSize, weight: .regular)
+        let column = ("0" as NSString).size(withAttributes: [.font: font]).width
+        let result = NSMutableAttributedString()
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+        for (index, line) in lines.enumerated() {
+            let style = NSMutableParagraphStyle()
+            style.headIndent = CGFloat(CodeWrap.continuationColumns(of: line)) * column
+            style.defaultTabInterval = CGFloat(CodeWrap.tabColumns) * column
+            style.tabStops = []
+            style.lineBreakMode = .byWordWrapping
+            let piece = String(line) + (index < lines.count - 1 ? "\n" : "")
+            result.append(NSAttributedString(
+                string: piece, attributes: [.font: font, .foregroundColor: NSColor.labelColor, .paragraphStyle: style]))
         }
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        // The scroller shows while the pointer is over the block, so the cut reads as scrollable (hill-climb r5).
-        .scrollIndicators(hovering && overflows ? .visible : .hidden, axes: .horizontal)
-        .onHover { hovering = $0 }
-        .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { viewportWidth = $0 }
-        .mask(
-            HStack(spacing: 0) {
-                Rectangle()
-                if overflows { LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing).frame(width: fade) }
-            })
+        return result
     }
 }

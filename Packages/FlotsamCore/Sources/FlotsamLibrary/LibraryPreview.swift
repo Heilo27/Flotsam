@@ -46,8 +46,8 @@ public struct LibraryPreview: Equatable, Sendable {
     public var isTruncated: Bool { (fullText?.count ?? 0) > Self.textLimit }
 
     /// Whether the text reads as code or any other text whose indentation matters: more than one line, and at least one
-    /// line indented by a tab or two spaces. Such text is drawn without soft wrapping, indentation kept, scrolling
-    /// sideways (FR-003-14); prose wraps.
+    /// line indented by a tab or two spaces. Such text is drawn monospaced with its indentation kept and soft-wrapped
+    /// under a hanging indent (`CodeWrap`, FR-003-14); prose wraps too, without the indent.
     public var textIsIndented: Bool {
         guard let fullText else { return false }
         let lines = fullText.split(separator: "\n", omittingEmptySubsequences: false)
@@ -107,5 +107,29 @@ public struct LibraryPreview: Equatable, Sendable {
         }
         if let note = content.note, !note.isEmpty { fields.append(field("ui.library.previewNote", note)) }
         return fields
+    }
+}
+
+/// The soft wrap of code in the preview (FR-003-14, hill-climb r6): a line that is wider than the pane wraps, and its
+/// continuation lines indent to the line's own leading whitespace plus one step, so the indentation stays readable. The
+/// columns are decided here (testable, no AppKit); the view turns them into points with the font's advance.
+public enum CodeWrap {
+    /// A tab counts as this many columns when measuring a line's leading whitespace.
+    public static let tabColumns = 4
+    /// The extra indent a continuation line takes beyond its line's own leading whitespace.
+    public static let continuationStep = 2
+
+    /// The width of `line`'s leading spaces and tabs, in columns.
+    public static func leadingColumns(of line: some StringProtocol) -> Int {
+        var columns = 0
+        for character in line {
+            if character == " " { columns += 1 } else if character == "\t" { columns += tabColumns } else { break }
+        }
+        return columns
+    }
+
+    /// Where the continuation lines of `line` start: its leading whitespace plus one step.
+    public static func continuationColumns(of line: some StringProtocol) -> Int {
+        leadingColumns(of: line) + continuationStep
     }
 }

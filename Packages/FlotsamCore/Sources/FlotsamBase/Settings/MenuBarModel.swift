@@ -76,7 +76,9 @@ public enum MenuBarModel {
         var rows: [MenuEntry] = [.openLibrary(openLibrary), .saveClipboard(saveClipboard), .addClip(addClip)]
         if shelfEnabled { rows.append(.toggleShelf(toggleShelf)) }
         rows += [.separator, .captureToggle(titleKey: toggle.titleKey, next: toggle.next)]
-        rows += [.clearRecent, .notices, .separator]
+        // Warnings and Errors opens the closing group with Settings, Show Setup Guide and Quit: it is an app-level
+        // surface, not a capture action (hill-climb r6).
+        rows += [.clearRecent, .separator, .notices]
         rows += [.settings, .setupGuide, .separator, .quit]
         return rows
     }

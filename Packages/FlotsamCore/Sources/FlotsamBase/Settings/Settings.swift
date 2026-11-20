@@ -82,6 +82,9 @@ public enum SettingKeys {
     public static let libraryTypes = SettingKey("library.types", default: TypeOrder.default, owner: "FR-003-12")
     /// The sidebar's Types section folded away (FR-003-12). A look-only setting, so it joins `resettable`.
     public static let librarySidebarTypesCollapsed = SettingKey("library.sidebarTypesCollapsed", default: false, owner: "FR-003-12")
+    /// Tags and Apps start folded so the sidebar fits the 760 x 480 default without scrolling (FR-003-12).
+    public static let librarySidebarTagsCollapsed = SettingKey("library.sidebarTagsCollapsed", default: true, owner: "FR-003-12")
+    public static let librarySidebarAppsCollapsed = SettingKey("library.sidebarAppsCollapsed", default: true, owner: "FR-003-12")
     public static let onboardingCompleted = SettingKey("onboarding.completed", default: false, owner: "FR-008-12")
     public static let settingsLastPane = SettingKey("settings.lastPane", default: SettingsPane.general, owner: "FR-008-03")
 
@@ -97,7 +100,8 @@ public enum SettingKeys {
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor,
         libraryBackground.descriptor, libraryPreviewPreset.descriptor, libraryCloseAfterPaste.descriptor,
         libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
-        librarySidebarTypesCollapsed.descriptor, libraryPanelSize.descriptor, libraryCompactPanelSize.descriptor,
+        librarySidebarTypesCollapsed.descriptor, librarySidebarTagsCollapsed.descriptor, librarySidebarAppsCollapsed.descriptor,
+        libraryPanelSize.descriptor, libraryCompactPanelSize.descriptor,
         onboardingCompleted.descriptor, settingsLastPane.descriptor,
     ]
 
@@ -108,7 +112,7 @@ public enum SettingKeys {
         libraryLayout.descriptor, libraryViewMode.descriptor, librarySort.descriptor, libraryPanelSize.descriptor,
         libraryCompactPanelSize.descriptor, libraryBackground.descriptor, libraryPreviewPreset.descriptor,
         libraryCloseAfterPaste.descriptor, libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
-        librarySidebarTypesCollapsed.descriptor,
+        librarySidebarTypesCollapsed.descriptor, librarySidebarTagsCollapsed.descriptor, librarySidebarAppsCollapsed.descriptor,
     ]
 }
 

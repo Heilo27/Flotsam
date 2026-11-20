@@ -25,11 +25,14 @@ struct ShelfView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     /// In light appearance the panel's material alone reads as a flat grey, so a faint white wash, strongest at the top,
-    /// lifts it (DESIGN section 2.4). Dark appearance keeps the material as it is.
+    /// lifts it (DESIGN section 2.4). Dark appearance gets a black wash (`DesignToken.shelfDarkWash`, hill-climb r6), so the
+    /// material never lifts to a mid grey that the section headers cannot sit on.
     @ViewBuilder private var panelWash: some View {
         if colorScheme == .light {
             LinearGradient(
                 colors: [Color.white.opacity(0.30), Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom)
+        } else {
+            DesignToken.shelfDarkWash
         }
     }
 
@@ -136,7 +139,7 @@ struct ShelfView: View {
                 Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold)).accessibilityHidden(true)
             }
             .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(Capsule().fill(selected ? DesignToken.selectionFill : Color.primary.opacity(0.06)))
+            .filterChip(selected: selected)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -148,7 +151,7 @@ struct ShelfView: View {
     private func pillLabel(_ title: String, selected: Bool) -> some View {
         Text(verbatim: title).font(.caption).lineLimit(1)
             .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(Capsule().fill(selected ? DesignToken.selectionFill : Color.primary.opacity(0.06)))
+            .filterChip(selected: selected)
     }
 
     /// The drop zone while an acceptable drag is over the panel (FR-006-12). It never takes clicks.
@@ -242,7 +245,7 @@ struct ShelfView: View {
                             // A section header reads as a header by weight alone: sentence case, semibold (hill-climb r5).
                             Text(verbatim: ShelfText.string(section.titleKey))
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(DesignToken.shelfSectionHeader)
                                 .accessibilityAddTraits(.isHeader)
                                 .frame(height: ShelfLayout.sectionHeaderHeight, alignment: .bottomLeading)
                             ForEach(section.cards) { card in cardView(card) }

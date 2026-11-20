@@ -73,9 +73,9 @@ struct Frd008ContractMenuTests {
         #expect(entries == [
             .openLibrary(openLibraryChord), .saveClipboard(saveClipboardChord), .addClip(.none), .toggleShelf(toggleShelfChord),
             .separator,
-            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .clearRecent, .notices,
+            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .clearRecent,
             .separator,
-            .settings, .setupGuide,
+            .notices, .settings, .setupGuide,
             .separator,
             .quit,
         ])
@@ -275,7 +275,7 @@ struct Frd008ContractMenuTests {
     func closingRows() {
         let entries = MenuBarModel.entries(
             mode: .active, shelfEnabled: true, openLibrary: .none, saveClipboard: .none, toggleShelf: .none)
-        #expect(Array(entries.suffix(5)) == [.separator, .settings, .setupGuide, .separator, .quit])
+        #expect(Array(entries.suffix(5)) == [.notices, .settings, .setupGuide, .separator, .quit])
         #expect(OnboardingFlow().current == .welcome)
     }
 

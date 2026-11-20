@@ -893,6 +893,16 @@
         }
       }
     },
+    "ui.library.hintBackToList" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to List"
+          }
+        }
+      }
+    },
     "ui.library.hintClosePreview" : {
       "localizations" : {
         "en" : {
@@ -1913,6 +1923,16 @@
         }
       }
     },
+    "ui.onboarding.accessibilityGrantedTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Accessibility Is On"
+          }
+        }
+      }
+    },
     "ui.onboarding.accessibilityTitle" : {
       "localizations" : {
         "en" : {
@@ -1969,6 +1989,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Allow Flotsam to read the clipboard so it can save what you copy."
+          }
+        }
+      }
+    },
+    "ui.onboarding.clipboardGrantedTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clipboard Access Is On"
           }
         }
       }
@@ -2119,6 +2149,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Lets Flotsam notice the trigger gestures you choose."
+          }
+        }
+      }
+    },
+    "ui.onboarding.inputMonitoringGrantedTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Input Monitoring Is On"
           }
         }
       }
@@ -5093,6 +5133,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Show Types"
+          }
+        }
+      }
+    },
+    "ui.library.tagsHide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Tags"
+          }
+        }
+      }
+    },
+    "ui.library.tagsShow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Tags"
+          }
+        }
+      }
+    },
+    "ui.library.appsHide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Apps"
+          }
+        }
+      }
+    },
+    "ui.library.appsShow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Apps"
           }
         }
       }

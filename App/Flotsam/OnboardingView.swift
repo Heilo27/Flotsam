@@ -13,26 +13,21 @@ struct OnboardingView: View {
             if isPermissionStep { permissionLayout } else { standardLayout }
         }
         .padding(24)
-        .frame(width: 560, height: 420)
+        .frame(width: 560, height: 392)
         .refreshWhileVisible { model.refresh() }
     }
 
     /// A row of 8 pt dots centred above the title, one per step, the steps reached filled in the accent colour and the
-    /// rest a visible grey, with a small "Step n of N" caption under them. VoiceOver reads the dots and caption as one
-    /// element whose value is "Step n of N".
-    private var stepCaption: some View {
+    /// rest a visible grey. Progress is shown once, by the dots: "Step n of N" is only their VoiceOver value
+    /// (hill-climb r6; the visible caption said it a second time).
+    private var stepDots: some View {
         let progress = String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total)
-        return VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                ForEach(1...model.flow.total, id: \.self) { index in
-                    Circle()
-                        .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.35))
-                        .frame(width: 8, height: 8)
-                }
+        return HStack(spacing: 8) {
+            ForEach(1...model.flow.total, id: \.self) { index in
+                Circle()
+                    .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.35))
+                    .frame(width: 8, height: 8)
             }
-            Text(verbatim: progress)
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
@@ -42,7 +37,7 @@ struct OnboardingView: View {
 
     private var standardLayout: some View {
         VStack(alignment: .leading, spacing: 16) {
-            stepCaption.padding(.bottom, 8)
+            stepDots.padding(.bottom, 4)
             // Centred, like the permission steps' title and purpose, so every step's heading sits in the same place.
             Text(verbatim: text(model.step.titleKey))
                 .font(.title2.bold())
@@ -76,15 +71,16 @@ struct OnboardingView: View {
     }
 
     private var permissionLayout: some View {
-        VStack(spacing: 16) {
-            stepCaption
+        VStack(spacing: 12) {
+            stepDots
             Spacer(minLength: 0)
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 Image(systemName: permissionSymbol)
-                    .font(.system(size: 64))
+                    .font(.system(size: 56))
                     .foregroundStyle(Color.accentColor)
                     .accessibilityHidden(true)
-                Text(verbatim: text(model.step.titleKey))
+                // Granted, the heading is a status ("Clipboard Access Is On"), not the instruction the purpose line gives.
+                Text(verbatim: text(permissionGranted ? (model.step.grantedTitleKey ?? model.step.titleKey) : model.step.titleKey))
                     .font(.title2.bold())
                     .accessibilityAddTraits(.isHeader)
                 Text(verbatim: text(model.step.purposeKey)).multilineTextAlignment(.center)

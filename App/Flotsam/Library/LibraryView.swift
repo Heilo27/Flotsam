@@ -201,11 +201,9 @@ struct LibrarySidebar: View {
     private func section(_ section: SidebarEntry.Section, title: String?, _ entries: [SidebarEntry]) -> some View {
         let inSection = entries.filter { $0.section == section }
         if !inSection.isEmpty {
-            let collapsed = section == .types && model.sidebarTypesCollapsed
-            if let title {
-                if section == .types { typesHeader(title: title, collapsed: collapsed) } else { header(title) }
-            }
-            // A folded Types section still shows the type that is the active filter, so the highlight never disappears.
+            let collapsed = model.collapsedSidebarSections.contains(section)
+            if let title { disclosureHeader(section, title: title, collapsed: collapsed) }
+            // A folded section still shows the entry that is the active filter, so the highlight never disappears.
             ForEach(collapsed ? inSection.filter { $0.filter == model.filter } : inSection) { entry in
                 let selected = model.filter == entry.filter
                 Button { model.select(filter: entry.filter) } label: {
@@ -248,15 +246,11 @@ struct LibrarySidebar: View {
         }
     }
 
-    private func header(_ title: String) -> some View {
-        Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.bottom, 3).padding(.horizontal, 6)
-            .frame(maxWidth: .infinity, minHeight: Self.lineHeight, maxHeight: Self.lineHeight, alignment: .bottomLeading)
-    }
-
-    /// The Types header folds the section (FR-003-12); the choice is remembered in `library.sidebarTypesCollapsed`.
-    private func typesHeader(title: String, collapsed: Bool) -> some View {
-        let tip = LibraryText.string(collapsed ? LibraryText.typesShow : LibraryText.typesHide)
-        return Button { model.toggleSidebarTypes() } label: {
+    /// A section header (Types, Tags, Apps) folds its section (FR-003-12); the choice is remembered per section in
+    /// `library.sidebar{Types,Tags,Apps}Collapsed`.
+    private func disclosureHeader(_ section: SidebarEntry.Section, title: String, collapsed: Bool) -> some View {
+        let tip = LibraryText.sectionToggleTip(section, collapsed: collapsed)
+        return Button { model.toggleSidebarSection(section) } label: {
             HStack(spacing: 4) {
                 Text(verbatim: title)
                 Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold)).rotationEffect(.degrees(collapsed ? 0 : 90))
@@ -298,12 +292,34 @@ extension LibrarySidebar {
 struct LibraryFooterView: View {
     let model: LibraryViewModel
 
+    /// What the footer gives up, in order, when its row would not fit on one line (FR-003-18): the lowest-priority hint,
+    /// then the sort's name. Every hint stays on one line; none wraps.
+    private enum Trim: CaseIterable { case none, lowestHint, sortName }
+
     var body: some View {
         let footer = model.footer()
+        // The widest row that fits wins; the last (narrowest) is the fallback and truncates before it wraps.
+        ViewThatFits(in: .horizontal) {
+            ForEach(Trim.allCases, id: \.self) { trim in
+                row(footer, trim: trim).fixedSize(horizontal: trim != .sortName, vertical: false)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        // Picks up a grant made in System Settings without a relaunch (FR-008-14). The hosting view outlives every
+        // hide, so the id includes `isShown`: the poll runs only while the copy-only footer shows on a shown panel,
+        // and restarts on the next open.
+        .task(id: footer.enableLabel != nil && model.isShown) {
+            guard footer.enableLabel != nil else { return }
+            await model.watchAccessibility()
+        }
+    }
+
+    private func row(_ footer: LibraryFooter, trim: Trim) -> some View {
         HStack(spacing: 14) {
             // The first hint is the leading action (Return Paste, or Return Start paste queue): stronger than the rest. Keycaps are in
             // the system font, not monospace.
-            ForEach(Array(footer.hints.enumerated()), id: \.element.key) { index, hint in
+            ForEach(Array((trim == .none ? footer.hints : footer.essentialHints).enumerated()), id: \.element.key) { index, hint in
                 let leading = index == 0
                 HStack(spacing: 4) {
                     Keycap(key: hint.key, emphasized: leading)
@@ -319,20 +335,12 @@ struct LibraryFooterView: View {
                     .buttonStyle(.link)
                     .font(.caption)
             }
-            Spacer()
+            Spacer(minLength: 8)
             // The active sort, then the count (FR-004-12, FR-003-18); both come from `LibraryFooter`.
             // Both are empty when there is nothing to count (no rows, a search with no results), and then draw nothing (FR-003-18).
-            if !footer.sortName.isEmpty { Text(verbatim: footer.sortName).font(.caption).foregroundStyle(.secondary) }
+            if trim != .sortName, !footer.sortName.isEmpty { Text(verbatim: footer.sortName).font(.caption).foregroundStyle(.secondary) }
             if !footer.countText.isEmpty { Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary) }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 6)
-        // Picks up a grant made in System Settings without a relaunch (FR-008-14). The hosting view outlives every
-        // hide, so the id includes `isShown`: the poll runs only while the copy-only footer shows on a shown panel,
-        // and restarts on the next open.
-        .task(id: footer.enableLabel != nil && model.isShown) {
-            guard footer.enableLabel != nil else { return }
-            await model.watchAccessibility()
-        }
+        .lineLimit(1)
     }
 }

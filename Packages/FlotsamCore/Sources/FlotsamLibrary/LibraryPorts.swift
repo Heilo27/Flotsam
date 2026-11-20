@@ -43,8 +43,21 @@ public protocol LibraryPreferences: Sendable {
     var resumeOnReopen: Bool { get }
     var display: LibraryDisplay { get }
     var typeOrder: TypeOrder { get }
-    /// The sidebar's Types section folded away (FR-003-12). The view model reads it on open and writes it on a toggle.
-    var sidebarTypesCollapsed: Bool { get nonmutating set }
+    /// Whether the sidebar's `section` is folded away (FR-003-12). The view model reads it on open and writes it on a toggle.
+    func sidebarCollapsed(_ section: SidebarEntry.Section) -> Bool
+    func setSidebarCollapsed(_ collapsed: Bool, for section: SidebarEntry.Section)
+}
+
+extension SidebarEntry.Section {
+    /// The setting that remembers whether this section is folded; the top group (All, Pinned, ...) cannot fold.
+    var collapsedSetting: SettingKey<Bool>? {
+        switch self {
+        case .top: nil
+        case .types: SettingKeys.librarySidebarTypesCollapsed
+        case .tags: SettingKeys.librarySidebarTagsCollapsed
+        case .apps: SettingKeys.librarySidebarAppsCollapsed
+        }
+    }
 }
 
 extension LibraryPreferences {
@@ -54,10 +67,8 @@ extension LibraryPreferences {
     public var resumeOnReopen: Bool { SettingKeys.libraryResumeOnReopen.defaultValue }
     public var display: LibraryDisplay { SettingKeys.libraryDisplay.defaultValue }
     public var typeOrder: TypeOrder { SettingKeys.libraryTypes.defaultValue }
-    public var sidebarTypesCollapsed: Bool {
-        get { SettingKeys.librarySidebarTypesCollapsed.defaultValue }
-        nonmutating set {}
-    }
+    public func sidebarCollapsed(_ section: SidebarEntry.Section) -> Bool { section.collapsedSetting?.defaultValue ?? false }
+    public func setSidebarCollapsed(_ collapsed: Bool, for section: SidebarEntry.Section) {}
 
     /// The remembered size for `layout`; the one place that picks between the two size keys.
     public func panelSize(for layout: LibraryLayoutMode) -> PanelSize {
@@ -111,9 +122,14 @@ public struct SettingsLibraryPreferences: LibraryPreferences {
     public var resumeOnReopen: Bool { settings.value(SettingKeys.libraryResumeOnReopen) }
     public var display: LibraryDisplay { settings.value(SettingKeys.libraryDisplay) }
     public var typeOrder: TypeOrder { settings.value(SettingKeys.libraryTypes) }
-    public var sidebarTypesCollapsed: Bool {
-        get { settings.value(SettingKeys.librarySidebarTypesCollapsed) }
-        nonmutating set { settings.set(newValue, for: SettingKeys.librarySidebarTypesCollapsed) }
+
+    public func sidebarCollapsed(_ section: SidebarEntry.Section) -> Bool {
+        section.collapsedSetting.map { settings.value($0) } ?? false
+    }
+
+    public func setSidebarCollapsed(_ collapsed: Bool, for section: SidebarEntry.Section) {
+        guard let key = section.collapsedSetting else { return }
+        settings.set(collapsed, for: key)
     }
 }
 

@@ -83,10 +83,13 @@ extension View {
     }
 }
 
-/// The height of an editable field (the shortcut recorder, the trigger field): one number, so a recorder and a text field
-/// side by side are the same height (hill-climb r5).
+/// The size of an editable field (the shortcut recorder, the trigger field): one number each, so a recorder and a text
+/// field side by side are the same height (hill-climb r5) and, in the item editor, the same width, so the (?) and clear
+/// buttons that follow them line up on one x (hill-climb r6).
 enum FieldMetric {
     static let height: CGFloat = 28
+    /// The width of the Shortcut and Trigger fields in the item editor, border to border.
+    static let editorFieldWidth: CGFloat = 240
 }
 
 /// The small glyph button beside a field (the (?) help, the clear ⓧ): one size, one colour, one pressed state, so the two

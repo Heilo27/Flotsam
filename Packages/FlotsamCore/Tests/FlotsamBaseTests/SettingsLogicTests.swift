@@ -11,8 +11,8 @@ import Testing
         let rows = MenuBarModel.entries(mode: .active, shelfEnabled: true, openLibrary: chord, saveClipboard: .none, toggleShelf: .none)
         #expect(rows == [
             .openLibrary(chord), .saveClipboard(.none), .addClip(.none), .toggleShelf(.none), .separator,
-            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .clearRecent, .notices, .separator,
-            .settings, .setupGuide, .separator, .quit,
+            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .clearRecent, .separator,
+            .notices, .settings, .setupGuide, .separator, .quit,
         ])
     }
 

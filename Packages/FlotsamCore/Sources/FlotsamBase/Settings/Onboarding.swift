@@ -7,6 +7,14 @@ public enum OnboardingStep: Int, CaseIterable, Sendable {
     /// Catalogue keys for this step's title and its one-sentence purpose.
     public var titleKey: String { "ui.onboarding.\(name)Title" }
     public var purposeKey: String { "ui.onboarding.\(name)Purpose" }
+    /// The title a permission step shows once its permission is on: a status ("Clipboard Access Is On"), not the instruction
+    /// the title and purpose give before (FR-008-12, hill-climb r6). Nil for the steps that ask for no permission.
+    public var grantedTitleKey: String? {
+        switch self {
+        case .clipboard, .accessibility, .inputMonitoring: "ui.onboarding.\(name)GrantedTitle"
+        default: nil
+        }
+    }
 
     private var name: String {
         switch self {

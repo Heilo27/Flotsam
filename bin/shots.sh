@@ -20,13 +20,16 @@ APP="$STABLE_APP/Contents/MacOS/Flotsam"
 SCREENS=(
   "01-library-standard:library"
   "02-library-compact:library-compact"
+  "02b-library-compact-list:library-compact-list"
   "03-library-empty:library-empty"
   "04-shelf:shelf"
   "05-menu-bar-menu:menu"
+  "05b-menu-bar-menu-paused:menu-paused"
   "06-settings-general:settings"
   "06b-settings-library:settings-library"
   "07-onboarding:onboarding"
   "08-shortcut-editor:shortcut"
+  "08b-shortcut-editor-empty:shortcut-empty"
 )
 APPEARANCES=(light dark)
 
@@ -193,10 +196,10 @@ for entry in "${SCREENS[@]}"; do
     png="$OUT/$name-$appearance.png"
     rm -f "$OUT/.mode"
     result="$(pass "$stage" "$appearance" "$png")"
-    if [[ "$result" != ok* && "$stage" == "menu" ]]; then
+    if [[ "$result" != ok* && ( "$stage" == "menu" || "$stage" == "menu-paused" ) ]]; then
       echo "shots: $name-$appearance: real menu not captured ($result); using the staged copy"
       echo "$name-$appearance: staged copy of the menu rows in a window, not the real NSMenu ($result)" >> "$NEW_NOTES"
-      result="$(pass menu-staged "$appearance" "$png")"
+      result="$(pass "$stage-staged" "$appearance" "$png")"
     fi
     [[ "$result" == ok* && -f "$OUT/.mode" ]] && echo "$name-$appearance: capture mode: $(cat "$OUT/.mode")" >> "$NEW_NOTES"
     if [[ "$result" == "ok-window" ]]; then

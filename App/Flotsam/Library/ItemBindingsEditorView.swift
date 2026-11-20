@@ -86,7 +86,7 @@ struct ItemBindingsEditorView: View {
             Text(.editorShortcut).gridColumnAlignment(.trailing)
             ShortcutRecorderField(
                 chord: model.hotkey, recorder: model.recorder, allowClear: true, startRecording: model.startRecording,
-                clear: model.clearHotkey)
+                clear: model.clearHotkey, fieldWidth: FieldMetric.editorFieldWidth)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -96,16 +96,19 @@ struct ItemBindingsEditorView: View {
         return GridRow(alignment: .firstTextBaseline) {
             Text(.editorTrigger).gridColumnAlignment(.trailing)
             VStack(alignment: .leading, spacing: 4) {
-                // Typed text is primary colour; only the empty field shows the dimmer placeholder.
+                // Entered text is the label colour; only the empty field shows the placeholder colour (hill-climb r6).
                 HStack(spacing: 6) {
-                    TextField(text: $model.triggerText, prompt: Text(.editorTriggerPlaceholder)) { Text(.editorTrigger) }
+                    TextField(
+                        text: $model.triggerText,
+                        prompt: Text(.editorTriggerPlaceholder).foregroundStyle(Color(nsColor: .placeholderTextColor))
+                    ) { Text(.editorTrigger) }
                         .labelsHidden()
                         .textFieldStyle(.plain)
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(Color(nsColor: .labelColor))
                         .disableAutocorrection(true)
                         .focused($triggerFocused)
                         .padding(.horizontal, 8)
-                        .frame(maxWidth: .infinity, minHeight: FieldMetric.height, maxHeight: FieldMetric.height)
+                        .frame(width: FieldMetric.editorFieldWidth, height: FieldMetric.height)
                         .fieldChrome(isActive: triggerFocused)
                     variablesHelpButton
                 }

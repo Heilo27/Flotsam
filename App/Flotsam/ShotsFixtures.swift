@@ -210,6 +210,8 @@ enum ShotsFixtures {
         if let bound = ids["shortcut"] {
             let chord = Chord(keyCode: 38, modifiers: [.command, .option, .control])
             _ = await database.applyExemptionEdit(.setHotkey(chord), to: bound)
+            // A real entered trigger, so 08 shows typed text (label colour) rather than the empty field's ";sig" placeholder.
+            _ = await database.applyExemptionEdit(.setTrigger(";thx"), to: bound)
         }
         return seeded
     }

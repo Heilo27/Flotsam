@@ -12,6 +12,8 @@ struct ShortcutRecorderField: View {
     let allowClear: Bool
     let startRecording: () -> Void
     let clear: () -> Void
+    /// A fixed border-to-border width, for a form whose fields must share one (the item editor). nil sizes to the content.
+    var fieldWidth: CGFloat?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -49,6 +51,7 @@ struct ShortcutRecorderField: View {
             }
             .frame(minWidth: 150, minHeight: FieldMetric.height, maxHeight: FieldMetric.height, alignment: .leading)
             .padding(.horizontal, 6)
+            .frame(width: fieldWidth, alignment: .leading)
             .fieldChrome(isActive: focused || recorder.isRecording)
             .contentShape(RoundedRectangle(cornerRadius: DesignToken.Radius.control))
         }

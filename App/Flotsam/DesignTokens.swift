@@ -24,10 +24,7 @@ enum DesignToken {
     /// far as the text needs. Measured for all eight system accents in DESIGN 2.2: both labels clear 4.5:1, Yellow included.
     static let selectionFill = Color(nsColor: NSColor(name: nil) { appearance in
         let accent = NSColor.controlAccentColor
-        guard appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua else {
-            let muted = accent.blended(withFraction: 0.3, of: NSColor(white: 0.8, alpha: 1)) ?? accent
-            return muted.blended(withFraction: 0.65, of: .white) ?? muted
-        }
+        guard appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua else { return lightSelection(of: accent) }
         let base = accent.blended(withFraction: 0.35, of: NSColor(white: 0.3, alpha: 1)) ?? accent
         var fraction: CGFloat = 0.3
         // 0.69 is the dark primary label (white at 0.85) times `onSelectionSecondary`'s 0.82, rounded down.
@@ -37,6 +34,32 @@ enum DesignToken {
         }
         return base.blended(withFraction: fraction, of: .black) ?? base
     })
+
+    /// The light selection tone: the accent mixed 30% toward a light grey, then 65% toward white. The one definition of the
+    /// pale accent: the light `selectionFill` and the selected filter chip both draw from it.
+    private static func lightSelection(of accent: NSColor) -> NSColor {
+        let muted = accent.blended(withFraction: 0.3, of: NSColor(white: 0.8, alpha: 1)) ?? accent
+        return muted.blended(withFraction: 0.65, of: .white) ?? muted
+    }
+
+    /// The selected filter chip (Shelf type pills; DESIGN section 2.2, hill-climb r6): the light treatment in both appearances,
+    /// so a chip never reads as a different control in dark. A pale accent fill with a fixed dark label (never `.primary`,
+    /// which turns white in dark and would sit on the pale fill at about 1.3:1).
+    static let chipSelectedFill = Color(nsColor: NSColor(name: nil) { _ in lightSelection(of: NSColor.controlAccentColor) })
+    static let chipSelectedLabel = Color.black.opacity(0.85)
+    /// An unselected chip's fill.
+    static let chipFill = Color.primary.opacity(0.06)
+
+    /// A Shelf section header ("Pinned", "Recent"; DESIGN section 2.2, hill-climb r6): an opaque grey that is explicit in both
+    /// appearances. It was `.secondary`, which drawn straight on the Shelf's `.hudWindow` material measured 142-143 on a 143
+    /// ground in dark (zero contrast, the header was invisible). Dark: white at 92% on the dark wash (`shelfDarkWash`), about
+    /// 5.5:1 on the 143 ground once washed. Light: 30% grey on the light material, above 6:1.
+    static let shelfSectionHeader = Color(nsColor: NSColor(name: nil) { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(white: 0.92, alpha: 1) : NSColor(white: 0.30, alpha: 1)
+    })
+    /// The Shelf's dark wash: black at 35% over the material, so the material never lifts to a mid grey that no label can
+    /// sit on (the window-only capture, which has no backdrop to blur, shows the bare material at 143/255).
+    static let shelfDarkWash = Color.black.opacity(0.35)
     /// The sidebar's selected row: a neutral wash with the primary label, so the sidebar never competes with the one accent fill
     /// on the selected result row (DESIGN section 3.1).
     static let sidebarSelection = Color.primary.opacity(0.12)
@@ -114,5 +137,14 @@ extension View {
                 Rectangle()
                 LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: height)
             })
+    }
+}
+
+extension View {
+    /// A filter chip's capsule (DESIGN section 2.2, hill-climb r6): selected is the pale accent with a dark label in both
+    /// appearances, unselected is the neutral wash with the primary label. The one place a chip is styled.
+    func filterChip(selected: Bool) -> some View {
+        foregroundStyle(selected ? DesignToken.chipSelectedLabel : Color.primary)
+            .background(Capsule().fill(selected ? DesignToken.chipSelectedFill : DesignToken.chipFill))
     }
 }

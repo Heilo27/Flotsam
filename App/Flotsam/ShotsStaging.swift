@@ -17,16 +17,26 @@ import Foundation
 @MainActor
 final class ShotsStaging {
     enum Screen: String {
-        case library, libraryCompact = "library-compact", libraryEmpty = "library-empty", shelf
-        case menu, menuStaged = "menu-staged", settings, settingsLibrary = "settings-library", onboarding, shortcut
+        case library, libraryCompact = "library-compact", libraryCompactList = "library-compact-list", libraryEmpty = "library-empty"
+        case shelf, menu, menuStaged = "menu-staged", menuPaused = "menu-paused", menuPausedStaged = "menu-paused-staged"
+        case settings, settingsLibrary = "settings-library", onboarding, shortcut, shortcutEmpty = "shortcut-empty"
 
         /// Surfaces that need the fixture items.
         var needsItems: Bool {
             switch self {
-            case .library, .libraryCompact, .libraryEmpty, .shelf, .shortcut: true
-            case .menu, .menuStaged, .settings, .settingsLibrary, .onboarding: false
+            case .library, .libraryCompact, .libraryCompactList, .libraryEmpty, .shelf, .shortcut, .shortcutEmpty: true
+            case .menu, .menuStaged, .menuPaused, .menuPausedStaged, .settings, .settingsLibrary, .onboarding: false
             }
         }
+
+        /// The Compact layout (the preview replaces the list while it is open).
+        var isCompact: Bool { self == .libraryCompact || self == .libraryCompactList }
+
+        /// The menu-bar menu surfaces: the real NSMenu, or its staged copy.
+        var isMenu: Bool { self == .menu || self == .menuStaged || self == .menuPaused || self == .menuPausedStaged }
+
+        /// Surfaces that capture while paused with a timed pause, so the menu shows its "Paused until …" line.
+        var staysPaused: Bool { self == .menuPaused || self == .menuPausedStaged }
     }
 
     private let screen: Screen
@@ -74,8 +84,11 @@ final class ShotsStaging {
         // Keep the screenshot folder and the typed-trigger tap out of the run (docs/AGENT-LAUNCH.md).
         settings.set(false, for: SettingKeys.screenshotsEnabled)
         settings.set(false, for: SettingKeys.triggersEnabled)
-        settings.set(screen == .libraryCompact ? LibraryLayoutMode.compact : .standard, for: SettingKeys.libraryLayout)
-        settings.set(screen == .library ? LibraryPreviewPreset.open : .closed, for: SettingKeys.libraryPreviewPreset)
+        settings.set(screen.isCompact ? LibraryLayoutMode.compact : .standard, for: SettingKeys.libraryLayout)
+        // The Library pane's "Preview pane" row reads this setting, so 06b stages it as 01 shows the Library: Shown. Staging
+        // it Closed made 06b say "Hidden" next to a preview-open 01 (hill-climb r6).
+        let previewShown = screen == .library || screen == .settingsLibrary
+        settings.set(previewShown ? LibraryPreviewPreset.open : .closed, for: SettingKeys.libraryPreviewPreset)
         settings.set(LibraryBackground.system, for: SettingKeys.libraryBackground)
         settings.set(screen == .settingsLibrary ? SettingsPane.library : .general, for: SettingKeys.settingsLastPane)
         if screen == .onboarding {
@@ -93,7 +106,7 @@ final class ShotsStaging {
     }
 
     private func stage(statusItem: StatusItemController) async {
-        if screen.needsItems || screen == .menu || screen == .menuStaged || screen == .settings || screen == .settingsLibrary {
+        if screen.needsItems || screen.isMenu || screen == .settings || screen == .settingsLibrary {
             guard await waitFor({ self.container.library != nil && self.container.shelf != nil && self.container.database != nil }) else {
                 return fail("the database or the panels did not come up")
             }
@@ -108,7 +121,7 @@ final class ShotsStaging {
         installBackdrop()  // already done in prepare(); a no-op here
         let before = visibleWindowNumbers()
         switch screen {
-        case .library, .libraryCompact, .libraryEmpty: await stageLibrary(seeded: seeded, before: before)
+        case .library, .libraryCompact, .libraryCompactList, .libraryEmpty: await stageLibrary(seeded: seeded, before: before)
         case .shelf:
             container.shelf?.toggle()
             await settle(seconds: 1.2)
@@ -125,8 +138,24 @@ final class ShotsStaging {
             container.actions.editShortcutAndTrigger?([id])
             await settle(seconds: 1.0)
             await finish(window: newWindow(excluding: before))
-        case .menu: stageMenu(statusItem: statusItem)
-        case .menuStaged: stageMenuCopy(statusItem: statusItem)
+        case .shortcutEmpty:
+            // An item with no shortcut and no trigger, and the recorder armed, so the shot shows the empty field's
+            // placeholder and the focus ring (the recording state draws the active ring).
+            guard let id = seeded.ids["text3"] else { return fail("the unbound text item was not seeded") }
+            container.actions.editShortcutAndTrigger?([id])
+            await settle(seconds: 1.0)
+            guard let window = newWindow(excluding: before) else { return fail("the shortcut editor did not open") }
+            guard Self.pressElement(labeled: SettingsString.shortcutRecord.text, in: window) else {
+                return fail("the shortcut recorder control was not found in the editor")
+            }
+            await settle(seconds: 0.6)
+            await finish(window: window)
+        case .menu, .menuPaused:
+            if screen.staysPaused { container.timedPause.pause(for: .oneHour) }
+            stageMenu(statusItem: statusItem)
+        case .menuStaged, .menuPausedStaged:
+            if screen.staysPaused { container.timedPause.pause(for: .oneHour) }
+            stageMenuCopy(statusItem: statusItem)
         }
     }
 
@@ -139,6 +168,12 @@ final class ShotsStaging {
             guard let id = seeded.ids["code"] else { return fail("the code item was not seeded") }
             library.model.select(id: id)
             await library.model.awaitPreview()
+        case .libraryCompactList:
+            // Compact's default state (FR-003-06): the results list, one row selected, the preview closed. 02 stages the
+            // same layout with the preview replacing the list.
+            guard let id = seeded.ids["code"] else { return fail("the code item was not seeded") }
+            library.model.select(id: id)
+            if library.model.isPreviewOpen { return fail("the preview is open in the Compact list shot") }
         case .libraryCompact:
             // FR-003-06 and FR-003-14: in Compact the preview replaces the results column, so the shot must open it. The staging
             // never did, which is why the earlier Compact shot showed only the hover card of the pointer resting on row 2.
@@ -155,6 +190,21 @@ final class ShotsStaging {
         }
         await settle(seconds: 1.0)
         await finish(window: newWindow(excluding: before))
+    }
+
+    // MARK: Pressing a control
+
+    /// Presses the accessibility element whose label is `label`, searching the window's accessibility tree. The staged
+    /// editor has no model handle here, so the recorder is armed the way VoiceOver would press it. False when absent.
+    private static func pressElement(labeled label: String, in window: NSWindow) -> Bool {
+        func search(_ node: Any, depth: Int) -> Bool {
+            guard depth < 40, let element = node as? NSAccessibilityProtocol else { return false }
+            if element.accessibilityLabel() == label, element.accessibilityPerformPress() { return true }
+            for child in element.accessibilityChildren() ?? [] where search(child, depth: depth + 1) { return true }
+            return false
+        }
+        guard let root = window.contentView else { return false }
+        return search(root, depth: 0)
     }
 
     // MARK: The menu

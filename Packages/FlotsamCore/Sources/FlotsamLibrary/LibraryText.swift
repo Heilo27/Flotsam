@@ -34,9 +34,17 @@ public enum LibraryText {
     public static let sectionTypes = "ui.library.sectionTypes"
     public static let sectionTags = "ui.library.sectionTags"
     public static let sectionApps = "ui.library.sectionApps"
-    /// The Types section header's tooltip and VoiceOver hint: what a click does now (FR-003-12).
-    public static let typesHide = "ui.library.typesHide"
-    public static let typesShow = "ui.library.typesShow"
+    /// A section header's tooltip and VoiceOver hint: what a click does now (FR-003-12).
+    public static func sectionToggleTip(_ section: SidebarEntry.Section, collapsed: Bool) -> String {
+        switch (section, collapsed) {
+        case (.tags, true): string("ui.library.tagsShow")
+        case (.tags, false): string("ui.library.tagsHide")
+        case (.apps, true): string("ui.library.appsShow")
+        case (.apps, false): string("ui.library.appsHide")
+        case (_, true): string("ui.library.typesShow")
+        case (_, false): string("ui.library.typesHide")
+        }
+    }
 
     public static func noResultsTitle(query: String) -> String { format("ui.library.noResultsTitle", query) }
 

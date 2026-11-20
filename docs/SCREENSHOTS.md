@@ -1,12 +1,12 @@
 # Screenshot harness
 
-`bin/shots.sh <outdir>` stages eight surfaces, each in light and dark, and writes 16 PNGs named
+`bin/shots.sh <outdir>` stages twelve surfaces (the eight numbered screens and the 02b, 05b, 08b states), each in light and dark, and writes 24 PNGs named
 `NN-<screen>-<light|dark>.png`. It exists so a second machine (Session 2) can produce the same pictures on demand.
 
 ## Run
 
 ```sh
-bin/shots.sh ~/flotsam-shots              # build Debug if needed, 16 passes, prints the folder and file list
+bin/shots.sh ~/flotsam-shots              # build Debug if needed, 24 passes, prints the folder and file list
 bin/shots.sh ~/flotsam-shots --only shelf # one screen (name or stage); NOTES.txt keeps the other screens
 bin/shots.sh --publish 3 [<outdir>]       # commit the PNGs to the orphan branch s2/shots under round-3/ and push
 ```
@@ -66,14 +66,17 @@ domain, deleted after each pass); `FLOTSAM_DATA_DIR` is its own temporary absolu
 | File | Stage | Shows |
 | --- | --- | --- |
 | 01-library-standard | library | Library, standard layout, a result selected, preview open |
-| 02-library-compact | library-compact | Library, compact layout |
+| 02-library-compact | library-compact | Library, compact layout, the preview replacing the list |
+| 02b-library-compact-list | library-compact-list | Library, compact layout showing the list (its default state), one row selected (added in round 6) |
 | 03-library-empty | library-empty | Search with no results |
 | 04-shelf | shelf | Shelf open with cards (pinned and recent) |
 | 05-menu-bar-menu | menu | The real menu-bar menu, opened and captured |
+| 05b-menu-bar-menu-paused | menu-paused | The same menu while capture is paused for an hour, so the "Paused until …" line shows (added in round 6; the time is wall-clock) |
 | 06-settings-general | settings | Settings, General pane |
-| 06b-settings-library | settings-library | Settings, Library pane (added in round 3; the other numbers did not move) |
+| 06b-settings-library | settings-library | Settings, Library pane (added in round 3; the other numbers did not move). Staged with the preview pane Shown, as 01 shows the Library (round 6) |
 | 07-onboarding | onboarding | Onboarding step 2 (clipboard access) |
-| 08-shortcut-editor | shortcut | Shortcut and Trigger window for the item that has a shortcut |
+| 08-shortcut-editor | shortcut | Shortcut and Trigger window for the item that has a shortcut and a trigger (";thx", entered text, so it draws in the label colour) |
+| 08b-shortcut-editor-empty | shortcut-empty | The same window for an item with neither, the recorder armed: the empty fields' placeholders and the focus ring (added in round 6; the recorder is armed through its accessibility press) |
 
 Fixtures (ShotsFixtures.swift): text, links, code, colours, four generated PNGs, a file, a bundle, two tags (Work, Home),
 two pinned items, one note and one item with a shortcut. All invented; nothing real.
@@ -92,4 +95,5 @@ two pinned items, one note and one item with a shortcut. All invented; nothing r
 - The preview's absolute "Copied" time is wall-clock and differs between runs. Relative times ("12m ago") are fixed.
 - Onboarding step 2 shows the host's real paste permission state ("Granted" or not).
 - Pixel size follows the display scale.
+- 05b stages a one-hour pause through the real `TimedPause`; if the real menu cannot be captured, its staged copy (`menu-paused-staged`) shows the same rows.
 - Staging code is Debug-only (`#if DEBUG`); a Release build contains none of it (checked with `strings` and `nm`).

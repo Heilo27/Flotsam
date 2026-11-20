@@ -63,7 +63,7 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
 
 /// One selectable row of the sidebar (FR-003-12).
 public struct SidebarEntry: Equatable, Identifiable {
-    public enum Section: Sendable, Equatable { case top, types, tags, apps }
+    public enum Section: Sendable, Hashable { case top, types, tags, apps }
 
     public let filter: LibraryFilter
     public let section: Section
@@ -128,6 +128,9 @@ public struct LibraryFooter: Equatable {
     }
 
     public let hints: [Hint]
+    /// `hints` without the lowest-priority one (the third: Plain Text, or Copy while pasting is off). The footer draws this
+    /// when the full row would not fit on one line at the compact width (FR-003-18, hill-climb r6).
+    public var essentialHints: [Hint] { hints.count == 4 ? hints.enumerated().filter { $0.offset != 2 }.map(\.element) : hints }
     public let countText: String
     /// "Press ⌘V to paste" when Accessibility is off; "Return starts a paste queue" while several rows are selected; the
     /// queue's remaining count and "Esc cancels" while one waits (FR-003-25).
@@ -139,7 +142,7 @@ public struct LibraryFooter: Equatable {
 
     public init(
         totalCount: Int, selectionCount: Int, isAccessibilityTrusted: Bool, sort: LibrarySort,
-        queueRemaining: Int = 0, previewShowing: Bool = false
+        queueRemaining: Int = 0, previewShowing: Bool = false, previewReplacesList: Bool = false
     ) {
         // With no rows (an empty history, a search with no results) there is nothing to sort or count, so neither is shown
         // ("Recent 0 items" under a no-results message says nothing true, FR-003-18).
@@ -160,10 +163,11 @@ public struct LibraryFooter: Equatable {
         let close = Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClose"))
         if totalCount > 0 {
             let paste = Hint(key: LibraryText.string("ui.library.keyReturn"), label: LibraryText.string("ui.library.hintPaste"))
-            // While the preview shows, Space closes it, so the hint says so (FR-003-18, hill-climb r5).
-            let preview = Hint(
-                key: LibraryText.string("ui.library.keySpace"),
-                label: LibraryText.string(previewShowing ? "ui.library.hintClosePreview" : "ui.library.hintPreview"))
+            // While the preview shows, Space closes it, so the hint says so: "Back to List" when the preview has taken the
+            // list's place (Compact), "Close Preview" beside it (FR-003-18, hill-climb r5 and r6).
+            let previewLabel = previewReplacesList
+                ? "ui.library.hintBackToList" : previewShowing ? "ui.library.hintClosePreview" : "ui.library.hintPreview"
+            let preview = Hint(key: LibraryText.string("ui.library.keySpace"), label: LibraryText.string(previewLabel))
             let secondary = isAccessibilityTrusted
                 ? Hint(key: LibraryText.string("ui.library.keyOptionReturn"), label: LibraryText.string("ui.library.hintPlain"))
                 : Hint(key: LibraryText.string("ui.library.keyCommandC"), label: LibraryText.string("ui.library.hintCopy"))
