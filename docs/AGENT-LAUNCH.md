@@ -82,6 +82,10 @@ LaunchServices matches a running app by bundle id, so with the real Flotsam also
 instead of the isolated build. Quit the real Flotsam (not by killing a PID you did not start: ask) before running the
 OC-8024 check.
 
+## Screenshots
+
+`bin/shots.sh` builds on this launch recipe to stage and capture the app; see SCREENSHOTS.md.
+
 ## Release check
 
 A Release build must contain none of this:
@@ -89,6 +93,6 @@ A Release build must contain none of this:
 ```sh
 xcodebuild -project Flotsam.xcodeproj -scheme Flotsam -configuration Release -derivedDataPath build/release \
   CODE_SIGNING_ALLOWED=NO build
-strings build/release/Build/Products/Release/Flotsam.app/Contents/MacOS/Flotsam | grep -E "FLOTSAM_(DATA_DIR|DEFAULTS|FAKE)" \
+strings build/release/Build/Products/Release/Flotsam.app/Contents/MacOS/Flotsam | grep -E "FLOTSAM_(DATA_DIR|DEFAULTS|FAKE|SHOTS)|ShotsStaging|ShotsFixtures" \
   && echo "LEAK" || echo "clean"
 ```

@@ -6,12 +6,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var container: AppContainer?
     private var statusItem: StatusItemController?
     private var onboarding: OnboardingWindowController?
+    #if DEBUG
+    private var shots: ShotsStaging?
+    #endif
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Text fields get ⌘A ⌘C ⌘V ⌘X ⌘Z only through a main menu's key equivalents (FR-008-19).
         NSApp.mainMenu = MainMenuBuilder.make()
         let container = AppContainer()
         self.container = container
+        #if DEBUG
+        // Screenshot staging (docs/SCREENSHOTS.md): ordinary settings, set before the database and the first window.
+        shots = ShotsStaging.fromEnvironment(container: container)
+        shots?.prepare()
+        #endif
         let onboarding = OnboardingWindowController(container: container)
         self.onboarding = onboarding
         // The setup guide is a Flotsam window too: "Show Setup Guide…" in the menu bar and the General pane's button hide
@@ -26,6 +34,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // First launch only; afterwards "Show Setup Guide…" is the way in (FR-008-12). No permission is requested
         // here: each step asks for its own, when the user presses its button (FR-008-13 rule a).
         if OnboardingFlow.shouldShowAutomatically(settings: container.settings) { onboarding.show(resuming: true) }
+        #if DEBUG
+        if let statusItem { shots?.run(statusItem: statusItem) }
+        #endif
     }
 
     func applicationWillTerminate(_ notification: Notification) {

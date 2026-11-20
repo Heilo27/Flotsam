@@ -261,12 +261,21 @@ final class AppContainer {
     /// check (FR-001-02 b, c); the launch check runs inside `start()` (FR-001-02 d).
     private func startCapture(database: FlotsamDatabase) {
         let settings = settings
+        #if DEBUG
+        // Screenshot staging reads no real pasteboard (docs/SCREENSHOTS.md); every other launch uses the system one.
+        let staged = ShotsStaging.isActive ? ShotsStaging.capturePorts() : nil
+        let capturePasteboard: any PasteboardPort = staged?.pasteboard ?? SystemPasteboard()
+        let captureAccess: any PasteboardAccessPort = staged?.access ?? SystemPasteboardAccess()
+        #else
+        let capturePasteboard: any PasteboardPort = SystemPasteboard()
+        let captureAccess: any PasteboardAccessPort = SystemPasteboardAccess()
+        #endif
         let capture = ClipboardCapture(
-            pasteboard: SystemPasteboard(), sourceApps: SystemSourceApps(), ownWrites: ownWrites,
+            pasteboard: capturePasteboard, sourceApps: SystemSourceApps(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
             ignoredApps: { settings.ignoredApps },
-            access: SystemPasteboardAccess(), vault: secureVault, cue: captureCue, pollTick: pollTick)
+            access: captureAccess, vault: secureVault, cue: captureCue, pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
         let presenter = presenter

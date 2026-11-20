@@ -54,6 +54,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         button.setAccessibilityTitle(FlotsamStrings.text(forKey: "ui.menu.title"))
     }
 
+    #if DEBUG
+    /// Screenshot staging only (ShotsStaging): opens the real menu with a click on the button, as the user would.
+    func shotsOpenMenu() { item.button?.performClick(nil) }
+
+    /// The rows of the menu as the user would see them, for the staged copy used when a real menu cannot be captured.
+    func shotsMenuTitles() -> [String] {
+        guard let menu = item.menu else { return [] }
+        menuNeedsUpdate(menu)
+        return menu.items.map { $0.isSeparatorItem ? "" : $0.title }
+    }
+    #endif
+
     // MARK: Menu
 
     func menuNeedsUpdate(_ menu: NSMenu) {
