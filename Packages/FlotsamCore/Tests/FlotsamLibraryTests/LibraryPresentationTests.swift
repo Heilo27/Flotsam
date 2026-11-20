@@ -50,7 +50,7 @@ import Testing
             tags: [SidebarCounts.TagCount(id: 1, name: "Idle", color: nil, count: 0)],
             apps: [SidebarCounts.AppCount(identity: .anotherDevice, name: nil, count: 2)])
         let entries = SidebarEntry.entries(from: counts)
-        #expect(entries.map(\.filter) == [.all, .pinned, .kind(.text), .kind(.link), .tag(1), .sourceApp(.anotherDevice)])
+        #expect(entries.map(\.filter) == [.all, .pinned, .hasNote, .hasShortcut, .kind(.text), .kind(.link), .tag(1), .sourceApp(.anotherDevice)])
         #expect(entries.first { $0.filter == .tag(1) }?.isDimmed == true)
         #expect(entries.first { $0.filter == .kind(.text) }?.title == "Text")
         #expect(entries.first { $0.filter == .kind(.link) }?.title == "Links")
@@ -95,20 +95,25 @@ import Testing
     }
 
     /// FR-003-18 / FR-003-08 / TASK-507 (Worf). given two or more rows selected with Accessibility denied, then the footer offers
-    /// only "Esc Clear selection": no ⌘C hint (copy is disabled with several rows), and the copy-only notice stays replaced
-    /// by the multi-select notice. Red if the ⌘C hint leaks into the multi-select branch.
+    /// "Return Start paste queue" and "Esc Clear selection" (FR-003-18, TASK-536): no ⌘C hint (copy is disabled with several
+    /// rows), and the copy-only notice stays replaced by the multi-select notice. Red if the ⌘C hint leaks into the
+    /// multi-select branch.
     @Test func footerMultiSelectUntrustedOffersNoCommandCHint() {
         for selected in [2, 3] {
             let footer = LibraryFooter(totalCount: 5, selectionCount: selected, isPreviewOpen: false, isAccessibilityTrusted: false, sort: .recent)
-            #expect(footer.hints == [LibraryFooter.Hint(key: "Esc", label: "Clear selection")], "selected \(selected)")
-            #expect(footer.notice == "Select one item to paste", "selected \(selected)")
+            #expect(
+                footer.hints == [
+                    LibraryFooter.Hint(key: "Return", label: "Start paste queue"),
+                    LibraryFooter.Hint(key: "Esc", label: "Clear selection"),
+                ], "selected \(selected)")
+            #expect(footer.notice == "Return queues these items", "selected \(selected)")
         }
     }
 
     @Test func footerForAMultiSelectionCountsAndDisablesPaste() {
         let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
         #expect(footer.countText == "3 selected")
-        #expect(footer.notice == "Select one item to paste")
+        #expect(footer.notice == "Return queues these items")
     }
 
     @Test func noResultsTitleQuotesTheQuery() {

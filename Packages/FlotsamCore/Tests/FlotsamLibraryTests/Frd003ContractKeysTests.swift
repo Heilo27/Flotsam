@@ -267,7 +267,8 @@ import Testing
         #expect(h.host.hideCount == 0)
         #expect(h.model.selection.count == 2)
         #expect(h.model.footer().countText == "2 selected")
-        #expect(h.model.footer().notice == "Select one item to paste")
+        // FR-003-08/18 (TASK-536): with several rows Return starts the paste queue, and the footer says so.
+        #expect(h.model.footer().notice == "Return queues these items")
     }
 
     // OC-3038 control: with one row selected the same Return does paste (so the test above can fail for the right reason).

@@ -11,7 +11,7 @@ import Foundation
 @Observable
 public final class BusyIndicator {
     /// The one delay both panels use (FR-003-50, FR-006-32).
-    public static let delay: Duration = .milliseconds(150)
+    public nonisolated static let delay: Duration = .milliseconds(150)
 
     /// The spinner's caption: "Searching…" while a search is typed, else "Loading…". One home for both panels; the Shelf
     /// reuses the Library's catalogue keys, as it does for its other shared words.

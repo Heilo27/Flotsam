@@ -491,15 +491,18 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
         for kind in nonEditable {
             #expect(organizeKeys(kind) == ["ui.organize.menuPin", "ui.organize.menuTags", "ui.organize.menuNote", "ui.organize.menuDelete"])
         }
-        #expect(organizeKeys(.bundle) == ["ui.organize.menuPin", "ui.organize.menuTags", "ui.organize.menuNote", "ui.organize.menuUngroup", "ui.organize.menuDelete"])
+        // Rename (FR-004-42) sits before Ungroup for the one bundle (TASK-539).
+        #expect(organizeKeys(.bundle) == ["ui.organize.menuPin", "ui.organize.menuTags", "ui.organize.menuNote", "ui.organize.menuRename", "ui.organize.menuUngroup", "ui.organize.menuDelete"])
         // control against a vacuous pass: the loops above covered all eleven kinds
         #expect(textual.count + nonEditable.count + 1 == 11)
         #expect(ItemKind.allCases.count == 11)
     }
 
-    @Test("OC-4105 given every kind and both targets, when menu titles are resolved, then none reads Group, Rename, Undo or Move to Trash")
+    @Test("OC-4105 given every kind and both targets, when menu titles are resolved, then none reads Undo or Move to Trash, and Group and Rename follow FR-004-41 and FR-004-42")
     func oc4105NoForbiddenActions() {
-        // Red if: a Group, Rename, Undo or Move to Trash entry is added to the item context menu.
+        // Red if: an Undo or Move to Trash entry is added to the item context menu, Group appears with no target rows, or
+        // Rename appears for anything but exactly one bundle. (Group and Rename were retired, then reinstated 2026-11-19
+        // by FRD-004 FR-004-41 and FR-004-42, TASK-539.)
         var seenTitles = Set<String>()
         for kind in ItemKind.allCases {
             for single in [true, false] {
@@ -507,24 +510,27 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
                     guard case .item(let key, _, _) = entry else { continue }
                     let title = LibraryText.string(key)
                     seenTitles.insert(title)
-                    for banned in ["Group", "Rename", "Undo", "Move to Trash"] {
+                    for banned in ["Undo", "Move to Trash", "Group"] {
                         #expect(!title.hasPrefix(banned), "\(banned) appeared as \(title)")
                     }
+                    if title.hasPrefix("Rename") { #expect(kind == .bundle && single, "Rename for \(kind), single \(single)") }
                 }
             }
         }
         // control: the scan did see real titles, including Ungroup, which is allowed and contains 'group'
         #expect(seenTitles.contains("Ungroup"))
+        #expect(seenTitles.contains("Rename"))
         #expect(seenTitles.contains("Delete"))
         #expect(seenTitles.contains("Pin"))
         #expect(seenTitles.count >= 10)
     }
 
-    // MARK: OC-4108 no Group action
+    // MARK: OC-4108 Group is the reinstated FR-004-41 action, with its own code and text
 
-    @Test("OC-4108 given the shipped surface, when it is searched for Group, then no action, error code or text for it exists")
-    func oc4108NoGroupSurface() throws {
-        // Red if: a Group menu entry, an ORG-VAL-004 error code or its message is (re)introduced.
+    @Test("OC-4108 given the shipped surface, when it is searched for Group, then it is the reinstated ORG-VAL-004 action and the retired wording is gone")
+    func oc4108GroupSurface() throws {
+        // Red if: Group appears in a menu with no target rows, ORG-VAL-004 loses its reinstated text (FRD-000 section 7,
+        // FRD-004 FR-004-41, TASK-539), or the retired wording returns.
         for kind in ItemKind.allCases {
             for single in [true, false] {
                 for key in organizeKeys(kind, singleTarget: single) {
@@ -532,13 +538,11 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
                 }
             }
         }
-        #expect(ErrorCode(rawValue: "ORG-VAL-004") == nil)
-        #expect(!ErrorCode.allCases.map(\.rawValue).contains("ORG-VAL-004"))
+        #expect(ErrorCode(rawValue: "ORG-VAL-004") == .orgVal004)
         let catalogue = try FlotsamCatalogue.englishStrings().get()
         #expect(catalogue.count > 100)
-        #expect(catalogue.keys.filter { $0.contains("ORG-VAL-004") }.isEmpty)
+        #expect(catalogue["error.ORG-VAL-004"] == "Choose 2 to 500 files or folders to group.")
         #expect(catalogue.values.filter { $0.contains("Select at least two files, folders or images to group.") }.isEmpty)
-        #expect(catalogue.values.filter { $0.contains("ORG-VAL-004") }.isEmpty)
     }
 
     @Test("OC-4108 given 2 and then 1 file, folder and image selected, when every organize action runs, then ORG-VAL-004 is never raised or logged")
@@ -616,20 +620,21 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
         #expect(presenter.fatals == 0)
     }
 
-    @Test("OC-4109 given the shipped surface, when it is searched for item rename and the retired code, then none exists")
-    func oc4109NoItemRenameNoRetiredCode() throws {
-        // Red if: an item/bundle Rename action, the ORG-VAL-005 code or its message is (re)introduced.
-        #expect(ErrorCode(rawValue: "ORG-VAL-005") == nil)
-        #expect(!ErrorCode.allCases.map(\.rawValue).contains("ORG-VAL-005"))
+    @Test("OC-4109 given the shipped surface, when it is searched for rename, then only a single bundle offers it and ORG-VAL-005 is the reinstated bundle-name code")
+    func oc4109RenameSurface() throws {
+        // Red if: Rename is offered for anything but exactly one bundle, ORG-VAL-005 loses its reinstated text (FRD-000
+        // section 7, FRD-004 FR-004-42, TASK-539), or the retired wording returns.
+        #expect(ErrorCode(rawValue: "ORG-VAL-005") == .orgVal005)
         let catalogue = try FlotsamCatalogue.englishStrings().get()
-        #expect(catalogue.keys.filter { $0.contains("ORG-VAL-005") }.isEmpty)
+        #expect(catalogue["error.ORG-VAL-005"] == "Bundle names can be up to 100 characters.")
         #expect(catalogue.values.filter { $0.contains("Names must be 1 to 80 characters.") }.isEmpty)
         for kind in ItemKind.allCases {
             for single in [true, false] {
-                #expect(!organizeKeys(kind, singleTarget: single).contains("ui.organize.menuRename"))
+                let offered = organizeKeys(kind, singleTarget: single).contains("ui.organize.menuRename")
+                #expect(offered == (kind == .bundle && single), "\(kind), single \(single)")
             }
         }
-        // control: the Rename string exists for the sidebar TAG menu, so the item-menu absence above is meaningful
+        // control: the same Rename string serves the sidebar tag menu
         #expect(catalogue["ui.organize.menuRename"] == "Rename")
     }
 
