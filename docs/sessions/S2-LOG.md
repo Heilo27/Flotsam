@@ -2315,3 +2315,12 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - In 01 the list's last row is sliced at the footer (ordinary scroll edge).
 - **Harness note:** in window mode the harness labels the frame "region capture failed" even when window mode was requested.
 - **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
+
+## Harness bug H1: window mode is labelled "region capture failed" (filed 2026-11-20, not fixed)
+
+- **Where:** `bin/shots.sh` at 63f6210, the same text as main 42c8f62. See the `pass()` capture block (about lines 153–167) and the result loop (about lines 197–199).
+- **Symptom:** with `SHOTS_CAPTURE=window`, each frame logs `ok (region capture failed; window-only capture, blur is flat)` to the console. NOTES gets `window-only capture (-l); region capture was not available…`. Both are false, because the region capture was never tried.
+- **Cause:** `pass()` returns the same `ok-window` result for two different cases: window mode was requested, or -R and the crop both failed and the capture fell back. The loop treats every `ok-window` as a fallback. The real reason is already written to `$OUT/.mode` as "window-only capture (screencapture -l)", but it's never checked against the mode that was asked for.
+- **Fix shape (for S1):** give a requested window capture its own result (e.g. `ok-window-requested`), or check `SHOTS_CAPTURE` in the loop. Keep the "region capture failed" wording for a real fallback only. The Screen Recording fallback (`sr=0`) is a third case and should say so.
+- **Impact:** NOTES only, and no pixels change. Round 3's NOTES were corrected by hand before publishing.
+- **Standing capture rule (S1):** 04 and 05 stay in window mode while the host Calendar alert is up. Once the alert is gone, all 16 go back to -R, and S2 reports the first round where -R works.
