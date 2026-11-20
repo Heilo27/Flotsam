@@ -88,14 +88,14 @@ private struct Rig {
     }
 
     // OC-8023. The panes are handed to the window in the FRD-008 order, with titles and icons.
-    @Test("OC-8023: the window is built with the six panes in the stated order")
+    @Test("OC-8023: the window is built with the eight panes in the stated order")
     func paneOrderHandedToWindow() {
         let rig = Rig(); defer { rig.wipe() }
         rig.driver.open()
         let items = rig.presenter.itemsSeen.first ?? []
-        #expect(items.map(\.pane) == [.general, .shortcuts, .triggers, .privacy, .storage, .about])
-        #expect(items.map(\.label) == ["General", "Shortcuts", "Triggers", "Privacy", "Storage", "About"])
-        #expect(items.map(\.symbolName) == ["gearshape", "keyboard", "bolt", "hand.raised", "internaldrive", "info.circle"])
+        #expect(items.map(\.pane) == [.general, .shortcuts, .types, .triggers, .privacy, .storage, .tips, .about])
+        #expect(items.map(\.label) == ["General", "Shortcuts", "Types", "Triggers", "Privacy", "Storage", "Tips", "About"])
+        #expect(items.map(\.symbolName) == ["gearshape", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle"])
         #expect(items == SettingsWindowDriver.items)
     }
 

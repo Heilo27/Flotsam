@@ -75,7 +75,11 @@ struct Frd008ContractStringsTests {
         "ui.settings.placementTopCenter": "popup value",
         "ui.settings.shortcutOpenLibrary": "menu item name", "ui.settings.shortcutSaveClipboard": "menu item name",
         "ui.settings.shortcutToggleShelf": "menu item name",
-        "ui.settings.editorWindow": "window title",
+        "ui.settings.editorWindow": "window title", "ui.settings.addClipWindow": "window title",
+        "ui.settings.resetLibraryTitle": "confirmation dialog title",
+        "ui.settings.addPasswordManagers": "button", "ui.settings.resetLibraryDefaults": "button",
+        "ui.settings.resetLibraryConfirm": "button",
+        "ui.settings.shortcutAddClip": "menu item name", "ui.settings.shortcutPasteQueue": "menu item name",
     ]
 
     // OC-8139 (every label). Labels and messages are sentence case; the Title Case element kinds are listed above.

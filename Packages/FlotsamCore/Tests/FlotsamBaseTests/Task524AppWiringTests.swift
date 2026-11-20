@@ -30,15 +30,22 @@ private func slice(_ text: String, from start: String, through end: String) -> S
         #expect(hideAt.upperBound <= openAt.lowerBound)
     }
 
-    @Test("actions.editShortcutAndTrigger hides only after the one-item guard, and before the editor opens")
+    // TASK-558 (FR-005-09): the one-item guard is `ShortcutEditorRule.target`, whose accepted case is `.success(let id?)`
+    // (exactly one, non-secure id). A refused request (`.success(nil)` or a failure) hides nothing.
+    @Test("actions.editShortcutAndTrigger hides only on the accepted ShortcutEditorRule result, and before the editor opens")
     func editorClosureHidesAfterGuardBeforeOpen() throws {
         let code = try appContainerCode()
         let closure = try #require(slice(code, from: "actions.editShortcutAndTrigger = {", through: "editor?.open(itemId: id)"))
-        let guardAt = try #require(closure.range(of: "guard let id = ids.first else { return }"))
+        let ruleAt = try #require(closure.range(of: "ShortcutEditorRule.target(ids: ids)"))
+        let acceptedAt = try #require(closure.range(of: "case .success(let id?):"))
         let hideAt = try #require(closure.range(of: hide))
         let openAt = try #require(closure.range(of: "editor?.open(itemId: id)"))
-        #expect(guardAt.upperBound <= hideAt.lowerBound)
+        #expect(ruleAt.upperBound <= acceptedAt.lowerBound)
+        #expect(acceptedAt.upperBound <= hideAt.lowerBound)
         #expect(hideAt.upperBound <= openAt.lowerBound)
+        // The refused results come after the accepted one and open nothing.
+        let tail = String(code[code.range(of: "editor?.open(itemId: id)")!.upperBound...].prefix(200))
+        #expect(tail.contains("case .success(nil): return"))
     }
 
     @Test("the hide is the Library panel's own idempotent hidePanel, and nothing else")

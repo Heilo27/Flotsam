@@ -62,7 +62,7 @@ struct Frd008ContractMenuTests {
     }
 
     // OC-8127. Red if a row is added, removed, reordered, or a chord is bound to the wrong row.
-    @Test("OC-8127: the menu is the eleven rows in the specified order with the configured chords")
+    @Test("OC-8127: the menu is the fourteen rows in the specified order with the configured chords")
     func menuRowsInOrder() throws {
         let store = Frd008Defaults()
         defer { store.wipe() }
@@ -71,19 +71,20 @@ struct Frd008ContractMenuTests {
         settings.set(toggleShelfChord, for: SettingKeys.shortcutsToggleShelf)
         let entries = MenuBarModel.entries(settings: settings)
         #expect(entries == [
-            .openLibrary(openLibraryChord), .saveClipboard(saveClipboardChord), .toggleShelf(toggleShelfChord),
+            .openLibrary(openLibraryChord), .saveClipboard(saveClipboardChord), .addClip(.none), .toggleShelf(toggleShelfChord),
             .separator,
-            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .notices,
+            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .pauseFor, .clearRecent, .notices,
             .separator,
             .settings, .setupGuide,
             .separator,
             .quit,
         ])
-        #expect(entries.count == 11)
-        #expect(["ui.menu.openLibrary", "ui.menu.saveClipboard", "ui.menu.toggleShelf", "ui.menu.pauseCapture",
-                 "ui.menu.notices", "ui.menu.settings", "ui.menu.setupGuide", "ui.menu.quit"].map(title)
-            == ["Open Library", "Save Clipboard", "Toggle Shelf", "Pause Capture", "Notices", "Settings…",
-                "Show Setup Guide…", "Quit Flotsam"])
+        #expect(entries.count == 14)
+        #expect(["ui.menu.openLibrary", "ui.menu.saveClipboard", "ui.menu.addClip", "ui.menu.toggleShelf", "ui.menu.pauseCapture",
+                 "ui.menu.pauseFor", "ui.menu.clearRecent", "ui.menu.notices", "ui.menu.settings", "ui.menu.setupGuide",
+                 "ui.menu.quit"].map(title)
+            == ["Open Library", "Save Clipboard", "Add Clip…", "Toggle Shelf", "Pause Capture", "Pause For", "Clear Recent",
+                "Notices", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
     }
 
     // OC-8127 (key equivalents). Red if the Settings or Quit key equivalent is changed or dropped.
@@ -225,7 +226,7 @@ struct Frd008ContractMenuTests {
         let before = MenuBarModel.entries(settings: settings)
         settings.set(false, for: SettingKeys.shelfEnabled)
         let after = MenuBarModel.entries(settings: defaults.store())
-        #expect(before.count == 11)
+        #expect(before.count == 14)
         #expect(after.count == before.count - 1)
         #expect(!after.contains(.toggleShelf(toggleShelfChord)))
         #expect(after == before.filter { $0 != .toggleShelf(toggleShelfChord) })

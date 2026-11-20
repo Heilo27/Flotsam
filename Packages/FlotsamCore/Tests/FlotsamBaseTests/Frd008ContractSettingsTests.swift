@@ -35,10 +35,10 @@ import Testing
 
     // MARK: - Window and panes (OC-8023...8032)
 
-    // OC-8023. Exactly six panes in the stated order with the stated titles.
-    @Test func oc8023_sixPanesInOrder() {
-        #expect(SettingsPane.allCases.map(\.rawValue) == ["general", "shortcuts", "triggers", "privacy", "storage", "about"])
-        #expect(SettingsPane.allCases.map { $0.title.text } == ["General", "Shortcuts", "Triggers", "Privacy", "Storage", "About"])
+    // OC-8023. Exactly eight panes in the stated order with the stated titles (FR-008-03, AC-008-28).
+    @Test func oc8023_eightPanesInOrder() {
+        #expect(SettingsPane.allCases.map(\.rawValue) == ["general", "shortcuts", "types", "triggers", "privacy", "storage", "tips", "about"])
+        #expect(SettingsPane.allCases.map { $0.title.text } == ["General", "Shortcuts", "Types", "Triggers", "Privacy", "Storage", "Tips", "About"])
         #expect(SettingsString.window.text == "Settings")
     }
 
@@ -119,15 +119,18 @@ import Testing
 
     // MARK: - Shortcuts (OC-8034, OC-8035)
 
-    // OC-8034. Three rows with these labels, and the footnote.
+    // OC-8034. Five rows (FR-008-05) with these labels, in registry order, and the footnote.
     @Test func oc8034_shortcutsPaneStrings() {
         #expect(SettingsString.shortcutOpenLibrary.text == "Open Library")
         #expect(SettingsString.shortcutSaveClipboard.text == "Save Clipboard")
+        #expect(SettingsString.shortcutAddClip.text == "Add Clip")
         #expect(SettingsString.shortcutToggleShelf.text == "Toggle Shelf")
+        #expect(SettingsString.shortcutPasteQueue.text == "Paste Queue")
         #expect(SettingsString.shortcutsFootnote.text == "Shortcuts for single items and typed triggers are set from the Library (⌘K).")
         #expect(SettingsString.shortcutClear.text == "Clear shortcut")
         let bound = SettingKeys.all.filter { $0.name.hasPrefix("shortcuts.") }.map(\.name)
-        #expect(bound == ["shortcuts.openLibrary", "shortcuts.saveClipboard", "shortcuts.toggleShelf"], "exactly three shortcut settings")
+        #expect(bound == ["shortcuts.openLibrary", "shortcuts.saveClipboard", "shortcuts.addClip", "shortcuts.toggleShelf", "shortcuts.pasteQueue"],
+                "exactly the five shortcut settings of FR-008-05")
     }
 
     // OC-8035. Clearing Open Library persists unbound, the menu row shows no chord, and a relaunch keeps it unbound.

@@ -2,19 +2,24 @@ import Foundation
 import Testing
 @testable import FlotsamBase
 
-/// FR-008-01 / FR-008-02 (AC-008-01, AC-008-02). Expected names, types and defaults are literals from the FR-008-01 table.
+/// FR-008-01 / FR-008-02 (AC-008-01, AC-008-02). Expected names, types and defaults are literals from the FR-008-01 table, in its order (33 rows).
 @Suite struct SettingsRegistryTests {
     @Test func registryEqualsTheFRTable() {
         let expected: [(String, String, String)] = [
             ("capture.mode", "CaptureMode", "active"),
+            ("capture.autoBundle", "Bool", "true"),
+            ("capture.cue", "Bool", "true"),
             ("screenshots.enabled", "Bool", "true"),
             ("screenshots.folderOverride", "FolderOverride", ""),
             ("shelf.enabled", "Bool", "true"),
             ("shelf.placement", "ShelfPlacement", "rightEdge"),
             ("shelf.revealOnEdgeHover", "Bool", "false"),
+            ("shelf.edgeBar", "Bool", "false"),
             ("shortcuts.openLibrary", "ChordBinding", "9:3"),
             ("shortcuts.saveClipboard", "ChordBinding", "none"),
+            ("shortcuts.addClip", "ChordBinding", "none"),
             ("shortcuts.toggleShelf", "ChordBinding", "none"),
+            ("shortcuts.pasteQueue", "ChordBinding", "none"),
             ("triggers.enabled", "Bool", "true"),
             ("triggers.excludedApps", "BundleIdentifierList", BundleIdentifierList.defaultTriggerExcludedApps.persisted),
             ("privacy.ignoredApps", "BundleIdentifierList", "[]"),
@@ -24,6 +29,12 @@ import Testing
             ("library.sort", "LibrarySort", "recent"),
             ("library.viewMode", "LibraryViewMode", "list"),
             ("library.layout", "LibraryLayoutMode", "standard"),
+            ("library.background", "LibraryBackground", "system"),
+            ("library.previewPreset", "LibraryPreviewPreset", "closed"),
+            ("library.closeAfterPaste", "Bool", "true"),
+            ("library.resumeOnReopen", "Bool", "false"),
+            ("library.display", "LibraryDisplay", "pointer"),
+            ("library.types", "TypeOrder", TypeOrder.default.persisted),
             ("library.panelSize", "PanelSize", "760.0x480.0"),
             ("library.compactPanelSize", "PanelSize", "520.0x520.0"),
             ("onboarding.completed", "Bool", "false"),

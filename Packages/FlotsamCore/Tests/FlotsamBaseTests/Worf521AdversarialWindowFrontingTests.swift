@@ -379,7 +379,7 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
 
     // OC-521-S02. Red if ANY App or package file gains an activation or ordering call, or if one of the five files the
     // shipped scan exempts wholesale (LibraryPanelController, ShelfPanelController, ErrorPresenterAdapter, FatalAlert,
-    // WindowFrontAdapter) gains a different one, or if App/Platform (not walked by the shipped scan) gains one.
+    // WindowFrontAdapter, plus ClearRecentConfirmation, CaptureCuePanel and ShelfEdgeBar since TASK-541/550/549) gains a different one, or if App/Platform (not walked by the shipped scan) gains one.
     @Test("S02: the set of files and calls that activate the app or order a window front is exactly the known one, across all of App/ and the packages")
     func exactActivationInventory() throws {
         #expect(try sourceFileCount(under: "App") > 40, "the walk reached the App sources")
@@ -389,7 +389,10 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
         #expect(app == [
             "App/Flotsam/WindowFrontAdapter.swift": ["activate", "openApplication", "ownBundleURL", "orderFrontRegardless", "makeKeyAndOrderFront"],
             "App/Flotsam/FatalAlert.swift": ["activate"],
+            "App/Flotsam/ClearRecentConfirmation.swift": ["activate"],  // TASK-541: a modal alert, like FatalAlert
             "App/Flotsam/ErrorPresenterAdapter.swift": ["orderFrontRegardless"],
+            "App/Flotsam/CaptureCuePanel.swift": ["orderFrontRegardless"],  // TASK-550: non-activating cue panel
+            "App/Flotsam/Shelf/ShelfEdgeBar.swift": ["orderFrontRegardless"],  // TASK-549: never-key edge bar
             "App/Flotsam/Library/LibraryPanelController.swift": ["makeKeyAndOrderFront"],
             "App/Flotsam/Shelf/ShelfPanelController.swift": ["makeKeyAndOrderFront", "orderFrontRegardless"],
             "App/Flotsam/FlotsamApp.swift": ["setActivationPolicy"],  // .accessory at launch: no Dock icon
@@ -423,6 +426,7 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
             "App/Flotsam/Settings/SettingsWindowController.swift": 2,  // the handle method and its one forwarding call
             "App/Flotsam/OnboardingWindowController.swift": 2,
             "App/Flotsam/Library/ItemBindingsEditorWindowController.swift": 2,
+            "App/Flotsam/AddClipWindowController.swift": 2,  // TASK-544: an explicit user open, forcing like the others
             "App/Flotsam/WindowFrontAdapter.swift": 2,  // the adapter method and the WindowFronting call
         ])
         // `forcing:` appears only where the launch rule lives: the adapter's pass-through and the setup guide

@@ -36,6 +36,8 @@ private let section7: [Row] = [
     ("ORG-VAL-001", .error, "Tag names must be 1 to 32 characters and unique."),
     ("ORG-VAL-002", .error, "Notes can be up to 2,000 characters."),
     ("ORG-VAL-003", .error, "Only text items can be edited, and they can't be empty."),
+    ("ORG-VAL-004", .error, "Choose 2 to 500 files or folders to group."),
+    ("ORG-VAL-005", .error, "Bundle names can be up to 100 characters."),
     ("ORG-LIM-001", .error, "An item can have up to 10 tags."),
     ("ORG-LIM-002", .error, "You can have up to 100 tags."),
     ("ORG-LIM-003", .error, "That text is over the {limit} limit. Shorten it and try again."),
@@ -101,18 +103,19 @@ private func verifyModule(_ prefix: String, expectedCount: Int) throws {
     // MARK: OC-0005
 
     /// OC-0005. given the shipped enum, when raw values are matched against the format regex and the section 7
-    /// table, then 0 malformed, 0 duplicate, set equals the 63 live codes, retired ORG-VAL-004/005 are not members.
-    @Test("OC-0005 code set equals the 63 live codes of section 7")
+    /// table, then 0 malformed, 0 duplicate, set equals the 65 live codes (ORG-VAL-004/005 reinstated 2026-11-19, FRD-004
+    /// FR-004-41/42).
+    @Test("OC-0005 code set equals the 65 live codes of section 7")
     func codeSetEqualsSection7() {
         let raws = ErrorCode.allCases.map(\.rawValue)
-        #expect(raws.count == 63)
-        #expect(Set(raws).count == 63, "duplicate raw value")
+        #expect(raws.count == 65)
+        #expect(Set(raws).count == 65, "duplicate raw value")
         #expect(Set(raws) == Set(section7.map(\.code)))
         let pattern = "^(SYS|CAP|SSP|LIB|ORG|TRG|SHF|STO|SET)-(PRM|IO|DB|VAL|LIM|OS|POL|DAT|INT)-[0-9]{3}$"
         let malformed = raws.filter { $0.range(of: pattern, options: .regularExpression) == nil }
         #expect(malformed.isEmpty, "\(malformed)")
-        #expect(ErrorCode(rawValue: "ORG-VAL-004") == nil)
-        #expect(ErrorCode(rawValue: "ORG-VAL-005") == nil)
+        #expect(ErrorCode(rawValue: "ORG-VAL-004") != nil)
+        #expect(ErrorCode(rawValue: "ORG-VAL-005") != nil)
     }
 
     /// OC-0005 negative. given malformed code strings, when parsed, then every one is rejected; a good one parses.
@@ -144,17 +147,17 @@ private func verifyModule(_ prefix: String, expectedCount: Int) throws {
     }
 
     /// OC-0007. given the enum, when grouped by severity, then exactly 2 Fatal (STO-IO-002, STO-DB-003) and
-    /// 22 Warning, 25 Error, 14 Info out of 63.
-    @Test("OC-0007 severity counts are 2 fatal, 22 warning, 25 error, 14 info")
+    /// 22 Warning, 27 Error, 14 Info out of 65.
+    @Test("OC-0007 severity counts are 2 fatal, 22 warning, 27 error, 14 info")
     func severityCounts() {
         func raws(_ severity: ErrorSeverity) -> Set<String> {
             Set(ErrorCode.allCases.filter { $0.severity == severity }.map(\.rawValue))
         }
         #expect(raws(.fatal) == ["STO-IO-002", "STO-DB-003"])
         #expect(raws(.warning).count == 22)
-        #expect(raws(.error).count == 25)
+        #expect(raws(.error).count == 27)
         #expect(raws(.info).count == 14)
-        #expect(ErrorCode.allCases.count == 63)
+        #expect(ErrorCode.allCases.count == 65)
     }
 
     // MARK: OC-0057 ... OC-0065
@@ -163,20 +166,21 @@ private func verifyModule(_ prefix: String, expectedCount: Int) throws {
     @Test("OC-0058 CAP codes: 13, severity and verbatim text") func cap() throws { try verifyModule("CAP", expectedCount: 13) }
     @Test("OC-0059 SSP codes: 7, severity and verbatim text") func ssp() throws { try verifyModule("SSP", expectedCount: 7) }
     @Test("OC-0060 LIB codes: 5, severity and verbatim text") func lib() throws { try verifyModule("LIB", expectedCount: 5) }
-    @Test("OC-0061 ORG codes: 6 live, severity and verbatim text") func org() throws { try verifyModule("ORG", expectedCount: 6) }
+    @Test("OC-0061 ORG codes: 8, severity and verbatim text") func org() throws { try verifyModule("ORG", expectedCount: 8) }
     @Test("OC-0062 TRG codes: 11, severity and verbatim text") func trg() throws { try verifyModule("TRG", expectedCount: 11) }
     @Test("OC-0063 SHF codes: 4, severity and verbatim text") func shf() throws { try verifyModule("SHF", expectedCount: 4) }
     @Test("OC-0064 STO codes: 10, severity and verbatim text") func sto() throws { try verifyModule("STO", expectedCount: 10) }
     @Test("OC-0065 SET codes: 6, severity and verbatim text") func set() throws { try verifyModule("SET", expectedCount: 6) }
 
-    /// OC-0061 retired. given ORG-VAL-004/005 retired, when the catalogue is read, then neither key exists and
-    /// neither retired text appears anywhere in the catalogue.
-    @Test("OC-0061 retired ORG-VAL-004/005 have no key and no text in the catalogue")
-    func retiredOrgCodesAbsent() throws {
+    /// OC-0061 reinstated. given ORG-VAL-004/005 reinstated (FRD-000 section 7, FRD-004 FR-004-41/42), when the
+    /// catalogue is read, then each has its key and its section 7 text.
+    @Test("OC-0061 reinstated ORG-VAL-004/005 have their key and text in the catalogue")
+    func reinstatedOrgCodesPresent() throws {
         let catalogue = try Repo.catalogue()
-        #expect(catalogue["error.ORG-VAL-004"] == nil)
-        #expect(catalogue["error.ORG-VAL-005"] == nil)
+        #expect(catalogue["error.ORG-VAL-004"] == "Choose 2 to 500 files or folders to group.")
+        #expect(catalogue["error.ORG-VAL-005"] == "Bundle names can be up to 100 characters.")
         let values = Array(catalogue.values)
+        // The pre-retirement wordings stay gone.
         #expect(!values.contains("Select at least two files, folders or images to group."))
         #expect(!values.contains("Names must be 1 to 80 characters."))
     }
@@ -184,18 +188,17 @@ private func verifyModule(_ prefix: String, expectedCount: Int) throws {
     // MARK: OC-0016, OC-0020, OC-0053
 
     /// OC-0016 / OC-0020 / OC-0053. given the shipped catalogue, when its keys are listed, then source language is
-    /// en and the error.* keys are exactly the 49 Warning/Error/Fatal codes: none for the 14 Info or 2 retired.
-    @Test("OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 49 non-Info codes")
+    /// en and the error.* keys are exactly the 51 Warning/Error/Fatal codes: none for the 14 Info.
+    @Test("OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 51 non-Info codes")
     func catalogueKeysMatchNonInfoCodes() throws {
         #expect(try Repo.catalogueSourceLanguage() == "en")
         let catalogue = try Repo.catalogue()
         let expectedKeys = Set(section7.filter { $0.message != nil }.map { "error.\($0.code)" })
-        #expect(expectedKeys.count == 49)
+        #expect(expectedKeys.count == 51)
         #expect(Set(catalogue.keys.filter { $0.hasPrefix("error.") }) == expectedKeys)
         let infoKeys = section7.filter { $0.message == nil }.map { "error.\($0.code)" }
         #expect(infoKeys.count == 14)
         for key in infoKeys { #expect(catalogue[key] == nil, "\(key) must have no message") }
-        for retired in ["error.ORG-VAL-004", "error.ORG-VAL-005"] { #expect(catalogue[retired] == nil) }
         for code in ErrorCode.allCases where code.severity != .info {
             #expect(catalogue[code.catalogueKey] != nil, "\(code.rawValue) has no key")
         }
@@ -212,7 +215,7 @@ private func verifyModule(_ prefix: String, expectedCount: Int) throws {
     @Test("OC-0018 every message is at most 140 characters")
     func messageLength() throws {
         let messages = try nonInfoMessages()
-        #expect(messages.count == 49)
+        #expect(messages.count == 51)
         for (code, text) in messages { #expect(text.count <= 140, "\(code) is \(text.count) characters") }
     }
 
