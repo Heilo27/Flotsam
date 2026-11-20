@@ -51,15 +51,16 @@ public actor IngestActor {
         case .success(let value): stored = value
         }
 
+        let source = FlotsamDatabase.sourceToStore(for: candidate, ignoredApps: database.ignoredApps())
         let inserted: Inserted
         do {
-            inserted = try await database.pool.write { [candidate, prepared, stored] db in
+            inserted = try await database.pool.write { [candidate, prepared, stored, source] db in
                 // Re-check: see the type documentation for why step 1 alone is not enough.
                 if let existing = try Self.lookup(db, contentKey: candidate.contentKey) {
                     if candidate.countsAsCopy { try Self.bump(db, id: existing.id, occurredAt: occurredAt) }
                     return .raced(existing.id)
                 }
-                try Self.insert(db, itemId: itemId, candidate: candidate, prepared: prepared, stored: stored)
+                try Self.insert(db, itemId: itemId, candidate: candidate, source: source, prepared: prepared, stored: stored)
                 return .created
             }
         } catch {
@@ -223,7 +224,8 @@ public actor IngestActor {
     // MARK: Step 4
 
     private static func insert(
-        _ db: Database, itemId: UUID, candidate: IngestCandidate, prepared: PreparedItem, stored: [StoredRepresentation]
+        _ db: Database, itemId: UUID, candidate: IngestCandidate, source: SourceApp?, prepared: PreparedItem,
+        stored: [StoredRepresentation]
     ) throws {
         let id = itemId.uuidString
         let at = candidate.occurredAt.epochMillis
@@ -237,7 +239,7 @@ public actor IngestActor {
                 """,
             arguments: [
                 id, candidate.kind.rawValue, at, at, candidate.contentKey, candidate.plainText,
-                candidate.source?.bundleId, candidate.source?.name, byteSize,
+                source?.bundleId, source?.name, byteSize,
                 prepared.pixelWidth, prepared.pixelHeight, candidate.originalPath, at,
                 candidate.isSecure, candidate.secureCiphertext,
             ])

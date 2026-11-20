@@ -1,3 +1,4 @@
+import FlotsamBase
 import Foundation
 import GRDB
 
@@ -18,5 +19,17 @@ extension FlotsamDatabase {
             "(NULLIF(sourceBundleId, '') IS NULL OR sourceBundleId NOT IN (\(placeholders)))",
             StatementArguments(ignored)
         )
+    }
+
+    /// The source to store with a new item. A Shelf drop is an explicit user action (FRD-006 FR-006-13), so a drop whose
+    /// source application is on the ignored list is stored with no source bundle identifier: the hide rule above can
+    /// never match it, and the drop stays visible (FR-008-42). The name is kept, so the row still says where it came
+    /// from. Every other origin keeps its source as captured, and an ignored app's clipboard copy never reaches here
+    /// (capture gate 4). The list is read at drop time, as at capture.
+    static func sourceToStore(for candidate: IngestCandidate, ignoredApps: Set<String>) -> SourceApp? {
+        guard candidate.origin == .shelfDrop, let source = candidate.source, let bundleId = source.bundleId,
+            ignoredApps.contains(bundleId)
+        else { return candidate.source }
+        return SourceApp(bundleId: nil, name: source.name)
     }
 }
