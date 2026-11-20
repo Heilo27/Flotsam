@@ -58,6 +58,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     /// Screenshot staging only (ShotsStaging): opens the real menu with a click on the button, as the user would.
     func shotsOpenMenu() { item.button?.performClick(nil) }
 
+    /// The same real menu, popped up at a fixed screen point (AppKit bottom-left coordinates) instead of under the item.
+    func shotsPopUpMenu(at point: CGPoint) { item.menu?.popUp(positioning: nil, at: point, in: nil) }
+
     /// The rows of the menu as the user would see them, for the staged copy used when a real menu cannot be captured.
     func shotsMenuTitles() -> [String] {
         guard let menu = item.menu else { return [] }

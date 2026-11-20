@@ -31,6 +31,24 @@ Set these up before a run; the harness cannot do them for you.
   machine while it runs (windows take focus for a second or two per pass).
 - Nothing else running as Flotsam.
 
+## Fixed launch path
+
+The script copies the built app to one fixed place (`~/Library/Caches/flotsam-shots/Flotsam.app`, overridable with
+`SHOTS_APP_PATH`) with `rsync --delete` and launches it from there every run, whichever worktree built it. macOS
+background-task management re-announces a stale login item ("Login Item Added" banner, even with Focus on) each time
+the app shows up at a new bundle path; a worktree path, or a fresh build folder, is a new path. One path means at most
+one announcement, on the first ever run.
+
+## Checks before a capture
+
+Each pass checks, from the staged app, that its target window is in the on-screen window list, owned by the staged
+process, at the expected level and title, on the main display, and above the backdrop. Otherwise the pass fails with the
+reason; no pass reports ok on an empty frame. The backdrop is installed at launch before the onboarding window opens
+(onboarding opens during launch; a later backdrop was ordered above it and hid it). The menu is the real NSMenu opened
+at a fixed spot near the top right (not under the status item, whose position depends on the host's menu bar) and the
+frame is cropped to the menu plus 24 pt of padding, the top stopping below the system menu bar. NOTES.txt records the
+capture mode each pass used (region, full-display plus crop, or window-only).
+
 ## What sits behind the panels
 
 Every staged launch first opens a full-screen backdrop window on the main display (Debug builds and the shots launch
