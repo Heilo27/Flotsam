@@ -2267,3 +2267,18 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
 - **Host path:** the fixed app path under the user Caches folder is left over from A7 and still present.
 - **Still open:** the Shelf Preview image card is oversized (it overflows and covers the "Preview" label). The menu follows the system appearance (known).
 - **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
+
+## A9: screenshot round 2 at hill-climb-529 0832dd1 (2026-11-20)
+
+- **Verdict: PUBLISHED.** s2/shots = 475c49c7ab5987605964b3d8b0071c9920e7080a (normal push). The tree holds round-1/ and round-2/, 17 files each. The NOTES leak grep is clean.
+- **Script:** the branch's bin/shots.sh, which is byte-identical to main 42c8f62. Built from a detached worktree; nothing merged.
+- **Runs:** all 16 passes, `-R` capture, every staging pass found its window. Both the run and the publish exited 0, and the cleanup error from A8 is gone.
+- **Banner and clipping:** none of the 16 frames shows the banner or host content.
+- **Layout notes for the judges, light and dark:**
+  - 01 and 03: the last sidebar Tags row ("Work") is cut by the footer.
+  - 02: the preview popover covers the list rows (probably intended).
+  - 04: the Shelf filter chips cut off at "Phone" at the right edge.
+  - 06: the General pane is cut mid-row at the bottom of the capture.
+  - 07: onboarding at 560x420 fits cleanly.
+  - 08: the recorder field shows the shortcut chips and the clear button.
+- **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
