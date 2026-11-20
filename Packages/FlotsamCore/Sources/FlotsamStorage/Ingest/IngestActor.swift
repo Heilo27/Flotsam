@@ -32,7 +32,8 @@ public actor IngestActor {
     private func persist(_ candidate: IngestCandidate) async -> FlotsamResult<IngestResult> {
         let occurredAt = candidate.occurredAt.epochMillis
 
-        switch await bumpIfKnown(candidate, occurredAt: occurredAt) {
+        let ignoredApps = database.ignoredApps()
+        switch await bumpIfKnown(candidate, occurredAt: occurredAt, ignoredApps: ignoredApps) {
         case .failure(let error): return .failure(error)
         case .success(let id?): return matched(id, countsAsCopy: candidate.countsAsCopy)
         case .success(nil): break
@@ -40,24 +41,26 @@ public actor IngestActor {
 
         let prepared: PreparedItem
         switch await prepare(candidate) {
-        case .failure(let error): return await bumpOrFail(candidate, occurredAt: occurredAt, failure: error)
+        case .failure(let error): return await bumpOrFail(candidate, occurredAt: occurredAt, ignoredApps: ignoredApps, failure: error)
         case .success(let value): prepared = value
         }
 
         let itemId = UUID()
         let stored: [StoredRepresentation]
         switch writeBlobs(prepared.representations, itemId: itemId) {
-        case .failure(let error): return await bumpOrFail(candidate, occurredAt: occurredAt, failure: error)
+        case .failure(let error): return await bumpOrFail(candidate, occurredAt: occurredAt, ignoredApps: ignoredApps, failure: error)
         case .success(let value): stored = value
         }
 
-        let source = FlotsamDatabase.sourceToStore(for: candidate, ignoredApps: database.ignoredApps())
+        let source = FlotsamDatabase.sourceToStore(for: candidate, ignoredApps: ignoredApps)
         let inserted: Inserted
         do {
-            inserted = try await database.pool.write { [candidate, prepared, stored, source] db in
+            inserted = try await database.pool.write { [candidate, prepared, stored, source, ignoredApps] db in
                 // Re-check: see the type documentation for why step 1 alone is not enough.
                 if let existing = try Self.lookup(db, contentKey: candidate.contentKey) {
-                    if candidate.countsAsCopy { try Self.bump(db, id: existing.id, occurredAt: occurredAt) }
+                    if candidate.countsAsCopy {
+                        try Self.bump(db, id: existing.id, occurredAt: occurredAt, origin: candidate.origin, ignoredApps: ignoredApps)
+                    }
                     return .raced(existing.id)
                 }
                 try Self.insert(db, itemId: itemId, candidate: candidate, source: source, prepared: prepared, stored: stored)
@@ -85,13 +88,18 @@ public actor IngestActor {
 
     // MARK: Step 1 and the re-check
 
-    private func bumpIfKnown(_ candidate: IngestCandidate, occurredAt: Int64) async -> FlotsamResult<String?> {
+    private func bumpIfKnown(
+        _ candidate: IngestCandidate, occurredAt: Int64, ignoredApps: Set<String>
+    ) async -> FlotsamResult<String?> {
         let contentKey = candidate.contentKey
         let countsAsCopy = candidate.countsAsCopy
+        let origin = candidate.origin
         do {
             return .success(try await database.pool.write { db in
                 guard let existing = try Self.lookup(db, contentKey: contentKey) else { return nil }
-                if countsAsCopy { try Self.bump(db, id: existing.id, occurredAt: occurredAt) }
+                if countsAsCopy {
+                    try Self.bump(db, id: existing.id, occurredAt: occurredAt, origin: origin, ignoredApps: ignoredApps)
+                }
                 return existing.id
             })
         } catch {
@@ -106,9 +114,9 @@ public actor IngestActor {
     /// (FR-007-05). If the look-up itself fails, the original failure is the one that explains the copy, and the
     /// look-up error is reported rather than swallowed.
     private func bumpOrFail(
-        _ candidate: IngestCandidate, occurredAt: Int64, failure: FlotsamError
+        _ candidate: IngestCandidate, occurredAt: Int64, ignoredApps: Set<String>, failure: FlotsamError
     ) async -> FlotsamResult<IngestResult> {
-        switch await bumpIfKnown(candidate, occurredAt: occurredAt) {
+        switch await bumpIfKnown(candidate, occurredAt: occurredAt, ignoredApps: ignoredApps) {
         case .failure(let lookupError):
             database.report(lookupError)
             return .failure(failure)
@@ -140,10 +148,15 @@ public actor IngestActor {
 
     /// `lastCopiedAt` never moves backwards: a screenshot picked up late carries its file date, which may be older
     /// than a copy of the same bytes made since (FR-007-05).
-    private static func bump(_ db: Database, id: String, occurredAt: Int64) throws {
+    /// A drop that bumps an item of an ignored app also clears that item's source id, so the drop wins over the hide
+    /// (FR-008-42; the rule is `IgnoredAppsGate`'s).
+    private static func bump(
+        _ db: Database, id: String, occurredAt: Int64, origin: CaptureOrigin, ignoredApps: Set<String>
+    ) throws {
         try db.execute(
             sql: "UPDATE item SET lastCopiedAt = max(lastCopiedAt, ?), copyCount = copyCount + 1 WHERE id = ?",
             arguments: [occurredAt, id])
+        try FlotsamDatabase.applyDropSource(db, itemId: id, origin: origin, ignoredApps: ignoredApps)
     }
 
     // MARK: Step 2

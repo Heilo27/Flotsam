@@ -21,15 +21,32 @@ extension FlotsamDatabase {
         )
     }
 
-    /// The source to store with a new item. A Shelf drop is an explicit user action (FRD-006 FR-006-13), so a drop whose
+    /// The source to store with an item. A Shelf drop is an explicit user action (FRD-006 FR-006-13), so a drop whose
     /// source application is on the ignored list is stored with no source bundle identifier: the hide rule above can
     /// never match it, and the drop stays visible (FR-008-42). The name is kept, so the row still says where it came
     /// from. Every other origin keeps its source as captured, and an ignored app's clipboard copy never reaches here
     /// (capture gate 4). The list is read at drop time, as at capture.
-    static func sourceToStore(for candidate: IngestCandidate, ignoredApps: Set<String>) -> SourceApp? {
-        guard candidate.origin == .shelfDrop, let source = candidate.source, let bundleId = source.bundleId,
-            ignoredApps.contains(bundleId)
-        else { return candidate.source }
+    static func sourceToStore(origin: CaptureOrigin, source: SourceApp?, ignoredApps: Set<String>) -> SourceApp? {
+        guard origin == .shelfDrop, let source, let bundleId = source.bundleId, ignoredApps.contains(bundleId)
+        else { return source }
         return SourceApp(bundleId: nil, name: source.name)
+    }
+
+    static func sourceToStore(for candidate: IngestCandidate, ignoredApps: Set<String>) -> SourceApp? {
+        sourceToStore(origin: candidate.origin, source: candidate.source, ignoredApps: ignoredApps)
+    }
+
+    /// A Shelf drop that dedupes onto an existing item wins over the hide (FR-008-42): when the item's stored source is
+    /// on the ignored list, its bundle identifier is cleared by the same `sourceToStore` rule, so the item the drop
+    /// just bumped is listed and the Shelf can highlight it. The name and everything else stay. Any other origin, and
+    /// an item whose source is not ignored, is left exactly as it was.
+    static func applyDropSource(_ db: Database, itemId: String, origin: CaptureOrigin, ignoredApps: Set<String>) throws {
+        guard origin == .shelfDrop, !ignoredApps.isEmpty,
+            let row = try Row.fetchOne(db, sql: "SELECT sourceBundleId, sourceName FROM item WHERE id = ?", arguments: [itemId])
+        else { return }
+        let existing = SourceApp(bundleId: row["sourceBundleId"], name: row["sourceName"])
+        let stored = sourceToStore(origin: origin, source: existing, ignoredApps: ignoredApps)
+        guard stored?.bundleId != existing.bundleId else { return }
+        try db.execute(sql: "UPDATE item SET sourceBundleId = NULL WHERE id = ?", arguments: [itemId])
     }
 }
