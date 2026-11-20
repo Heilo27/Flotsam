@@ -2297,3 +2297,21 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - 07 and 08 are clean.
 - **Needs Ryan:** dismiss the Calendar alert, then rerun all 16 passes.
 - **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
+
+## A10 (resumed): screenshot round 3 at hill-climb-529 63f6210 (2026-11-20)
+
+- **Verdict: PUBLISHED.** s2/shots = 9f9cad5ad5c91a01a50d50a7174a6da4dbc0ffd3 (normal push). The tree holds round-1/, round-2/ and round-3/, 17 files each, and the round-3 NOTES leak grep is clean.
+- **Capture method:** per S1's ruling, the host Calendar alert stayed up and was not touched.
+  - 04 and 05 used the harness's `SHOTS_CAPTURE=window` mode (`screencapture -l <windowID> -o`), which leaves out overlapping windows.
+  - The other 12 frames used `-R`.
+  - NOTES.txt records the change. Its auto "region capture failed" wording was corrected to the real reason.
+- **Alert check:** all 16 PNGs were opened by eye, with no alert content anywhere. I re-checked 01 and 04 myself.
+- **Window-capture look:** 04 and 05 lose the backdrop and vibrancy (flat panel, transparent corners). The 05 light menu renders a murky mid-grey; a faithful retake needs the alert gone.
+- **Answers, light and dark:**
+  - (a) The 01/03 sidebar "Work" row is whole.
+  - (b) The 06 General bottom row is whole: it ends at "Show Setup Guide…", and the toolbar has 9 panes.
+  - (c) The 04 chips still end in a clipped "Phone" chip at the panel edge.
+  - 02 compact still shows the preview in place of the list. 07 and 08 are clean.
+  - In 01 the list's last row is sliced at the footer (ordinary scroll edge).
+- **Harness note:** in window mode the harness labels the frame "region capture failed" even when window mode was requested.
+- **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
