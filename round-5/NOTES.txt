@@ -1,0 +1,40 @@
+01-library-standard-light: capture mode: region capture (screencapture -R)
+01-library-standard-dark: capture mode: region capture (screencapture -R)
+02-library-compact-light: capture mode: region capture (screencapture -R)
+02-library-compact-dark: capture mode: region capture (screencapture -R)
+03-library-empty-light: capture mode: region capture (screencapture -R)
+03-library-empty-dark: capture mode: region capture (screencapture -R)
+04-shelf-light: capture mode: window-only capture (screencapture -l)
+04-shelf-light: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+04-shelf-dark: capture mode: window-only capture (screencapture -l)
+04-shelf-dark: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+05-menu-bar-menu-light: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-light: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+05-menu-bar-menu-dark: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-dark: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+06-settings-general-light: capture mode: region capture (screencapture -R)
+06-settings-general-dark: capture mode: region capture (screencapture -R)
+06b-settings-library-light: capture mode: region capture (screencapture -R)
+06b-settings-library-dark: capture mode: region capture (screencapture -R)
+07-onboarding-light: capture mode: region capture (screencapture -R)
+07-onboarding-dark: capture mode: region capture (screencapture -R)
+08-shortcut-editor-light: capture mode: region capture (screencapture -R)
+08-shortcut-editor-dark: capture mode: region capture (screencapture -R)
+
+Round 5 at 97e17b5. Layout notes (hand-written after viewing every PNG).
+Capture modes: 04 and 05 (light and dark) window-only (-l); all other shots region (-R).
+Host: a host calendar alert was present before all nine passes, so region capture still cannot be used for 04 and 05. No frame shows alert content; no retakes were needed. This is not the first round where -R works for every screen.
+
+New items:
+- Sidebar fade (01, 02, 03): bottom rows fade out under the footer. Works in both appearances.
+- Row app icons (01, 04): Notes, Safari, TextEdit, Preview and Terminal icons render at the right size in light and dark; colour swatch and gradient thumbnail rows also render.
+- Preview fade (01, 02): the code line now fades at the right edge instead of a hard clip. Line is still truncated.
+- Shelf light wash (04): window capture has a flat backdrop, so the wash cannot be judged here. Cards are white on flat light grey (light) and near-black on flat mid grey (dark). Last row (Terminal) is cut by the image bottom with no fade visible.
+- Onboarding step caption (07): "Step 2 of 8" sits centred under the progress dots, grey, legible in both appearances. Only the close button shows.
+- Shortcut editor (08): only the close button is shown; minimise and zoom are hidden as intended. Layout clean in both appearances.
+- Settings (06, 06b): minimise is yellow, zoom is greyed (disabled). Both panes clean; no clipping.
+
+Old issues:
+- Sidebar last row cut by the footer (01/02/03): softened by the fade but still partly under the footer in 02 (Notes row); Work row in 01 and 03 sits under the fade.
+- Preview code line clipped at right (01/02): now a fade, still truncated.
+- Light menu in 05: still a flat mid-grey fill from window capture (not the real material). Dark menu looks correct.
