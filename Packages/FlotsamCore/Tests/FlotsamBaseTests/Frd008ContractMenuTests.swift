@@ -84,7 +84,7 @@ struct Frd008ContractMenuTests {
                  "ui.menu.pauseUntilResume", "ui.menu.clearRecent", "ui.menu.notices", "ui.menu.settings", "ui.menu.setupGuide",
                  "ui.menu.quit"].map(title)
             == ["Open Library", "Save Clipboard to Library", "New Clip from Text…", "Toggle Shelf", "Pause Capture", "Until I Resume",
-                "Clear Recent", "Notices", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
+                "Clear Recent", "Warnings and Errors", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
     }
 
     // OC-8127 (key equivalents). Red if the Settings or Quit key equivalent is changed or dropped.

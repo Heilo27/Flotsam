@@ -193,7 +193,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | SET-PRM-001 | Warning | Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V. | copy-only fallback |
 | SET-PRM-002 | Warning | Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security. | triggers inert |
-| SET-OS-001 | Error | Couldn't change Launch at Login. Check System Settings › General › Login Items. | revert toggle; HUD |
+| SET-OS-001 | Error | Couldn't change Launch at login. Check System Settings › General › Login Items. | revert toggle; HUD |
 | SET-VAL-001 | Error | That folder can't be used for screenshots. Choose a folder you can read. | rejected |
 | SET-VAL-002 | Error | That isn't an app Flotsam can add. Choose an application. | rejected |
 | SET-DAT-001 | Warning | A setting had an invalid value and was reset to its default. | reset; Notice |
@@ -213,7 +213,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 |---|---|---|---|
 | HUD | transient floating label | top-centre of pointer's screen | message text, 2.5 s, no focus, VoiceOver announces |
 | Menu-bar badge dot | icon overlay | menu-bar icon | shown while unacknowledged Warning/Error Notices exist |
-| Notices submenu | menu | menu bar › Notices | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so each row reads "message · CODE" on one line); "Dismiss All" |
+| Warnings and Errors submenu | menu | menu bar › Warnings and Errors | up to 10 entries: message text and code in secondary text (a menu-style menu cannot style a second line, so each row reads "message · CODE" on one line); "Dismiss All"; "No Warnings or Errors" when empty. The menu is named for what it lists (hill-climb r5: "Notices" read as vague, "Recent Problems" as alarming); the entry type is still a Notice |
 | Fatal alert | modal NSAlert | centre | message, "Reveal Data Folder" (nearest existing ancestor if the folder is missing), "Quit" |
 | Copy Diagnostics button | button | Settings › About | builds and copies report; confirms with HUD "Diagnostics copied" |
 | Inline validation text | label | beside the invalid field | catalogue message, red text plus icon, role alert for VoiceOver |
@@ -222,6 +222,7 @@ Columns: code · severity · user message (catalogue text) · recovery. `{n}` = 
 Localization beyond English (structure supports it, v1 ships English only); remote logging or crash upload (A4); user-visible log viewer; persisted error history.
 
 ## 11. Change Log
+- 2026-11-20: FR-000-08 and §9: the menu-bar submenu that lists Notices is named "Warnings and Errors" (empty: "No Warnings or Errors"), was "Notices" (hill-climb r5, TASK-529); the entry type is unchanged. FR-008-16 also gains a "Paused until …" line above Resume Capture.
 - 2026-11-19: §7 reinstates `ORG-VAL-004` (group needs 2 to 500 files or folders) and `ORG-VAL-005` (bundle names up to 100 characters) for FRD-004 FR-004-41 and FR-004-42 (TASK-539); they were retired on 2026-11-17 and are live again. 65 live codes: 2 Fatal, 22 Warning, 27 Error, 14 Info. FR-000-05: `ui.queue.ready` ("Paste queue ready: %lld items") joins `error.CAP-LIM-003` as a count-plus-noun string that needs no plural, because a queue starts only with two or more items (FR-003-25), so its count is never 1.
 - 2026-11-18: §7 gains `LIB-OS-002` (a secure item's copy was not authorised), `LIB-DAT-002` (a secure item's key is missing or its bytes do not open) and `TRG-VAL-006` (a secure item cannot carry a shortcut or trigger), for secure clips (FRD-001 FR-001-25). 63 live codes: 2 Fatal, 22 Warning, 25 Error, 14 Info.
 - 2026-11-18: FR-000-05: a plural count is a whole number in any form, including a boxed one (`NSNumber`): exactly 1 reads `one`; anything else reads `other`. A decimal (1.0, 1.5), text, a missing count and a yes/no value (even one that boxes to 1) are not counts and read `other`.

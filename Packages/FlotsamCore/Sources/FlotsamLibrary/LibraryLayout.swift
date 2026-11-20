@@ -29,9 +29,10 @@ public enum LibraryLayout {
 
     /// A list row is 44 pt tall (FR-003-07, FR-003-21, DESIGN section 3.1).
     public static let listRowHeight: CGFloat = 44
-    /// The trailing room a hovered list row keeps for its hover strip (three 22 pt buttons, 2 pt gaps, the capsule's padding),
-    /// so the title truncates instead of running under it (FR-003-38).
-    public static let hoverStripReserve: CGFloat = 86
+    /// The trailing room a hovered list row keeps for its hover strip (three 22 pt targets, 2 pt gaps, the capsule's padding)
+    /// plus 8 pt of air, so the title truncates well before the strip instead of running under or touching it (FR-003-38,
+    /// hill-climb r5).
+    public static let hoverStripReserve: CGFloat = 94
     /// The least gap between two list rows and the margin above the first (FR-003-05).
     public static let listRowSpacing: CGFloat = 2
     public static let listTopMargin: CGFloat = 4

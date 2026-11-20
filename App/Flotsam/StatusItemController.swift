@@ -83,7 +83,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             case .captureToggle(let titleKey, let next):
                 // Pausing has a length, so it is a submenu; resuming is one click.
                 if next == .paused { menu.addItem(pauseCaptureItem(titleKey: titleKey, untilResumed: next)) }
-                else { menu.addItem(row(titleKey, run: { [container] in container.settings.set(next, for: SettingKeys.captureMode) })) }
+                else {
+                    // While paused the menu offers Resume instead of the Pause submenu, so the pause state is stated on a
+                    // disabled line right above it (hill-climb r5).
+                    if let status = pauseStatusItem() { menu.addItem(status) }
+                    menu.addItem(row(titleKey, run: { [container] in container.settings.set(next, for: SettingKeys.captureMode) }))
+                }
             case .clearRecent: menu.addItem(clearRecentItem())
             case .notices: menu.addItem(noticesItem())
             case .settings: menu.addItem(row("ui.menu.settings", key: ",", run: container.actions.openSettings))
@@ -91,6 +96,24 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             case .quit: menu.addItem(row("ui.menu.quit", key: "q", run: { NSApplication.shared.terminate(nil) }))
             }
         }
+    }
+
+    /// The disabled "Paused until 3:45 PM" line shown above Resume Capture while capture is Paused (FR-008-16): the end of a
+    /// timed pause, or "Paused until you resume" for an open-ended one. nil in Active and Curated, which are not pauses.
+    private func pauseStatusItem() -> NSMenuItem? {
+        guard container.settings.value(SettingKeys.captureMode) == .paused else { return nil }
+        let title: String
+        if let millis = container.timedPause.deadlineMillis {
+            let end = Date(timeIntervalSince1970: Double(millis) / 1000)
+            let time = Calendar.current.isDateInToday(end)
+                ? end.formatted(date: .omitted, time: .shortened) : end.formatted(date: .abbreviated, time: .shortened)
+            title = FlotsamStrings.formatted(forKey: "ui.menu.pausedUntil", [time]) ?? ""
+        } else {
+            title = FlotsamStrings.text(forKey: "ui.menu.pausedUntilResume") ?? ""
+        }
+        let line = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        line.isEnabled = false
+        return line
     }
 
     /// Pause Capture submenu (FR-007-12, FR-008-16): each timed choice pauses capture and sets when it ends; "Until I Resume"
@@ -123,7 +146,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         return parent
     }
 
-    /// Notices submenu (FRD-000 section 9, FR-000-08 b): newest first, the code after the message, then "Dismiss all".
+    /// Warnings and Errors submenu, the notices (FRD-000 section 9, FR-000-08 b): newest first, the code after the message, then "Dismiss all".
     private func noticesItem() -> NSMenuItem {
         let parent = NSMenuItem(title: FlotsamStrings.text(forKey: "ui.menu.notices") ?? "", action: nil, keyEquivalent: "")
         let submenu = NSMenu()

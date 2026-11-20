@@ -139,7 +139,7 @@ public struct LibraryFooter: Equatable {
 
     public init(
         totalCount: Int, selectionCount: Int, isAccessibilityTrusted: Bool, sort: LibrarySort,
-        queueRemaining: Int = 0
+        queueRemaining: Int = 0, previewShowing: Bool = false
     ) {
         // With no rows (an empty history, a search with no results) there is nothing to sort or count, so neither is shown
         // ("Recent 0 items" under a no-results message says nothing true, FR-003-18).
@@ -160,7 +160,10 @@ public struct LibraryFooter: Equatable {
         let close = Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClose"))
         if totalCount > 0 {
             let paste = Hint(key: LibraryText.string("ui.library.keyReturn"), label: LibraryText.string("ui.library.hintPaste"))
-            let preview = Hint(key: LibraryText.string("ui.library.keySpace"), label: LibraryText.string("ui.library.hintPreview"))
+            // While the preview shows, Space closes it, so the hint says so (FR-003-18, hill-climb r5).
+            let preview = Hint(
+                key: LibraryText.string("ui.library.keySpace"),
+                label: LibraryText.string(previewShowing ? "ui.library.hintClosePreview" : "ui.library.hintPreview"))
             let secondary = isAccessibilityTrusted
                 ? Hint(key: LibraryText.string("ui.library.keyOptionReturn"), label: LibraryText.string("ui.library.hintPlain"))
                 : Hint(key: LibraryText.string("ui.library.keyCommandC"), label: LibraryText.string("ui.library.hintCopy"))

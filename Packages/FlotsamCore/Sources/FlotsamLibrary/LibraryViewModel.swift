@@ -170,7 +170,8 @@ public final class LibraryViewModel {
         _ = accessibilityRevision
         return LibraryFooter(
             totalCount: totalCount, selectionCount: selection.count,
-            isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort, queueRemaining: effects.queueRemaining())
+            isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort, queueRemaining: effects.queueRemaining(),
+            previewShowing: columns.preview != .hidden)
     }
 
     /// The active sort, for the header's sort menu (FR-004-12).

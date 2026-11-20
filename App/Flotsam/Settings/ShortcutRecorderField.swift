@@ -12,6 +12,7 @@ struct ShortcutRecorderField: View {
     let allowClear: Bool
     let startRecording: () -> Void
     let clear: () -> Void
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
@@ -19,9 +20,9 @@ struct ShortcutRecorderField: View {
                 field
                 if allowClear, chord != nil, !recorder.isRecording {
                     Button(action: clear) {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        Image(systemName: "xmark.circle.fill")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(AccessoryGlyphButtonStyle())
                     .help(SettingsString.shortcutClear.text)
                     .accessibilityLabel(SettingsString.shortcutClear.text)
                 }
@@ -46,12 +47,15 @@ struct ShortcutRecorderField: View {
                     Text(.shortcutRecord).foregroundStyle(.secondary)
                 }
             }
-            .frame(minWidth: 150, minHeight: 28, alignment: .leading)
+            .frame(minWidth: 150, minHeight: FieldMetric.height, maxHeight: FieldMetric.height, alignment: .leading)
             .padding(.horizontal, 6)
-            .fieldChrome(isActive: recorder.isRecording)
+            .fieldChrome(isActive: focused || recorder.isRecording)
             .contentShape(RoundedRectangle(cornerRadius: DesignToken.Radius.control))
         }
         .buttonStyle(.plain)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($focused)
         .accessibilityLabel(SettingsString.shortcutRecord.text)
         .accessibilityValue(chord?.displayString ?? SettingsString.shortcutNotSet.text)
     }

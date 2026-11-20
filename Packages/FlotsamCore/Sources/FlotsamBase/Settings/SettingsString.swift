@@ -9,12 +9,12 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case paneGeneral, paneLibrary, paneShortcuts, paneTypes, paneTriggers, panePrivacy, paneStorage, paneTips, paneAbout
 
     // General
-    case launchAtLogin, loginApprovalCaption, openLoginItems
+    case launchAtLogin, loginApprovalCaption, openLoginItems, loginItems
     case pickUpScreenshots, screenshotFolder, folderSystemDefault, chooseFolder, useSystemDefault
     /// The always-available backfill button (FR-002-12).
-    case importRecentScreenshots
+    case importRecentScreenshots, recentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
-    case revealAtEdge, revealAtEdgeHelp, edgeBar, edgeBarHelp, showSetupGuide, setupGuide, historyHelp
+    case revealAtEdge, edgeBar, showSetupGuide, setupGuide, historyHelp
     /// The General pane's group headers, one per FR-008-04 group.
     case sectionSystem, sectionScreenshots, sectionShelf, sectionLibrary, sectionCapture, sectionSetup
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.

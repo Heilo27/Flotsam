@@ -95,7 +95,7 @@ struct Frd008ContractOnboardingTests {
         let titles = seen.map { text($0.0.titleKey) }
         #expect(titles == [
             "Welcome to Flotsam", "Clipboard access", "Accessibility", "Input Monitoring", "Screenshots", "Shortcut",
-            "Launch at Login", "You are set",
+            "Launch at login", "You are set",
         ])
         for step in OnboardingStep.allCases {
             let purpose = text(step.purposeKey)

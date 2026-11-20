@@ -8,13 +8,20 @@ import SwiftUI
 struct LibraryPreviewView: View {
     let preview: LibraryPreview?
     @State private var showingAll = false
+    @State private var showingDetails = false
 
     var body: some View {
         Group {
             if let preview {
-                // The content scrolls in the area that is left; the metadata is a compact footer block under it (FR-003-14), so
-                // a short clip no longer leaves the pane empty below its fields.
+                // The metadata is a compact header line directly under the top edge (FR-003-14, hill-climb r5); the content
+                // follows and takes every point that is left, so a short snippet no longer floats above a gap.
                 VStack(spacing: 0) {
+                    ScrollView {
+                        metadata(preview.fields).padding(.horizontal, 12).padding(.vertical, 8).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: Self.metadataMaxHeight)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Hairline()
                     ScrollView {
                         VStack(alignment: .leading, spacing: 10) {
                             if let data = preview.imageData, let image = NSImage(data: data) {
@@ -44,38 +51,50 @@ struct LibraryPreviewView: View {
                         .id(preview.itemId)
                     }
                     .frame(maxHeight: .infinity)
-                    Divider()
-                    ScrollView {
-                        metadata(preview.fields).padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(maxHeight: Self.metadataMaxHeight)
-                    .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
                 Text(verbatim: LibraryText.string(LibraryText.previewUnavailable))
                     .foregroundStyle(.secondary).padding(12).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
-        .onChange(of: preview?.itemId) { _, _ in showingAll = false }
+        .onChange(of: preview?.itemId) { _, _ in
+            showingAll = false
+            showingDetails = false
+        }
     }
 
-    /// The footer block's tallest size: past this it scrolls, so a clip with many fields never squeezes the content away.
+    /// The header block's tallest size: past this it scrolls, so a clip with many fields never squeezes the content away.
     private static let metadataMaxHeight: CGFloat = 150
 
-    /// The width of the fade at the right edge of a sideways-scrolling block (FR-003-14).
-    private static let trailingFade: CGFloat = 24
+    /// The width of the fade at the right edge of a sideways-scrolling block (FR-003-14, hill-climb r5): wide enough that no
+    /// partly visible glyph reads as a stray mark, and transparent at the edge.
+    private static let trailingFade: CGFloat = 40
 
-    /// The metadata as one compact block (FR-003-14): Kind, Source and Copied together on one or two lines, then any other
-    /// field as a short label and value line, then the tags as chips. The content above gets everything the block saves.
+    /// The metadata as one compact header line (FR-003-14, hill-climb r5): kind, source app, copied time and size on one line
+    /// in the secondary colour (two at the narrowest), the colour's hex and rgb and the tag chips under it, and every other
+    /// field (first copied, counts, pixel size, note) folded behind a chevron until it is opened.
     @ViewBuilder private func metadata(_ fields: [LibraryPreview.Field]) -> some View {
-        let summary = fields.filter { $0.placement == .summary }
-        let identity = summary.filter { $0.label != copiedLabel }.map(\.value).joined(separator: " · ")
-        VStack(alignment: .leading, spacing: 3) {
-            if !identity.isEmpty { Text(verbatim: identity).font(.caption) }
-            ForEach(summary.filter { $0.label == copiedLabel }) { field in
-                Text(verbatim: [field.label, field.value].joined(separator: " ")).font(.caption).foregroundStyle(.secondary)
+        let sizeLabel = LibraryText.string("ui.library.previewSize")
+        let colorLabels = [LibraryText.string("ui.library.previewHex"), LibraryText.string("ui.library.previewRGB")]
+        let headline = (fields.filter { $0.placement == .summary }.map(\.value)
+            + [fields.first { $0.label == sizeLabel }?.value].compactMap { $0 }).joined(separator: " · ")
+        let shown = fields.filter { $0.placement == .detail && colorLabels.contains($0.label) }
+        let folded = fields.filter { $0.placement == .detail && !colorLabels.contains($0.label) && $0.label != sizeLabel }
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(verbatim: headline).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                Spacer(minLength: 0)
+                if !folded.isEmpty {
+                    Button { showingDetails.toggle() } label: {
+                        Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(showingDetails ? 90 : 0)).frame(width: 16, height: 16).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(LibraryText.string(showingDetails ? "ui.library.previewDetailsHide" : "ui.library.previewDetailsShow"))
+                    .accessibilityLabel(LibraryText.string(showingDetails ? "ui.library.previewDetailsHide" : "ui.library.previewDetailsShow"))
+                }
             }
-            ForEach(fields.filter { $0.placement == .detail }) { field in
+            ForEach(shown + (showingDetails ? folded : [])) { field in
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(verbatim: field.label).font(.caption).foregroundStyle(.secondary)
                     Text(verbatim: field.value).font(.caption)
@@ -97,8 +116,6 @@ struct LibraryPreviewView: View {
             }
         }
     }
-
-    private var copiedLabel: String { LibraryText.string("ui.library.previewCopied") }
 
     /// The item's text. A rich text item keeps its formatting (bold, italics, colours, sizes) when its RTF reads; any
     /// other text, and a rich text item whose RTF does not read, is plain monospaced text.
@@ -127,6 +144,7 @@ private struct SidewaysText: View {
     let fade: CGFloat
     @State private var viewportWidth: CGFloat = 0
     @State private var contentWidth: CGFloat = 0
+    @State private var hovering = false
 
     var body: some View {
         let overflows = contentWidth > viewportWidth
@@ -136,6 +154,9 @@ private struct SidewaysText: View {
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { contentWidth = $0 - (overflows ? fade : 0) }
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        // The scroller shows while the pointer is over the block, so the cut reads as scrollable (hill-climb r5).
+        .scrollIndicators(hovering && overflows ? .visible : .hidden, axes: .horizontal)
+        .onHover { hovering = $0 }
         .onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { viewportWidth = $0 }
         .mask(
             HStack(spacing: 0) {

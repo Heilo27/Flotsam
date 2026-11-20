@@ -196,7 +196,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Couldn't change Launch at Login. Check System Settings › General › Login Items."
+            "value" : "Couldn't change Launch at login. Check System Settings › General › Login Items."
           }
         }
       }
@@ -893,6 +893,16 @@
         }
       }
     },
+    "ui.library.hintClosePreview" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close Preview"
+          }
+        }
+      }
+    },
     "ui.library.hintCopy" : {
       "localizations" : {
         "en" : {
@@ -1119,6 +1129,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copied"
+          }
+        }
+      }
+    },
+    "ui.library.previewDetailsHide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide details"
+          }
+        }
+      }
+    },
+    "ui.library.previewDetailsShow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show details"
           }
         }
       }
@@ -1678,7 +1708,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No Notices"
+            "value" : "No Warnings or Errors"
           }
         }
       }
@@ -1688,7 +1718,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Notices"
+            "value" : "Warnings and Errors"
           }
         }
       }
@@ -1749,6 +1779,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Until Tomorrow"
+          }
+        }
+      }
+    },
+    "ui.menu.pausedUntil" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused until %@"
+          }
+        }
+      }
+    },
+    "ui.menu.pausedUntilResume" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paused until you resume"
           }
         }
       }
@@ -2128,7 +2178,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Launch at Login"
+            "value" : "Launch at login"
           }
         }
       }
@@ -4282,7 +4332,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Record Shortcut"
+            "value" : "Click to Record Shortcut"
           }
         }
       }
@@ -4682,7 +4732,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Panel background"
+            "value" : "Appearance"
           }
         }
       }
@@ -4692,7 +4742,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Match system"
+            "value" : "System"
           }
         }
       }
@@ -4722,7 +4772,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show preview"
+            "value" : "Preview pane"
           }
         }
       }
@@ -4732,7 +4782,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Off"
+            "value" : "Hidden"
           }
         }
       }
@@ -4742,7 +4792,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On"
+            "value" : "Shown"
           }
         }
       }
@@ -4752,7 +4802,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "On, larger panel"
+            "value" : "Shown, larger panel"
           }
         }
       }
@@ -4762,7 +4812,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Standard layout only. Your saved size is kept."
+            "value" : "Applies to the standard layout."
           }
         }
       }
@@ -5047,26 +5097,6 @@
         }
       }
     },
-    "ui.settings.revealAtEdgeHelp" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The Shelf slides out when the pointer rests at the edge."
-          }
-        }
-      }
-    },
-    "ui.settings.edgeBarHelp" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A thin bar marks the edge while the Shelf is hidden."
-          }
-        }
-      }
-    },
     "ui.settings.editorVariablesHelpButton" : {
       "localizations" : {
         "en" : {
@@ -5083,6 +5113,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Clip"
+          }
+        }
+      }
+    },
+    "ui.settings.loginItems" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Login items"
+          }
+        }
+      }
+    },
+    "ui.settings.recentScreenshots" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent screenshots"
           }
         }
       }

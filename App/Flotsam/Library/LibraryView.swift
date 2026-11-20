@@ -14,11 +14,11 @@ struct LibraryView: View {
     var body: some View {
         VStack(spacing: 0) {
             searchField
-            Divider()
+            Hairline()
             HStack(spacing: 0) {
                 LibrarySidebar(model: model, organize: organize)
                     .frame(width: LibrarySidebar.width)
-                Divider()
+                Hairline(.vertical)
                 // Which columns exist is `LibraryColumns`' decision (FR-003-06); the view only draws it.
                 let columns = model.columns
                 switch columns.preview {
@@ -26,7 +26,7 @@ struct LibraryView: View {
                     content
                 case .rightPane:
                     content
-                    Divider()
+                    Hairline(.vertical)
                     LibraryPreviewView(preview: model.preview)
                         .frame(minWidth: 200, idealWidth: 280, maxWidth: 360)
                 case .replacesList:
@@ -36,7 +36,7 @@ struct LibraryView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            Divider()
+            Hairline()
             LibraryFooterView(model: model)
         }
         // The panel's transparent title bar (full-size content) would otherwise add its height as a dead band above the
@@ -160,9 +160,9 @@ struct LibrarySidebar: View {
         // changed where the last row ended at the far end of the scroll, never what the edge cut at rest).
         GeometryReader { proxy in
             let viewport = Self.snappedHeight(fitting: proxy.size.height)
-            // More lines than the viewport holds: the whole last visible line (24 pt) dissolves and a line of room follows the
-            // content, so the end reads as a deliberate scroll cue, not a clipped row (compact layout, TASK-529 rounds 3 and 4),
-            // and the far end of the scroll still lands on a line.
+            // More lines than the viewport holds: the last 36 pt (a line and 8 pt, `DesignToken.endFadeHeight`) dissolve to clear
+            // above the footer and the same height of room follows the content, so the end reads as a deliberate scroll cue,
+            // not a clipped row, and the far end of the scroll shows the last row whole (TASK-529 rounds 3 to 5).
             let overflows = contentHeight > viewport - Self.topMargin
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -177,9 +177,9 @@ struct LibrarySidebar: View {
             .scrollTargetBehavior(.viewAligned)
             .contentMargins(.horizontal, 8, for: .scrollContent)
             .contentMargins(.top, Self.topMargin, for: .scrollContent)
-            .contentMargins(.bottom, overflows ? Self.lineHeight : 0, for: .scrollContent)
+            .contentMargins(.bottom, overflows ? DesignToken.endFadeHeight : 0, for: .scrollContent)
             .frame(height: viewport)
-            .fadingBottomEdge(overflows ? Self.lineHeight : 0)
+            .fadingBottomEdge(overflows ? DesignToken.endFadeHeight : 0)
         }
     }
 
@@ -217,7 +217,7 @@ struct LibrarySidebar: View {
                         Spacer(minLength: 4)
                         // The counts are the whole history's, so they go while the search has text (FR-003-12).
                         if model.showsSidebarCounts {
-                            Text(verbatim: entry.count.formatted()).foregroundStyle(selected ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary)).monospacedDigit()
+                            Text(verbatim: entry.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
                         }
                     }
                     .font(.system(size: 13))
@@ -273,24 +273,6 @@ struct LibrarySidebar: View {
         .accessibilityLabel(title)
         .accessibilityHint(tip)
         .accessibilityAddTraits(.isHeader)
-    }
-}
-
-/// The bottom fade shared by the sidebar and the results list (FR-003-05): rows dissolve into the footer instead of being
-/// cut off by it.
-enum LibraryScrollFade {
-    static let height: CGFloat = 16
-}
-
-extension View {
-    /// Fades the last `height` points to clear (0: no fade). Pair it with a bottom content margin of at least that, so the
-    /// final row can be scrolled out of the fade.
-    func fadingBottomEdge(_ height: CGFloat) -> some View {
-        mask(
-            VStack(spacing: 0) {
-                Rectangle()
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: height)
-            })
     }
 }
 

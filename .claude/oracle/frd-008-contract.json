@@ -7,7 +7,7 @@
       "requirement": "FR-008-01",
       "given": "Fresh install, onboarding closed on step 1",
       "when": "user opens Settings › General",
-      "then": "Launch at Login off; 'Pick up screenshots' on; Screenshot folder shows the macOS default screenshot location's name; Shelf switch on; placement popup reads 'Right Edge'; 'Reveal when the pointer rests at the edge' off",
+      "then": "Launch at login off; 'Pick up screenshots' on; Screenshot folder shows the macOS default screenshot location's name; Shelf switch on; placement popup reads 'Right Edge'; 'Reveal when the pointer rests at the edge' off",
       "class": "state",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -75,7 +75,7 @@
     {
       "id": "OC-8008",
       "requirement": "FR-008-01",
-      "given": "Launch at Login on and Flotsam listed in System Settings › Login Items; history holds 5 items",
+      "given": "Launch at login on and Flotsam listed in System Settings › Login Items; history holds 5 items",
       "when": "Flotsam is quit, its UserDefaults domain is deleted (`defaults delete`), and it is relaunched",
       "then": "Login Items still lists Flotsam and the General switch shows on (launch at login is not a registry value); history still holds the same 5 items (item data is not in preferences); no screenshot already imported is imported again (scan watermark lives in the database)",
       "class": "persistence",
@@ -297,7 +297,7 @@
       "requirement": "AC-008-04",
       "given": "Settings › General",
       "when": "user lists the pane's controls top to bottom",
-      "then": "exactly, in order: Launch at Login switch; 'Pick up screenshots' switch; Screenshot folder name with 'Choose…' and 'Use System Default'; Shelf switch; placement popup with exactly 5 items Right Edge, Left Edge, Bottom Edge, Menu Bar, Top Center; 'Reveal when the pointer rests at the edge' switch; 'Show Setup Guide…' button; nothing else",
+      "then": "exactly, in order: Launch at login switch; 'Pick up screenshots' switch; Screenshot folder name with 'Choose…' and 'Use System Default'; Shelf switch; placement popup with exactly 5 items Right Edge, Left Edge, Bottom Edge, Menu Bar, Top Center; 'Reveal when the pointer rests at the edge' switch; 'Show Setup Guide…' button; nothing else",
       "class": "layout",
       "source_verdict": "CONFIRMED",
       "must_verify": true,
@@ -1178,7 +1178,7 @@
     {
       "id": "OC-8120",
       "requirement": "AC-008-10",
-      "given": "Flotsam in /Applications; Launch at Login off",
+      "given": "Flotsam in /Applications; Launch at login off",
       "when": "user turns the General switch on",
       "then": "SMAppService.mainApp status is enabled or requiresApproval and the switch shows on",
       "class": "state",
@@ -1188,7 +1188,7 @@
     {
       "id": "OC-8121",
       "requirement": "FR-008-15",
-      "given": "Launch at Login registered but awaiting user approval",
+      "given": "Launch at login registered but awaiting user approval",
       "when": "user opens Settings › General",
       "then": "the switch shows on with the caption 'Waiting for approval in System Settings' and a button that opens Login Items",
       "class": "state",
@@ -1199,8 +1199,8 @@
       "id": "OC-8122",
       "requirement": "SET-OS-001",
       "given": "Flotsam running from ~/Downloads (not /Applications) and the system refuses registration",
-      "when": "user turns Launch at Login on",
-      "then": "the switch reverts to off; HUD text 'Couldn't change Launch at Login. Check System Settings › General › Login Items.'; Login Items does not list Flotsam",
+      "when": "user turns Launch at login on",
+      "then": "the switch reverts to off; HUD text 'Couldn't change Launch at login. Check System Settings › General › Login Items.'; Login Items does not list Flotsam",
       "class": "error",
       "source_verdict": "CONFIRMED",
       "must_verify": true
@@ -1208,7 +1208,7 @@
     {
       "id": "OC-8123",
       "requirement": "SET-OS-001",
-      "given": "Launch at Login on; unregister fails",
+      "given": "Launch at login on; unregister fails",
       "when": "user turns the switch off",
       "then": "the switch reverts to on; HUD shows the SET-OS-001 message",
       "class": "error",
@@ -1218,7 +1218,7 @@
     {
       "id": "OC-8124",
       "requirement": "AC-008-10",
-      "given": "Launch at Login on",
+      "given": "Launch at login on",
       "when": "user removes Flotsam from Login Items in System Settings, then reopens Settings › General",
       "then": "the switch shows off",
       "class": "state",

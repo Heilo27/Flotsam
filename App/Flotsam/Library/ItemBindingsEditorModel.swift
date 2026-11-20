@@ -112,10 +112,22 @@ final class ItemBindingsEditorModel {
     /// The longest a clip name gets in a window title.
     private static let nameLimit = 80
 
+    /// A name over `nameLimit` is cut at the last word boundary inside the limit (hill-climb r5), so the editor's two-line
+    /// clip label never ends in half a word. One unbroken word longer than the limit is cut at the limit.
+    private static func cutAtWord(_ line: String) -> String {
+        guard line.count > nameLimit else { return line }
+        let head = String(line.prefix(nameLimit))
+        let atWord = line[line.index(line.startIndex, offsetBy: nameLimit)].isWhitespace
+        if atWord { return head + "…" }
+        guard let space = head.lastIndex(where: \.isWhitespace) else { return head + "…" }
+        let words = head[..<space].trimmingCharacters(in: .whitespaces)
+        return (words.isEmpty ? head : words) + "…"
+    }
+
     private static func name(of content: ItemContent) -> String {
         if let line = content.plainText?.split(whereSeparator: \.isNewline)
             .map({ $0.trimmingCharacters(in: .whitespaces) }).first(where: { !$0.isEmpty }) {
-            return line.count > nameLimit ? String(line.prefix(nameLimit)) + "…" : line
+            return Self.cutAtWord(line)
         }
         if let path = content.members.first?.path {
             let file = (path as NSString).lastPathComponent

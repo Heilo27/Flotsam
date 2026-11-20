@@ -52,7 +52,7 @@ public enum ShelfRevealRule {
     }
 }
 
-/// How the Launch at Login row looks for a status read from macOS (FR-008-15): `.enabled` is on, `.requiresApproval` is
+/// How the Launch at login row looks for a status read from macOS (FR-008-15): `.enabled` is on, `.requiresApproval` is
 /// on with a caption and a Login Items button, anything else is off.
 public struct LoginItemPresentation: Equatable, Sendable {
     public let isOn: Bool

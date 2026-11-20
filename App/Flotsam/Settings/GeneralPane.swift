@@ -2,7 +2,7 @@ import AppKit
 import FlotsamBase
 import SwiftUI
 
-/// General (FR-008-04): Launch at Login and the setup guide, screenshot pickup, folder and import, and the Shelf, in one
+/// General (FR-008-04): Launch at login and the setup guide, screenshot pickup, folder and import, and the Shelf, in one
 /// grouped form with a header per group and each note directly under its own control. The Library and capture settings
 /// have their own pane (`LibraryPane`, FR-008-33) so neither pane is taller than a laptop screen.
 struct GeneralPane: View {
@@ -24,7 +24,11 @@ struct GeneralPane: View {
                     SettingLabel(.launchAtLogin, note: login.caption?.text)
                 }
                 if login.showsLoginItemsButton {
-                    trailing { Button { model.env.openLoginItems() } label: { Text(.openLoginItems) } }
+                    LabeledContent {
+                        Button { model.env.openLoginItems() } label: { Text(.openLoginItems) }
+                    } label: {
+                        Text(.loginItems)
+                    }
                 }
                 // A labelled row, like the folder row: a button alone in a row reads as a stray control (FR-008-04).
                 LabeledContent {
@@ -49,7 +53,11 @@ struct GeneralPane: View {
                     SettingLabel(.screenshotFolder, note: folderName)
                 }
                 // FR-002-12: always available, including while pickup is off, so never disabled.
-                trailing { Button { model.env.importRecentScreenshots() } label: { Text(.importRecentScreenshots) } }
+                LabeledContent {
+                    Button { model.env.importRecentScreenshots() } label: { Text(.importRecentScreenshots) }
+                } label: {
+                    Text(.recentScreenshots)
+                }
             } header: {
                 Text(.sectionScreenshots)
             }
@@ -59,13 +67,9 @@ struct GeneralPane: View {
                     ForEach(ShelfPlacement.allCases, id: \.self) { Text($0.label).tag($0) }
                 } label: { Text(.shelfPlacement) }
                 .disabled(!shelfEnabled)
-                Toggle(isOn: model.binding(SettingKeys.shelfRevealOnEdgeHover)) {
-                    SettingLabel(.revealAtEdge, note: SettingsString.revealAtEdgeHelp.text)
-                }
+                Toggle(isOn: model.binding(SettingKeys.shelfRevealOnEdgeHover)) { Text(.revealAtEdge) }
                 .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
-                Toggle(isOn: model.binding(SettingKeys.shelfEdgeBar)) {
-                    SettingLabel(.edgeBar, note: SettingsString.edgeBarHelp.text)
-                }
+                Toggle(isOn: model.binding(SettingKeys.shelfEdgeBar)) { Text(.edgeBar) }
                 .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
             } header: {
                 Text(.sectionShelf)
@@ -75,18 +79,13 @@ struct GeneralPane: View {
         .onAppear { loginStatus = model.env.login.status }
     }
 
-    /// A button that is alone in its row sits on the trailing edge, the edge the switches and the other buttons use (FR-008-04).
-    private func trailing<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        HStack { Spacer(minLength: 0); content() }
-    }
-
     /// The effective folder name: the override's folder, or "System default".
     private var folderName: String {
         model.value(SettingKeys.screenshotsFolderOverride).resolvedURL?.lastPathComponent
             ?? SettingsString.folderSystemDefault.text
     }
 
-    /// Launch at Login reads macOS each time; a refused change reports `SET-OS-001` and the switch shows the real state.
+    /// Launch at login reads macOS each time; a refused change reports `SET-OS-001` and the switch shows the real state.
     private func setLogin(_ on: Bool) {
         switch model.env.login.setEnabled(on) {
         case .success(let status): loginStatus = status

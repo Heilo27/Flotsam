@@ -17,8 +17,10 @@ private struct PaneChrome: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        // The system switch, stated once for every pane so no row can pick another style or a tint (FR-008-17).
-        let form = content.formStyle(.grouped).toggleStyle(.switch).frame(width: Self.width)
+        // The system switch, pop-up and bordered button, stated once for every pane so no row can pick another style or a
+        // tint (FR-008-17, hill-climb r5). A row that needs a borderless button (a list's add and remove) says so itself.
+        let form = content.formStyle(.grouped).toggleStyle(.switch).pickerStyle(.menu).buttonStyle(.bordered)
+            .frame(width: Self.width)
         ViewThatFits(in: .vertical) {
             form.scrollDisabled(true).fixedSize(horizontal: false, vertical: true)
             form
@@ -78,5 +80,24 @@ private struct FieldChrome: ViewModifier {
 extension View {
     func fieldChrome(isActive: Bool, cornerRadius: CGFloat = DesignToken.Radius.control) -> some View {
         modifier(FieldChrome(isActive: isActive, cornerRadius: cornerRadius))
+    }
+}
+
+/// The height of an editable field (the shortcut recorder, the trigger field): one number, so a recorder and a text field
+/// side by side are the same height (hill-climb r5).
+enum FieldMetric {
+    static let height: CGFloat = 28
+}
+
+/// The small glyph button beside a field (the (?) help, the clear ⓧ): one size, one colour, one pressed state, so the two
+/// can never differ (hill-climb r5).
+struct AccessoryGlyphButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15))
+            .foregroundStyle(.secondary)
+            .frame(width: 20, height: 20)
+            .opacity(configuration.isPressed ? 0.6 : 1)
+            .contentShape(Rectangle())
     }
 }

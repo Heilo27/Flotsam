@@ -51,9 +51,9 @@ struct LibraryItemsView: View {
                 .scrollTargetBehavior(.viewAligned)
                 .contentMargins(.horizontal, isList ? 8 : 10, for: .scrollContent)
                 .contentMargins(.top, isList ? LibraryLayout.listTopMargin : 10, for: .scrollContent)
-                .contentMargins(.bottom, isList ? fit.rowSpacing : LibraryScrollFade.height + 8, for: .scrollContent)
+                .contentMargins(.bottom, isList ? fit.rowSpacing : DesignToken.endFadeHeight, for: .scrollContent)
                 .frame(height: isList ? min(fit.viewport, geometry.size.height) : nil)
-                .fadingBottomEdge(isList ? 0 : LibraryScrollFade.height)
+                .fadingBottomEdge(isList ? 0 : DesignToken.endFadeHeight)
                 .onChange(of: model.cursorID) { _, id in
                     if let id { proxy.scrollTo(id) }
                 }
@@ -210,10 +210,12 @@ private struct HoverStripButton: View {
 
     var body: some View {
         Button(action: perform) {
-            Image(systemName: action.symbol).frame(width: 22, height: 22).contentShape(Rectangle())
+            // 13 pt symbols in 22 pt targets, in the secondary colour: three bold primary icons out-shouted the row's title
+            // (hill-climb r5). Delete turns red only under the pointer.
+            Image(systemName: action.symbol).font(.system(size: 13)).frame(width: 22, height: 22).contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
-        .foregroundStyle(action.isDestructive ? (isHovered ? Color.red : Color.secondary) : Color.primary)
+        .foregroundStyle(action.isDestructive && isHovered ? Color.red : Color.secondary)
         .onHover { isHovered = $0 }
         .help(LibraryText.string(action.titleKey))
     }

@@ -48,9 +48,13 @@ public enum ShelfLayout {
     public static let contentPadding: CGFloat = 8
     /// A text card reads the first four lines, at most 120 characters, and shows the whole lines that fit its 96 pt (FR-006-07).
     public static let cardTextLineLimit = 4
-    /// In the vertical placements a text card is only as tall as its text needs (FR-006-07, hill-climb r2): between this
-    /// floor, for one short line, and `cardHeight`, which four lines of text fill. The other cards stay `cardHeight`.
-    public static let textCardMinimumHeight: CGFloat = 48
+    /// In the vertical placements a text card is only as tall as its text needs (FR-006-07, hill-climb r2, r5): never under
+    /// `textCardMinimumLines` lines, so a one-line clip is not a sliver beside its neighbours, and never over `cardHeight`,
+    /// which three lines of text fill. The other cards stay `cardHeight`.
+    public static let textCardMinimumLines = 2
+    /// The card height a text card with no text to measure takes: the chrome and the minimum lines at the callout size's
+    /// 16 pt line. (A measured card uses its real line height in `cardHeight(forLineCount:lineHeight:)`.)
+    public static let textCardMinimumHeight: CGFloat = cardChromeHeight + CGFloat(textCardMinimumLines) * 16
     /// The card's fixed furniture: the 6 pt padding above and below, the 16 pt header row and the 6 pt gap under it.
     private static let cardChromeHeight: CGFloat = 6 * 2 + 16 + 6
     public static let cardTextCharacterLimit = 120
@@ -181,11 +185,11 @@ public enum ShelfLayout {
 
     /// A text card's height from its measured line count (FR-006-07, hill-climb r3): the app measures the text at the card's
     /// real width and font, because a characters-per-line guess leaves blank lines under 2-3 lines of text. The lines are
-    /// capped at `cardTextLineLimit`; the height is never under `textCardMinimumHeight`, which only a one-line card reaches,
-    /// and never over `cardHeight`.
+    /// capped at what fits (`maxTextLines`); the height is never under `textCardMinimumLines` lines, which a one-line card
+    /// reaches, and never over `cardHeight`.
     public static func cardHeight(forLineCount lines: Int, lineHeight: CGFloat) -> CGFloat {
-        let shown = min(max(lines, 1), maxTextLines(lineHeight: lineHeight))
-        return min(max(cardChromeHeight + CGFloat(shown) * lineHeight, textCardMinimumHeight), cardHeight)
+        let shown = min(max(lines, textCardMinimumLines), maxTextLines(lineHeight: lineHeight))
+        return min(cardChromeHeight + CGFloat(shown) * lineHeight, cardHeight)
     }
 
     /// How many whole lines of `lineHeight` a text card can show: the read limit (`cardTextLineLimit`), less any line that

@@ -1258,7 +1258,7 @@
       "id": "OC-5126",
       "requirement": "FR-005-19",
       "given": "Two tap disablements simulated 30 s apart",
-      "when": "Notices opened",
+      "when": "Warnings and Errors opened",
       "then": "exactly one TRG-OS-003 Notice exists (60 s throttle)",
       "class": "error",
       "source_verdict": "CONFIRMED",

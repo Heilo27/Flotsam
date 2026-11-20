@@ -43,10 +43,14 @@ struct OnboardingView: View {
     private var standardLayout: some View {
         VStack(alignment: .leading, spacing: 16) {
             stepCaption.padding(.bottom, 8)
+            // Centred, like the permission steps' title and purpose, so every step's heading sits in the same place.
             Text(verbatim: text(model.step.titleKey))
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity)
             Text(verbatim: text(model.step.purposeKey))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
             content
             Spacer(minLength: 0)
             footer
@@ -238,22 +242,21 @@ struct OnboardingView: View {
 
     // MARK: Footer
 
-    /// Step 4's "Not Now" is the visible default while the permission is missing, so Continue is not the default action
-    /// there (FR-008-12); once it is granted, Continue is. Skip and Not Now are plain text buttons unless they are
-    /// the default.
+    /// Skip (Not Now on the permission steps) is a plain text button alone at the leading edge; Back and Continue sit together
+    /// on the trailing edge, Continue the default (hill-climb r5). Step 4's "Not Now" is the visible default while the
+    /// permission is missing, so Continue is not the default action there (FR-008-12); once it is granted, Continue is.
     private var footer: some View {
         let optionalStep = model.step == .accessibility || model.step == .inputMonitoring
         let notNowIsDefault = model.step == .inputMonitoring && !permissionGranted
         let skipTitle = text(optionalStep ? "ui.onboarding.notNow" : "ui.onboarding.skip")
         return HStack {
-            Button(text("ui.onboarding.back")) { model.back() }
-                .disabled(model.flow.isFirst)
             if !model.flow.isLast, !notNowIsDefault {
-                // A plain text button on the leading side, apart from Continue so the two are never mistaken.
                 Button(skipTitle) { model.skip() }
                     .buttonStyle(.link)
             }
             Spacer()
+            Button(text("ui.onboarding.back")) { model.back() }
+                .disabled(model.flow.isFirst)
             if model.flow.isLast {
                 Button(text("ui.onboarding.finish")) { finish() }
                     .keyboardShortcut(.defaultAction)

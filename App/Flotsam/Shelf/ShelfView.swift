@@ -16,6 +16,9 @@ struct ShelfView: View {
     let close: @MainActor () -> Void
 
     @FocusState private var searchFocused: Bool
+    /// The vertical list's content and viewport heights, to fade its end only when it scrolls (DESIGN section 2.4, r5).
+    @State private var listContentHeight: CGFloat = 0
+    @State private var listViewportHeight: CGFloat = 0
 
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
 
@@ -236,21 +239,30 @@ struct ShelfView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: ShelfLayout.cardSpacing) {
                         ForEach(sections) { section in
-                            // A section header reads as a header: semibold, upper case, tracked (hill-climb r4).
+                            // A section header reads as a header by weight alone: sentence case, semibold (hill-climb r5).
                             Text(verbatim: ShelfText.string(section.titleKey))
-                                .font(.caption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
                                 .accessibilityAddTraits(.isHeader)
                                 .frame(height: ShelfLayout.sectionHeaderHeight, alignment: .bottomLeading)
                             ForEach(section.cards) { card in cardView(card) }
                         }
-                    }.padding(ShelfLayout.contentPadding)
+                    }
+                    .padding(ShelfLayout.contentPadding)
+                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { listContentHeight = $0 }
                 }
+                // A list taller than the panel ends in the shared end fade with a margin of the same height, so the last
+                // card scrolls clear of it (hill-climb r5); one that fits is drawn whole.
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { listViewportHeight = $0 }
+                .contentMargins(.bottom, listOverflows ? DesignToken.endFadeHeight : 0, for: .scrollContent)
+                .fadingBottomEdge(listOverflows ? DesignToken.endFadeHeight : 0)
                 .id(queryIdentity)
                 .onChange(of: scrollKey(sections)) { _, key in reveal(key, in: proxy, anchor: .top) }
             }
         }
     }
+
+    private var listOverflows: Bool { listContentHeight > listViewportHeight }
 
     /// A new search or type filter starts the list at its first card (FR-006-22): the scroll view is rebuilt per query.
     private var queryIdentity: String { "\(model.kindFilter?.rawValue ?? "")|\(model.searchText)" }
@@ -276,25 +288,31 @@ private struct ShelfCardView: View {
     private var selected: Bool { model.selection.contains(card.id) }
     private let shape = RoundedRectangle(cornerRadius: DesignToken.Radius.card)
 
-    /// Header row over a content area; the header never overlaps the content (hill-climb r1, TASK-529).
+    /// Header row over a content area. Only an image card lets its picture run under the header (hill-climb r5): the
+    /// header then sits on a dark scrim, white on 60 % black, so it reads over any picture.
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            header
-            content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        Group {
+            if card.visual == .thumbnail { thumbnailBody } else { standardBody }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .background {
-            // A raised surface: an opaque card fill, a hairline edge that also separates it on a dark panel, and a soft shadow.
+            // A raised surface: an opaque card fill and a soft shadow. The hairline edge that also separates it on a dark
+            // panel is drawn over the content, below.
+            shape.fill(Color(nsColor: .controlBackgroundColor))
+                .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
+        }
+        .overlay(alignment: .top) {
+            // The type cue: a thin edge in the kind's colour (DESIGN section 2.1), clipped to the card's corners.
+            DesignToken.typeCue(for: card.kind).frame(height: 3)
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: DesignToken.Radius.card, topTrailingRadius: DesignToken.Radius.card))
+                .accessibilityHidden(true)
+        }
+        .overlay {
             // The selected card is a 2 pt accent ring and nothing else: no tint over the card (FR-006-07). In dark the hairline is
             // brighter, so the card still separates from the panel.
-            shape.fill(Color(nsColor: .controlBackgroundColor))
-                .overlay(
-                    shape.strokeBorder(
-                        selected ? Color.accentColor : Color.primary.opacity(colorScheme == .dark ? 0.30 : 0.14),
-                        lineWidth: selected ? 2 : (colorScheme == .dark ? 1 : 0.5)))
-                .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
+            shape.strokeBorder(
+                selected ? Color.accentColor : Color.primary.opacity(colorScheme == .dark ? 0.30 : 0.14),
+                lineWidth: selected ? 2 : (colorScheme == .dark ? 1 : 0.5))
         }
         .overlay {
             // A dropped card flashes for `ShelfLayout.dropHighlightDuration` (FR-006-15).
@@ -323,32 +341,55 @@ private struct ShelfCardView: View {
         }
     }
 
-    /// Source app icon, app name, pin badge and age: one 16 pt row.
-    private var header: some View {
+    /// The header over the content, both inside the card's padding.
+    private var standardBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header(onMedia: false)
+            content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+
+    /// An image card: the picture fills the card edge to edge, clipped to the card's corners, with the header on a scrim.
+    private var thumbnailBody: some View {
+        ZStack(alignment: .top) {
+            Color.clear
+                .overlay {
+                    if let image { Image(nsImage: image).resizable().scaledToFill() }
+                    else { Image(systemName: symbolName(for: card.kind)).font(.title2).foregroundStyle(.secondary) }
+                }
+                .clipped()
+            header(onMedia: true)
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .background(Color.black.opacity(0.6))
+        }
+        .clipShape(shape)
+    }
+
+    /// Source app icon, app name, pin badge and age: one 16 pt row. Everything is secondary, the age included (it was
+    /// tertiary, which lost its contrast on a dark card; hill-climb r5); on an image it is white over the scrim.
+    private func header(onMedia: Bool) -> some View {
         HStack(spacing: 4) {
             Image(nsImage: SourceAppIcons.icon(forBundleId: card.sourceBundleId))
                 .resizable().interpolation(.high).frame(width: 16, height: 16).accessibilityHidden(true)
             if let source = card.sourceName {
-                Text(verbatim: source).font(.caption.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
+                Text(verbatim: source).font(.caption.weight(.medium)).lineLimit(1)
             }
             Spacer(minLength: 4)
-            if card.isPinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary).accessibilityHidden(true) }
-            Text(verbatim: card.age).font(.caption2).foregroundStyle(.tertiary).lineLimit(1).fixedSize()
+            if card.isPinned { Image(systemName: "pin.fill").font(.caption2).accessibilityHidden(true) }
+            Text(verbatim: card.age).font(.caption2).lineLimit(1).fixedSize()
         }
+        .foregroundStyle(onMedia ? AnyShapeStyle(Color.white) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
         .frame(height: 16)
     }
 
     @ViewBuilder private var content: some View {
         switch card.visual {
         case .thumbnail:
-            // Full bleed across the content area, clipped to its own rounded rectangle so a wide or tall picture can
-            // never run past the card edge. `Color.clear.overlay` takes the proposed size, which `scaledToFill` would not.
-            Color.clear
-                .overlay {
-                    if let image { Image(nsImage: image).resizable().scaledToFill() }
-                    else { Image(systemName: symbolName(for: card.kind)).font(.title2).foregroundStyle(.secondary) }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
+            // Drawn full bleed by `thumbnailBody`, never inside the card padding.
+            EmptyView()
         case .swatch:
             // A big swatch with its value under it.
             VStack(alignment: .leading, spacing: 4) {
@@ -364,7 +405,7 @@ private struct ShelfCardView: View {
             }
         case .kindIcon(let kind):
             HStack(alignment: .top, spacing: 6) {
-                Image(systemName: symbolName(for: kind)).font(.caption).foregroundStyle(.secondary).frame(width: 14)
+                Image(systemName: symbolName(for: kind)).font(.caption).foregroundStyle(DesignToken.typeCue(for: kind)).frame(width: 14)
                 textColumn
             }
         }

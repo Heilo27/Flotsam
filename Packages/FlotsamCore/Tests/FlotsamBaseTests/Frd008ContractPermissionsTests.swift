@@ -253,7 +253,7 @@ struct Frd008ContractPermissionsTests {
         #expect(!LoginItemPresentation(status: controller.status).isOn)
         let rig = Rig()
         await rig.reporter.report(error, origin: .userInitiated)
-        #expect(rig.presenter.huds == ["Couldn't change Launch at Login. Check System Settings › General › Login Items."])
+        #expect(rig.presenter.huds == ["Couldn't change Launch at login. Check System Settings › General › Login Items."])
     }
 
     // OC-8123. Red if a failed unregister turns the switch off.
@@ -273,7 +273,7 @@ struct Frd008ContractPermissionsTests {
         let rig = Rig()
         await rig.reporter.report(error, origin: .userInitiated)
         #expect(rig.presenter.huds.count == 1)
-        #expect(rig.presenter.huds.first?.hasPrefix("Couldn't change Launch at Login.") == true)
+        #expect(rig.presenter.huds.first?.hasPrefix("Couldn't change Launch at login.") == true)
     }
 
     // OC-8124. Red if the switch is read from a stored copy instead of the service status each time.

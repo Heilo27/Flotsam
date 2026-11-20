@@ -68,7 +68,7 @@ private let section7: [Row] = [
     ("STO-POL-001", .info, nil),
     ("SET-PRM-001", .warning, "Accessibility is off, so Flotsam can't paste for you. The item is on your clipboard; press ⌘V."),
     ("SET-PRM-002", .warning, "Input Monitoring is off, so typed triggers are paused. Turn it on in System Settings › Privacy & Security."),
-    ("SET-OS-001", .error, "Couldn't change Launch at Login. Check System Settings › General › Login Items."),
+    ("SET-OS-001", .error, "Couldn't change Launch at login. Check System Settings › General › Login Items."),
     ("SET-VAL-001", .error, "That folder can't be used for screenshots. Choose a folder you can read."),
     ("SET-VAL-002", .error, "That isn't an app Flotsam can add. Choose an application."),
     ("SET-DAT-001", .warning, "A setting had an invalid value and was reset to its default."),

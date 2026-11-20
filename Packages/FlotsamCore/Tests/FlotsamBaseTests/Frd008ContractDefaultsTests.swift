@@ -136,7 +136,7 @@ import Testing
     }
 
     // OC-8008. Deleting the preferences domain resets only registry values. Item data and the screenshot watermark are
-    // not in preferences, so the registry must not hold a key for either. Launch at Login is not a registry value.
+    // not in preferences, so the registry must not hold a key for either. Launch at login is not a registry value.
     @Test func oc8008_preferencesDeleteTouchesRegistryOnly() {
         let names = SettingKeys.all.map(\.name)
 

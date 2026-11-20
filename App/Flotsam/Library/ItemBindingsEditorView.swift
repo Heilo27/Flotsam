@@ -84,19 +84,17 @@ struct ItemBindingsEditorView: View {
     private var hotkeyRow: some View {
         GridRow(alignment: .firstTextBaseline) {
             Text(.editorShortcut).gridColumnAlignment(.trailing)
-            HStack {
-                ShortcutRecorderField(
-                    chord: model.hotkey, recorder: model.recorder, allowClear: true, startRecording: model.startRecording,
-                    clear: model.clearHotkey)
-                Spacer(minLength: 0)
-            }
+            ShortcutRecorderField(
+                chord: model.hotkey, recorder: model.recorder, allowClear: true, startRecording: model.startRecording,
+                clear: model.clearHotkey)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     private var triggerRow: some View {
         @Bindable var model = model
         return GridRow(alignment: .firstTextBaseline) {
-            Text(.editorTrigger)
+            Text(.editorTrigger).gridColumnAlignment(.trailing)
             VStack(alignment: .leading, spacing: 4) {
                 // Typed text is primary colour; only the empty field shows the dimmer placeholder.
                 HStack(spacing: 6) {
@@ -107,7 +105,7 @@ struct ItemBindingsEditorView: View {
                         .disableAutocorrection(true)
                         .focused($triggerFocused)
                         .padding(.horizontal, 8)
-                        .frame(height: 28)
+                        .frame(maxWidth: .infinity, minHeight: FieldMetric.height, maxHeight: FieldMetric.height)
                         .fieldChrome(isActive: triggerFocused)
                     variablesHelpButton
                 }
@@ -123,9 +121,9 @@ struct ItemBindingsEditorView: View {
     /// The variables reference sits behind a (?) button so the form shows one line of help, not three (FR-005-09).
     private var variablesHelpButton: some View {
         Button { showsVariablesHelp.toggle() } label: {
-            Image(systemName: "questionmark.circle").foregroundStyle(.secondary)
+            Image(systemName: "questionmark.circle.fill")
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AccessoryGlyphButtonStyle())
         .help(SettingsString.editorVariablesHelpButton.text)
         .accessibilityLabel(SettingsString.editorVariablesHelpButton.text)
         .popover(isPresented: $showsVariablesHelp, arrowEdge: .bottom) {
