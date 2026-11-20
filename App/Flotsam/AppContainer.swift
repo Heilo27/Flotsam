@@ -233,8 +233,12 @@ final class AppContainer {
             let paster = PasteService(
                 store: opened, pasteboard: pasteboard, files: LocalFileSystem(), frontmost: frontmost,
                 accessibility: permissions, keys: keys, clock: SystemClock(), ownWrites: ownWrites, secureAccess: secureAccess)
-            startShelf(database: opened, paster: paster, frontmost: frontmost)
-            startLibrary(database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost)
+            // One tracker for both panels: the thumbnail cache they share is freed when the last of them closes (FR-003-13).
+            let residency = PanelResidency { await opened.releaseMemory() }
+            startShelf(database: opened, paster: paster, frontmost: frontmost, residency: residency)
+            startLibrary(
+                database: opened, paster: paster, pasteboard: pasteboard, keys: keys, frontmost: frontmost,
+                residency: residency)
             startScreenshots(database: opened)
             startTextRecognition(database: opened)
             startMaintenance(database: opened)
@@ -376,7 +380,9 @@ final class AppContainer {
 
     /// FRD-006: builds the Shelf over the opened database and points `actions.toggleShelf` at it (FR-006-03c). The Shelf
     /// pastes through the Library's `PasteService` (FR-006-08) and reads Missing from the same row flag (FR-006-14).
-    private func startShelf(database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider) {
+    private func startShelf(
+        database: FlotsamDatabase, paster: PasteService, frontmost: WorkspaceFrontmostAppProvider, residency: PanelResidency
+    ) {
         let reporter = reporter
         let capture = capture
         let settings = settings
@@ -390,7 +396,7 @@ final class AppContainer {
             makeModel: { host in
                 ShelfModel(
                     source: database, paster: ShelfPasteAdapter(service: paster), host: host, events: database.events,
-                    details: database, effects: effects)
+                    details: database, effects: effects, residency: residency)
             })
         shelf = controller
         controller.menuBarIconFrame = { [weak self] in self?.menuBarIconFrame?() }
@@ -425,7 +431,7 @@ final class AppContainer {
     /// Builds the Library stack over the opened database and registers its hotkey (FR-003-01, FR-005-01).
     private func startLibrary(
         database: FlotsamDatabase, paster: PasteService, pasteboard: SystemPasteboard, keys: CGEventKeyPoster,
-        frontmost: WorkspaceFrontmostAppProvider
+        frontmost: WorkspaceFrontmostAppProvider, residency: PanelResidency
     ) {
         let reporter = reporter
         let probe = permissions
@@ -491,7 +497,7 @@ final class AppContainer {
         let controller = LibraryPanelController(
             source: database, paster: paster, preferences: SettingsLibraryPreferences(settings: settings),
             effects: effects, organizer: organizer, organize: organize, frontmost: frontmost,
-            events: database.events,
+            events: database.events, residency: residency,
             // Flush a copy made in the last poll interval before the Library lists items (FR-003-02).
             captureNow: { capture?.captureNow() })
         library = controller

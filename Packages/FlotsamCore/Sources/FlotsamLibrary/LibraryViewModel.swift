@@ -71,6 +71,9 @@ public final class LibraryViewModel {
     /// Storage's change feed (FR-004-13): while the panel is shown, a capture or any commit reloads the list and the
     /// sidebar counts at once. Nil in tests that do not exercise it.
     @ObservationIgnored private let events: ItemEventBus?
+    /// Tells storage when this panel opens and closes, so the shared thumbnail cache is freed only when the last panel
+    /// (Library or Shelf) is gone (FR-003-13). Without one, a hide of this panel is the last.
+    @ObservationIgnored private let residency: PanelResidency
     /// The one time source for every row's relative time and its VoiceOver label (FR-003-07, FR-003-21).
     @ObservationIgnored private let clock: any WallClock
     @ObservationIgnored private var unsubscribeEvents: (@Sendable () -> Void)?
@@ -109,7 +112,8 @@ public final class LibraryViewModel {
     public init(
         source: any LibraryDataSource, paster: any PastePerforming, host: any PasteHost,
         preferences: any LibraryPreferences, effects: LibraryEffects = LibraryEffects(),
-        organizer: LibraryOrganizer? = nil, events: ItemEventBus? = nil, clock: any WallClock = SystemClock()
+        organizer: LibraryOrganizer? = nil, events: ItemEventBus? = nil, clock: any WallClock = SystemClock(),
+        residency: PanelResidency? = nil
     ) {
         self.source = source
         self.paster = paster
@@ -119,6 +123,7 @@ public final class LibraryViewModel {
         self.organizer = organizer
         self.events = events
         self.clock = clock
+        self.residency = residency ?? PanelResidency { await source.releaseMemory() }
         busy = BusyIndicator { await clock.sleep(for: $0) }
         viewMode = preferences.viewMode
         layout = preferences.layout
@@ -186,6 +191,7 @@ public final class LibraryViewModel {
     public func open(target: FrontmostApp?) async {
         self.target = target
         isShown = true
+        residency.opened(.library)
         refreshAccessibility()
         viewMode = preferences.viewMode
         layout = preferences.layout
@@ -299,8 +305,9 @@ public final class LibraryViewModel {
         effects.openAccessibilitySettings()
     }
 
-    /// The panel hid, for any reason: drop in-flight work and let storage free what only a visible panel needs
-    /// (FR-003-13).
+    /// The panel hid, for any reason: drop in-flight work and the rows and preview only a visible panel needs (the 50-row
+    /// cache, FR-003-05), and let storage free the thumbnail cache if this was the last panel (FR-003-13). A reopen
+    /// inside the resume window reloads the rows and keeps the selection (FR-003-04).
     public func panelDidHide() {
         isShown = false
         lastHiddenAt = clock.now()
@@ -315,8 +322,9 @@ public final class LibraryViewModel {
         relativeTimeTask?.cancel()
         relativeTimeTask = nil
         generation += 1
-        let source = source
-        Task { await source.releaseMemory() }
+        loadedRows = []
+        preview = nil
+        residency.closed(.library)
     }
 
     public func retry() async {
