@@ -2256,3 +2256,14 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - Remove the stale Flotsam Login Items entries.
   - Then rerun all 16 passes.
 - **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is restored, and no Flotsam is running.
+
+## A8: screenshot round 1 at 7ab11a8 (2026-11-20)
+
+- **Verdict: PUBLISHED.** s2/shots = 95530dfa2d8c767669ba26369f31fa4ea9f32bf3 (normal push, no force).
+- **Checks:** all 16 passes clean on checks 1–4. Checked 04-shelf and 05-menu-bar-menu by eye in light and dark: no banner, no host content, the menu is complete and its corners are intact.
+- **Branch contents:** 17 files (round-1/: 16 PNGs + NOTES.txt). The leak grep on NOTES.txt is clean.
+- **Capture mode:** `-R` for all 16, per NOTES.txt.
+- **Harness defect:** after the publish, the cleanup step at bin/shots.sh:70 fails with `work: unbound variable`. The push had already landed.
+- **Host path:** the fixed app path under the user Caches folder is left over from A7 and still present.
+- **Still open:** the Shelf Preview image card is oversized (it overflows and covers the "Preview" label). The menu follows the system appearance (known).
+- **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
