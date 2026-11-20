@@ -396,6 +396,7 @@ private func occurrences(of pattern: String, under relativeRoot: String) throws 
             "App/Flotsam/Library/LibraryPanelController.swift": ["makeKeyAndOrderFront"],
             "App/Flotsam/Shelf/ShelfPanelController.swift": ["makeKeyAndOrderFront", "orderFrontRegardless"],
             "App/Flotsam/FlotsamApp.swift": ["setActivationPolicy"],  // .accessory at launch: no Dock icon
+            "App/Flotsam/ShotsStaging.swift": ["orderFrontRegardless"],  // DEBUG-only screenshot staging: backdrop + cue, never key
         ])
         let packages = try activationMap(under: "Packages/FlotsamCore/Sources")
         #expect(packages == [:], "the packages never touch window activation: \(packages)")
