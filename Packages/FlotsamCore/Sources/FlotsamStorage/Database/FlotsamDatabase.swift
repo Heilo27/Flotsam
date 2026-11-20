@@ -2,14 +2,6 @@ import FlotsamBase
 import Foundation
 import GRDB
 
-/// Facts about an open database, used by tests and the diagnostics report.
-public struct StorageDiagnostics: Sendable, Equatable {
-    public let journalMode: String
-    public let foreignKeysEnabled: Bool
-    public let secureDeleteEnabled: Bool
-    public let userVersion: Int
-}
-
 /// The database and the services that share its lifetime. Only this module imports GRDB (ADR-0001). Every public
 /// function is `async` and returns `Result`; there is no synchronous read, so a main-thread read cannot be written
 /// (ADR-0004).
@@ -414,21 +406,7 @@ public final class FlotsamDatabase: Sendable {
         return fileSystem.replaceItem(at: destination, with: staged)
     }
 
-    // MARK: Diagnostics and error mapping
-
-    public func diagnostics() async -> FlotsamResult<StorageDiagnostics> {
-        do {
-            return .success(try await pool.read { db in
-                StorageDiagnostics(
-                    journalMode: try String.fetchOne(db, sql: "PRAGMA journal_mode") ?? "",
-                    foreignKeysEnabled: try Int.fetchOne(db, sql: "PRAGMA foreign_keys") == 1,
-                    secureDeleteEnabled: try Int.fetchOne(db, sql: "PRAGMA secure_delete") == 1,
-                    userVersion: try MigrationRunner.currentVersion(db))
-            })
-        } catch {
-            return .failure(Self.readFailure(error))
-        }
-    }
+    // MARK: Configuration and error mapping
 
     private static func configuration(busyTimeout: TimeInterval) -> Configuration {
         var configuration = Configuration()
