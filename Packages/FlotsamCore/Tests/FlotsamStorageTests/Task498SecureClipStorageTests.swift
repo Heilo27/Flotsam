@@ -101,20 +101,21 @@ private func failureCode<T>(_ result: FlotsamResult<T>) -> ErrorCode? {
         }
     }
 
-    /// Guards `Migrations.all` listing version 2 (user_version 2) and `Schema.createVersion2` adding both columns.
-    @Test("AC-001-25 / FR-007-03: a new database is at version 2 with isSecure and secureCiphertext on item")
+    /// Guards `Migrations.all` reaching the newest version (user_version 4: FR-007-17 lists v2 secure columns, v3 `name`
+    /// from TASK-539, v4 `ocrText`/`ocrAt` from TASK-552) and `Schema.createVersion2` adding both secure columns.
+    @Test("AC-001-25 / FR-007-03: a new database is at version 4 with isSecure and secureCiphertext on item")
     func newDatabaseIsVersion2() async throws {
         let s = try await Store.make()
         defer { s.cleanUp() }
 
-        #expect(try userVersion(s) == 2)
+        #expect(try userVersion(s) == 4)
         let columns = try itemColumns(s)
         #expect(columns["isSecure"] == "INTEGER")
         #expect(columns["secureCiphertext"] == "BLOB")
     }
 
     /// Guards the "Existing rows take the column defaults" contract and `Migrations.all` containing both versions.
-    @Test("FR-007-03: a version 1 database upgrades to 2 and keeps every row, none of them secure")
+    @Test("FR-007-03: a version 1 database upgrades to 4 and keeps every row, none of them secure")
     func versionOneUpgradesKeepingRows() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("flotsam-498-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -130,7 +131,7 @@ private func failureCode<T>(_ result: FlotsamResult<T>) -> ErrorCode? {
 
         let upgraded = try await Store.make(root: root)
 
-        #expect(try userVersion(upgraded) == 2)
+        #expect(try userVersion(upgraded) == 4)
         #expect(try upgraded.presentIds() == [1, 2, 3])
         #expect(try upgraded.query { try String.fetchAll($0, sql: "SELECT plainText FROM item ORDER BY id") } == ["first", "second", "item 3"])
         #expect(try upgraded.query { try Int.fetchAll($0, sql: "SELECT isSecure FROM item") } == [0, 0, 0])

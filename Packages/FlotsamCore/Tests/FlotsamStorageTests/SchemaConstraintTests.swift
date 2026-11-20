@@ -49,9 +49,9 @@ struct SchemaConstraintTests {
             "id", "kind", "createdAt", "lastCopiedAt", "copyCount", "pasteCount", "lastUsedAt", "contentKey", "plainText",
             "searchText", "sourceBundleId", "sourceName", "byteSize", "pixelWidth", "pixelHeight", "originalPath", "pinned",
             "note", "updatedAt", "hotkeyCode", "hotkeyModifiers", "trigger", "exemptReleasedAt",
-            "isSecure", "secureCiphertext",
+            "isSecure", "secureCiphertext", "name", "ocrText", "ocrAt",
         ])
-        #expect(try await columns("item", store).count == 25)
+        #expect(try await columns("item", store).count == 28)
         #expect(!(try await columns("item", store)).contains("exempt"))
         #expect(Set(try await columns("representation", store)) == ["id", "itemId", "uti", "byteSize", "blobName"])
         #expect(Set(try await columns("bundleMember", store)) == ["itemId", "ordinal", "path", "bookmark", "isDirectory"])

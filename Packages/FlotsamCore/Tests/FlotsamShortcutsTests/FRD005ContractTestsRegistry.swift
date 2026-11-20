@@ -78,11 +78,12 @@ private struct Rig {
         rig.registrar.press(.ctrlCmdV)
         rig.registrar.press(.ctrlCmdV)
         // then the menu shows ⌃⌘V only for Open Library, only ⌃⌘V is registered, and the action ran once per press
-        let rows = Array(MenuBarModel.entries(settings: settings).prefix(3))
+        let rows = Array(MenuBarModel.entries(settings: settings).prefix(4))
         #expect(
             rows == [
                 .openLibrary(.chord(Chord(keyCode: 9, modifiers: [.control, .command]))),
                 .saveClipboard(.none),
+                .addClip(.none),
                 .toggleShelf(.none),
             ])
         #expect(errors.isEmpty)
@@ -164,9 +165,10 @@ private struct Rig {
         #expect(rig.registry.status(of: .saveClipboard) == .unbound)
         #expect(rig.registrar.liveChords == [Chord(keyCode: 9, modifiers: [.control, .command])])
         let rows = MenuBarModel.entries(settings: settings)
-        #expect(rows.count == 11)
-        #expect(Array(rows.prefix(3)) == [
-            .openLibrary(.chord(Chord(keyCode: 9, modifiers: [.control, .command]))), .saveClipboard(.none), .toggleShelf(.none),
+        #expect(rows.count == 14)
+        #expect(Array(rows.prefix(4)) == [
+            .openLibrary(.chord(Chord(keyCode: 9, modifiers: [.control, .command]))), .saveClipboard(.none), .addClip(.none),
+            .toggleShelf(.none),
         ])
     }
 
@@ -177,22 +179,24 @@ private struct Rig {
         settings.set(ChordBinding.chord(Chord(keyCode: 1, modifiers: [.control, .option])), for: SettingKeys.shortcutsSaveClipboard)
         settings.set(ChordBinding.chord(Chord(keyCode: 25, modifiers: [.command, .shift])), for: SettingKeys.shortcutsToggleShelf)
         // when the user reads the menu items
-        let before = Array(MenuBarModel.entries(settings: settings).prefix(3))
+        let before = Array(MenuBarModel.entries(settings: settings).prefix(4))
         // then Open Library, Save Clipboard and Toggle Shelf each carry their chord
         #expect(
             before == [
                 .openLibrary(.chord(Chord(keyCode: 9, modifiers: [.control, .command]))),
                 .saveClipboard(.chord(Chord(keyCode: 1, modifiers: [.control, .option]))),
+                .addClip(.none),
                 .toggleShelf(.chord(Chord(keyCode: 25, modifiers: [.command, .shift]))),
             ])
         // when the user changes Save Clipboard to ⌃⌥D in Settings
         settings.set(ChordBinding.chord(Chord(keyCode: 2, modifiers: [.control, .option])), for: SettingKeys.shortcutsSaveClipboard)
         // then the Save Clipboard row carries the new chord and the other two rows are unchanged
-        let after = Array(MenuBarModel.entries(settings: settings).prefix(3))
+        let after = Array(MenuBarModel.entries(settings: settings).prefix(4))
         #expect(
             after == [
                 .openLibrary(.chord(Chord(keyCode: 9, modifiers: [.control, .command]))),
                 .saveClipboard(.chord(Chord(keyCode: 2, modifiers: [.control, .option]))),
+                .addClip(.none),
                 .toggleShelf(.chord(Chord(keyCode: 25, modifiers: [.command, .shift]))),
             ])
     }
