@@ -56,12 +56,12 @@ import Testing
         #expect(entries.first { $0.filter == .kind(.link) }?.title == "Links")
     }
 
-    @Test func footerShowsThreeHintsAndTheCount() {
-        let footer = LibraryFooter(totalCount: 12, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
-        #expect(footer.hints.count == 3)
+    @Test func footerShowsFourHintsAndTheCount() {
+        let footer = LibraryFooter(totalCount: 12, selectionCount: 1, isAccessibilityTrusted: true, sort: .recent)
+        #expect(footer.hints.count == 4)
         #expect(footer.countText == "12 items")
         #expect(footer.notice == nil)
-        #expect(LibraryFooter(totalCount: 1, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent).countText == "1 item")
+        #expect(LibraryFooter(totalCount: 1, selectionCount: 1, isAccessibilityTrusted: true, sort: .recent).countText == "1 item")
     }
 
     /// FR-004-12: the footer names the active sort, for every sort, in every footer state.
@@ -70,27 +70,27 @@ import Testing
         #expect(LibrarySort.allCases.count == 4)
         for trusted in [true, false] {
             for selection in [1, 3] {
-                let footer = LibraryFooter(totalCount: 5, selectionCount: selection, isPreviewOpen: false, isAccessibilityTrusted: trusted, sort: sort)
+                let footer = LibraryFooter(totalCount: 5, selectionCount: selection, isAccessibilityTrusted: trusted, sort: sort)
                 #expect(footer.sortName == name)
             }
         }
     }
 
     @Test func footerShowsTheCopyOnlyNoticeWithoutAccessibility() {
-        let footer = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: true, isAccessibilityTrusted: false, sort: .recent)
+        let footer = LibraryFooter(totalCount: 3, selectionCount: 1, isAccessibilityTrusted: false, sort: .recent)
         #expect(footer.notice == "Press ⌘V to paste")
         #expect(footer.hints.contains { $0.label == "Close" })
     }
 
-    /// FR-003-18 / TASK-507: the copy-only hint names ⌘C while Accessibility is denied; trusted keeps ⌥Return Plain text.
-    @Test func footerSecondHintIsCommandCCopyWhenUntrustedAndPlainTextWhenTrusted() {
+    /// FR-003-18 / TASK-507: the copy-only hint names ⌘C while Accessibility is denied; trusted keeps ⌥Return Plain Text (third hint, FR-003-18).
+    @Test func footerThirdHintIsCommandCCopyWhenUntrustedAndPlainTextWhenTrusted() {
         for preview in [false, true] {
-            let untrusted = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: preview, isAccessibilityTrusted: false, sort: .recent)
-            #expect(untrusted.hints.count == 3)
-            #expect(untrusted.hints[1] == LibraryFooter.Hint(key: "⌘C", label: "Copy"), "preview \(preview)")
-            let trusted = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: preview, isAccessibilityTrusted: true, sort: .recent)
-            #expect(trusted.hints.count == 3)
-            #expect(trusted.hints[1] == LibraryFooter.Hint(key: "⌥Return", label: "Plain text"), "preview \(preview)")
+            let untrusted = LibraryFooter(totalCount: 3, selectionCount: 1, isAccessibilityTrusted: false, sort: .recent)
+            #expect(untrusted.hints.count == 4)
+            #expect(untrusted.hints[2] == LibraryFooter.Hint(key: "⌘C", label: "Copy"), "preview \(preview)")
+            let trusted = LibraryFooter(totalCount: 3, selectionCount: 1, isAccessibilityTrusted: true, sort: .recent)
+            #expect(trusted.hints.count == 4)
+            #expect(trusted.hints[2] == LibraryFooter.Hint(key: "⌥Return", label: "Plain Text"), "preview \(preview)")
         }
     }
 
@@ -100,7 +100,7 @@ import Testing
     /// multi-select branch.
     @Test func footerMultiSelectUntrustedOffersNoCommandCHint() {
         for selected in [2, 3] {
-            let footer = LibraryFooter(totalCount: 5, selectionCount: selected, isPreviewOpen: false, isAccessibilityTrusted: false, sort: .recent)
+            let footer = LibraryFooter(totalCount: 5, selectionCount: selected, isAccessibilityTrusted: false, sort: .recent)
             #expect(
                 footer.hints == [
                     LibraryFooter.Hint(key: "Return", label: "Start paste queue"),
@@ -111,7 +111,7 @@ import Testing
     }
 
     @Test func footerForAMultiSelectionCountsAndDisablesPaste() {
-        let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
+        let footer = LibraryFooter(totalCount: 30, selectionCount: 3, isAccessibilityTrusted: true, sort: .recent)
         #expect(footer.countText == "3 selected")
         #expect(footer.notice == "Return queues these items")
     }

@@ -39,6 +39,9 @@ struct LibraryView: View {
             Divider()
             LibraryFooterView(model: model)
         }
+        // The panel's transparent title bar (full-size content) would otherwise add its height as a dead band above the
+        // search row; the window buttons are hidden, so the row can use that space.
+        .ignoresSafeArea(.container, edges: .top)
         .overlay { OrganizeOverlayHost(organize: organize, model: model) }
         .onAppear { searchFocused = true }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
@@ -50,26 +53,38 @@ struct LibraryView: View {
         }
     }
 
+    /// The search row: the field in a visible rounded container that shows the focus ring, and the grid/list toggle beside it.
     private var searchField: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
-            TextField(
-                LibraryText.string(LibraryText.searchPlaceholder),
-                text: Binding(get: { model.searchText }, set: { model.setSearchText($0) })
-            )
-            .textFieldStyle(.plain)
-            .font(.title3)
-            .focused($searchFocused)
-            .accessibilityLabel(LibraryText.string(LibraryText.searchPlaceholder))
+        let fieldShape = RoundedRectangle(cornerRadius: 8)
+        let toggleLabel = LibraryText.string(model.viewMode == .list ? "ui.library.viewGrid" : "ui.library.viewList")
+        return HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).accessibilityHidden(true)
+                TextField(
+                    LibraryText.string(LibraryText.searchPlaceholder),
+                    text: Binding(get: { model.searchText }, set: { model.setSearchText($0) })
+                )
+                .textFieldStyle(.plain)
+                .font(.title3)
+                .focused($searchFocused)
+                .accessibilityLabel(LibraryText.string(LibraryText.searchPlaceholder))
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 36)
+            .background(Color.primary.opacity(0.06), in: fieldShape)
+            .overlay(fieldShape.strokeBorder(searchFocused ? Color.accentColor : Color.primary.opacity(0.14), lineWidth: searchFocused ? 2 : 0.5))
             Button {
                 model.toggleViewMode()
             } label: {
                 Image(systemName: model.viewMode == .list ? "square.grid.2x2" : "list.bullet")
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel(LibraryText.string(model.viewMode == .list ? "ui.library.viewGrid" : "ui.library.viewList"))
+            .help(toggleLabel)
+            .accessibilityLabel(toggleLabel)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
         .padding(.vertical, 10)
     }
 
@@ -136,22 +151,35 @@ struct LibrarySidebar: View {
     var body: some View {
         let entries = model.sidebarEntries
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 2) {
+            LazyVStack(alignment: .leading, spacing: 1) {
                 section(.top, title: nil, entries)
                 section(.types, title: LibraryText.string(LibraryText.sectionTypes), entries)
                 section(.tags, title: LibraryText.string(LibraryText.sectionTags), entries)
                 section(.apps, title: LibraryText.string(LibraryText.sectionApps), entries)
             }
-            .padding(8)
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+            // Room under the last row, so it can be scrolled clear of the footer and the fade below.
+            .padding(.bottom, Self.bottomFade + 8)
         }
+        // The rows fade out into the footer instead of being cut off by it.
+        .mask(
+            VStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: Self.bottomFade)
+            })
     }
+
+    private static let bottomFade: CGFloat = 16
+    /// A sidebar row (DESIGN 3.3 Library): tight, so the results list stays the dominant column.
+    private static let sidebarRowHeight: CGFloat = 24
 
     @ViewBuilder
     private func section(_ section: SidebarEntry.Section, title: String?, _ entries: [SidebarEntry]) -> some View {
         let inSection = entries.filter { $0.section == section }
         if !inSection.isEmpty {
             if let title {
-                Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.top, 8).padding(.horizontal, 6)
+                Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.top, 10).padding(.bottom, 2).padding(.horizontal, 6)
             }
             ForEach(inSection) { entry in
                 Button { model.select(filter: entry.filter) } label: {
@@ -160,9 +188,10 @@ struct LibrarySidebar: View {
                         Spacer(minLength: 4)
                         Text(verbatim: entry.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
                     }
+                    .font(.system(size: 13))
                     .opacity(entry.isDimmed ? 0.5 : 1)
                     .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
+                    .frame(height: Self.sidebarRowHeight)
                     .background(model.filter == entry.filter ? Color.accentColor.opacity(0.25) : .clear, in: RoundedRectangle(cornerRadius: 5))
                     .contentShape(Rectangle())
                 }
@@ -206,6 +235,8 @@ struct LibraryFooterView: View {
                         .background(.quaternary, in: RoundedRectangle(cornerRadius: 3))
                     Text(verbatim: hint.label).font(.caption)
                 }
+                // A hint with nothing to act on stays in its place, dimmed (FR-003-18).
+                .opacity(hint.isEnabled ? 1 : 0.4)
             }
             if let notice = footer.notice {
                 Text(verbatim: notice).font(.caption).foregroundStyle(.orange)

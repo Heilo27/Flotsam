@@ -22,3 +22,22 @@ extension View {
         font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
 }
+
+/// A control's label with its explanatory note directly under it, as one row, so a note can never drift away from the
+/// control it explains (a separate caption row sits under a divider, apart from its control).
+struct SettingLabel: View {
+    let title: SettingsString
+    let note: String?
+
+    init(_ title: SettingsString, note: String? = nil) {
+        self.title = title
+        self.note = note
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            if let note { Text(verbatim: note).settingsCaption() }
+        }
+    }
+}

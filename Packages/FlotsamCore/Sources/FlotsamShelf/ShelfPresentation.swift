@@ -12,7 +12,7 @@ public enum ShelfCardAction: Sendable, Equatable, CaseIterable {
 /// is tested without a view.
 public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
     /// The main picture of the card. The view maps each case to a thumbnail, a system file icon, a swatch or the kind
-    /// icon; none of the cases carries a timestamp, note or tag (FR-006-07).
+    /// icon; none of the cases carries a note or tag (FR-006-07).
     public enum Visual: Sendable, Equatable {
         case thumbnail
         case fileIcon
@@ -39,6 +39,11 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
     public let unavailableBadge: String?
     /// The source app's name; the view draws its small icon. Nil when the source is unknown.
     public let sourceName: String?
+    /// The source app's bundle identifier, from which the view looks up the icon; nil when unknown.
+    public let sourceBundleId: String?
+    /// The card's age for the header ("2 min ago", "Yesterday", a date after 7 days): the Library's wording, from the
+    /// one helper that also words the VoiceOver label, so the two read alike and age together (FR-006-48).
+    public let age: String
     public let accessibilityLabel: String
     public let accessibilityActions: [ShelfCardAction]
 
@@ -54,6 +59,8 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
         isSecure = row.isSecure
         unavailableBadge = row.isSecure && row.isUnavailable ? ShelfText.string(ShelfText.secureUnavailable) : nil
         sourceName = row.sourceName
+        sourceBundleId = row.sourceBundleId
+        age = ItemSpeech.relativeTime(row.lastCopiedAt, now: now)
         accessibilityLabel = ItemSpeech.label(for: row, now: now)
         accessibilityActions = ShelfCardAction.allCases
 

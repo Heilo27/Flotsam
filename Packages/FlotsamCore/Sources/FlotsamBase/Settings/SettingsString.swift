@@ -15,6 +15,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
     case revealAtEdge, edgeBar, showSetupGuide, historyHelp
+    /// The General pane's group headers, one per FR-008-04 group.
+    case sectionSystem, sectionScreenshots, sectionShelf, sectionLibrary, sectionCapture, sectionSetup
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
     case libraryLayout, layoutStandard, layoutCompact, libraryLayoutHelp
     /// The auto-bundle row (FR-001-12, FR-008-04): label and caption.
@@ -41,6 +43,8 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case shortcutNotSet, shortcutRecord, shortcutRecording, shortcutClear, shortcutNeedsModifier, shortcutsFootnote
 
     // Item editor: shortcut and trigger (FR-005-09)
+    /// `editorWindowNamed` is the title with the clip's name (`%@`) once the item is loaded; `editorWindow` is the title until then.
+    case editorWindowNamed
     case editorWindow, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
     /// The variable help caption: lists {date}, {time}, {clipboard} and format examples (FR-005-17, FRD-005 section 8).
     case editorVariablesHelp

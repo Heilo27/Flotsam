@@ -61,8 +61,8 @@ public struct LibraryPreview: Equatable, Sendable {
 
     private static func dateTime(_ date: Date) -> String { date.formatted(date: .abbreviated, time: .shortened) }
 
-    /// The metadata block (FR-003-14), in order: kind, source app, copied, first copied, times copied, times pasted, size,
-    /// pixel size, then each tag, then the note. A colour's hex and rgb follow its kind.
+    /// The metadata block (FR-003-14), in order: kind, source app, copied, first copied (only when it differs from copied),
+    /// times copied and times pasted (only above zero), size, pixel size, then each tag, then the note. A colour's hex and rgb follow its kind.
     private static func fields(for row: ItemRow, content: ItemContent, color: ColorChannels?) -> [Field] {
         func field(_ key: String, _ value: String) -> Field { Field(label: LibraryText.string(key), value: value) }
         var fields = [field("ui.library.previewKind", KindLabel.text(for: row.kind))]
@@ -71,10 +71,14 @@ public struct LibraryPreview: Equatable, Sendable {
             fields.append(field("ui.library.previewRGB", color.channels))
         }
         if let source = row.sourceName, !source.isEmpty { fields.append(field("ui.library.previewSource", source)) }
-        fields.append(field("ui.library.previewCopied", dateTime(row.lastCopiedAt)))
-        fields.append(field("ui.library.previewFirstCopied", dateTime(content.firstCopiedAt ?? row.lastCopiedAt)))
-        fields.append(field("ui.library.previewTimesCopied", content.copyCount.formatted()))
-        fields.append(field("ui.library.previewTimesPasted", row.pasteCount.formatted()))
+        let copied = dateTime(row.lastCopiedAt)
+        fields.append(field("ui.library.previewCopied", copied))
+        // First copied and the counters appear only when they add something: the same time as Copied, or a count of
+        // zero, is noise (an item pasted never has "Times pasted 0").
+        let firstCopied = dateTime(content.firstCopiedAt ?? row.lastCopiedAt)
+        if firstCopied != copied { fields.append(field("ui.library.previewFirstCopied", firstCopied)) }
+        if content.copyCount > 0 { fields.append(field("ui.library.previewTimesCopied", content.copyCount.formatted())) }
+        if row.pasteCount > 0 { fields.append(field("ui.library.previewTimesPasted", row.pasteCount.formatted())) }
         if row.byteSize > 0 {
             fields.append(field("ui.library.previewSize", ByteCountFormatter.string(fromByteCount: row.byteSize, countStyle: .file)))
         }

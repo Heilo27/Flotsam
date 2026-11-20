@@ -267,6 +267,7 @@ extension FlotsamDatabase {
         let pasteCount: Int
         let primaryLine: String
         let sourceName: String?
+        let sourceBundleId: String?
         let isPinned: Bool
         let hasTrigger: Bool
         let hasShortcut: Bool
@@ -282,7 +283,7 @@ extension FlotsamDatabase {
                 id: uuid, kind: kind, lastCopiedAt: Date(epochMillis: lastCopiedAt), pasteCount: pasteCount,
                 primaryLine: primaryLine, sourceName: sourceName, tagNames: tagNames, isPinned: isPinned,
                 hasTrigger: hasTrigger, hasShortcut: hasShortcut, pixelWidth: pixelWidth, pixelHeight: pixelHeight,
-                memberCount: memberCount, byteSize: byteSize, isSecure: isSecure)
+                memberCount: memberCount, byteSize: byteSize, isSecure: isSecure, sourceBundleId: sourceBundleId)
         }
     }
 
@@ -293,7 +294,7 @@ extension FlotsamDatabase {
         let rows = try Row.fetchAll(
             db,
             sql: """
-                SELECT id, kind, lastCopiedAt, pasteCount, substr(plainText, 1, ?) AS text, name, sourceName, pinned,
+                SELECT id, kind, lastCopiedAt, pasteCount, substr(plainText, 1, ?) AS text, name, sourceName, sourceBundleId, pinned,
                        "trigger" IS NOT NULL AS hasTrigger, hotkeyCode IS NOT NULL AS hasShortcut,
                        isSecure, pixelWidth, pixelHeight, byteSize,
                        (SELECT COUNT(*) FROM bundleMember WHERE bundleMember.itemId = item.id) AS memberCount
@@ -329,7 +330,7 @@ extension FlotsamDatabase {
                     kind: ItemKind(rawValue: kind) ?? .text, plainText: row["text"], pixelWidth: row["pixelWidth"],
                     pixelHeight: row["pixelHeight"], memberCount: memberCount, memberNames: names[id] ?? [],
                     bundleName: row["name"]),
-                sourceName: row["sourceName"], isPinned: row["pinned"] == 1, hasTrigger: row["hasTrigger"],
+                sourceName: row["sourceName"], sourceBundleId: row["sourceBundleId"], isPinned: row["pinned"] == 1, hasTrigger: row["hasTrigger"],
                 hasShortcut: row["hasShortcut"], isSecure: isSecure, pixelWidth: row["pixelWidth"],
                 pixelHeight: row["pixelHeight"], memberCount: memberCount, byteSize: row["byteSize"])
         }

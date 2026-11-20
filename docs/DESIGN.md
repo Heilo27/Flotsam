@@ -119,23 +119,23 @@ Library appears in 120 ms ease-out (scale 0.98 to 1, fade). Shelf slides 150 ms 
 
 Compact layout (FR-003-06, Settings > General): two columns, sidebar 170 and results, no preview column, 520x520 (min 480x400). Space or ⌘Y shows the preview in place of the results with the sidebar kept; Esc returns to the list. Tab order and VoiceOver order: search, sidebar, results (or the preview).
 
-- Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows 28 pt, count right-aligned, `accent-text` on selected row.
+- Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows 24 pt with 13 pt text (tight, so the results list stays the dominant column), count right-aligned, `accent-text` on selected row.
 - List rows: 44 pt, 32 pt lead icon or thumbnail, first line `t1` single line, second line `t2` (source app, age). Badges: pin, trigger, Missing (warn). Up to 3 tag chips then "+n". Quick-paste badge ⌘1 to ⌘9 on the first nine rows.
 - Grid cells: 120 pt square, thumbnail, name caption, same badges.
 - Preview: content, metadata list, tags, note, "Show more" past 12 lines (text) or fit for images.
-- Footer: key hints (Paste, Plain text, Copy, Preview, Close); the active sort name (Recent, Oldest, Most Used, A to Z) beside the item count at the right; copy-only mode shows "Press ⌘V to paste" and an "Enable pasting" link.
+- Footer: the same four key hints in every state, in this order (Return Paste, Space Preview, ⌥Return Plain Text, Esc Close; ⌘C Copy replaces Plain Text while pasting is off), dimmed in place when the list has nothing to act on; the active sort name (Recent, Oldest, Most Used, A to Z) beside the item count at the right; copy-only mode shows "Press ⌘V to paste" and an "Enable pasting" link.
 
 ### 3.2 Shelf (image 05)
 
-Left and right: 280 pt wide, 64 pt cards, full height of the visible frame. Bottom: 140 pt strip, 112 pt cards. Menu-bar placement: 280 pt wide panel under the status item. Two sections: Pinned (up to 20) and Recent (20). Drop highlight uses the system accent colour (`NSColor.controlAccentColor`) so it respects the user's Mac setting. Sticky Shelf shows a close button (top right, 24 pt). Non-sticky Shelf dismisses on outside click or Esc.
+Left and right: 280 pt wide, 96 pt cards (header row: source app icon, name, age; content below), full height of the visible frame. Bottom: 140 pt strip, 144 pt cards. Menu-bar placement: 280 pt wide panel under the status item. Two sections: Pinned (up to 20) and Recent (20). Drop highlight uses the system accent colour (`NSColor.controlAccentColor`) so it respects the user's Mac setting. Sticky Shelf shows a close button (top right, 24 pt). Non-sticky Shelf dismisses on outside click or Esc.
 
 ### 3.3 Settings (image 06)
 
-Toolbar window, 560 wide, height fits the pane. Panes in order: General, Shortcuts, Triggers, Privacy, Storage, About. Changes apply immediately (no Apply button); the window reopens on the last pane. Destructive actions (Clear History, shorten retention, reset ignored apps) use alerts (§4).
+Toolbar window, 560 wide, height fits the pane. Panes in order: General, Shortcuts, Triggers, Privacy, Storage, About. The General pane is one grouped form with a header per group (System, Screenshots, Shelf, Library, Capture, Setup) and each control's note directly under its label, at the native 13 pt row height (FRD-008 FR-008-04). Shortcut rows use the shared recorder field: keycap glyphs, click to record, an inline clear button (FR-008-05). Changes apply immediately (no Apply button); the window reopens on the last pane. Destructive actions (Clear History, shorten retention, reset ignored apps) use alerts (§4).
 
 ### 3.4 Onboarding (image 07)
 
-Window 560x420, 8 steps, progress dots, every step skippable ("Skip"); Back and Continue at the bottom. Permission steps show what the user loses by skipping, in plain words, never as pressure. Step 4 (Input Monitoring) defaults to "Not Now".
+Window 560x420, 8 steps, progress dots, every step skippable ("Skip"); Back and Continue at the bottom. Permission steps (2 to 4) share one centred layout: a permission symbol, title and purpose, then what the user loses by skipping, in plain words, never as pressure; once the permission is granted a green check and one confirmation line replace that warning, Continue becomes the single prominent button, and the skip action is a plain text button (FR-008-12). Step 4 (Input Monitoring) defaults to "Not Now" until it is granted.
 
 ### 3.5 Menu-bar and feedback (image 08)
 
@@ -165,7 +165,7 @@ Menu-bar glyph (template image, 18 pt, adapts to the menu-bar tint). Shape diffe
 
 Alerts (NSAlert, sheet-style, max width 320): title at most 40, message at most 150, primary action on the right, Cancel left, destructive primary uses the destructive role (HIG: Alerts). Delete and Delete Items are never the default button when data loss is permanent; Cancel holds Return and Esc.
 
-Popovers (tags, note) anchor to the selected row, close on Esc, and return focus to the row. The shortcut and trigger editor is a small titled window instead (FRD-005 §8): centred, one at a time, closes on Esc or ⌘W.
+Popovers (tags, note) anchor to the selected row, close on Esc, and return focus to the row. The shortcut and trigger editor is a small titled window instead (FRD-005 §8): centred, one at a time, closes on Esc or ⌘W; a two-column aligned form (labels, then the shared shortcut recorder field with keycaps and inline clear, and the trigger field), titled "Shortcut for “<clip name>”".
 
 ## 5. States matrix
 
@@ -337,7 +337,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.footerItems` | 1 item / %lld items (plural: one, other) | (9/40) |
 | `ui.library.footerSelected` | %lld selected | (12/40) |
 | `ui.library.hintPaste` | Paste | (5/15) |
-| `ui.library.hintPlain` | Plain text | (10/15) |
+| `ui.library.hintPlain` | Plain Text | (10/15) |
 | `ui.library.hintCopy` | Copy | (4/15) |
 | `ui.library.hintPreview` | Preview | (7/15) |
 | `ui.library.hintClose` | Close | (5/15) |

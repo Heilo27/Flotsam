@@ -99,11 +99,11 @@ import Testing
         let imagePreview = await preview(of: image, in: lib)
         let textPreview = await preview(of: text, in: lib)
         // then: the image block names all eight fields in order with values matching the item
-        #expect(labels(imagePreview) == ["Kind", "Source", "Copied", "First copied", "Times copied", "Times pasted", "Size", "Pixel size"])
+        #expect(labels(imagePreview) == ["Kind", "Source", "Copied", "First copied", "Times copied", "Size", "Pixel size"])
         #expect(value(imagePreview, "Kind") == "Image")
         #expect(value(imagePreview, "Source") == "Safari")
         #expect(value(imagePreview, "Times copied") == "2")
-        #expect(value(imagePreview, "Times pasted") == "0")
+        #expect(value(imagePreview, "Times pasted") == nil)
         #expect(value(imagePreview, "Pixel size")?.replacingOccurrences(of: "×", with: "x") == "120 x 80")
         #expect(value(imagePreview, "First copied") != nil && value(imagePreview, "First copied") != value(imagePreview, "Copied"))
         // and: the text item's block has no Pixel size

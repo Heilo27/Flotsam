@@ -382,7 +382,7 @@ struct StoredState: Equatable {
     }
 
     // OC-3081. Mutation: the revoked-state notice shows while Accessibility is granted, or a hint goes missing.
-    @Test("OC-3081 with Accessibility granted and one row selected the footer has three hints, 7 items and no notice")
+    @Test("OC-3081 with Accessibility granted and one row selected the footer has four hints, 7 items and no notice")
     func oc3081_footerGranted() async throws {
         // given: 7 items, Accessibility granted
         let rig = try await PasteRig.make(trusted: true)
@@ -392,7 +392,7 @@ struct StoredState: Equatable {
         await rig.reopen()
         let footer = rig.model.footer()
         // then
-        #expect(footer.hints.count == 3)
+        #expect(footer.hints.count == 4)
         #expect(footer.countText == "7 items")
         #expect(footer.notice == nil)
     }

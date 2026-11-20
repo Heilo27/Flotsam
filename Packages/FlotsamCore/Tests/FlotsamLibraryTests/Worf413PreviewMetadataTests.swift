@@ -41,7 +41,7 @@ import Testing
         // given a colour item with a source
         let preview = LibraryPreview(row: row(kind: .color), content: content(kind: .color, text: "#1A2B3C"), imageData: nil)
         // then hex and rgb directly follow kind
-        #expect(labels(preview) == ["Kind", "Hex", "RGB", "Source", "Copied", "First copied", "Times copied", "Times pasted"])
+        #expect(labels(preview) == ["Kind", "Hex", "RGB", "Source", "Copied", "Times copied"])
         #expect(value(preview, "Hex") == "#1A2B3C")
         #expect(value(preview, "RGB") == "26, 43, 60")
         let swatch = preview.color
@@ -63,7 +63,7 @@ import Testing
         for text in ["hsl(210, 50%, 40%)", "red", "#12", "rgb(1, 2)"] {
             let preview = LibraryPreview(row: row(kind: .color), content: content(kind: .color, text: text), imageData: nil)
             #expect(preview.color == nil, "\(text)")
-            #expect(labels(preview) == ["Kind", "Source", "Copied", "First copied", "Times copied", "Times pasted"], "\(text)")
+            #expect(labels(preview) == ["Kind", "Source", "Copied", "Times copied"], "\(text)")
             #expect(preview.text(showingAll: true) == text)
         }
         // and: a colour item with no text at all
@@ -111,7 +111,7 @@ import Testing
         #expect(tagRows.map(\.value) == ["work", "home"])
         #expect(tagRows.map(\.tagColor) == [.blue, .green])
         #expect(preview.fields.filter { $0.label != "Tag" }.allSatisfy { $0.tagColor == nil })
-        #expect(preview.fields.count == 6 + 2 + 1)
+        #expect(preview.fields.count == 4 + 2 + 1)
     }
 
     // Red if an empty tag list or a nil / empty note still produces a row (B6: empty case).
@@ -119,7 +119,7 @@ import Testing
     func w413_noTagNoNote() {
         for note in [nil, ""] as [String?] {
             let preview = LibraryPreview(row: row(), content: content(note: note, tags: []), imageData: nil)
-            #expect(labels(preview) == ["Kind", "Source", "Copied", "First copied", "Times copied", "Times pasted"], "note \(String(describing: note))")
+            #expect(labels(preview) == ["Kind", "Source", "Copied", "Times copied"], "note \(String(describing: note))")
         }
     }
 
@@ -145,11 +145,14 @@ import Testing
     }
 
     // Red if a missing first-copied date blanks the row or drops it. The fallback is the copied time.
-    @Test("OC-3061 W413-P10 First copied is always present; without a stored date it equals Copied")
+    @Test("OC-3061 W413-P10 First copied shows only when it differs from Copied; without a stored date it falls back to Copied and is hidden")
     func w413_firstCopiedFallback() {
         let fallback = LibraryPreview(row: row(), content: content(firstCopiedAt: nil), imageData: nil)
-        #expect(value(fallback, "First copied") != nil)
-        #expect(value(fallback, "First copied") == value(fallback, "Copied"))
+        #expect(value(fallback, "First copied") == nil)
+        let same = LibraryPreview(row: row(), content: content(firstCopiedAt: copied), imageData: nil)
+        #expect(value(same, "First copied") == nil)
+        let earlier = LibraryPreview(row: row(), content: content(firstCopiedAt: copied.addingTimeInterval(-86_400)), imageData: nil)
+        #expect(value(earlier, "First copied") != nil)
     }
 
     // Red if Times copied shows the paste count (or the two are swapped), including at the 0 boundary.
@@ -157,7 +160,9 @@ import Testing
     func w413_timesCopiedVsPasted() {
         let preview = LibraryPreview(row: row(pasteCount: 0), content: content(copyCount: 5), imageData: nil)
         #expect(value(preview, "Times copied") == "5")
-        #expect(value(preview, "Times pasted") == "0")
+        #expect(value(preview, "Times pasted") == nil)
+        let zeroCopies = LibraryPreview(row: row(pasteCount: 2), content: content(copyCount: 0), imageData: nil)
+        #expect(value(zeroCopies, "Times copied") == nil)
         let swapped = LibraryPreview(row: row(pasteCount: 9), content: content(copyCount: 1), imageData: nil)
         #expect(value(swapped, "Times copied") == "1")
         #expect(value(swapped, "Times pasted") == "9")
@@ -230,7 +235,7 @@ import Testing
         #expect(shown?.richTextRTF == rtfBytes)
         // and: the sibling has no tag, no note, no RTF
         #expect(bare?.itemId == sibling)
-        #expect(bare?.fields.map(\.label) == ["Kind", "Copied", "First copied", "Times copied", "Times pasted"])
+        #expect(bare?.fields.map(\.label) == ["Kind", "Copied", "Times copied"])
         #expect(bare?.richTextRTF == nil)
     }
 

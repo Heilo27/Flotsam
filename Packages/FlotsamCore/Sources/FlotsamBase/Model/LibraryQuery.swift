@@ -82,6 +82,8 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
     /// FRD-003 FR-003-07 primary line as plain text. It is also the key of the alphabetical sort (FR-004-12).
     public let primaryLine: String
     public let sourceName: String?
+    /// The source app's bundle identifier, for the app icon a Shelf card draws; nil when unknown.
+    public let sourceBundleId: String?
     /// Tag names, alphabetical.
     public let tagNames: [String]
     public let isPinned: Bool
@@ -105,7 +107,8 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
     public init(
         id: UUID, kind: ItemKind, lastCopiedAt: Date, pasteCount: Int, primaryLine: String, sourceName: String?,
         tagNames: [String], isPinned: Bool, hasTrigger: Bool, hasShortcut: Bool, pixelWidth: Int?, pixelHeight: Int?,
-        memberCount: Int, byteSize: Int64, isMissing: Bool = false, isSecure: Bool = false, isUnavailable: Bool = false
+        memberCount: Int, byteSize: Int64, isMissing: Bool = false, isSecure: Bool = false, isUnavailable: Bool = false,
+        sourceBundleId: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -113,6 +116,7 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
         self.pasteCount = pasteCount
         self.primaryLine = primaryLine
         self.sourceName = sourceName
+        self.sourceBundleId = sourceBundleId
         self.tagNames = tagNames
         self.isPinned = isPinned
         self.hasTrigger = hasTrigger
@@ -137,7 +141,8 @@ public struct ItemRow: Sendable, Equatable, Identifiable {
             id: id, kind: kind, lastCopiedAt: lastCopiedAt, pasteCount: pasteCount, primaryLine: primaryLine,
             sourceName: sourceName, tagNames: tagNames, isPinned: isPinned, hasTrigger: hasTrigger,
             hasShortcut: hasShortcut, pixelWidth: pixelWidth, pixelHeight: pixelHeight, memberCount: memberCount,
-            byteSize: byteSize, isMissing: isMissing, isSecure: isSecure, isUnavailable: isUnavailable)
+            byteSize: byteSize, isMissing: isMissing, isSecure: isSecure, isUnavailable: isUnavailable,
+            sourceBundleId: sourceBundleId)
     }
 }
 

@@ -122,12 +122,12 @@ import FlotsamBase
 
     // MARK: Cards and motion
 
-    @Test("OC-6048 vertical cards are 64 pt tall; bottom cards are 112 pt wide")
+    @Test("OC-6048 vertical cards are 96 pt tall; bottom cards are 144 pt wide")
     func cardSizes() {
-        #expect(ShelfLayout.cardSize(for: .rightEdge).height == 64)
-        #expect(ShelfLayout.cardSize(for: .leftEdge).height == 64)
-        #expect(ShelfLayout.cardSize(for: .menuBar).height == 64)
-        #expect(ShelfLayout.cardSize(for: .bottomEdge).width == 112)
+        #expect(ShelfLayout.cardSize(for: .rightEdge).height == 96)
+        #expect(ShelfLayout.cardSize(for: .leftEdge).height == 96)
+        #expect(ShelfLayout.cardSize(for: .menuBar).height == 96)
+        #expect(ShelfLayout.cardSize(for: .bottomEdge).width == 144)
         #expect(ShelfLayout.isHorizontal(.bottomEdge))
         #expect(!ShelfLayout.isHorizontal(.rightEdge))
     }

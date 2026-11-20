@@ -19,6 +19,8 @@ struct ShelfView: View {
 
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
 
+    private static let pillFadeWidth: CGFloat = 20
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
@@ -61,6 +63,15 @@ struct ShelfView: View {
             .textFieldStyle(.plain)
             .focused($searchFocused)
             .accessibilityLabel(ShelfText.string(ShelfText.searchPlaceholder))
+            // The clear button exists only while the field has text.
+            if !model.searchText.isEmpty {
+                Button { model.setSearchText(String()) } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(ShelfText.string(ShelfText.clearSearch))
+                .accessibilityLabel(ShelfText.string(ShelfText.clearSearch))
+            }
         }
         .frame(width: horizontal ? 220 : nil, height: ShelfLayout.searchRowHeight)
     }
@@ -75,8 +86,17 @@ struct ShelfView: View {
                     pill(title: ShelfText.typeTitle(kind), kind: kind)
                 }
             }
+            // Room at the end, so the last pill clears the fade once the row is scrolled all the way.
+            .padding(.trailing, Self.pillFadeWidth)
         }
         .frame(height: ShelfLayout.searchRowHeight)
+        // A pill cut off at the trailing edge fades out instead of ending mid-word, which says the row scrolls.
+        .mask(
+            HStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: Self.pillFadeWidth)
+            })
     }
 
     private func pill(title: String, kind: ItemKind?) -> some View {
@@ -211,36 +231,29 @@ private struct ShelfCardView: View {
     @State private var image: NSImage?
 
     private var selected: Bool { model.selection.contains(card.id) }
+    private let shape = RoundedRectangle(cornerRadius: 10)
 
+    /// Header row over a content area; the header never overlaps the content (hill-climb r1, TASK-529).
     var body: some View {
-        let layout = horizontal ? AnyLayout(VStackLayout(spacing: 4)) : AnyLayout(HStackLayout(spacing: 8))
-        layout {
-            visual.frame(width: 40, height: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                if let text = card.text { Text(verbatim: text).font(.callout).lineLimit(ShelfLayout.cardTextLineLimit) }
-                if card.isMissing {
-                    Text(verbatim: ShelfText.string(ShelfText.missing)).font(.caption2).foregroundStyle(.red)
-                }
-                if let unavailable = card.unavailableBadge {
-                    Text(verbatim: unavailable).font(.caption2).foregroundStyle(.red)
-                }
-                if let source = card.sourceName {
-                    Text(verbatim: source).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 6) {
+            header
+            content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .padding(6)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.accentColor.opacity(0.28) : Color.primary.opacity(0.06)))
+        .background {
+            // A raised surface: an opaque card fill, a hairline edge that also separates it on a dark panel, and a soft shadow.
+            shape.fill(Color(nsColor: .controlBackgroundColor))
+                .overlay(shape.fill(Color.accentColor.opacity(selected ? 0.28 : 0)))
+                .overlay(shape.strokeBorder(selected ? Color.accentColor : Color.primary.opacity(0.14), lineWidth: selected ? 1.5 : 0.5))
+                .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
+        }
         .overlay {
             // A dropped card flashes for `ShelfLayout.dropHighlightDuration` (FR-006-15).
             if model.highlightedItemId == card.id {
-                RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor, lineWidth: 2)
+                shape.strokeBorder(Color.accentColor, lineWidth: 2)
             }
-        }
-        .overlay(alignment: .topTrailing) {
-            if card.isPinned { Image(systemName: "pin.fill").font(.caption2).padding(4).accessibilityHidden(true) }
         }
         .contentShape(Rectangle())
         .overlay {
@@ -263,11 +276,69 @@ private struct ShelfCardView: View {
         }
     }
 
-    @ViewBuilder private var visual: some View {
+    /// Source app icon, app name, pin badge and age: one 16 pt row.
+    private var header: some View {
+        HStack(spacing: 4) {
+            Image(nsImage: SourceAppIcons.icon(forBundleId: card.sourceBundleId))
+                .resizable().frame(width: 14, height: 14).accessibilityHidden(true)
+            if let source = card.sourceName {
+                Text(verbatim: source).font(.caption.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 4)
+            if card.isPinned { Image(systemName: "pin.fill").font(.caption2).foregroundStyle(.secondary).accessibilityHidden(true) }
+            Text(verbatim: card.age).font(.caption2).foregroundStyle(.tertiary).lineLimit(1).fixedSize()
+        }
+        .frame(height: 16)
+    }
+
+    @ViewBuilder private var content: some View {
         switch card.visual {
         case .thumbnail:
-            if let image { Image(nsImage: image).resizable().scaledToFill().clipShape(RoundedRectangle(cornerRadius: 4)) }
-            else { Image(systemName: symbolName(for: card.kind)).font(.title2).foregroundStyle(.secondary) }
+            // Full bleed across the content area, clipped to its own rounded rectangle so a wide or tall picture can
+            // never run past the card edge. `Color.clear.overlay` takes the proposed size, which `scaledToFill` would not.
+            Color.clear
+                .overlay {
+                    if let image { Image(nsImage: image).resizable().scaledToFill() }
+                    else { Image(systemName: symbolName(for: card.kind)).font(.title2).foregroundStyle(.secondary) }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        case .swatch:
+            // A big swatch with its value under it.
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 6).fill(Self.color(from: card.text) ?? Color.secondary)
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if let text = card.text { Text(verbatim: text).font(.caption.monospaced()).lineLimit(1) }
+            }
+        case .fileIcon, .stackedIcon, .secure:
+            HStack(alignment: .top, spacing: 8) {
+                picture.frame(width: 36, height: 36)
+                textColumn
+            }
+        case .kindIcon(let kind):
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: symbolName(for: kind)).font(.caption).foregroundStyle(.secondary).frame(width: 14)
+                textColumn
+            }
+        }
+    }
+
+    private var textColumn: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let text = card.text { Text(verbatim: text).font(.callout).lineLimit(ShelfLayout.cardTextLineLimit) }
+            if card.isMissing {
+                Text(verbatim: ShelfText.string(ShelfText.missing)).font(.caption2).foregroundStyle(.red)
+            }
+            if let unavailable = card.unavailableBadge {
+                Text(verbatim: unavailable).font(.caption2).foregroundStyle(.red)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The picture of the file, bundle and secure cards (the others draw their own content above).
+    @ViewBuilder private var picture: some View {
+        switch card.visual {
         case .fileIcon:
             Image(nsImage: Self.fileIcon(named: card.text, folder: card.kind == .folder)).resizable().scaledToFit()
         case .stackedIcon(let count):
@@ -275,11 +346,7 @@ private struct ShelfCardView: View {
                 Image(systemName: symbolName(for: .bundle)).font(.title2).foregroundStyle(.secondary)
                 Text(verbatim: String(count)).font(.caption2.bold()).padding(2)
             }
-        case .swatch:
-            RoundedRectangle(cornerRadius: 6).fill(Self.color(from: card.text) ?? Color.secondary)
-        case .kindIcon(let kind):
-            Image(systemName: symbolName(for: kind)).font(.title2).foregroundStyle(.secondary)
-        case .secure:
+        default:
             Image(systemName: "lock.fill").font(.title2).foregroundStyle(.secondary)
         }
     }
@@ -304,5 +371,22 @@ private struct ShelfCardView: View {
     /// A colour item's swatch; nil when its notation is not one `ColorChannels` reads.
     private static func color(from text: String?) -> Color? {
         ColorChannels(text: text).map(Color.init)
+    }
+}
+
+/// Source app icons for the card header, one lookup per app. The app may be gone from this Mac, and then the card shows a
+/// generic app glyph; no disk access happens per frame, because a drawn icon is cached by bundle identifier.
+@MainActor
+private enum SourceAppIcons {
+    private static var cache: [String: NSImage] = [:]
+    private static let generic: NSImage = NSWorkspace.shared.icon(for: .applicationBundle)
+
+    static func icon(forBundleId bundleId: String?) -> NSImage {
+        guard let bundleId, !bundleId.isEmpty else { return generic }
+        if let cached = cache[bundleId] { return cached }
+        let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
+            .map { NSWorkspace.shared.icon(forFile: $0.path) } ?? generic
+        cache[bundleId] = icon
+        return icon
     }
 }

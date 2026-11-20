@@ -35,10 +35,10 @@ import Testing
     }
 
     @Test func footerOffersEnableOnlyWhileAccessibilityIsOff() {
-        let denied = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: false, sort: .recent)
+        let denied = LibraryFooter(totalCount: 3, selectionCount: 1, isAccessibilityTrusted: false, sort: .recent)
         #expect(denied.enableLabel == "Enable")
         #expect(denied.notice == "Press ⌘V to paste")
-        let granted = LibraryFooter(totalCount: 3, selectionCount: 1, isPreviewOpen: false, isAccessibilityTrusted: true, sort: .recent)
+        let granted = LibraryFooter(totalCount: 3, selectionCount: 1, isAccessibilityTrusted: true, sort: .recent)
         #expect(granted.enableLabel == nil)
     }
 

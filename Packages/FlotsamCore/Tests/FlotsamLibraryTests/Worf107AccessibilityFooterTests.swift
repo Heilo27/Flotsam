@@ -39,17 +39,17 @@ import Testing
         // given Accessibility is off, when the footer is built for 0, 1 and 3 selected rows with preview open and closed
         for selection in [0, 1, 3] {
             for preview in [false, true] {
-                let off = LibraryFooter(totalCount: 5, selectionCount: selection, isPreviewOpen: preview, isAccessibilityTrusted: false, sort: .recent)
+                let off = LibraryFooter(totalCount: 5, selectionCount: selection, isAccessibilityTrusted: false, sort: .recent)
                 // then the button label is the literal "Enable", and is absent once granted
                 #expect(off.enableLabel == "Enable", "selection \(selection) preview \(preview)")
-                let on = LibraryFooter(totalCount: 5, selectionCount: selection, isPreviewOpen: preview, isAccessibilityTrusted: true, sort: .recent)
+                let on = LibraryFooter(totalCount: 5, selectionCount: selection, isAccessibilityTrusted: true, sort: .recent)
                 #expect(on.enableLabel == nil, "selection \(selection) preview \(preview)")
             }
         }
         // and FR-003-17: the copy-only text is persistent for single and empty selection, in both preview states
         for selection in [0, 1] {
             for preview in [false, true] {
-                let off = LibraryFooter(totalCount: 5, selectionCount: selection, isPreviewOpen: preview, isAccessibilityTrusted: false, sort: .recent)
+                let off = LibraryFooter(totalCount: 5, selectionCount: selection, isAccessibilityTrusted: false, sort: .recent)
                 #expect(off.notice == "Press ⌘V to paste")
             }
         }

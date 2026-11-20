@@ -9,10 +9,23 @@ struct OnboardingView: View {
     let finish: () -> Void
 
     var body: some View {
+        Group {
+            if isPermissionStep { permissionLayout } else { standardLayout }
+        }
+        .padding(24)
+        .frame(width: 560, height: 420)
+        .refreshWhileVisible { model.refresh() }
+    }
+
+    private var stepCaption: some View {
+        Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+    private var standardLayout: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            stepCaption
             Text(verbatim: text(model.step.titleKey))
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
@@ -21,9 +34,109 @@ struct OnboardingView: View {
             Spacer(minLength: 0)
             footer
         }
-        .padding(24)
-        .frame(width: 480, height: 380)
-        .refreshWhileVisible { model.refresh() }
+    }
+
+    // MARK: Permission steps
+
+    /// The three steps that ask for a permission (clipboard, Accessibility, Input Monitoring) share one centred layout:
+    /// a symbol, the title and purpose, then either what is missing and how to fix it, or one line saying it is on.
+    private var isPermissionStep: Bool {
+        model.step == .clipboard || model.step == .accessibility || model.step == .inputMonitoring
+    }
+
+    /// Live status of the current permission step; false on every other step.
+    private var permissionGranted: Bool {
+        switch model.step {
+        case .clipboard: model.pasteboardAllowed
+        case .accessibility: model.accessibilityGranted
+        case .inputMonitoring: model.inputMonitoringGranted
+        default: false
+        }
+    }
+
+    private var permissionLayout: some View {
+        VStack(spacing: 16) {
+            stepCaption.frame(maxWidth: .infinity, alignment: .leading)
+            Spacer(minLength: 0)
+            VStack(spacing: 12) {
+                Image(systemName: permissionSymbol)
+                    .font(.system(size: 44))
+                    .foregroundStyle(permissionGranted ? Color.green : Color.accentColor)
+                    .accessibilityHidden(true)
+                Text(verbatim: text(model.step.titleKey))
+                    .font(.title2.bold())
+                    .accessibilityAddTraits(.isHeader)
+                Text(verbatim: text(model.step.purposeKey)).multilineTextAlignment(.center)
+                permissionDetail.padding(.top, 4)
+            }
+            .frame(maxWidth: .infinity)
+            Spacer(minLength: 0)
+            footer
+        }
+    }
+
+    private var permissionSymbol: String {
+        switch model.step {
+        case .clipboard: "doc.on.clipboard"
+        case .accessibility: "accessibility"
+        default: "keyboard"
+        }
+    }
+
+    @ViewBuilder
+    private var permissionDetail: some View {
+        if permissionGranted {
+            // Granted: the warning and the way to System Settings are moot, so one line says it is on and Continue is the
+            // only prominent control.
+            let line = text(grantedKey)
+            Label(line, systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(verbatim: [text(permissionNameKey), text("ui.onboarding.granted"), line].joined(separator: " ")))
+        } else {
+            Text(verbatim: text(missingKey)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            statusRow(permissionNameKey, granted: false)
+            switch model.step {
+            case .clipboard:
+                Button(text("ui.onboarding.openSystemSettings")) { model.openPasteboardSettings() }
+            case .accessibility:
+                allowRow(allow: { model.allowAccessibility() }, open: { model.openSettings(for: .accessibility) })
+            default:
+                allowRow(allow: { model.allowInputMonitoring() }, open: { model.openSettings(for: .inputMonitoring) })
+            }
+        }
+    }
+
+    /// "Allow" asks the system; "Open System Settings" is the fallback, so it is demoted to a link.
+    private func allowRow(allow: @escaping () -> Void, open: @escaping () -> Void) -> some View {
+        HStack(spacing: 16) {
+            Button(text("ui.onboarding.allow"), action: allow)
+            Button(text("ui.onboarding.openSystemSettings"), action: open).buttonStyle(.link)
+        }
+    }
+
+    private var permissionNameKey: String {
+        switch model.step {
+        case .clipboard: "ui.permission.pasteboard"
+        case .accessibility: "ui.permission.accessibility"
+        default: "ui.permission.inputMonitoring"
+        }
+    }
+
+    private var grantedKey: String {
+        switch model.step {
+        case .clipboard: "ui.onboarding.clipboardGranted"
+        case .accessibility: "ui.onboarding.accessibilityGranted"
+        default: "ui.onboarding.inputMonitoringGranted"
+        }
+    }
+
+    private var missingKey: String {
+        switch model.step {
+        case .clipboard: "ui.onboarding.clipboardMissing"
+        case .accessibility: "ui.onboarding.accessibilityMissing"
+        default: "ui.onboarding.inputMonitoringOptional"
+        }
     }
 
     // MARK: Step content
@@ -33,24 +146,8 @@ struct OnboardingView: View {
         switch model.step {
         case .welcome:
             Text(verbatim: text("ui.onboarding.welcomeNetwork"))
-        case .clipboard:
-            Text(verbatim: text("ui.onboarding.clipboardMissing")).foregroundStyle(.secondary)
-            statusRow("ui.permission.pasteboard", granted: model.pasteboardAllowed)
-            Button(text("ui.onboarding.openSystemSettings")) { model.openPasteboardSettings() }
-        case .accessibility:
-            Text(verbatim: text("ui.onboarding.accessibilityMissing")).foregroundStyle(.secondary)
-            statusRow("ui.permission.accessibility", granted: model.accessibilityGranted)
-            HStack {
-                Button(text("ui.onboarding.allow")) { model.allowAccessibility() }
-                Button(text("ui.onboarding.openSystemSettings")) { model.openSettings(for: .accessibility) }
-            }
-        case .inputMonitoring:
-            Text(verbatim: text("ui.onboarding.inputMonitoringOptional")).foregroundStyle(.secondary)
-            statusRow("ui.permission.inputMonitoring", granted: model.inputMonitoringGranted)
-            HStack {
-                Button(text("ui.onboarding.allow")) { model.allowInputMonitoring() }
-                Button(text("ui.onboarding.openSystemSettings")) { model.openSettings(for: .inputMonitoring) }
-            }
+        case .clipboard, .accessibility, .inputMonitoring:
+            EmptyView()  // drawn by `permissionLayout`
         case .screenshots:
             screenshotsContent
         case .hotkey:
@@ -120,9 +217,11 @@ struct OnboardingView: View {
 
     // MARK: Footer
 
-    /// Step 4's "Not Now" is the visible default, so Continue is not the default action there (FR-008-12).
+    /// Step 4's "Not Now" is the visible default while the permission is missing, so Continue is not the default action
+    /// there (FR-008-12); once it is granted, Continue is. Skip and Not Now are plain text unless they are the default.
     private var footer: some View {
         let optionalStep = model.step == .accessibility || model.step == .inputMonitoring
+        let notNowIsDefault = model.step == .inputMonitoring && !permissionGranted
         return HStack {
             Button(text("ui.onboarding.back")) { model.back() }
                 .disabled(model.flow.isFirst)
@@ -131,10 +230,16 @@ struct OnboardingView: View {
                 Button(text("ui.onboarding.finish")) { finish() }
                     .keyboardShortcut(.defaultAction)
             } else {
-                Button(text(optionalStep ? "ui.onboarding.notNow" : "ui.onboarding.skip")) { model.skip() }
-                    .keyboardShortcut(model.step == .inputMonitoring ? .defaultAction : nil)
+                if notNowIsDefault {
+                    Button(text("ui.onboarding.notNow")) { model.skip() }
+                        .keyboardShortcut(.defaultAction)
+                } else {
+                    Button(text(optionalStep ? "ui.onboarding.notNow" : "ui.onboarding.skip")) { model.skip() }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                }
                 Button(text("ui.onboarding.continue")) { model.continueFromStep() }
-                    .keyboardShortcut(model.step == .inputMonitoring ? nil : .defaultAction)
+                    .keyboardShortcut(notNowIsDefault ? nil : .defaultAction)
             }
         }
     }

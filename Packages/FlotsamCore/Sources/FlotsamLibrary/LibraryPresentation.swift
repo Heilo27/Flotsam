@@ -116,11 +116,13 @@ public struct SidebarEntry: Equatable, Identifiable {
     }
 }
 
-/// The footer (FR-003-11, FR-003-18): the three most relevant keys, the count, and the copy-only notice.
+/// The footer (FR-003-11, FR-003-18): the four core keys in one fixed order, the count, and the copy-only notice.
 public struct LibraryFooter: Equatable {
     public struct Hint: Equatable {
         public let key: String
         public let label: String
+        /// False when the key has nothing to act on (an empty list or no results): the view dims the hint, it stays in place.
+        public var isEnabled: Bool = true
     }
 
     public let hints: [Hint]
@@ -134,7 +136,7 @@ public struct LibraryFooter: Equatable {
     public let sortName: String
 
     public init(
-        totalCount: Int, selectionCount: Int, isPreviewOpen: Bool, isAccessibilityTrusted: Bool, sort: LibrarySort,
+        totalCount: Int, selectionCount: Int, isAccessibilityTrusted: Bool, sort: LibrarySort,
         queueRemaining: Int = 0
     ) {
         sortName = LibraryText.sortName(sort)
@@ -149,14 +151,22 @@ public struct LibraryFooter: Equatable {
             notice = LibraryText.string("ui.library.footerMultiDisabled")
             return
         }
+        // The same four hints in every state, in the same places (FR-003-18); only the third one swaps with Accessibility,
+        // and with nothing in the list everything but Esc has nothing to act on.
+        let hasRows = totalCount > 0
+        let paste = Hint(
+            key: LibraryText.string("ui.library.keyReturn"), label: LibraryText.string("ui.library.hintPaste"), isEnabled: hasRows)
         let preview = Hint(
-            key: LibraryText.string(isPreviewOpen ? "ui.library.keyEsc" : "ui.library.keySpace"),
-            label: LibraryText.string(isPreviewOpen ? "ui.library.hintClose" : "ui.library.hintPreview"))
-        let paste = Hint(key: LibraryText.string("ui.library.keyReturn"), label: LibraryText.string("ui.library.hintPaste"))
+            key: LibraryText.string("ui.library.keySpace"), label: LibraryText.string("ui.library.hintPreview"), isEnabled: hasRows)
         let secondary = isAccessibilityTrusted
-            ? Hint(key: LibraryText.string("ui.library.keyOptionReturn"), label: LibraryText.string("ui.library.hintPlain"))
-            : Hint(key: LibraryText.string("ui.library.keyCommandC"), label: LibraryText.string("ui.library.hintCopy"))
-        hints = [paste, secondary, preview]
+            ? Hint(
+                key: LibraryText.string("ui.library.keyOptionReturn"), label: LibraryText.string("ui.library.hintPlain"),
+                isEnabled: hasRows)
+            : Hint(
+                key: LibraryText.string("ui.library.keyCommandC"), label: LibraryText.string("ui.library.hintCopy"),
+                isEnabled: hasRows)
+        let close = Hint(key: LibraryText.string("ui.library.keyEsc"), label: LibraryText.string("ui.library.hintClose"))
+        hints = [paste, preview, secondary, close]
         countText = LibraryText.itemCount(totalCount)
         // A waiting paste queue says so, and that Esc drops it (FR-003-25); it outranks the copy-only reminder, which the
         // enable button still carries.

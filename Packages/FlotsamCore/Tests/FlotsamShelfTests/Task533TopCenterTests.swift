@@ -113,7 +113,7 @@ import FlotsamBase
     func horizontalRow() {
         #expect(ShelfLayout.isHorizontal(.topCenter))
         #expect(ShelfLayout.cardSize(for: .topCenter) == ShelfLayout.cardSize(for: .bottomEdge))
-        #expect(ShelfLayout.cardSize(for: .topCenter).width == 112)
+        #expect(ShelfLayout.cardSize(for: .topCenter).width == 144)
         #expect(!ShelfLayout.isHorizontal(.menuBar))
         #expect(!ShelfLayout.isHorizontal(.rightEdge))
     }

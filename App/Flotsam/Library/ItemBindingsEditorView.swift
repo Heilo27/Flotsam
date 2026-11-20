@@ -7,6 +7,8 @@ import SwiftUI
 struct ItemBindingsEditorView: View {
     let model: ItemBindingsEditorModel
     let close: () -> Void
+    /// Called with the clip's name once the item has loaded, so the window title can name it.
+    var nameLoaded: (String) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -27,6 +29,7 @@ struct ItemBindingsEditorView: View {
         // The recorder must not outlive the window or its focus: its hotkey suspension would stick (FR-005-04).
         .onDisappear { model.stopRecording() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in model.stopRecording() }
+        .onChange(of: model.clipName) { _, name in if let name { nameLoaded(name) } }
         .onChange(of: model.phase) { _, phase in if phase == .saved { close() } }
     }
 
@@ -39,10 +42,13 @@ struct ItemBindingsEditorView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 14) {
-            hotkeyRow
-            if model.triggerOffered {
-                triggerRow
-            } else {
+            Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 14) {
+                hotkeyRow
+                if model.triggerOffered {
+                    triggerRow
+                }
+            }
+            if !model.triggerOffered {
                 Text(.editorNoTrigger).font(.caption).foregroundStyle(.secondary)
             }
             if let warning = model.warningMessage {
@@ -58,45 +64,37 @@ struct ItemBindingsEditorView: View {
         }
     }
 
+    /// Two aligned columns: right-aligned labels, then the control with its help under it.
     private var hotkeyRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            LabeledContent {
-                HStack {
-                    if model.recorder.isRecording {
-                        Text(.shortcutRecording).foregroundStyle(.secondary)
-                    } else {
-                        Text(verbatim: model.hotkey?.displayString ?? SettingsString.shortcutNotSet.text)
-                        Button(SettingsString.shortcutRecord.text) { model.startRecording() }
-                        if model.hotkey != nil {
-                            Button(SettingsString.shortcutClear.text) { model.clearHotkey() }
-                        }
-                    }
-                }
-            } label: {
-                Text(.editorShortcut)
-            }
-            if let message = model.recorder.errorMessage {
-                Text(verbatim: message).font(.caption).foregroundStyle(.red)
+        GridRow(alignment: .firstTextBaseline) {
+            Text(.editorShortcut).gridColumnAlignment(.trailing)
+            HStack {
+                ShortcutRecorderField(
+                    chord: model.hotkey, recorder: model.recorder, allowClear: true, startRecording: model.startRecording,
+                    clear: model.clearHotkey)
+                Spacer(minLength: 0)
             }
         }
     }
 
     private var triggerRow: some View {
         @Bindable var model = model
-        return VStack(alignment: .leading, spacing: 4) {
-            LabeledContent {
-                TextField(SettingsString.editorTriggerPlaceholder.text, text: $model.triggerText)
+        return GridRow(alignment: .firstTextBaseline) {
+            Text(.editorTrigger)
+            VStack(alignment: .leading, spacing: 4) {
+                // Typed text is primary colour; only the empty field shows the dimmer placeholder.
+                TextField(text: $model.triggerText, prompt: Text(.editorTriggerPlaceholder)) { Text(.editorTrigger) }
+                    .labelsHidden()
                     .textFieldStyle(.roundedBorder)
+                    .foregroundStyle(.primary)
                     .disableAutocorrection(true)
-            } label: {
-                Text(.editorTrigger)
+                if let message = model.triggerErrorMessage {
+                    Text(verbatim: message).font(.caption).foregroundStyle(.red)
+                } else {
+                    Text(.editorTriggerHelp).font(.caption).foregroundStyle(.secondary)
+                }
+                Text(.editorVariablesHelp).font(.caption).foregroundStyle(.secondary)
             }
-            if let message = model.triggerErrorMessage {
-                Text(verbatim: message).font(.caption).foregroundStyle(.red)
-            } else {
-                Text(.editorTriggerHelp).font(.caption).foregroundStyle(.secondary)
-            }
-            Text(.editorVariablesHelp).font(.caption).foregroundStyle(.secondary)
         }
     }
 }

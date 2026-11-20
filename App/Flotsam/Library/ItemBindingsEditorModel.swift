@@ -38,6 +38,9 @@ final class ItemBindingsEditorModel {
     /// Image, screenshot, file, folder and bundle items are not offered a trigger (FR-005-09).
     private(set) var triggerOffered = false
     private(set) var hotkey: Chord?
+    /// What the clip is called in the window title: its first non-empty text line, else its first file's name, else its
+    /// kind. Nil until the item is loaded (the title is then the generic one).
+    private(set) var clipName: String?
     var triggerText = ""
     @ObservationIgnored private var storedHotkey: Chord?
     @ObservationIgnored private var storedTrigger: String?
@@ -89,6 +92,7 @@ final class ItemBindingsEditorModel {
                 return
             }
             triggerOffered = content.kind.isTextBearing
+            clipName = Self.name(of: content)
             storedHotkey = bindings.hotkeys[itemId]
             storedTrigger = bindings.triggers[itemId]
             hotkey = storedHotkey
@@ -103,6 +107,21 @@ final class ItemBindingsEditorModel {
             services.report(error)
             phase = .failed
         }
+    }
+
+    /// The longest a clip name gets in a window title.
+    private static let nameLimit = 40
+
+    private static func name(of content: ItemContent) -> String {
+        if let line = content.plainText?.split(whereSeparator: \.isNewline)
+            .map({ $0.trimmingCharacters(in: .whitespaces) }).first(where: { !$0.isEmpty }) {
+            return line.count > nameLimit ? String(line.prefix(nameLimit)) + "…" : line
+        }
+        if let path = content.members.first?.path {
+            let file = (path as NSString).lastPathComponent
+            if !file.isEmpty { return file }
+        }
+        return KindLabel.text(for: content.kind)
     }
 
     // MARK: Hotkey

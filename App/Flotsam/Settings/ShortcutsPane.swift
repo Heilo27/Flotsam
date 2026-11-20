@@ -46,22 +46,9 @@ private struct ShortcutRow: View {
     var body: some View {
         let binding = model.value(key)
         LabeledContent {
-            VStack(alignment: .trailing, spacing: 4) {
-                HStack {
-                    if recorder.isRecording {
-                        Text(.shortcutRecording).foregroundStyle(.secondary)
-                    } else {
-                        Text(verbatim: shown(binding))
-                        Button(SettingsString.shortcutRecord.text) { startRecording() }
-                        if allowClear, binding != .none {
-                            Button(SettingsString.shortcutClear.text) { model.binding(key).wrappedValue = .none }
-                        }
-                    }
-                }
-                if let message = recorder.errorMessage {
-                    Text(verbatim: message).settingsCaption().foregroundStyle(.red)
-                }
-            }
+            ShortcutRecorderField(
+                chord: chord(of: binding), recorder: recorder, allowClear: allowClear, startRecording: startRecording,
+                clear: { model.binding(key).wrappedValue = .none })
         } label: {
             Text(label)
         }
@@ -76,10 +63,10 @@ private struct ShortcutRow: View {
         }
     }
 
-    private func shown(_ binding: ChordBinding) -> String {
+    private func chord(of binding: ChordBinding) -> Chord? {
         switch binding {
-        case .none: SettingsString.shortcutNotSet.text
-        case .chord(let chord): chord.displayString
+        case .none: nil
+        case .chord(let chord): chord
         }
     }
 }

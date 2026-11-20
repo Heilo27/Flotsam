@@ -39,8 +39,10 @@ public enum ShelfLayout {
 
     // MARK: Cards and sections (FR-006-06, FR-006-07)
 
-    public static let cardHeight: CGFloat = 64
-    public static let bottomCardWidth: CGFloat = 112
+    /// A card is a header row (source icon, app name, age) over a content area (hill-climb r1, TASK-529): 96 pt tall in the
+    /// vertical placements, 144 pt wide in the horizontal ones.
+    public static let cardHeight: CGFloat = 96
+    public static let bottomCardWidth: CGFloat = 144
     public static let cardSpacing: CGFloat = 4
     public static let sectionHeaderHeight: CGFloat = 24
     public static let contentPadding: CGFloat = 8
@@ -208,7 +210,7 @@ public enum ShelfLayout {
         }
     }
 
-    /// The card size for a placement (FR-006-07): 64 pt tall across the panel, or 112 pt wide in the bottom strip.
+    /// The card size for a placement (FR-006-07): 96 pt tall across the panel, or 144 pt wide in the bottom strip.
     /// In the horizontal placements a sticky Shelf's cards are as much shorter as its search row is tall (`showsSearch`).
     public static func cardSize(for placement: ShelfPlacement, showsSearch: Bool = false) -> CGSize {
         if isHorizontal(placement) {

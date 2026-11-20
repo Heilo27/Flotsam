@@ -155,7 +155,7 @@ public final class LibraryViewModel {
     public func footer(now: Date = Date()) -> LibraryFooter {
         _ = accessibilityRevision
         return LibraryFooter(
-            totalCount: totalCount, selectionCount: selection.count, isPreviewOpen: isPreviewOpen,
+            totalCount: totalCount, selectionCount: selection.count,
             isAccessibilityTrusted: effects.isAccessibilityTrusted(), sort: sort, queueRemaining: effects.queueRemaining())
     }
 

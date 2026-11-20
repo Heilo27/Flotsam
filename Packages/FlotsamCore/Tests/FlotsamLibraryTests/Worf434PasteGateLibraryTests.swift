@@ -185,7 +185,7 @@ struct Worf434PasteGateLibraryTests {
     }
 
     /// FR-003-18 / OC-8119. given Accessibility untrusted, then the footer notice reads 'Press ⌘V to paste' and the
-    /// second hint is ⌘C Copy; given trusted, no notice and the second hint is ⌥Return Plain text. Red if the
+    /// third hint is ⌘C Copy; given trusted, no notice and the third hint is ⌥Return Plain Text. Red if the
     /// footer stops asking the shared probe extension, or swaps the branches.
     @Test("footer: untrusted shows the copy-only notice and the ⌘C hint; trusted shows neither")
     func footerFollowsAccessibility() {
@@ -193,11 +193,11 @@ struct Worf434PasteGateLibraryTests {
         let trusted = W434Rig(accessibility: true).model.footer()
 
         #expect(untrusted.notice == "Press ⌘V to paste")
-        #expect(untrusted.hints.map(\.key) == ["Return", "⌘C", "Space"])
-        #expect(untrusted.hints[1].label == "Copy")
+        #expect(untrusted.hints.map(\.key) == ["Return", "Space", "⌘C", "Esc"])
+        #expect(untrusted.hints[2].label == "Copy")
         #expect(trusted.notice == nil)
-        #expect(trusted.hints[1].key == "⌥Return")
-        #expect(trusted.hints[1].label == "Plain text")
+        #expect(trusted.hints[2].key == "⌥Return")
+        #expect(trusted.hints[2].label == "Plain Text")
     }
 
     /// FR-008-13 rule b: state is read fresh, never cached. given a footer read while untrusted, when Accessibility is

@@ -2,7 +2,8 @@ import AppKit
 import FlotsamBase
 import SwiftUI
 
-/// General (FR-008-04): Launch at Login, screenshot pickup, folder and import, the Shelf, and the setup guide.
+/// General (FR-008-04): Launch at Login, screenshot pickup, folder and import, the Shelf, the Library, capture, and the
+/// setup guide, in one grouped form with a header per group and each note directly under its own control.
 struct GeneralPane: View {
     let model: SettingsModel
     @State private var loginStatus: LoginItemStatus
@@ -19,11 +20,14 @@ struct GeneralPane: View {
         let placement = model.value(SettingKeys.shelfPlacement)
         Form {
             Section {
-                Toggle(isOn: Binding(get: { login.isOn }, set: { setLogin($0) })) { Text(.launchAtLogin) }
-                if let caption = login.caption { Text(caption).settingsCaption() }
+                Toggle(isOn: Binding(get: { login.isOn }, set: { setLogin($0) })) {
+                    SettingLabel(.launchAtLogin, note: login.caption?.text)
+                }
                 if login.showsLoginItemsButton {
                     Button { model.env.openLoginItems() } label: { Text(.openLoginItems) }
                 }
+            } header: {
+                Text(.sectionSystem)
             }
             Section {
                 Toggle(isOn: model.binding(SettingKeys.screenshotsEnabled)) { Text(.pickUpScreenshots) }
@@ -36,13 +40,12 @@ struct GeneralPane: View {
                         .disabled(model.value(SettingKeys.screenshotsFolderOverride) == .none)
                     }
                 } label: {
-                    VStack(alignment: .leading) {
-                        Text(.screenshotFolder)
-                        Text(verbatim: folderName).settingsCaption()
-                    }
+                    SettingLabel(.screenshotFolder, note: folderName)
                 }
                 // FR-002-12: always available, including while pickup is off, so never disabled.
                 Button { model.env.importRecentScreenshots() } label: { Text(.importRecentScreenshots) }
+            } header: {
+                Text(.sectionScreenshots)
             }
             Section {
                 Toggle(isOn: model.binding(SettingKeys.shelfEnabled)) { Text(.shelf) }
@@ -54,38 +57,46 @@ struct GeneralPane: View {
                     .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
                 Toggle(isOn: model.binding(SettingKeys.shelfEdgeBar)) { Text(.edgeBar) }
                     .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
+            } header: {
+                Text(.sectionShelf)
             }
             Section {
                 Picker(selection: model.binding(SettingKeys.libraryLayout)) {
                     ForEach(LibraryLayoutMode.allCases, id: \.self) { Text($0.label).tag($0) }
-                } label: { Text(.libraryLayout) }
-                Text(.libraryLayoutHelp).settingsCaption()
+                } label: { SettingLabel(.libraryLayout, note: SettingsString.libraryLayoutHelp.text) }
                 Picker(selection: model.binding(SettingKeys.libraryBackground)) {
                     ForEach(LibraryBackground.allCases, id: \.self) { Text($0.label).tag($0) }
                 } label: { Text(.libraryBackground) }
                 Picker(selection: model.binding(SettingKeys.libraryPreviewPreset)) {
                     ForEach(LibraryPreviewPreset.allCases, id: \.self) { Text($0.label).tag($0) }
-                } label: { Text(.previewPreset) }
-                Text(.previewPresetHelp).settingsCaption()
+                } label: { SettingLabel(.previewPreset, note: SettingsString.previewPresetHelp.text) }
                 Picker(selection: model.binding(SettingKeys.libraryDisplay)) {
                     ForEach(LibraryDisplay.allCases, id: \.self) { Text($0.label).tag($0) }
                 } label: { Text(.libraryDisplay) }
-                Toggle(isOn: model.binding(SettingKeys.libraryCloseAfterPaste)) { Text(.closeAfterPaste) }
-                Text(.closeAfterPasteHelp).settingsCaption()
-                Toggle(isOn: model.binding(SettingKeys.libraryResumeOnReopen)) { Text(.resumeOnReopen) }
-                Text(.resumeOnReopenHelp).settingsCaption()
+                Toggle(isOn: model.binding(SettingKeys.libraryCloseAfterPaste)) {
+                    SettingLabel(.closeAfterPaste, note: SettingsString.closeAfterPasteHelp.text)
+                }
+                Toggle(isOn: model.binding(SettingKeys.libraryResumeOnReopen)) {
+                    SettingLabel(.resumeOnReopen, note: SettingsString.resumeOnReopenHelp.text)
+                }
                 Button { confirmingReset = true } label: { Text(.resetLibraryDefaults) }
+            } header: {
+                Text(.sectionLibrary)
             }
             Section {
-                Toggle(isOn: model.binding(SettingKeys.captureAutoBundle)) { Text(.autoBundle) }
-                Text(.autoBundleHelp).settingsCaption()
-            }
-            Section {
-                Toggle(isOn: model.binding(SettingKeys.captureCue)) { Text(.captureCue) }
-                Text(.captureCueHelp).settingsCaption()
+                Toggle(isOn: model.binding(SettingKeys.captureAutoBundle)) {
+                    SettingLabel(.autoBundle, note: SettingsString.autoBundleHelp.text)
+                }
+                Toggle(isOn: model.binding(SettingKeys.captureCue)) {
+                    SettingLabel(.captureCue, note: SettingsString.captureCueHelp.text)
+                }
+            } header: {
+                Text(.sectionCapture)
             }
             Section {
                 Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
+            } header: {
+                Text(.sectionSetup)
             }
         }
         .settingsPaneChrome()

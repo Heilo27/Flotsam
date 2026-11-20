@@ -13,14 +13,19 @@ extension Chord {
     /// The character a menu item uses as its key equivalent; nil for a key the table does not know.
     public var keyEquivalent: String? { Self.keys[keyCode] }
 
-    /// Modifier glyphs in the system order (control, option, shift, command), then the key: "⌃⌘V".
-    public var displayString: String {
-        var text = ""
-        if modifiers.contains(.control) { text += "\u{2303}" }
-        if modifiers.contains(.option) { text += "\u{2325}" }
-        if modifiers.contains(.shift) { text += "\u{21E7}" }
-        if modifiers.contains(.command) { text += "\u{2318}" }
-        let key = keyEquivalent.map { $0 == " " ? "Space" : $0.uppercased() } ?? "#\(keyCode)"
-        return text + key
+    /// One string per keycap, in the system order (control, option, shift, command), then the key: ["⌃", "⌘", "V"].
+    /// The key is one cap even when its name is longer ("Space"). `displayString` is these joined, so the recorder's
+    /// keycaps and every other chord text come from this one place.
+    public var keycaps: [String] {
+        var caps: [String] = []
+        if modifiers.contains(.control) { caps.append("\u{2303}") }
+        if modifiers.contains(.option) { caps.append("\u{2325}") }
+        if modifiers.contains(.shift) { caps.append("\u{21E7}") }
+        if modifiers.contains(.command) { caps.append("\u{2318}") }
+        caps.append(keyEquivalent.map { $0 == " " ? "Space" : $0.uppercased() } ?? "#\(keyCode)")
+        return caps
     }
+
+    /// Modifier glyphs in the system order (control, option, shift, command), then the key: "⌃⌘V".
+    public var displayString: String { keycaps.joined() }
 }

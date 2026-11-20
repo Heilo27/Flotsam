@@ -4,7 +4,7 @@ import Testing
 // TASK-463 Worf blind QA (FRD-005 section 8 "Variable help line", FR-005-17, OC-5055).
 // The variable help caption must show whether or not the trigger field has an inline error. The editor view has no
 // render harness, so this checks the view's structure: the caption must be a direct child of the trigger row's VStack
-// (a sibling of the LabeledContent), never nested inside the `if let message ... else { ... }` that swaps the error
+// (a sibling of the TextField), never nested inside the `if let message ... else { ... }` that swaps the error
 // for the trigger help. Whitespace-independent, unlike a text match on indentation.
 
 private func triggerRowBody() throws -> String {
@@ -39,7 +39,7 @@ struct Task463WorfVariableHelpVisibilityTests {
         // given: the trigger row source
         let body = try triggerRowBody()
         // when: depths of the field, the error branch and the caption are measured
-        let field = try depth(of: "LabeledContent", in: body)
+        let field = try depth(of: "TextField(", in: body)
         let errorBranch = try depth(of: "if let message = model.triggerErrorMessage", in: body)
         let caption = try depth(of: "Text(.editorVariablesHelp)", in: body)
         // then: all three are siblings, so the caption shows with a trigger error and without one
