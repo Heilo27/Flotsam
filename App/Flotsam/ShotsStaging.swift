@@ -102,6 +102,7 @@ final class ShotsStaging {
                 now: Date())
         }
         centerPointerOnMainDisplay()
+        installBackdrop()
         let before = visibleWindowNumbers()
         switch screen {
         case .library, .libraryCompact, .libraryEmpty: await stageLibrary(seeded: seeded, before: before)
@@ -155,7 +156,6 @@ final class ShotsStaging {
                 guard let self else { return }
                 guard let number = Self.ownMenuWindowNumber() else { return self.fail("no menu window appeared") }
                 let frame = Self.ownMenuWindowFrame()
-                self.placeBackdrop(under: frame)
                 self.ready(number, frame: frame)
             }
         }
@@ -228,24 +228,20 @@ final class ShotsStaging {
             window.setFrameOrigin(origin)
         }
         if show { window.orderFrontRegardless() }
-        placeBackdrop(under: window.frame)
         window.makeFirstResponder(nil)
         await settle(seconds: 0.6)
         ready(window.windowNumber, frame: window.frame)
     }
 
-    /// A solid, fixed-colour window just behind the staged one, so every material samples the same backdrop on every host.
-    private func placeBackdrop(under frame: CGRect) {
-        let panel = NSWindow(contentRect: frame.insetBy(dx: -60, dy: -60), styleMask: .borderless, backing: .buffered, defer: false)
-        panel.backgroundColor = dark
-            ? NSColor(srgbRed: 0.10, green: 0.12, blue: 0.17, alpha: 1) : NSColor(srgbRed: 0.86, green: 0.88, blue: 0.92, alpha: 1)
-        panel.isOpaque = true
-        panel.hasShadow = false
-        panel.ignoresMouseEvents = true
-        panel.isReleasedWhenClosed = false
-        panel.level = .normal
-        panel.orderFront(nil)
-        panel.orderBack(nil)
+    /// A full-screen, generated, deterministic backdrop on the capture display, installed before any Flotsam window opens
+    /// so every panel is ordered above it. It is opaque and covers the whole display (other apps, the terminal, the
+    /// desktop), so the Library, Shelf and menu materials always blur the same pixels. Window level `.normal`: Flotsam's
+    /// floating panels (3) and the pop-up menu (101) sit above it. The system menu bar (24) and Dock (20) stay above it
+    /// by design; a frame that reaches them shows them. It never becomes key or main, so it takes no focus from the staged panel.
+    private func installBackdrop() {
+        guard backdrop == nil, let screen = NSScreen.screens.first else { return }
+        let panel = ShotsBackdropWindow(contentRect: screen.frame, dark: dark)
+        panel.orderFrontRegardless()
         backdrop = panel
     }
 
@@ -288,12 +284,21 @@ final class ShotsStaging {
         CGWarpMouseCursorPosition(CGPoint(x: bounds.midX, y: bounds.midY))
     }
 
-    /// `<window number> <x> <y> <width> <height>`: the frame in global top-left screen points, for `screencapture -R`.
+    /// `<window number> <x> <y> <width> <height> <main display width> <screen recording 1|0>`: the frame in global top-left screen points, for
+    /// `screencapture -R` (or a crop of a full-display capture, which needs the display width to find the pixel scale).
     /// A region capture records what is really on screen (materials over the fixed backdrop); a `-l` window capture
     /// renders the window alone, so its blur has nothing to sample.
     private func ready(_ windowNumber: Int, frame: CGRect) {
+        // An asleep or locked display captures as bare wallpaper (and -R is refused): say so instead of shooting it.
+        let session = CGSessionCopyCurrentDictionary() as? [String: Any] ?? [:]
+        if CGDisplayIsAsleep(CGMainDisplayID()) != 0 || (session["CGSSessionScreenIsLocked"] as? Bool) == true {
+            return fail("the main display is asleep or the screen is locked; wake and unlock it")
+        }
+        // Round outward to whole points: rounding each number on its own can shave a point off one edge and let a
+        // neighbouring pixel (a corner of a rounded panel, the shadow's edge) into the capture.
         let top = (NSScreen.screens.first?.frame.height ?? 0) - frame.maxY
-        let line = "\(windowNumber) \(Int(frame.minX.rounded())) \(Int(top.rounded())) \(Int(frame.width.rounded())) \(Int(frame.height.rounded()))\n"
+        let rect = CGRect(x: frame.minX, y: top, width: frame.width, height: frame.height).integral
+        let line = "\(windowNumber) \(Int(rect.minX)) \(Int(rect.minY)) \(Int(rect.width)) \(Int(rect.height)) \(Int((NSScreen.screens.first?.frame.width ?? 0).rounded())) \(CGPreflightScreenCaptureAccess() ? 1 : 0)\n"
         try? Data(line.utf8).write(to: ctl.appendingPathComponent("ready"))
     }
 
@@ -315,6 +320,70 @@ final class ShotsStaging {
 
     private struct AllowedAccess: PasteboardAccessPort {
         var isReadAllowed: Bool { true }
+    }
+}
+/// The shots backdrop: a borderless, click-through window that can never become key or main.
+private final class ShotsBackdropWindow: NSWindow {
+    init(contentRect: CGRect, dark: Bool) {
+        super.init(contentRect: contentRect, styleMask: .borderless, backing: .buffered, defer: false)
+        isReleasedWhenClosed = false
+        isOpaque = true
+        hasShadow = false
+        ignoresMouseEvents = true
+        level = .normal
+        collectionBehavior = [.stationary, .ignoresCycle, .fullScreenNone]
+        backgroundColor = ShotsBackdropView.baseColor(dark: dark)
+        contentView = ShotsBackdropView(frame: CGRect(origin: .zero, size: contentRect.size), dark: dark)
+        setFrame(contentRect, display: false)
+    }
+
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
+/// A soft, wallpaper-like gradient drawn in code from fixed sRGB numbers: nothing is read from the host (no wallpaper,
+/// no images), so the output is the same on every Mac. Different for light and dark.
+private final class ShotsBackdropView: NSView {
+    private let dark: Bool
+
+    init(frame: CGRect, dark: Bool) {
+        self.dark = dark
+        super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) { return nil }
+
+    override var isFlipped: Bool { false }
+
+    static func baseColor(dark: Bool) -> NSColor {
+        dark ? NSColor(srgbRed: 0.09, green: 0.10, blue: 0.20, alpha: 1) : NSColor(srgbRed: 0.80, green: 0.86, blue: 0.96, alpha: 1)
+    }
+
+    private func color(_ r: Double, _ g: Double, _ b: Double, _ a: Double = 1) -> CGColor {
+        NSColor(srgbRed: r, green: g, blue: b, alpha: a).cgColor
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let ctx = NSGraphicsContext.current?.cgContext, let space = CGColorSpace(name: CGColorSpace.sRGB) else { return }
+        let w = bounds.width, h = bounds.height
+        // Base: a diagonal linear gradient.
+        let stops: [CGColor] = dark
+            ? [color(0.05, 0.07, 0.16), color(0.16, 0.12, 0.30), color(0.10, 0.20, 0.33)]
+            : [color(0.74, 0.84, 0.97), color(0.90, 0.84, 0.96), color(0.98, 0.88, 0.84)]
+        if let base = CGGradient(colorsSpace: space, colors: stops as CFArray, locations: [0, 0.55, 1]) {
+            ctx.drawLinearGradient(base, start: CGPoint(x: 0, y: h), end: CGPoint(x: w, y: 0), options: [.drawsBeforeStartLocation, .drawsAfterEndLocation])
+        }
+        // Soft colour blooms, fixed positions as fractions of the screen.
+        let blooms: [(x: Double, y: Double, r: Double, c: CGColor)] = dark
+            ? [(0.22, 0.70, 0.45, color(0.35, 0.28, 0.62, 0.55)), (0.78, 0.25, 0.50, color(0.12, 0.45, 0.58, 0.50)), (0.55, 0.85, 0.30, color(0.50, 0.25, 0.45, 0.30))]
+            : [(0.20, 0.75, 0.45, color(1.00, 0.92, 0.82, 0.75)), (0.80, 0.30, 0.50, color(0.70, 0.88, 1.00, 0.70)), (0.55, 0.88, 0.30, color(0.92, 0.80, 0.98, 0.55))]
+        for bloom in blooms {
+            let center = CGPoint(x: bloom.x * w, y: bloom.y * h)
+            let clear = bloom.c.copy(alpha: 0) ?? bloom.c
+            if let g = CGGradient(colorsSpace: space, colors: [bloom.c, clear] as CFArray, locations: [0, 1]) {
+                ctx.drawRadialGradient(g, startCenter: center, startRadius: 0, endCenter: center, endRadius: bloom.r * max(w, h), options: [])
+            }
+        }
     }
 }
 #endif

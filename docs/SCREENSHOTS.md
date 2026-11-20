@@ -18,10 +18,30 @@ The script refuses to run while a Flotsam is already running.
 
 ## Host needs
 
-- Screen Recording permission for the terminal (or host) that runs the script.
-- An awake, unlocked display. Windows open on the display the pointer is on; the harness moves the pointer to the main
-  display first. Do not use the machine while it runs (windows take focus for a second or two per pass).
+Set these up before a run; the harness cannot do them for you.
+
+- Screen Recording permission for the terminal (or host) that runs the script. Without it a screen capture leaves out
+  every other app's windows.
+- An awake, unlocked display. A locked or asleep display captures as bare wallpaper and `screencapture -R` is refused
+  ("could not create image from rect"); the staged app detects this and the pass fails with "the main display is asleep
+  or the screen is locked". Keep the display awake for the whole run (for example `caffeinate -d` in another tab).
+- Do Not Disturb (a Focus) turned on. Otherwise macOS banners (for example "Login Item Added") can land on screen and end
+  up in the Shelf shot, which sits at the screen edge where banners appear.
+- Windows open on the display the pointer is on; the harness moves the pointer to the main display first. Do not use the
+  machine while it runs (windows take focus for a second or two per pass).
 - Nothing else running as Flotsam.
+
+## What sits behind the panels
+
+Every staged launch first opens a full-screen backdrop window on the main display (Debug builds and the shots launch
+flag only): a soft gradient drawn in code from fixed colours, one for light and one for dark. It hides everything behind
+it (other apps, the terminal, the desktop), so the Library, Shelf and menu glass blur the same pixels on every host, and
+the transparent corners of rounded panels show the backdrop, never another app. It sits at the normal window level,
+under Flotsam's panels (floating) and the pop-up menu (level 101), and cannot become key or main, so it takes no focus.
+The system menu bar and Dock are above it by design. The launched instance also gets a throw-away home
+(`CFFIXED_USER_HOME`) so file lookups under the home (Library, Documents, the screenshot folder default) land in a temporary folder.
+It does not redirect the preferences daemon, so preferences isolation is still `FLOTSAM_DEFAULTS_SUITE` (a temporary
+domain, deleted after each pass); `FLOTSAM_DATA_DIR` is its own temporary absolute path.
 
 ## Screens
 
@@ -43,8 +63,9 @@ two pinned items, one note and one item with a shortcut. All invented; nothing r
 
 - Default: region capture (`screencapture -R`) of the staged window over a fixed solid backdrop, so translucent
   materials look the same on every host. If it fails the script falls back to window-only capture (`-l`), and
-  NOTES.txt in the output folder says so. Window-only has flat materials: dark panels read mid-grey. Region capture
-  failed on the build Mac (display not capturable) and is unverified on S2. `SHOTS_CAPTURE=window` forces the fallback.
+  NOTES.txt in the output folder says so. If `-R` is refused, the script captures the whole main display and
+  crops the same rectangle with `sips`. Window-only has flat materials: dark panels read mid-grey. Region capture failed
+  on the build Mac (display locked or asleep) and is unverified on S2. `SHOTS_CAPTURE=window` forces the fallback.
 - The menu-bar menu follows the system menu appearance, not the forced light or dark, so both menu files may look alike.
   If the real menu cannot be captured, a staged copy of its rows in a window is used and NOTES.txt says so.
 - The preview's absolute "Copied" time is wall-clock and differs between runs. Relative times ("12m ago") are fixed.
