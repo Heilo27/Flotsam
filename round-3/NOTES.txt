@@ -1,0 +1,20 @@
+01-library-standard-light: capture mode: region capture (screencapture -R)
+01-library-standard-dark: capture mode: region capture (screencapture -R)
+02-library-compact-light: capture mode: region capture (screencapture -R)
+02-library-compact-dark: capture mode: region capture (screencapture -R)
+03-library-empty-light: capture mode: region capture (screencapture -R)
+03-library-empty-dark: capture mode: region capture (screencapture -R)
+04-shelf-light: capture mode: window-only capture (screencapture -l)
+04-shelf-light: window capture (screencapture -l <windowID> -o) used instead of -R: host notification present; window capture excludes overlapping windows. Materials are not blurred over the backdrop.
+04-shelf-dark: capture mode: window-only capture (screencapture -l)
+04-shelf-dark: window capture (screencapture -l <windowID> -o) used instead of -R: host notification present; window capture excludes overlapping windows. Materials are not blurred over the backdrop.
+05-menu-bar-menu-light: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-light: window capture (screencapture -l <windowID> -o) used instead of -R: host notification present; window capture excludes overlapping windows. Materials are not blurred over the backdrop.
+05-menu-bar-menu-dark: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-dark: window capture (screencapture -l <windowID> -o) used instead of -R: host notification present; window capture excludes overlapping windows. Materials are not blurred over the backdrop.
+06-settings-general-light: capture mode: region capture (screencapture -R)
+06-settings-general-dark: capture mode: region capture (screencapture -R)
+07-onboarding-light: capture mode: region capture (screencapture -R)
+07-onboarding-dark: capture mode: region capture (screencapture -R)
+08-shortcut-editor-light: capture mode: region capture (screencapture -R)
+08-shortcut-editor-dark: capture mode: region capture (screencapture -R)
