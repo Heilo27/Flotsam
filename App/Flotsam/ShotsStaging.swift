@@ -66,6 +66,9 @@ final class ShotsStaging {
     /// Runs right after the container is built, before the database opens and before the first window: the Library reads
     /// its layout and preview preset once, when it is built.
     func prepare() {
+        // Before any Flotsam window exists. The onboarding window opens during launch, before `run`; a backdrop installed
+        // after it would be ordered above it at the same level and hide it (the round-2 empty 07-onboarding frames).
+        installBackdrop()
         NSApp.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let settings = container.settings
         // Keep the screenshot folder and the typed-trigger tap out of the run (docs/AGENT-LAUNCH.md).
@@ -102,7 +105,7 @@ final class ShotsStaging {
                 now: Date())
         }
         centerPointerOnMainDisplay()
-        installBackdrop()
+        installBackdrop()  // already done in prepare(); a no-op here
         let before = visibleWindowNumbers()
         switch screen {
         case .library, .libraryCompact, .libraryEmpty: await stageLibrary(seeded: seeded, before: before)
@@ -156,11 +159,14 @@ final class ShotsStaging {
                 guard let self else { return }
                 guard let number = Self.ownMenuWindowNumber() else { return self.fail("no menu window appeared") }
                 let frame = Self.ownMenuWindowFrame()
-                self.ready(number, frame: frame)
+                self.ready(number, frame: frame, expectedLevel: nil, title: "", padding: 24)
             }
         }
         RunLoop.main.add(timer, forMode: .common)
-        statusItem.shotsOpenMenu()
+        // Opened at a fixed spot (top right, a gap below the system menu bar), not under the status item: the item's own
+        // position depends on the host's menu bar (overflow, notch, other apps' items) and can land at x = 0.
+        let area = (NSScreen.screens.first ?? NSScreen.main)?.visibleFrame ?? .zero
+        statusItem.shotsPopUpMenu(at: CGPoint(x: area.maxX - 40 - 400, y: area.maxY - 30))
     }
 
     /// The fallback when a real menu cannot be captured: the same rows, drawn in a plain window with the menu material.
@@ -227,10 +233,11 @@ final class ShotsStaging {
             let origin = CGPoint(x: area.midX - window.frame.width / 2, y: area.midY - window.frame.height / 2)
             window.setFrameOrigin(origin)
         }
-        if show { window.orderFrontRegardless() }
+        // Always above the backdrop, whatever order the windows were created in.
+        window.orderFrontRegardless()
         window.makeFirstResponder(nil)
         await settle(seconds: 0.6)
-        ready(window.windowNumber, frame: window.frame)
+        ready(window.windowNumber, frame: window.frame, expectedLevel: window.level.rawValue, title: window.title)
     }
 
     /// A full-screen, generated, deterministic backdrop on the capture display, installed before any Flotsam window opens
@@ -288,18 +295,56 @@ final class ShotsStaging {
     /// `screencapture -R` (or a crop of a full-display capture, which needs the display width to find the pixel scale).
     /// A region capture records what is really on screen (materials over the fixed backdrop); a `-l` window capture
     /// renders the window alone, so its blur has nothing to sample.
-    private func ready(_ windowNumber: Int, frame: CGRect) {
+    private func ready(_ windowNumber: Int, frame: CGRect, expectedLevel: Int?, title: String, padding: CGFloat = 0) {
         // An asleep or locked display captures as bare wallpaper (and -R is refused): say so instead of shooting it.
         let session = CGSessionCopyCurrentDictionary() as? [String: Any] ?? [:]
         if CGDisplayIsAsleep(CGMainDisplayID()) != 0 || (session["CGSSessionScreenIsLocked"] as? Bool) == true {
             return fail("the main display is asleep or the screen is locked; wake and unlock it")
         }
+        if let problem = verifyOnScreen(windowNumber, expectedLevel: expectedLevel, title: title) { return fail(problem) }
+        let display = NSScreen.screens.first?.frame ?? .zero
+        // Top-left screen points. The menu is cropped with padding on every side, the top never reaching the system menu bar.
+        var rect = CGRect(x: frame.minX, y: display.height - frame.maxY, width: frame.width, height: frame.height)
+        if padding > 0 {
+            let menuBarBottom = display.maxY - ((NSScreen.screens.first?.visibleFrame.maxY) ?? display.maxY)
+            let padded = rect.insetBy(dx: -padding, dy: -padding)
+            let top = max(padded.minY, menuBarBottom)
+            rect = CGRect(x: padded.minX, y: top, width: padded.width, height: padded.maxY - top).intersection(CGRect(x: 0, y: 0, width: display.width, height: display.height))
+        }
         // Round outward to whole points: rounding each number on its own can shave a point off one edge and let a
         // neighbouring pixel (a corner of a rounded panel, the shadow's edge) into the capture.
-        let top = (NSScreen.screens.first?.frame.height ?? 0) - frame.maxY
-        let rect = CGRect(x: frame.minX, y: top, width: frame.width, height: frame.height).integral
-        let line = "\(windowNumber) \(Int(rect.minX)) \(Int(rect.minY)) \(Int(rect.width)) \(Int(rect.height)) \(Int((NSScreen.screens.first?.frame.width ?? 0).rounded())) \(CGPreflightScreenCaptureAccess() ? 1 : 0)\n"
+        rect = rect.integral
+        let line = "\(windowNumber) \(Int(rect.minX)) \(Int(rect.minY)) \(Int(rect.width)) \(Int(rect.height)) \(Int(display.width.rounded())) \(CGPreflightScreenCaptureAccess() ? 1 : 0)\n"
         try? Data(line.utf8).write(to: ctl.appendingPathComponent("ready"))
+    }
+
+    /// Fails a pass that would shoot an empty frame: the target must be in the on-screen window list, owned by this
+    /// process, at the expected level, with the expected title, on the display, and ordered above the backdrop.
+    /// Returns the problem, or nil when the target is really there.
+    private func verifyOnScreen(_ number: Int, expectedLevel: Int?, title: String) -> String? {
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []  // front to back
+        let pid = ProcessInfo.processInfo.processIdentifier
+        func index(of n: Int) -> Int? { list.firstIndex { ($0[kCGWindowNumber as String] as? Int) == n } }
+        guard let at = index(of: number), let info = Optional(list[at]) else {
+            return "the target window (\(number)) is not on screen: it is missing from the window list"
+        }
+        if (info[kCGWindowOwnerPID as String] as? Int32) != pid { return "the target window is not owned by the staged process" }
+        let layer = info[kCGWindowLayer as String] as? Int ?? 0
+        if let expectedLevel, layer != expectedLevel { return "the target window is at level \(layer), expected \(expectedLevel)" }
+        if expectedLevel == nil, layer < 101 { return "the menu window is at level \(layer), expected a pop-up menu (101 or above)" }
+        if !title.isEmpty, let name = info[kCGWindowName as String] as? String, name != title {
+            return "the target window is titled \"\(name)\", expected \"\(title)\""
+        }
+        let bounds = info[kCGWindowBounds as String] as? [String: Double] ?? [:]
+        let box = CGRect(x: bounds["X"] ?? 0, y: bounds["Y"] ?? 0, width: bounds["Width"] ?? 0, height: bounds["Height"] ?? 0)
+        let displayBox = CGRect(x: 0, y: 0, width: NSScreen.screens.first?.frame.width ?? 0, height: NSScreen.screens.first?.frame.height ?? 0)
+        if box.width < 1 || box.height < 1 || !displayBox.contains(CGPoint(x: box.midX, y: box.midY)) {
+            return "the target window is not on the main display (bounds \(box))"
+        }
+        if let backdrop, let back = index(of: backdrop.windowNumber), back < at {
+            return "the target window is hidden behind the backdrop"
+        }
+        return nil
     }
 
     private func fail(_ reason: String) {

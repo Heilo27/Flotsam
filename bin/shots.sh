@@ -10,7 +10,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
-APP="$ROOT/build/Build/Products/Debug/Flotsam.app/Contents/MacOS/Flotsam"
+BUILT_APP="$ROOT/build/Build/Products/Debug/Flotsam.app"
+# The instance is always launched from ONE fixed path, whichever worktree built it (docs/SCREENSHOTS.md, "Fixed launch
+# path"): macOS announces a "Login Item Added" banner for a stale login item each time the app shows up at a new bundle path.
+STABLE_APP="${SHOTS_APP_PATH:-$HOME/Library/Caches/flotsam-shots/Flotsam.app}"
+APP="$STABLE_APP/Contents/MacOS/Flotsam"
 
 # number-name:stage (the stage is the FLOTSAM_SHOTS_STAGE value)
 SCREENS=(
@@ -78,11 +82,14 @@ OUT="$(cd "$OUT" && pwd)"
 # A real Flotsam shares the Carbon hotkeys and the pasteboard; do not run next to one.
 if pgrep -x Flotsam >/dev/null 2>&1; then die "a Flotsam is already running; quit it first (the harness never kills a process it did not start)"; fi
 
-if [[ ! -x "$APP" ]] || [[ -n "$(find App Packages project.yml -newer "$APP" \( -name '*.swift' -o -name project.yml \) 2>/dev/null | head -1)" ]]; then
+if [[ ! -x "$BUILT_APP/Contents/MacOS/Flotsam" ]] || [[ -n "$(find App Packages project.yml -newer "$BUILT_APP/Contents/MacOS/Flotsam" \( -name '*.swift' -o -name project.yml \) 2>/dev/null | head -1)" ]]; then
   echo "shots: building Debug app"
   bin/build.sh >/dev/null
 fi
-[[ -x "$APP" ]] || die "build did not produce $APP"
+[[ -x "$BUILT_APP/Contents/MacOS/Flotsam" ]] || die "build did not produce $BUILT_APP"
+mkdir -p "$STABLE_APP"
+rsync -a --delete "$BUILT_APP/" "$STABLE_APP/"   # overwrite in place: same path every run
+[[ -x "$APP" ]] || die "could not install the app at $STABLE_APP"
 
 # crop_display <ctl> <png> <x> <y> <w> <h> <display width in points>: capture the main display and crop the point
 # rectangle out of it (pixel scale = capture pixels / display points). Returns non-zero on any failure.
@@ -129,7 +136,7 @@ pass() {
     # Default: the region of the screen the staged window occupies. The window sits on a fixed-colour backdrop, so its
     # materials blur the same thing on every host. SHOTS_CAPTURE=window captures the window alone instead (-l): blur
     # then has nothing behind it and looks flat.
-    local mode="${SHOTS_CAPTURE:-region}" captured=0
+    local mode="${SHOTS_CAPTURE:-region}" captured=0 used="none"
     # Without Screen Recording a screen capture silently leaves out every other app's windows (it returns the bare
     # wallpaper, with no Flotsam in it) and -R is refused. Never produce those: fall back to the window-only capture.
     if [[ "${sr:-1}" == "0" && "$mode" != "window" ]]; then
@@ -137,14 +144,15 @@ pass() {
       mode="window"
     fi
     if [[ "$mode" == "region" ]] && screencapture -x -R "$x,$y,$w,$h" "$png" 2>"$ctl/capture.log" && [[ -s "$png" ]]; then
-      captured=1; result="ok"
+      captured=1; result="ok"; used="region capture (screencapture -R)"
     elif [[ "$mode" != "window" ]] && crop_display "$ctl" "$png" "$x" "$y" "$w" "$h" "${dw:-0}"; then
       # -R is refused on some hosts ("could not create image from rect") while a whole-display capture works: take the
       # main display and cut the same rectangle out of it. Same pixels, same backdrop.
-      captured=1; result="ok"
+      captured=1; result="ok"; used="full-display capture + sips crop"
     elif screencapture -x -o -l "$wid" "$png" 2>>"$ctl/capture.log" && [[ -s "$png" ]]; then
-      captured=1; result="ok-window"
+      captured=1; result="ok-window"; used="window-only capture (screencapture -l)"
     fi
+    echo "$used" > "$OUT/.mode"
     if ((captured == 0)); then
       result="screencapture failed (is Screen Recording allowed for this terminal, and is the display awake?): $(head -1 "$ctl/capture.log")"
     fi
@@ -163,12 +171,14 @@ for entry in "${SCREENS[@]}"; do
   [[ -z "$ONLY" || "$ONLY" == "$name" || "$ONLY" == "$stage" ]] || continue
   for appearance in "${APPEARANCES[@]}"; do
     png="$OUT/$name-$appearance.png"
+    rm -f "$OUT/.mode"
     result="$(pass "$stage" "$appearance" "$png")"
     if [[ "$result" != ok* && "$stage" == "menu" ]]; then
       echo "shots: $name-$appearance: real menu not captured ($result); using the staged copy"
       echo "$name-$appearance: staged copy of the menu rows in a window, not the real NSMenu ($result)" >> "$OUT/NOTES.txt"
       result="$(pass menu-staged "$appearance" "$png")"
     fi
+    [[ "$result" == ok* && -f "$OUT/.mode" ]] && echo "$name-$appearance: capture mode: $(cat "$OUT/.mode")" >> "$OUT/NOTES.txt"
     if [[ "$result" == "ok-window" ]]; then
       echo "shots: $name-$appearance ok (region capture failed; window-only capture, blur is flat)"
       echo "$name-$appearance: window-only capture (-l); region capture was not available, so materials are not blurred over the backdrop" >> "$OUT/NOTES.txt"
