@@ -44,6 +44,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
     private var machine: ShelfRevealMachine { driver.machine }
     private var placement: ShelfPlacement
     private var showTask: Task<Void, Never>?
+    /// The panel's content view, which owns the pointer tracking area (FR-006-47).
+    private var dropView: ShelfDropView?
     private var keyMonitor: Any?
     /// Pointer, button and drag monitors (FR-006-03, FR-006-04); `hoverMonitor` only while edge hover is on.
     private var pointerMonitors: [Any] = []
@@ -219,6 +221,9 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         // moved since sits on the panel now, and no further event would say so: tell the machine, or it hides the Shelf
         // 600 ms after it appeared (FR-006-04). The collapsed bars step aside first (FR-006-37).
         refreshEdgeBars()
+        // A pointer already inside the panel's frame has "entered" as far as the machine is concerned, but the tracking
+        // area has not seen it move in and would never report its leaving (FR-006-47).
+        dropView?.assumePointerInside(ShelfLayout.contains(frame, NSEvent.mouseLocation))
         lastRegion = nil
         reportPointer()
     }
@@ -227,6 +232,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         showTask?.cancel()
         showTask = nil
         shown = nil
+        dropView?.assumePointerInside(false)
         removeKeyMonitor()
         model.didHide()
         guard panel.isVisible else { refreshEdgeBars(); return }
@@ -301,6 +307,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
 
         let effect = ShelfDropView()
         effect.delegate = self
+        dropView = effect
         effect.material = .hudWindow
         effect.blendingMode = .behindWindow
         effect.state = .active

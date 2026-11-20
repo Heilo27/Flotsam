@@ -275,14 +275,9 @@ public final class LibraryViewModel {
     /// caller's task is cancelled, or no visible label can change again (all dated), so a hidden panel costs no wakeups
     /// and a panel of old rows sleeps. The caller restarts it when `relativeTimeWatchKey` changes.
     public func watchRelativeTimes() async {
-        while !Task.isCancelled, isShown {
-            let now = clock.now()
-            let due = visibleRows.compactMap { ItemSpeech.secondsUntilRelativeTimeChanges($0.lastCopiedAt, now: now) }.min()
-            guard let due else { return }
-            await clock.sleep(for: .seconds(due + Self.relativeTimeSlack))
-            guard !Task.isCancelled, isShown else { return }
-            timeRevision += 1
-        }
+        await RelativeTimeWatch.run(
+            dates: { visibleRows.map(\.lastCopiedAt) }, isShown: { isShown }, now: { clock.now() },
+            sleep: { await clock.sleep(for: .seconds($0)) }, refresh: { timeRevision += 1 })
     }
 
     /// Runs `watchRelativeTimes` as a task the model owns, replacing any earlier one. The view calls this from
@@ -296,7 +291,7 @@ public final class LibraryViewModel {
     }
 
     /// Added to each sleep so the wake lands just after a label's boundary, never just before it.
-    static let relativeTimeSlack: TimeInterval = 0.05
+    static let relativeTimeSlack = RelativeTimeWatch.slack
 
     /// The footer's "Enable" button: open the Accessibility pane (FR-008-14). It does not prompt; the grant is
     /// noticed by `refreshAccessibility`.
