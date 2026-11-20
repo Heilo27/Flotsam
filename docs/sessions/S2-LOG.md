@@ -2324,3 +2324,29 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
 - **Fix shape (for S1):** give a requested window capture its own result (e.g. `ok-window-requested`), or check `SHOTS_CAPTURE` in the loop. Keep the "region capture failed" wording for a real fallback only. The Screen Recording fallback (`sr=0`) is a third case and should say so.
 - **Impact:** NOTES only, and no pixels change. Round 3's NOTES were corrected by hand before publishing.
 - **Standing capture rule (S1):** 04 and 05 stay in window mode while the host Calendar alert is up. Once the alert is gone, all 16 go back to -R, and S2 reports the first round where -R works.
+
+## A11: screenshot round 4 at hill-climb-529 8e7794f (2026-11-20)
+
+- **Verdict: PUBLISHED.** s2/shots = 01aab3b8104ba2c789c44042812fa8ac807f8712 (normal push). round-1/ through round-3/ hold 17 files each, and round-4/ holds 19 (18 PNGs including 06b, plus NOTES). The NOTES leak grep is clean.
+- **Capture mode:** the host Calendar alert was still up before every pass and was not touched, so -R is not back yet.
+  - 04 and 05 used `SHOTS_CAPTURE=window`. All other shots (01, 02, 03, 06, 06b, 07, 08) used -R.
+  - All 18 PNGs were checked by eye, and no alert content appears in any of them, so no retakes were needed. I re-checked 01 light and 06b dark myself.
+- **H1 fix verified:** the console and NOTES now say window-only capture was requested via SHOTS_CAPTURE=window. No hand correction was needed.
+- **Layout, light and dark:**
+  - **01:** the sidebar ends at the "Work" row, tight on the footer, and the Apps section is below the fold. The preview's code line is clipped at the right edge.
+  - **02 compact:** the last sidebar row (Apps › Notes) is cut by the footer divider, and the code line is truncated.
+  - **03 empty:** the empty state is whole. The "Work" row is partly clipped by the footer.
+  - **04 Shelf:** the chips (All / Text / Links / More) now render whole. The last card is cut at the scroll edge, and the backdrop is flat because of window mode.
+  - **05 menu:** nothing is clipped. Window capture makes the light menu a flat mid-grey, which doesn't represent the real menu; dark looks right.
+  - **06 General:** whole.
+  - **06b Library (new):** the Library and Capture sections, the Restore Library Defaults button, the toggles and the pickers are all whole, with a normal bottom margin.
+  - **07:** clean.
+  - **08:** clean; the ellipsis is by design.
+- **Real state:** hashes match (DB, prefs, and the screencapture domain). The prefs listing is unchanged, the pasteboard is unchanged, no Flotsam is running, and hill-climb-529 was not pushed to.
+
+## Harness bug H2: --publish skips 06b (filed 2026-11-20, not fixed)
+
+- **Where:** `bin/shots.sh` at 8e7794f, line 53, in the publish glob `[0-9][0-9]-*-light.png` (and its dark twin).
+- **Symptom:** `06b-…` doesn't match, because its third character is a letter, so `--publish` silently leaves out both 06b PNGs. The count check expects 16 and finds 16, so it gives no warning.
+- **Fix shape:** change the glob to `[0-9][0-9]*-light.png` and its dark twin, and raise the expected count to 18. Better still, derive the count from SCREENS so it can't drift again.
+- **Workaround used for round 4:** a temporary copy of the script with the glob widened; it was deleted afterwards, and the worktree is clean at 8e7794f.
