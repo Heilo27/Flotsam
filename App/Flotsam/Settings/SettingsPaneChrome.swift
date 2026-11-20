@@ -22,7 +22,7 @@ private struct PaneChrome: ViewModifier {
             form.scrollDisabled(true).fixedSize(horizontal: false, vertical: true)
             form
         }
-        .frame(minHeight: 0, idealHeight: maxHeight, maxHeight: maxHeight)
+        .frame(maxHeight: maxHeight)
     }
 }
 

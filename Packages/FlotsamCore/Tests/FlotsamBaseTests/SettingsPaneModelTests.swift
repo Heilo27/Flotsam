@@ -11,12 +11,12 @@ private struct StubProbe: PermissionProbe {
 
 @Suite struct SettingsPaneModelTests {
     @Test func panesAreInTheFRD008Order() {
-        #expect(SettingsPane.allCases == [.general, .shortcuts, .types, .triggers, .privacy, .storage, .tips, .about])
+        #expect(SettingsPane.allCases == [.general, .library, .shortcuts, .types, .triggers, .privacy, .storage, .tips, .about])
         #expect(SettingsPane.allCases.map(\.title) == [
-            .paneGeneral, .paneShortcuts, .paneTypes, .paneTriggers, .panePrivacy, .paneStorage, .paneTips, .paneAbout,
+            .paneGeneral, .paneLibrary, .paneShortcuts, .paneTypes, .paneTriggers, .panePrivacy, .paneStorage, .paneTips, .paneAbout,
         ])
         #expect(SettingsPane.allCases.map(\.symbolName) == [
-            "gearshape", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle",
+            "gearshape", "books.vertical", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle",
         ])
     }
 

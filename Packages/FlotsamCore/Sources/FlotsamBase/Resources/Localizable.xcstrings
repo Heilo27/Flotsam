@@ -3707,6 +3707,16 @@
         }
       }
     },
+    "ui.settings.paneLibrary" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library"
+          }
+        }
+      }
+    },
     "ui.settings.panePrivacy" : {
       "localizations" : {
         "en" : {

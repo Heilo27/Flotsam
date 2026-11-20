@@ -114,6 +114,7 @@ private struct PaneView: View {
     var body: some View {
         switch pane {
         case .general: GeneralPane(model: model)
+        case .library: LibraryPane(model: model)
         case .shortcuts: ShortcutsPane(model: model)
         case .types: TypesPane(model: model)
         case .triggers: TriggersPane(model: model)

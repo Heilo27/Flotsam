@@ -2,12 +2,12 @@ import AppKit
 import FlotsamBase
 import SwiftUI
 
-/// General (FR-008-04): Launch at Login, screenshot pickup, folder and import, the Shelf, the Library, capture, and the
-/// setup guide, in one grouped form with a header per group and each note directly under its own control.
+/// General (FR-008-04): Launch at Login, screenshot pickup, folder and import, the Shelf, and the setup guide, in one
+/// grouped form with a header per group and each note directly under its own control. The Library and capture settings
+/// have their own pane (`LibraryPane`, FR-008-33) so neither pane is taller than a laptop screen.
 struct GeneralPane: View {
     let model: SettingsModel
     @State private var loginStatus: LoginItemStatus
-    @State private var confirmingReset = false
 
     init(model: SettingsModel) {
         self.model = model
@@ -65,51 +65,12 @@ struct GeneralPane: View {
                 Text(.sectionShelf)
             }
             Section {
-                Picker(selection: model.binding(SettingKeys.libraryLayout)) {
-                    ForEach(LibraryLayoutMode.allCases, id: \.self) { Text($0.label).tag($0) }
-                } label: { SettingLabel(.libraryLayout, note: SettingsString.libraryLayoutHelp.text) }
-                Picker(selection: model.binding(SettingKeys.libraryBackground)) {
-                    ForEach(LibraryBackground.allCases, id: \.self) { Text($0.label).tag($0) }
-                } label: { Text(.libraryBackground) }
-                Picker(selection: model.binding(SettingKeys.libraryPreviewPreset)) {
-                    ForEach(LibraryPreviewPreset.allCases, id: \.self) { Text($0.label).tag($0) }
-                } label: { SettingLabel(.previewPreset, note: SettingsString.previewPresetHelp.text) }
-                Picker(selection: model.binding(SettingKeys.libraryDisplay)) {
-                    ForEach(LibraryDisplay.allCases, id: \.self) { Text($0.label).tag($0) }
-                } label: { Text(.libraryDisplay) }
-                Toggle(isOn: model.binding(SettingKeys.libraryCloseAfterPaste)) {
-                    SettingLabel(.closeAfterPaste, note: SettingsString.closeAfterPasteHelp.text)
-                }
-                Toggle(isOn: model.binding(SettingKeys.libraryResumeOnReopen)) {
-                    SettingLabel(.resumeOnReopen, note: SettingsString.resumeOnReopenHelp.text)
-                }
-                Button { confirmingReset = true } label: { Text(.resetLibraryDefaults) }
-            } header: {
-                Text(.sectionLibrary)
-            }
-            Section {
-                Toggle(isOn: model.binding(SettingKeys.captureAutoBundle)) {
-                    SettingLabel(.autoBundle, note: SettingsString.autoBundleHelp.text)
-                }
-                Toggle(isOn: model.binding(SettingKeys.captureCue)) {
-                    SettingLabel(.captureCue, note: SettingsString.captureCueHelp.text)
-                }
-            } header: {
-                Text(.sectionCapture)
-            }
-            Section {
                 Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
             } header: {
                 Text(.sectionSetup)
             }
         }
         .settingsPaneChrome()
-        .confirmationDialog(Text(.resetLibraryTitle), isPresented: $confirmingReset) {
-            Button { model.env.settings.resetToDefaults() } label: { Text(.resetLibraryConfirm) }
-            Button(role: .cancel) {} label: { Text(.cancel) }
-        } message: {
-            Text(.resetLibraryMessage)
-        }
         .onAppear { loginStatus = model.env.login.status }
     }
 

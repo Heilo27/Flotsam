@@ -152,24 +152,37 @@ struct LibrarySidebar: View {
 
     var body: some View {
         let entries = model.sidebarEntries
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 1) {
-                section(.top, title: nil, entries)
-                section(.types, title: LibraryText.string(LibraryText.sectionTypes), entries)
-                section(.tags, title: LibraryText.string(LibraryText.sectionTags), entries)
-                section(.apps, title: LibraryText.string(LibraryText.sectionApps), entries)
+        // The sidebar is a scroll view whose content (about 570 pt with Types open) is taller than the 760 x 480 default's
+        // viewport (about 400 pt), so it rests scrolled to the top with its bottom edge somewhere in the list. Every line
+        // (row or header) is one `lineHeight`, the viewport is a whole number of lines, and scrolling snaps to a line,
+        // so the edge never slices a row: it falls between two (TASK-529 round 3; the round 2 margins and fade only
+        // changed where the last row ended at the far end of the scroll, never what the edge cut at rest).
+        GeometryReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    section(.top, title: nil, entries)
+                    section(.types, title: LibraryText.string(LibraryText.sectionTypes), entries)
+                    section(.tags, title: LibraryText.string(LibraryText.sectionTags), entries)
+                    section(.apps, title: LibraryText.string(LibraryText.sectionApps), entries)
+                }
+                .scrollTargetLayout()
             }
+            .scrollTargetBehavior(.viewAligned)
+            .contentMargins(.horizontal, 8, for: .scrollContent)
+            .contentMargins(.top, Self.topMargin, for: .scrollContent)
+            .frame(height: Self.snappedHeight(fitting: proxy.size.height))
         }
-        // Real scroll-content margins (not padding on a background): the last row scrolls fully clear of the footer and the
-        // fade below it.
-        .contentMargins(.horizontal, 8, for: .scrollContent)
-        .contentMargins(.top, 8, for: .scrollContent)
-        .contentMargins(.bottom, LibraryScrollFade.height + 8, for: .scrollContent)
-        .fadingBottomEdge()
     }
 
-    /// A sidebar row (DESIGN 3.3 Library): tight, so the results list stays the dominant column.
-    private static let sidebarRowHeight: CGFloat = 24
+    /// One sidebar line: a row or a section header (DESIGN 3.3 Library): tight, so the results list stays the dominant column.
+    private static let lineHeight: CGFloat = 24
+    private static let topMargin: CGFloat = 4
+
+    /// The tallest viewport at most `available` high that holds a whole number of lines (at least one).
+    static func snappedHeight(fitting available: CGFloat) -> CGFloat {
+        let lines = max(((available - topMargin) / lineHeight).rounded(.down), 1)
+        return topMargin + lines * lineHeight
+    }
 
     @ViewBuilder
     private func section(_ section: SidebarEntry.Section, title: String?, _ entries: [SidebarEntry]) -> some View {
@@ -193,7 +206,7 @@ struct LibrarySidebar: View {
                     .font(.system(size: 13))
                     .opacity(entry.isDimmed ? 0.5 : 1)
                     .padding(.horizontal, 6)
-                    .frame(height: Self.sidebarRowHeight)
+                    .frame(height: Self.lineHeight)
                     .background(model.filter == entry.filter ? Color.accentColor.opacity(0.25) : .clear, in: RoundedRectangle(cornerRadius: 5))
                     .contentShape(Rectangle())
                 }
@@ -205,7 +218,8 @@ struct LibrarySidebar: View {
     }
 
     private func header(_ title: String) -> some View {
-        Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.top, 10).padding(.bottom, 2).padding(.horizontal, 6)
+        Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.bottom, 3).padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, minHeight: Self.lineHeight, maxHeight: Self.lineHeight, alignment: .bottomLeading)
     }
 
     /// The Types header folds the section (FR-003-12); the choice is remembered in `library.sidebarTypesCollapsed`.
@@ -219,7 +233,8 @@ struct LibrarySidebar: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            .padding(.top, 10).padding(.bottom, 2).padding(.horizontal, 6)
+            .padding(.bottom, 3).padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, minHeight: Self.lineHeight, maxHeight: Self.lineHeight, alignment: .bottomLeading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

@@ -37,7 +37,7 @@ copies together, lets you drag them out, and turns favourites into triggers.
 | F5 | Item shortcuts & triggers | S4 | Per-item global hotkey; per-item typed trigger (e.g. `;sig`) expanded on Space/Tab/Return; variables `{date}`, `{time}`, `{clipboard}` with formats; rich-text triggers keep links. Per-app exclusion. |
 | F6 | Shelf | S3 | Optional edge/menu-bar panel showing recent + pinned items; drag clips out to any app; drop files/text in to add them. Off by default after falsifier review; on in v1. |
 | F7 | Retention & storage | Primary | Local SQLite + on-disk blobs in Application Support; retention presets (7 d, 30 d default, 90 d, 1 y, forever) with pinned/triggered items exempt; separate image-size budget; "Clear history". Optional capture pause & "capture only on explicit save" (curated mode). |
-| F8 | Onboarding, permissions & settings | Primary | First-run: Accessibility permission (paste-back, triggers), screenshot folder access, hotkey choice, launch at login. Settings: General, Shortcuts, Triggers, Privacy (ignored apps), Storage. Menu-bar icon. |
+| F8 | Onboarding, permissions & settings | Primary | First-run: Accessibility permission (paste-back, triggers), screenshot folder access, hotkey choice, launch at login. Settings: General, Library, Shortcuts, Triggers, Privacy (ignored apps), Storage. Menu-bar icon. |
 | F0 | Error system | All | Typed errors, user-facing strings in one catalogue, logging via `os.Logger` (no content in logs). |
 
 ## 6. Out of Scope (traced to TRUTHS)

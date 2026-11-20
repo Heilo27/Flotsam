@@ -6,7 +6,7 @@ import Foundation
 public enum SettingsString: String, CaseIterable, Sendable {
     // Window and panes
     case window
-    case paneGeneral, paneShortcuts, paneTypes, paneTriggers, panePrivacy, paneStorage, paneTips, paneAbout
+    case paneGeneral, paneLibrary, paneShortcuts, paneTypes, paneTriggers, panePrivacy, paneStorage, paneTips, paneAbout
 
     // General
     case launchAtLogin, loginApprovalCaption, openLoginItems

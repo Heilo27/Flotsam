@@ -420,7 +420,7 @@ import Testing
         let forbidden = ["export", "import", "sync", "icloud"]
 
         let titles = SettingsPane.allCases.map { $0.title.text.lowercased() }
-        #expect(titles == ["general", "shortcuts", "types", "triggers", "privacy", "storage", "tips", "about"])
+        #expect(titles == ["general", "library", "shortcuts", "types", "triggers", "privacy", "storage", "tips", "about"])
         for word in forbidden {
             #expect(!titles.contains { $0.contains(word) }, "pane title mentions \(word)")
             // The two exceptions are not settings transfer: .clearDone is a deletion message, and .importRecentScreenshots

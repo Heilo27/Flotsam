@@ -55,7 +55,7 @@ public enum LibraryViewMode: String, SettingValue, CaseIterable { case list, gri
 public enum LibraryLayoutMode: String, SettingValue, CaseIterable { case standard, compact }
 
 /// The Settings window's panes in display order (FR-008-03). Also the value of `settings.lastPane`.
-public enum SettingsPane: String, SettingValue, CaseIterable { case general, shortcuts, types, triggers, privacy, storage, tips, about }
+public enum SettingsPane: String, SettingValue, CaseIterable { case general, library, shortcuts, types, triggers, privacy, storage, tips, about }
 
 /// The Library's panel background (`library.background`, FR-003-21): follow the system appearance, or force light or dark.
 public enum LibraryBackground: String, SettingValue, CaseIterable { case system, light, dark }

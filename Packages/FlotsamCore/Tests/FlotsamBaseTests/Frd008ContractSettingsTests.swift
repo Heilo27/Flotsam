@@ -35,10 +35,10 @@ import Testing
 
     // MARK: - Window and panes (OC-8023...8032)
 
-    // OC-8023. Exactly eight panes in the stated order with the stated titles (FR-008-03, AC-008-28).
-    @Test func oc8023_eightPanesInOrder() {
-        #expect(SettingsPane.allCases.map(\.rawValue) == ["general", "shortcuts", "types", "triggers", "privacy", "storage", "tips", "about"])
-        #expect(SettingsPane.allCases.map { $0.title.text } == ["General", "Shortcuts", "Types", "Triggers", "Privacy", "Storage", "Tips", "About"])
+    // OC-8023. Exactly nine panes (Library split from General, TASK-529 round 3) in the stated order with the stated titles (FR-008-03, AC-008-28).
+    @Test func oc8023_ninePanesInOrder() {
+        #expect(SettingsPane.allCases.map(\.rawValue) == ["general", "library", "shortcuts", "types", "triggers", "privacy", "storage", "tips", "about"])
+        #expect(SettingsPane.allCases.map { $0.title.text } == ["General", "Library", "Shortcuts", "Types", "Triggers", "Privacy", "Storage", "Tips", "About"])
         #expect(SettingsString.window.text == "Settings")
     }
 

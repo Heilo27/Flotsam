@@ -5,6 +5,7 @@ extension SettingsPane {
     public var title: SettingsString {
         switch self {
         case .general: .paneGeneral
+        case .library: .paneLibrary
         case .shortcuts: .paneShortcuts
         case .types: .paneTypes
         case .triggers: .paneTriggers
@@ -19,6 +20,7 @@ extension SettingsPane {
     public var symbolName: String {
         switch self {
         case .general: "gearshape"
+        case .library: "books.vertical"
         case .shortcuts: "keyboard"
         case .types: "square.grid.2x2"
         case .triggers: "bolt"

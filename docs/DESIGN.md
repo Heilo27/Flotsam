@@ -117,9 +117,9 @@ Library appears in 120 ms ease-out (scale 0.98 to 1, fade). Shelf slides 150 ms 
 
 760x480, centred on the pointer's screen, resizable to 560x360 minimum. Three columns: sidebar 170, results taking the remaining width, preview 280 by default (200 to 360 as the panel is resized). No column collapses at narrow widths: the panel's 560 pt minimum is the narrowest, and at that width the sidebar and the results list stay visible with the preview open (FR-003-03). Search field 36 pt at top. Footer hint bar 30 pt.
 
-Compact layout (FR-003-06, Settings > General): two columns, sidebar 170 and results, no preview column, 520x520 (min 480x400). Space or ⌘Y shows the preview in place of the results with the sidebar kept; Esc returns to the list. Tab order and VoiceOver order: search, sidebar, results (or the preview).
+Compact layout (FR-003-06, Settings > Library): two columns, sidebar 170 and results, no preview column, 520x520 (min 480x400). Space or ⌘Y shows the preview in place of the results with the sidebar kept; Esc returns to the list. Tab order and VoiceOver order: search, sidebar, results (or the preview).
 
-- Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows 24 pt with 13 pt text (tight, so the results list stays the dominant column), count right-aligned, `accent-text` on selected row.
+- Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows and section headers are each one 24 pt line with 13 pt row text (tight, so the results list stays the dominant column), count right-aligned, `accent-text` on selected row. The sidebar's viewport is a whole number of lines (plus a 4 pt top margin) and scrolls line by line, so its bottom edge never cuts a row (FR-003-07).
 - List rows: 44 pt, 32 pt lead icon or thumbnail, first line `t1` single line, second line `t2` (source app, age). Badges: pin, trigger, Missing (warn). Up to 3 tag chips then "+n". Quick-paste badge ⌘1 to ⌘9 on the first nine rows.
 - Grid cells: 120 pt square, thumbnail, name caption, same badges.
 - Preview: content, metadata list, tags, note, "Show more" past 12 lines (text) or fit for images.
@@ -131,7 +131,7 @@ Left and right: 280 pt wide, 96 pt cards (header row: source app icon, name, age
 
 ### 3.3 Settings (image 06)
 
-Toolbar window, 560 wide, height fits the pane. Panes in order: General, Shortcuts, Triggers, Privacy, Storage, About. The General pane is one grouped form with a header per group (System, Screenshots, Shelf, Library, Capture, Setup) and each control's note directly under its label, at the native 13 pt row height (FRD-008 FR-008-04). Shortcut rows use the shared recorder field: keycap glyphs, click to record, an inline clear button (FR-008-05). Changes apply immediately (no Apply button); the window reopens on the last pane. Destructive actions (Clear History, shorten retention, reset ignored apps) use alerts (§4).
+Toolbar window, 560 wide, height fits the pane. Panes in order: General, Library, Shortcuts, Types, Triggers, Privacy, Storage, Tips, About. The General pane is one grouped form with a header per group (System, Screenshots, Shelf, Setup) and each control's note directly under its label, at the native 13 pt row height (FRD-008 FR-008-04); the Library pane holds the Library and Capture groups (FR-008-33). No pane is built taller than a laptop screen: a pane that would be is split by topic, because a scrolling viewport's edge can cut a row. Shortcut rows use the shared recorder field: keycap glyphs, click to record, an inline clear button (FR-008-05). Changes apply immediately (no Apply button); the window reopens on the last pane. Destructive actions (Clear History, shorten retention, reset ignored apps) use alerts (§4).
 
 ### 3.4 Onboarding (image 07)
 
@@ -274,7 +274,7 @@ Mockups use SVG stand-ins. Shipped names:
 | Pause | `pause.fill` |
 | Warning | `exclamationmark.triangle.fill` |
 | Success | `checkmark.circle` |
-| Settings panes | `gearshape`, `keyboard`, `bolt`, `hand.raised`, `internaldrive`, `info.circle` |
+| Settings panes | `gearshape`, `books.vertical`, `keyboard`, `square.grid.2x2`, `bolt`, `hand.raised`, `internaldrive`, `lightbulb`, `info.circle` |
 
 Each icon-only control carries an `accessibilityLabel` (below).
 

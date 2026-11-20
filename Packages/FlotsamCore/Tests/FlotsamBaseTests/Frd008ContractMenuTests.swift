@@ -308,9 +308,9 @@ struct Frd008ContractMenuTests {
 
     // OC-8141. Red if a second control for a key appears in another pane or the menu. Panes and menu only: the
     // onboarding overlap is the separate DEFECT test below.
-    @Test("OC-8141: across the six panes and the menu only capture.mode has two homes")
+    @Test("OC-8141: across the panes and the menu only capture.mode has two homes")
     func oneControlPerSettingInPanesAndMenu() throws {
-        let files = ["AboutPane", "GeneralPane", "PrivacyPane", "ShortcutsPane", "StoragePane", "TriggersPane"]
+        let files = ["AboutPane", "GeneralPane", "LibraryPane", "PrivacyPane", "ShortcutsPane", "StoragePane", "TriggersPane"]
             .map { "App/Flotsam/Settings/\($0).swift" } + ["App/Flotsam/StatusItemController.swift"]
         let homes = try Frd008KeyHomes.scan(files)
         let doubled = homes.filter { $0.value.count > 1 }.keys.sorted()
@@ -323,7 +323,7 @@ struct Frd008ContractMenuTests {
     // (step 5 in particular) touches screenshots.enabled or screenshots.folderOverride, which General controls.
     @Test("OC-8141: onboarding shares only shortcuts.openLibrary with a Settings pane")
     func onboardingOverlap() throws {
-        let panes = ["GeneralPane", "PrivacyPane", "ShortcutsPane", "StoragePane", "TriggersPane"]
+        let panes = ["GeneralPane", "LibraryPane", "PrivacyPane", "ShortcutsPane", "StoragePane", "TriggersPane"]
             .map { "App/Flotsam/Settings/\($0).swift" }
         let paneKeys = Set(try Frd008KeyHomes.scan(panes).keys)
         let onboardingKeys = Set(try Frd008KeyHomes.scan(["App/Flotsam/OnboardingModel.swift"]).keys)

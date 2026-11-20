@@ -93,9 +93,9 @@ private struct Rig {
         let rig = Rig(); defer { rig.wipe() }
         rig.driver.open()
         let items = rig.presenter.itemsSeen.first ?? []
-        #expect(items.map(\.pane) == [.general, .shortcuts, .types, .triggers, .privacy, .storage, .tips, .about])
-        #expect(items.map(\.label) == ["General", "Shortcuts", "Types", "Triggers", "Privacy", "Storage", "Tips", "About"])
-        #expect(items.map(\.symbolName) == ["gearshape", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle"])
+        #expect(items.map(\.pane) == [.general, .library, .shortcuts, .types, .triggers, .privacy, .storage, .tips, .about])
+        #expect(items.map(\.label) == ["General", "Library", "Shortcuts", "Types", "Triggers", "Privacy", "Storage", "Tips", "About"])
+        #expect(items.map(\.symbolName) == ["gearshape", "books.vertical", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle"])
         #expect(items == SettingsWindowDriver.items)
     }
 
