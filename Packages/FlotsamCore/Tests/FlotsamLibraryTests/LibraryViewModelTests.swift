@@ -211,7 +211,7 @@ import Testing
         }
         await h.model.pasteTask?.value
         #expect(h.paster.calls.isEmpty)
-        #expect(h.model.footer().notice == LibraryText.string("ui.library.footerMultiDisabled"))
+        #expect(h.model.footer().notice == "Return queues these items")
     }
 
     @Test func accessibilityDeniedOutcomeReportsTheCopyOnlyFallback() async {
@@ -293,11 +293,16 @@ import Testing
             all: 5, pinned: 1, kinds: [.text: 4, .link: 1],
             tags: [SidebarCounts.TagCount(id: 7, name: "Work", color: nil, count: 2)], apps: [])
         let h = await opened(Harness.rows(5), counts: counts)
+        // FR-003-12 order: All, Pinned, Notes, Shortcuts (each stepped even at zero), then the types (TASK-537).
         h.model.handle(key(.down, .option))
         #expect(h.model.filter == .pinned)
         h.model.handle(key(.down, .option))
+        #expect(h.model.filter == .hasNote)
+        h.model.handle(key(.down, .option))
+        #expect(h.model.filter == .hasShortcut)
+        h.model.handle(key(.down, .option))
         #expect(h.model.filter == .kind(.text))
-        h.model.handle(key(.up, .option)); h.model.handle(key(.up, .option)); h.model.handle(key(.up, .option))
+        for _ in 0..<4 { h.model.handle(key(.up, .option)) }
         #expect(h.model.filter == .all)
         await h.model.settled()
         // Each step cancels the load before it, but a cancelled load still reaches the source, and the loads call it from
@@ -332,5 +337,29 @@ import Testing
         h.model.panelDidHide()
         try? await Task.sleep(for: .milliseconds(100))
         #expect(h.source.releaseCount == 1)
+    }
+
+    /// FR-003-05/13, AC-003-65: the Library and the Shelf share one cache, so a Library hide drops its own rows at once
+    /// but frees the shared memory only when the last open panel closes.
+    @Test func hidingTheLibraryWhileTheShelfIsOpenDropsRowsButReleasesMemoryOnlyWhenTheShelfCloses() async {
+        let source = FakeSource(rows: Harness.rows(3), counts: nil)
+        let residency = PanelResidency { await source.releaseMemory() }
+        let model = LibraryViewModel(
+            source: source, paster: FakePaster(), host: FakeHost(), preferences: FakePreferences(),
+            residency: residency)
+        residency.opened(.shelf)
+        await model.open(target: nil)
+        #expect(!model.loadedRows.isEmpty)
+
+        model.panelDidHide()
+        #expect(model.loadedRows.isEmpty, "the Library's rows drop on hide")
+        #expect(source.releaseCount == 0, "the Shelf is still open: nothing shared is released")
+        #expect(residency.isAnyOpen)
+
+        residency.closed(.shelf)
+        // Hang guard only: the release is an event (the last panel closing), not a bound.
+        let deadline = Date().addingTimeInterval(10)
+        while source.releaseCount == 0, Date() < deadline { try? await Task.sleep(for: .milliseconds(2)) }
+        #expect(source.releaseCount == 1, "the last panel closing releases exactly once")
     }
 }

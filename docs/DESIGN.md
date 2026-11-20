@@ -333,7 +333,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.searching` | Searching… | (10/15) |
 | `ui.library.errorTitle` | History unavailable | (19/40) |
 | `ui.library.footerCopyOnly` | Press ⌘V to paste | (17/40) |
-| `ui.library.footerMultiDisabled` | Select one item to paste | (24/40) |
+| `ui.library.footerMultiDisabled` | Return queues these items | (24/40) |
 | `ui.library.footerItems` | 1 item / %lld items (plural: one, other) | (9/40) |
 | `ui.library.footerSelected` | %lld selected | (12/40) |
 | `ui.library.hintPaste` | Paste | (5/15) |

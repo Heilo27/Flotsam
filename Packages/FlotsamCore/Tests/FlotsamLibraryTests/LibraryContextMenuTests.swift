@@ -26,11 +26,11 @@ import Testing
         ])
     }
 
-    @Test("OC-3091 bundle menu has Ungroup and Reveal in Finder, no Edit; Reveal sits between two separators")
+    @Test("OC-3091 bundle menu has Rename, Ungroup and Reveal in Finder, no Edit; Reveal sits between two separators (FR-004-42, TASK-539)")
     func bundleMenu() {
         #expect(titles(.bundle) == [
             "Paste", "Paste as Plain Text", "Copy", "Preview", "-",
-            "Pin", "Tags…", "Note…", "Shortcut and Trigger…", "Ungroup", "-",
+            "Pin", "Tags…", "Note…", "Shortcut and Trigger…", "Rename", "Ungroup", "-",
             "Reveal in Finder", "-",
             "Delete",
         ])

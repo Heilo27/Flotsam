@@ -119,7 +119,7 @@ An input rejection shown inline (ORG-VAL-001 to -003, ORG-VAL-005, ORG-LIM-001 t
 | Bundle rename card | in-panel single-line field with Save/Cancel | replaces the results area | FR-004-42; Return saves, Esc cancels |
 | Sort control | menu button and ⌘S | panel header | four options; checkmark on active |
 | Inline validation text | label | by field | ORG-* messages |
-| Context menu entries | menu | right-click | Pin/Unpin, Tags..., Note..., Edit..., Group into Bundle, Rename..., Ungroup, Delete (placement in FRD-003 FR-003-22) |
+| Context menu entries | menu | right-click | Pin/Unpin, Tags..., Note..., Edit..., Group into Bundle, Rename, Ungroup, Delete (placement in FRD-003 FR-003-22) |
 
 ## 9. Out of Scope
 Grouping items other than files, folders and bundles. Renaming anything but a bundle. Undo or trash. Nested tags, smart collections, tag sync (A1). Editing images or files (A3). Rich-text editing. Combining several filters at once. Tag-based retention rules.

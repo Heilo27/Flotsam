@@ -613,7 +613,9 @@ public final class LibraryViewModel {
         clearHoverPreview()
         // Opening a Flotsam window hides the Library first, as an explicit step and not as a side effect of the window
         // taking key: a window coming back from the Dock does not move key in time (FR-003-02, TASK-524).
-        if command.opensFlotsamWindow(selection: selectedRows) { host.hidePanel() }
+        // The hide drops the held rows (FR-003-05, `panelDidHide`), so what the command acts on is read before it.
+        let target = selectedRows
+        if command.opensFlotsamWindow(selection: target) { host.hidePanel() }
         switch command {
         case .move(let direction): move(direction, extending: false)
         case .extend(let direction): move(direction, extending: true)
@@ -632,9 +634,9 @@ public final class LibraryViewModel {
         case .external(.shortcutAndTrigger):
             // The editor's one gate (FR-005-09): exactly one row that can carry a shortcut. The app opens the editor
             // for the id it is handed and no other, so nothing else reaches it.
-            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: selectedRows) else { return }
+            guard let id = LibraryExternalCommand.shortcutAndTrigger.shortcutEditorTarget(selection: target) else { return }
             effects.external(.shortcutAndTrigger, [id])
-        case .external(let command): effects.external(command, selectedRows.map(\.id))
+        case .external(let command): effects.external(command, target.map(\.id))
         }
     }
 

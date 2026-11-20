@@ -452,16 +452,20 @@ import Testing
     }
 
     // OC-3028. Mutation: skip Pinned, wrap at the ends, or reverse the direction.
-    @Test("OC-3028 Option-Down and Option-Up walk the sidebar: All, Pinned, first type, Pinned")
+    @Test("OC-3028 Option-Down and Option-Up walk the sidebar: All, Pinned, Notes, Shortcuts, first type, then back up to Pinned")
     func oc3028_sidebarStep() async {
         // given: sidebar on All, with Text and Links types present
         let counts = SidebarCounts(all: 5, pinned: 1, kinds: [.text: 3, .link: 2], tags: [], apps: [])
         let h = await opened(Harness.rows(5), counts: counts)
         #expect(h.model.filter == .all)
         // when/then
+        // Notes and Shortcuts sit between Pinned and the types (FR-003-12, TASK-537)
         h.model.handle(key(.down, .option)); #expect(h.model.filter == .pinned)
+        h.model.handle(key(.down, .option)); #expect(h.model.filter == .hasNote)
+        h.model.handle(key(.down, .option)); #expect(h.model.filter == .hasShortcut)
         h.model.handle(key(.down, .option)); #expect(h.model.filter == .kind(.text))
-        h.model.handle(key(.up, .option)); #expect(h.model.filter == .pinned)
+        for _ in 0..<3 { h.model.handle(key(.up, .option)) }
+        #expect(h.model.filter == .pinned)
         // and boundary: Option-Up twice from Pinned stops at All
         h.model.handle(key(.up, .option)); h.model.handle(key(.up, .option))
         #expect(h.model.filter == .all)

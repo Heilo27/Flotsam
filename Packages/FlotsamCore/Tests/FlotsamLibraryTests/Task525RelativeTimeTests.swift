@@ -11,41 +11,68 @@ import Testing
 
 /// A clock whose `sleep` parks until the test releases it, advancing time by the requested duration, and records each
 /// request. Nothing sleeps for real.
+///
+/// The model also hands this clock to its `BusyIndicator` (TASK-546, FR-003-50), whose one-shot 150 ms spinner delay
+/// is not the relative-time watch. That sleep parks like any other but is kept apart: it is not in `sleeps`, not
+/// counted by `parked`, and `release()` never wakes it. It ends only when the model cancels it. Cancelling one sleeper
+/// wakes that sleeper alone, including a sleeper whose task was already cancelled when it began to sleep.
 final class GatedClock: WallClock, @unchecked Sendable {
+    private struct Waiter {
+        let id: Int
+        let seconds: TimeInterval
+        let isSpinnerDelay: Bool
+        let resume: CheckedContinuation<Void, Never>
+    }
+
     private let lock = NSLock()
     private var current: Date
     private var requested: [TimeInterval] = []
-    private var waiters: [(seconds: TimeInterval, resume: CheckedContinuation<Void, Never>)] = []
+    private var waiters: [Waiter] = []
+    private var cancelledEarly: Set<Int> = []
+    private var nextID = 0
 
     init(_ start: Date) { current = start }
 
     func now() -> Date { lock.withLock { current } }
+    /// Every watch sleep asked for, in order; the spinner's 150 ms delay is not one.
     var sleeps: [TimeInterval] { lock.withLock { requested } }
-    var parked: Int { lock.withLock { waiters.count } }
+    /// Watch sleepers currently parked.
+    var parked: Int { lock.withLock { waiters.filter { !$0.isSpinnerDelay }.count } }
 
     func sleep(for duration: Duration) async {
-        let seconds = Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
+        let seconds = duration.timeInterval
+        let isSpinnerDelay = duration == BusyIndicator.delay
+        let id = lock.withLock { () -> Int in
+            nextID += 1
+            return nextID
+        }
         await withTaskCancellationHandler {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                lock.withLock {
-                    requested.append(seconds)
-                    waiters.append((seconds, continuation))
+                let alreadyCancelled = lock.withLock { () -> Bool in
+                    if !isSpinnerDelay { requested.append(seconds) }
+                    if cancelledEarly.remove(id) != nil { return true }
+                    waiters.append(Waiter(id: id, seconds: seconds, isSpinnerDelay: isSpinnerDelay, resume: continuation))
+                    return false
                 }
+                if alreadyCancelled { continuation.resume() }
             }
         } onCancel: {
-            let all = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
-                defer { waiters = [] }
-                return waiters.map(\.resume)
+            let own = lock.withLock { () -> Waiter? in
+                guard let index = waiters.firstIndex(where: { $0.id == id }) else {
+                    cancelledEarly.insert(id)
+                    return nil
+                }
+                return waiters.remove(at: index)
             }
-            all.forEach { $0.resume() }
+            own?.resume.resume()
         }
     }
 
     /// Lets the parked sleeper wake, with time moved on by what it asked for.
     func release() {
-        let waiter = lock.withLock { () -> (seconds: TimeInterval, resume: CheckedContinuation<Void, Never>)? in
-            guard !waiters.isEmpty else { return nil }
-            let first = waiters.removeFirst()
+        let waiter = lock.withLock { () -> Waiter? in
+            guard let index = waiters.firstIndex(where: { !$0.isSpinnerDelay }) else { return nil }
+            let first = waiters.remove(at: index)
             current = current.addingTimeInterval(first.seconds)
             return first
         }
