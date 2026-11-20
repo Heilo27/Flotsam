@@ -84,6 +84,22 @@ if [[ ! -x "$APP" ]] || [[ -n "$(find App Packages project.yml -newer "$APP" \( 
 fi
 [[ -x "$APP" ]] || die "build did not produce $APP"
 
+# crop_display <ctl> <png> <x> <y> <w> <h> <display width in points>: capture the main display and crop the point
+# rectangle out of it (pixel scale = capture pixels / display points). Returns non-zero on any failure.
+crop_display() {
+  local ctl="$1" png="$2" x="$3" y="$4" w="$5" h="$6" dw="$7"
+  local full="$ctl/display.png" pxw scale
+  ((dw > 0)) || return 1
+  screencapture -x -m "$full" 2>>"$ctl/capture.log" && [[ -s "$full" ]] || return 1
+  pxw="$(sips -g pixelWidth "$full" 2>/dev/null | awk '/pixelWidth/ {print $2}')"
+  [[ "$pxw" =~ ^[0-9]+$ ]] || return 1
+  scale="$(awk -v p="$pxw" -v d="$dw" 'BEGIN { printf "%.4f", p / d }')"
+  local cx cy cw ch
+  read -r cx cy cw ch < <(awk -v s="$scale" -v x="$x" -v y="$y" -v w="$w" -v h="$h" \
+    'BEGIN { printf "%d %d %d %d\n", x * s + 0.5, y * s + 0.5, w * s + 0.5, h * s + 0.5 }')
+  sips -c "$ch" "$cw" --cropOffset "$cy" "$cx" "$full" --out "$png" >/dev/null 2>>"$ctl/capture.log" && [[ -s "$png" ]]
+}
+
 # One pass: launch, wait for ready or failed, capture the window, end our own process.
 # Prints "ok" or the failure reason on the last line of stdout.
 pass() {
@@ -92,7 +108,13 @@ pass() {
   local suite="flotsam-shots-$$-$RANDOM"
   defaults write "$suite" screenshots.enabled -string false
   defaults write "$suite" triggers.enabled -string false
-  FLOTSAM_DATA_DIR="$ctl/data" FLOTSAM_DEFAULTS_SUITE="$suite" FLOTSAM_FAKE_SECURE=1 \
+  # A throw-away home for the launched instance (CFFIXED_USER_HOME): file-based lookups (NSHomeDirectory, ~/Library,
+  # ~/Documents, the screenshot folder default) resolve inside $ctl, not the real home. It does NOT redirect cfprefsd:
+  # defaults domains still live in the real ~/Library/Preferences, so the suite stays the preferences isolation (and is
+  # deleted below). FLOTSAM_DATA_DIR stays an absolute path of its own.
+  local fakehome="$ctl/home"
+  mkdir -p "$fakehome/Library/Preferences"
+  CFFIXED_USER_HOME="$fakehome" FLOTSAM_DATA_DIR="$ctl/data" FLOTSAM_DEFAULTS_SUITE="$suite" FLOTSAM_FAKE_SECURE=1 \
     FLOTSAM_SHOTS_STAGE="$stage" FLOTSAM_SHOTS_APPEARANCE="$appearance" FLOTSAM_SHOTS_CTL="$ctl" \
     "$APP" >"$ctl/stdout.log" 2>"$ctl/stderr.log" &
   local pid=$! result="timeout"
@@ -103,12 +125,22 @@ pass() {
     sleep 0.2
   done
   if [[ "$result" == "ready" ]]; then
-    local wid x y w h; read -r wid x y w h < "$ctl/ready"
+    local wid x y w h; read -r wid x y w h dw sr < "$ctl/ready"
     # Default: the region of the screen the staged window occupies. The window sits on a fixed-colour backdrop, so its
     # materials blur the same thing on every host. SHOTS_CAPTURE=window captures the window alone instead (-l): blur
     # then has nothing behind it and looks flat.
     local mode="${SHOTS_CAPTURE:-region}" captured=0
+    # Without Screen Recording a screen capture silently leaves out every other app's windows (it returns the bare
+    # wallpaper, with no Flotsam in it) and -R is refused. Never produce those: fall back to the window-only capture.
+    if [[ "${sr:-1}" == "0" && "$mode" != "window" ]]; then
+      echo "shots: Screen Recording is not granted to this host; region capture would be wallpaper only" >&2
+      mode="window"
+    fi
     if [[ "$mode" == "region" ]] && screencapture -x -R "$x,$y,$w,$h" "$png" 2>"$ctl/capture.log" && [[ -s "$png" ]]; then
+      captured=1; result="ok"
+    elif [[ "$mode" != "window" ]] && crop_display "$ctl" "$png" "$x" "$y" "$w" "$h" "${dw:-0}"; then
+      # -R is refused on some hosts ("could not create image from rect") while a whole-display capture works: take the
+      # main display and cut the same rectangle out of it. Same pixels, same backdrop.
       captured=1; result="ok"
     elif screencapture -x -o -l "$wid" "$png" 2>>"$ctl/capture.log" && [[ -s "$png" ]]; then
       captured=1; result="ok-window"
