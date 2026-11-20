@@ -71,6 +71,9 @@ public final class ShelfModel {
     @ObservationIgnored private let events: ItemEventBus
     @ObservationIgnored private let effects: ShelfEffects
     @ObservationIgnored private let clock: any ShelfClock
+    /// Tells storage when the Shelf opens and is gone, so the shared thumbnail cache is freed only when the last panel
+    /// (Library or Shelf) is gone (FR-003-13). Nil in tests that do not exercise it.
+    @ObservationIgnored private let residency: PanelResidency?
     /// The spinner's 150 ms one-shot delay (FR-006-32); the Library's logic and constant.
     public let busy: BusyIndicator
 
@@ -91,7 +94,7 @@ public final class ShelfModel {
     public init(
         source: any ShelfDataSource, paster: any ShelfPasting, host: any ShelfPasteHost, events: ItemEventBus,
         details: any ShelfCardDetails = NoShelfCardDetails(), effects: ShelfEffects = ShelfEffects(),
-        clock: any ShelfClock = SystemShelfClock()
+        clock: any ShelfClock = SystemShelfClock(), residency: PanelResidency? = nil
     ) {
         self.source = source
         self.paster = paster
@@ -100,6 +103,7 @@ public final class ShelfModel {
         self.details = details
         self.effects = effects
         self.clock = clock
+        self.residency = residency
         busy = BusyIndicator { await clock.sleep(for: $0.timeInterval) }
     }
 
@@ -186,6 +190,7 @@ public final class ShelfModel {
         self.target = target
         isSticky = sticky
         isOpen = true
+        residency?.opened(.shelf)
         // A reveal starts clean, like the Library's open (FR-003-04): empty search, All.
         searchText = ""
         kindFilter = nil
@@ -217,6 +222,19 @@ public final class ShelfModel {
         relativeTimeTask = nil
         busy.end()
         generation += 1
+    }
+
+    /// The panel is gone: hidden and no longer drawing, which is after a hide animation, not at `didHide`. Drops the cards
+    /// and their texts, which only a visible Shelf needs (FR-003-05, FR-006-07), and lets storage free the thumbnail
+    /// cache if this was the last panel (FR-003-13). A no-op while the Shelf is open again. The next reveal loads afresh.
+    public func panelDidClose() {
+        guard !isOpen else { return }
+        pinnedRows = []
+        recentRows = []
+        texts = [:]
+        rowsRevision += 1
+        loadState = .idle
+        residency?.closed(.shelf)
     }
 
     private func subscribeIfNeeded() {

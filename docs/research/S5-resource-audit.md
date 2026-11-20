@@ -107,4 +107,4 @@ M = measured here, S = spec-only (code does not exist yet or was not isolated).
   ingest writes thumbnail files only (`writeThumbnails`).
 - Spec, same commit: FRD-001 FR-001-20, AC-001-01, AC-001-16; FRD-003 FR-003-13 and the in-memory list;
   FRD-007 FR-007-07; ADR-0004 image-pipeline row.
-- Not wired: calling `releaseMemory()` on last-panel-close. The panel UI does not exist yet (TASK-383).
+- Wired by TASK-383: `PanelResidency` (FlotsamBase) calls `releaseMemory()` when the last of Library and Shelf is gone, and each panel drops its rows (Library: loaded rows and preview content; Shelf: cards and texts) when it hides. Real-panel measurements (RSS after 1,000 images browsed and closed, 10 minutes idle at 10k items) are still owed; the residency cause is unconfirmed (candidates: malloc/ImageIO retained pages that RSS counts but footprint does not, SwiftUI image caches in the hosting views; neither measured).

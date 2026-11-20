@@ -177,7 +177,12 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
             guard let self else { span.end(); return }
             await model.open(target: target, sticky: sticky)
             // A hide that arrived while the sections loaded wins.
-            guard !Task.isCancelled, machine.isVisible else { span.end(); return }
+            guard !Task.isCancelled, machine.isVisible else {
+                span.end()
+                // `open` may have run after the hide that beat it; balance it so the panel counts as closed (FR-003-13).
+                if !machine.isVisible { model.didHide(); model.panelDidClose() }
+                return
+            }
             reveal(trigger: trigger, screen: screen, sticky: sticky, span: span)
         }
     }
@@ -235,7 +240,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         dropView?.assumePointerInside(false)
         removeKeyMonitor()
         model.didHide()
-        guard panel.isVisible else { refreshEdgeBars(); return }
+        guard panel.isVisible else { model.panelDidClose(); refreshEdgeBars(); return }
         let transition = ShelfLayout.transition(reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = transition.hideDuration
@@ -251,6 +256,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
                 guard let self, !self.machine.isVisible else { return }
                 self.panel.orderOut(nil)
                 self.panel.alphaValue = 1
+                // Gone, not just hiding: only now may the cards and the shared thumbnail cache be freed (FR-003-13).
+                self.model.panelDidClose()
                 self.refreshEdgeBars()
             }
         })
