@@ -185,7 +185,6 @@ final class AppContainer {
     /// `actions.openSettings`. The window is created at first use; the database it reads is asked for on each call, because it opens after launch.
     func installSettings(showSetupGuide: @escaping @MainActor @Sendable () -> Void) {
         let reporter = reporter
-        let presenter = presenter
         let settings = settings
         let permissions = permissions
         let storage = settingsStorage
