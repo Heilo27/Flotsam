@@ -1678,7 +1678,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No Recent Problems"
+            "value" : "No Notices"
           }
         }
       }
@@ -1688,7 +1688,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recent Problems"
+            "value" : "Notices"
           }
         }
       }
@@ -2964,7 +2964,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show a cue when something is captured"
+            "value" : "Show capture cue"
           }
         }
       }
@@ -3532,7 +3532,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Launch at Login"
+            "value" : "Launch at login"
           }
         }
       }
@@ -3842,7 +3842,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bottom Edge"
+            "value" : "Bottom edge"
           }
         }
       }
@@ -3852,7 +3852,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Left Edge"
+            "value" : "Left edge"
           }
         }
       }
@@ -3862,7 +3862,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Menu Bar"
+            "value" : "Menu bar"
           }
         }
       }
@@ -3872,7 +3872,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Right Edge"
+            "value" : "Right edge"
           }
         }
       }
@@ -3882,7 +3882,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Top Center"
+            "value" : "Top center"
           }
         }
       }
@@ -4692,7 +4692,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Match System"
+            "value" : "Match system"
           }
         }
       }
@@ -4722,7 +4722,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Preview on open"
+            "value" : "Show preview"
           }
         }
       }
@@ -4732,7 +4732,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Closed"
+            "value" : "Off"
           }
         }
       }
@@ -4742,7 +4742,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open"
+            "value" : "On"
           }
         }
       }
@@ -4752,7 +4752,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open, larger panel"
+            "value" : "On, larger panel"
           }
         }
       }
@@ -4792,7 +4792,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resume where I left off"
+            "value" : "Reopen last view"
           }
         }
       }
@@ -5073,6 +5073,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Trigger Variables"
+          }
+        }
+      }
+    },
+    "ui.settings.editorClip" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clip"
+          }
+        }
+      }
+    },
+    "ui.settings.setupGuide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Setup guide"
           }
         }
       }

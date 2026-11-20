@@ -30,6 +30,9 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
         let window = EditorWindow(contentViewController: host)
         window.title = SettingsString.editorWindow.text
         window.styleMask = [.titled, .closable]
+        // Only Close applies to a small fixed-size editor; the dimmed minimise and zoom buttons would be dead controls.
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.center()

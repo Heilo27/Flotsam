@@ -76,7 +76,7 @@ import Testing
 
     // OC-8030. General's popup and buttons: five placements in order (Top Center added by TASK-533, FRD-008 AC-008-04) and the stated button texts.
     @Test func oc8030_generalPaneLabelsAndPlacementItems() {
-        #expect(ShelfPlacement.allCases.map { $0.label.text } == ["Right Edge", "Left Edge", "Bottom Edge", "Menu Bar", "Top Center"])
+        #expect(ShelfPlacement.allCases.map { $0.label.text } == ["Right edge", "Left edge", "Bottom edge", "Menu bar", "Top center"])
         #expect(SettingsString.chooseFolder.text == "Choose…")
         #expect(SettingsString.useSystemDefault.text == "Use System Default")
         #expect(SettingsString.showSetupGuide.text == "Show Setup Guide…")

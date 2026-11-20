@@ -44,9 +44,9 @@ public enum ShelfLayout {
     public static let cardHeight: CGFloat = 96
     public static let bottomCardWidth: CGFloat = 144
     public static let cardSpacing: CGFloat = 4
-    public static let sectionHeaderHeight: CGFloat = 24
+    public static let sectionHeaderHeight: CGFloat = 30
     public static let contentPadding: CGFloat = 8
-    /// A text card shows the first four lines, at most 120 characters (FR-006-07).
+    /// A text card reads the first four lines, at most 120 characters, and shows the whole lines that fit its 96 pt (FR-006-07).
     public static let cardTextLineLimit = 4
     /// In the vertical placements a text card is only as tall as its text needs (FR-006-07, hill-climb r2): between this
     /// floor, for one short line, and `cardHeight`, which four lines of text fill. The other cards stay `cardHeight`.
@@ -184,8 +184,17 @@ public enum ShelfLayout {
     /// capped at `cardTextLineLimit`; the height is never under `textCardMinimumHeight`, which only a one-line card reaches,
     /// and never over `cardHeight`.
     public static func cardHeight(forLineCount lines: Int, lineHeight: CGFloat) -> CGFloat {
-        let shown = min(max(lines, 1), cardTextLineLimit)
+        let shown = min(max(lines, 1), maxTextLines(lineHeight: lineHeight))
         return min(max(cardChromeHeight + CGFloat(shown) * lineHeight, textCardMinimumHeight), cardHeight)
+    }
+
+    /// How many whole lines of `lineHeight` a text card can show: the read limit (`cardTextLineLimit`), less any line that
+    /// would not fit under the header inside `cardHeight`, so a card never ends with a half-cut last line (hill-climb r4).
+    /// At the callout size (16 pt lines) that is three lines; the app fades the last one when the text goes on.
+    public static func maxTextLines(lineHeight: CGFloat) -> Int {
+        guard lineHeight > 0 else { return cardTextLineLimit }
+        let fitting = Int(((cardHeight - cardChromeHeight) / lineHeight).rounded(.down))
+        return min(max(fitting, 1), cardTextLineLimit)
     }
 
     /// The width of the content for the bottom strip: one card per item in one row, padding either side. An empty

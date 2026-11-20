@@ -16,7 +16,7 @@ private struct StubProbe: PermissionProbe {
             .paneGeneral, .paneLibrary, .paneShortcuts, .paneTypes, .paneTriggers, .panePrivacy, .paneStorage, .paneTips, .paneAbout,
         ])
         #expect(SettingsPane.allCases.map(\.symbolName) == [
-            "gearshape", "books.vertical", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle",
+            "gearshape", "list.bullet.rectangle", "keyboard", "square.grid.2x2", "bolt", "hand.raised", "internaldrive", "lightbulb", "info.circle",
         ])
     }
 

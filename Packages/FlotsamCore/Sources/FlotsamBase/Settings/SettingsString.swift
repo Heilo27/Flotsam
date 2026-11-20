@@ -14,7 +14,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// The always-available backfill button (FR-002-12).
     case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
-    case revealAtEdge, revealAtEdgeHelp, edgeBar, edgeBarHelp, showSetupGuide, historyHelp
+    case revealAtEdge, revealAtEdgeHelp, edgeBar, edgeBarHelp, showSetupGuide, setupGuide, historyHelp
     /// The General pane's group headers, one per FR-008-04 group.
     case sectionSystem, sectionScreenshots, sectionShelf, sectionLibrary, sectionCapture, sectionSetup
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
@@ -46,7 +46,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
 
     // Item editor: shortcut and trigger (FR-005-09)
     /// `editorWindow` is the window title ("Edit Shortcut"); the clip's name is a subtitle line inside the form.
-    case editorWindow, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
+    case editorWindow, editorClip, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
     /// The variable help caption: lists {date}, {time}, {clipboard} and format examples (FR-005-17, FRD-005 section 8).
     case editorVariablesHelp, editorVariablesHelpButton
     case editorNoTrigger, editorSave, editorItemGone, editorLoadFailed

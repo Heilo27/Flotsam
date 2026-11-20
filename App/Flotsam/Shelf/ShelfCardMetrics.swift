@@ -10,14 +10,31 @@ enum ShelfCardMetrics {
     private static var textWidth: CGFloat { ShelfLayout.panelWidth - ShelfLayout.contentPadding * 2 - 8 * 2 - 14 - 6 }
     private static let font = NSFont.preferredFont(forTextStyle: .callout)
 
-    static func height(of card: ShelfCardPresentation) -> CGFloat {
-        guard case .kindIcon = card.visual, let text = card.text else { return card.verticalHeight }
-        let lineHeight = ceil(NSLayoutManager().defaultLineHeight(for: font))
+    static var lineHeight: CGFloat { ceil(NSLayoutManager().defaultLineHeight(for: font)) }
+
+    /// How a text card shows its text: the whole lines that fit (never a half-cut last line) and whether the text goes on
+    /// past them, in which case the card fades its last line (FR-006-07, hill-climb r4).
+    struct TextFit {
+        let height: CGFloat
+        let shownLines: Int
+        let isClamped: Bool
+    }
+
+    /// nil for a card that does not draw its text as lines (image, colour, file and the other kinds).
+    static func textFit(of card: ShelfCardPresentation) -> TextFit? {
+        guard case .kindIcon = card.visual, let text = card.text else { return nil }
+        let lineHeight = lineHeight
         let bounds = (text as NSString).boundingRect(
             with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font])
         let lines = Int((bounds.height / lineHeight).rounded(.up))
-        return ShelfLayout.cardHeight(forLineCount: lines, lineHeight: lineHeight)
+        let shown = min(max(lines, 1), ShelfLayout.maxTextLines(lineHeight: lineHeight))
+        return TextFit(
+            height: ShelfLayout.cardHeight(forLineCount: lines, lineHeight: lineHeight), shownLines: shown, isClamped: lines > shown)
+    }
+
+    static func height(of card: ShelfCardPresentation) -> CGFloat {
+        textFit(of: card)?.height ?? card.verticalHeight
     }
 }
 

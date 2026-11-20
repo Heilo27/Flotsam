@@ -18,19 +18,26 @@ struct OnboardingView: View {
     }
 
     /// A row of 8 pt dots centred above the title, one per step, the steps reached filled in the accent colour and the
-    /// rest a visible grey. VoiceOver reads the progress as one element whose value is "Step n of N".
+    /// rest a visible grey, with a small "Step n of N" caption under them. VoiceOver reads the dots and caption as one
+    /// element whose value is "Step n of N".
     private var stepCaption: some View {
-        HStack(spacing: 8) {
-            ForEach(1...model.flow.total, id: \.self) { index in
-                Circle()
-                    .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.35))
-                    .frame(width: 8, height: 8)
+        let progress = String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total)
+        return VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                ForEach(1...model.flow.total, id: \.self) { index in
+                    Circle()
+                        .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.35))
+                        .frame(width: 8, height: 8)
+                }
             }
+            Text(verbatim: progress)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: text("ui.onboarding.windowTitle")))
-        .accessibilityValue(Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total)))
+        .accessibilityValue(Text(verbatim: progress))
     }
 
     private var standardLayout: some View {
@@ -232,7 +239,7 @@ struct OnboardingView: View {
     // MARK: Footer
 
     /// Step 4's "Not Now" is the visible default while the permission is missing, so Continue is not the default action
-    /// there (FR-008-12); once it is granted, Continue is. Skip and Not Now are bordered secondary buttons unless they are
+    /// there (FR-008-12); once it is granted, Continue is. Skip and Not Now are plain text buttons unless they are
     /// the default.
     private var footer: some View {
         let optionalStep = model.step == .accessibility || model.step == .inputMonitoring
@@ -242,8 +249,9 @@ struct OnboardingView: View {
             Button(text("ui.onboarding.back")) { model.back() }
                 .disabled(model.flow.isFirst)
             if !model.flow.isLast, !notNowIsDefault {
-                // A legible secondary button on the leading side, apart from Continue so the two are never mistaken.
+                // A plain text button on the leading side, apart from Continue so the two are never mistaken.
                 Button(skipTitle) { model.skip() }
+                    .buttonStyle(.link)
             }
             Spacer()
             if model.flow.isLast {

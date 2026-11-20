@@ -26,7 +26,12 @@ struct GeneralPane: View {
                 if login.showsLoginItemsButton {
                     trailing { Button { model.env.openLoginItems() } label: { Text(.openLoginItems) } }
                 }
-                trailing { Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) } }
+                // A labelled row, like the folder row: a button alone in a row reads as a stray control (FR-008-04).
+                LabeledContent {
+                    Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
+                } label: {
+                    Text(.setupGuide)
+                }
             } header: {
                 Text(.sectionSystem)
             }

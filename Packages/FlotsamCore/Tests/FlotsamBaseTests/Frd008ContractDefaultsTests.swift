@@ -39,16 +39,16 @@ import Testing
         #expect(SettingsString.folderSystemDefault.text == "System default")
         #expect(settings.value(SettingKeys.shelfEnabled) == true)
         #expect(settings.value(SettingKeys.shelfPlacement) == .rightEdge)
-        #expect(SettingsString.placementRightEdge.text == "Right Edge")
+        #expect(SettingsString.placementRightEdge.text == "Right edge")
         #expect(settings.value(SettingKeys.shelfRevealOnEdgeHover) == false)
         #expect(SettingsString.pickUpScreenshots.text == "Pick up screenshots")
         #expect(SettingsString.revealAtEdge.text == "Reveal on edge hover")
         #expect(domain.reported.names.isEmpty, "defaults are not corruption: nothing is reported")
     }
 
-    // OC-8001 (label). The row reads 'Launch at Login'.
+    // OC-8001 (label). The row reads 'Launch at login'.
     @Test func oc8001_launchAtLoginLabel() {
-        #expect(SettingsString.launchAtLogin.text == "Launch at Login")
+        #expect(SettingsString.launchAtLogin.text == "Launch at login")
     }
 
     // OC-8002. Given a fresh install. Then capture mode is Active, the menu offers Pause Capture, and automatic capture is on.
@@ -391,7 +391,7 @@ import Testing
 
         let second = domain.reopen()
         #expect(second.value(SettingKeys.shelfPlacement) == .bottomEdge)
-        #expect(SettingsString.placementBottomEdge.text == "Bottom Edge")
+        #expect(SettingsString.placementBottomEdge.text == "Bottom edge")
         #expect(second.value(SettingKeys.libraryViewMode) == .grid)
         #expect(SettingsPane.lastOpened(in: second) == .privacy)
         #expect(second.value(SettingKeys.storageRetention) == .d30, "untouched keys stay at their defaults")

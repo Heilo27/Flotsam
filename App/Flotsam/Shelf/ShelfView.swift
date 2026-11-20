@@ -19,6 +19,17 @@ struct ShelfView: View {
 
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// In light appearance the panel's material alone reads as a flat grey, so a faint white wash, strongest at the top,
+    /// lifts it (DESIGN section 2.4). Dark appearance keeps the material as it is.
+    @ViewBuilder private var panelWash: some View {
+        if colorScheme == .light {
+            LinearGradient(
+                colors: [Color.white.opacity(0.30), Color.white.opacity(0.06)], startPoint: .top, endPoint: .bottom)
+        }
+    }
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
@@ -37,6 +48,7 @@ struct ShelfView: View {
             .help(ShelfText.string(ShelfText.close))
             .accessibilityLabel(Text(verbatim: ShelfText.string(ShelfText.close)))
         }
+        .background { panelWash.allowsHitTesting(false) }
         // Ages the cards' VoiceOver labels while the Shelf is open (FR-006-48). The model owns the watch task and cancels
         // it on a hide; the key restarts it on the next open or card change.
         .task(id: model.relativeTimeWatchKey) { await model.runRelativeTimeWatch() }
@@ -224,8 +236,11 @@ struct ShelfView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: ShelfLayout.cardSpacing) {
                         ForEach(sections) { section in
+                            // A section header reads as a header: semibold, upper case, tracked (hill-climb r4).
                             Text(verbatim: ShelfText.string(section.titleKey))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.caption.weight(.semibold)).textCase(.uppercase).tracking(0.6)
+                                .foregroundStyle(.secondary)
+                                .accessibilityAddTraits(.isHeader)
                                 .frame(height: ShelfLayout.sectionHeaderHeight, alignment: .bottomLeading)
                             ForEach(section.cards) { card in cardView(card) }
                         }
@@ -357,7 +372,7 @@ private struct ShelfCardView: View {
 
     private var textColumn: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let text = card.text { Text(verbatim: text).font(.callout).lineLimit(ShelfLayout.cardTextLineLimit) }
+            if let text = card.text { cardText(text) }
             if card.isMissing {
                 Text(verbatim: ShelfText.string(ShelfText.missing)).font(.caption2).foregroundStyle(.red)
             }
@@ -366,6 +381,25 @@ private struct ShelfCardView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The card's text as whole lines only: the lines that fit under the header, never a half-cut last line. When the text
+    /// goes on past them the last line fades out inside the card padding, so the cut reads as intentional (FR-006-07).
+    @ViewBuilder private func cardText(_ text: String) -> some View {
+        let fit = ShelfCardMetrics.textFit(of: card)
+        let lines = fit?.shownLines ?? ShelfLayout.maxTextLines(lineHeight: ShelfCardMetrics.lineHeight)
+        let label = Text(verbatim: text).font(.callout).lineLimit(lines)
+        if fit?.isClamped == true {
+            label.mask {
+                VStack(spacing: 0) {
+                    Rectangle()
+                    LinearGradient(colors: [.black, .black.opacity(0.15)], startPoint: .top, endPoint: .bottom)
+                        .frame(height: ShelfCardMetrics.lineHeight)
+                }
+            }
+        } else {
+            label
+        }
     }
 
     /// The picture of the file, bundle and secure cards (the others draw their own content above).
@@ -403,22 +437,5 @@ private struct ShelfCardView: View {
     /// A colour item's swatch; nil when its notation is not one `ColorChannels` reads.
     private static func color(from text: String?) -> Color? {
         ColorChannels(text: text).map(Color.init)
-    }
-}
-
-/// Source app icons for the card header, one lookup per app. The app may be gone from this Mac, and then the card shows a
-/// generic app glyph; no disk access happens per frame, because a drawn icon is cached by bundle identifier.
-@MainActor
-private enum SourceAppIcons {
-    private static var cache: [String: NSImage] = [:]
-    private static let generic: NSImage = NSWorkspace.shared.icon(for: .applicationBundle)
-
-    static func icon(forBundleId bundleId: String?) -> NSImage {
-        guard let bundleId, !bundleId.isEmpty else { return generic }
-        if let cached = cache[bundleId] { return cached }
-        let icon = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
-            .map { NSWorkspace.shared.icon(forFile: $0.path) } ?? generic
-        cache[bundleId] = icon
-        return icon
     }
 }

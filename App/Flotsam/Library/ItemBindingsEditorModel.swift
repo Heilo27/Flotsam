@@ -110,7 +110,7 @@ final class ItemBindingsEditorModel {
     }
 
     /// The longest a clip name gets in a window title.
-    private static let nameLimit = 40
+    private static let nameLimit = 80
 
     private static func name(of content: ItemContent) -> String {
         if let line = content.plainText?.split(whereSeparator: \.isNewline)

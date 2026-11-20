@@ -50,9 +50,10 @@ publish() {
   fi
   [[ -d "$outdir" ]] || die "no such folder: $outdir"
   shopt -s nullglob
-  local pngs=("$outdir"/[0-9][0-9]-*-light.png "$outdir"/[0-9][0-9]-*-dark.png)
+  local pngs=("$outdir"/[0-9][0-9]*-*-light.png "$outdir"/[0-9][0-9]*-*-dark.png)
   ((${#pngs[@]} > 0)) || die "no screenshots in $outdir"
-  ((${#pngs[@]} == 16)) || echo "shots: warning: ${#pngs[@]} of 16 files in $outdir" >&2
+  local expected=$((${#SCREENS[@]} * ${#APPEARANCES[@]}))
+  ((${#pngs[@]} == expected)) || echo "shots: warning: ${#pngs[@]} of $expected files in $outdir" >&2
 
   local work="$ROOT/.claude/worktrees/shots-publish-$$"
   PUBLISH_WORK="$work"

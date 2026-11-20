@@ -17,7 +17,7 @@ struct LibraryView: View {
             Divider()
             HStack(spacing: 0) {
                 LibrarySidebar(model: model, organize: organize)
-                    .frame(width: 170)
+                    .frame(width: LibrarySidebar.width)
                 Divider()
                 // Which columns exist is `LibraryColumns`' decision (FR-003-06); the view only draws it.
                 let columns = model.columns
@@ -160,9 +160,9 @@ struct LibrarySidebar: View {
         // changed where the last row ended at the far end of the scroll, never what the edge cut at rest).
         GeometryReader { proxy in
             let viewport = Self.snappedHeight(fitting: proxy.size.height)
-            // More lines than the viewport holds: the last visible line fades and a line of room follows the content, so
-            // the clipped end shows it scrolls (compact layout, TASK-529 round 3) and the far end of the scroll still
-            // lands on a line.
+            // More lines than the viewport holds: the whole last visible line (24 pt) dissolves and a line of room follows the
+            // content, so the end reads as a deliberate scroll cue, not a clipped row (compact layout, TASK-529 rounds 3 and 4),
+            // and the far end of the scroll still lands on a line.
             let overflows = contentHeight > viewport - Self.topMargin
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -179,9 +179,13 @@ struct LibrarySidebar: View {
             .contentMargins(.top, Self.topMargin, for: .scrollContent)
             .contentMargins(.bottom, overflows ? Self.lineHeight : 0, for: .scrollContent)
             .frame(height: viewport)
-            .fadingBottomEdge(overflows ? LibraryScrollFade.height : 0)
+            .fadingBottomEdge(overflows ? Self.lineHeight : 0)
         }
     }
+
+    /// The sidebar's width: wide enough that the longest type name ("Phone Numbers") and a two-digit count fit on one line
+    /// (FR-003-12, DESIGN 3.1).
+    static let width: CGFloat = 184
 
     /// One sidebar line: a row or a section header (DESIGN 3.3 Library): tight, so the results list stays the dominant column.
     private static let lineHeight: CGFloat = 24
@@ -213,14 +217,14 @@ struct LibrarySidebar: View {
                         Spacer(minLength: 4)
                         // The counts are the whole history's, so they go while the search has text (FR-003-12).
                         if model.showsSidebarCounts {
-                            Text(verbatim: entry.count.formatted()).foregroundStyle(selected ? AnyShapeStyle(DesignToken.onSelectionSecondary) : AnyShapeStyle(.tertiary)).monospacedDigit()
+                            Text(verbatim: entry.count.formatted()).foregroundStyle(selected ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary)).monospacedDigit()
                         }
                     }
                     .font(.system(size: 13))
                     .opacity(entry.isDimmed ? 0.5 : 1)
                     .padding(.horizontal, 6)
                     .frame(height: Self.lineHeight)
-                    .background(selected ? DesignToken.selectionFill : .clear, in: RoundedRectangle(cornerRadius: DesignToken.Radius.row))
+                    .background(selected ? DesignToken.sidebarSelection : .clear, in: RoundedRectangle(cornerRadius: DesignToken.Radius.row))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -320,9 +324,7 @@ struct LibraryFooterView: View {
             ForEach(Array(footer.hints.enumerated()), id: \.element.key) { index, hint in
                 let leading = index == 0
                 HStack(spacing: 4) {
-                    Text(verbatim: hint.key).font(.caption.weight(leading ? .semibold : .regular))
-                        .padding(.horizontal, 4)
-                        .background(leading ? DesignToken.selectionFill : DesignToken.cursorFill, in: RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
+                    Keycap(key: hint.key, emphasized: leading)
                     Text(verbatim: hint.label).font(.caption.weight(leading ? .semibold : .regular))
                         .foregroundStyle(leading ? Color.primary : Color.secondary)
                 }

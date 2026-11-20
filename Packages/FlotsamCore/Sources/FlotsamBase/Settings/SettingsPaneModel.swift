@@ -20,7 +20,7 @@ extension SettingsPane {
     public var symbolName: String {
         switch self {
         case .general: "gearshape"
-        case .library: "books.vertical"
+        case .library: "list.bullet.rectangle"
         case .shortcuts: "keyboard"
         case .types: "square.grid.2x2"
         case .triggers: "bolt"

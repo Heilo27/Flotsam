@@ -14,6 +14,8 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
     public let primaryText: String
     /// Source app and relative time; the tag chips follow it.
     public let secondaryText: String
+    /// The source app's bundle identifier, for the app icon that leads a text, link and code row (FR-003-07); nil when unknown.
+    public let sourceBundleId: String?
     public let tagChips: [String]
     /// The "+n" after the chips, or nil when every tag fits.
     public let tagOverflow: String?
@@ -39,6 +41,7 @@ public struct LibraryRowPresentation: Equatable, Identifiable {
         // the badge below says instead.
         primaryText = row.isSecure ? SecureClip.mask : row.primaryLine
         isSecure = row.isSecure
+        sourceBundleId = row.sourceBundleId
         unavailableBadge = row.isSecure && row.isUnavailable ? LibraryText.string("ui.library.secureUnavailable") : nil
         isPinned = row.isPinned
         hasTrigger = row.hasTrigger

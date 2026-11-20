@@ -41,11 +41,9 @@ struct ItemBindingsEditorView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 14) {
-            // The clip being edited, under the "Edit Shortcut" title: one line, cut in the middle so both ends show.
-            if let name = model.clipName {
-                Text(verbatim: name).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-            }
+            // One grid, so the labels (Clip, Shortcut, Trigger) share a column and every value starts at the same edge.
             Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 14) {
+                clipRow
                 hotkeyRow
                 if model.triggerOffered {
                     triggerRow
@@ -63,6 +61,21 @@ struct ItemBindingsEditorView: View {
                 Button(SettingsString.editorSave.text) { Task { await model.save() } }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.canSave)
+            }
+        }
+    }
+
+    /// The clip being edited, labelled: up to two lines, then cut at the end, so a long first line still says which clip it is.
+    @ViewBuilder
+    private var clipRow: some View {
+        if let name = model.clipName {
+            GridRow(alignment: .firstTextBaseline) {
+                Text(.editorClip).gridColumnAlignment(.trailing)
+                Text(verbatim: name)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

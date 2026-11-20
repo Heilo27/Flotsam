@@ -17,7 +17,8 @@ private struct PaneChrome: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        let form = content.formStyle(.grouped).frame(width: Self.width)
+        // The system switch, stated once for every pane so no row can pick another style or a tint (FR-008-17).
+        let form = content.formStyle(.grouped).toggleStyle(.switch).frame(width: Self.width)
         ViewThatFits(in: .vertical) {
             form.scrollDisabled(true).fixedSize(horizontal: false, vertical: true)
             form

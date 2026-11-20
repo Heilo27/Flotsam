@@ -39,11 +39,8 @@ struct ShortcutRecorderField: View {
                     Text(.shortcutRecording).foregroundStyle(.secondary)
                 } else if let chord {
                     ForEach(Array(chord.keycaps.enumerated()), id: \.offset) { _, cap in
-                        Text(verbatim: cap)
-                            .font(.system(size: 12, weight: .medium))
-                            .padding(.horizontal, 5)
-                            .frame(minWidth: 20, minHeight: 20)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
+                        Keycap(key: cap, font: .system(size: 12), minWidth: 20)
+                            .frame(minHeight: 20)
                     }
                 } else {
                     Text(.shortcutRecord).foregroundStyle(.secondary)

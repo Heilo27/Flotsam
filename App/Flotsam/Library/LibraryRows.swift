@@ -343,20 +343,29 @@ struct LibraryListRow: View {
     }
 }
 
-/// The lead slot of a list row (FR-003-07): always `LibraryLayout.listLeadSize` square. Images and screenshots show their
-/// thumbnail; every other row, and an image whose thumbnail has not loaded, shows its kind icon in the same tile, so
-/// every row's text starts at the same edge. Files, folders and bundles show the kind icon: the presentation carries no
-/// file path to ask the system for a Finder icon.
+/// The lead slot of a list row (FR-003-07): always `LibraryLayout.listLeadSize` square, so every row's text starts at the same
+/// edge. Images and screenshots show their thumbnail; a colour shows its swatch; text, rich text and link rows show the source
+/// app's icon (the app on this Mac, from its bundle identifier, no network), and fall back to the kind glyph when the clip has
+/// no app or the app is gone; every other row, and an image whose thumbnail has not loaded, shows its kind glyph. Files, folders
+/// and bundles show the kind glyph: the presentation carries no file path to ask the system for a Finder icon.
 private struct LibraryRowLead: View {
     let model: LibraryViewModel
     let row: LibraryRowPresentation
     @State private var thumbnail: NSImage?
+
+    private static let appIconSide: CGFloat = 20
 
     var body: some View {
         let side = LibraryLayout.listLeadSize
         ZStack {
             if let thumbnail {
                 Image(nsImage: thumbnail).resizable().scaledToFill()
+            } else if row.kind == .color, let channels = ColorChannels(text: row.primaryText) {
+                RoundedRectangle(cornerRadius: DesignToken.Radius.control).fill(Color(channels))
+                    .overlay(RoundedRectangle(cornerRadius: DesignToken.Radius.control).stroke(Color.primary.opacity(0.25), lineWidth: 0.5))
+                    .padding(4)
+            } else if Self.showsSourceApp(row.kind), let icon = SourceAppIcons.installedIcon(forBundleId: row.sourceBundleId) {
+                Image(nsImage: icon).resizable().interpolation(.high).frame(width: Self.appIconSide, height: Self.appIconSide)
             } else {
                 Image(systemName: symbolName(for: row.kind)).foregroundStyle(.secondary)
             }
@@ -369,6 +378,10 @@ private struct LibraryRowLead: View {
             guard row.kind == .image || row.kind == .screenshot else { return }
             if let data = await model.thumbnail(for: row.id, size: .grid) { thumbnail = NSImage(data: data) }
         }
+    }
+
+    private static func showsSourceApp(_ kind: ItemKind) -> Bool {
+        kind == .text || kind == .richText || kind == .link
     }
 }
 
