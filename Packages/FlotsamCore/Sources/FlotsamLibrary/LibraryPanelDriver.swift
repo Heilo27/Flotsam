@@ -84,9 +84,11 @@ public final class LibraryPanelDriver: PasteHost {
 
     // MARK: Show and hide
 
-    /// The hotkey and the menu item both call this: it toggles (FR-003-02).
+    /// The hotkey and the menu item both call this: it toggles (FR-003-02). A press while the Library is still opening
+    /// (after the first press, before the panel is on screen) is a hide: it cancels the open, as every other hide does
+    /// (`hidePanel` remembers it), rather than being dropped.
     public func toggle() {
-        if isPanelVisible { hidePanel() } else { showTask = Task { await show() } }
+        if isPanelVisible || isOpening { hidePanel() } else { showTask = Task { await show() } }
     }
 
     /// Records the target app, runs `captureNow`, loads the open state, then shows (FR-003-02, FR-003-04). The target is

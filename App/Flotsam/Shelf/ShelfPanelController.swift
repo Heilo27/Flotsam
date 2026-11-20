@@ -167,6 +167,10 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
 
     // MARK: Show and hide
 
+    // A hide that arrives while the sections load is honored, unlike the Library's (TASK-531, TASK-564): the machine marks
+    // the Shelf visible when it issues `.show`, before this task finishes, so every hide (the toggle, `.pasted`, a Space
+    // change, the Library opening) reaches `dismiss`, which cancels `showTask` and calls `model.didHide()`. The task then
+    // finds itself cancelled (and the model closed) and never reveals the panel.
     private func present(trigger: ShelfTrigger, screen: Int) {
         showTask?.cancel()
         let target = frontmost.frontmost()
