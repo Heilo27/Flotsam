@@ -2152,3 +2152,19 @@ Debug build, M1 Max, macOS 27.3. Isolated instance (temp home, data dir and suit
 - **[Spec Drift]:** PRD.md:25 states the S5 budgets as physical footprint, while AC-003-65 (FRD-003:152) says RSS. By RSS every memory row fails (Debug RSS includes mapped shared-cache pages); by footprint only the after-close row fails. One home for the metric is needed. Not edited here.
 - **TASK-556:** the earlier p95 of 176 ms didn't reproduce, but the trigger was different. Neither the dwell trigger nor the drag trigger fired (likely Accessibility isn't trusted on the Debug build; not confirmed), so the dwell-to-reveal span in AC-006-18 wasn't exercised. Needs Ryan or a trusted build.
 - **Side effect:** the Debug build registered itself as a login item (macOS showed "Login Item Added: Flotsam", since Launch at Login defaults to on). The agent turned the in-app toggle off. Legacy login items list no Flotsam, and the `sfltool dumpbtm` capture came back empty, so the background-task store wasn't verified. Ryan should check System Settings > Login Items for a stray Flotsam entry. Separately, launch at login defaulting to on for an unsigned dev build is worth a look.
+
+## swift test at ce3d64a (2026-11-19)
+
+Fresh clone at ce3d64a, full `swift test --package-path Packages/FlotsamCore`, no filter, about 5 min wall. It built clean. The exit code wasn't captured, but all 12 Swift Testing module runs passed and the log has no `✘` line.
+
+- **Swift Testing:** 3,977 tests over 12 module runs (the sizes sum to that), 0 runs failed, 0 distinct failing tests. 12 known issues, all marked known in the tests.
+- **XCTest:** 19 tests (2 + 6 + 11 across three bundles), 0 failures.
+- **Failure list:** `docs/sessions/S2-ce3d64a-failures.txt` has no entries.
+- **Vs f959507 (67 failing tests):** fixed 67, still failing 0, newly failing 0. Only 46 of the 67 names still exist in this log, and each of those passed. The other 21 aren't in the log under their old names: they were renamed or rewritten with the spec changes (e.g. "63 live codes of section 7" is now "65 live codes", the ORG-VAL-004/005 retired-code tests became "reinstated"). "Fixed" for those 21 means the old assertion is gone, not that the same test now passes.
+- **New failures:** none, so no clusters. No flaky failures, so no `--filter` re-runs.
+- **Known noise:**
+  - KNOWN-TASK-368: appeared, 7 known issues (TASK-368 lint suites), 0 failures.
+  - KNOWN-TASK-372: Adversarial 372 suite ("TASK-372 adversarial: sidecar-less WAL probe copy") passed.
+  - OC-7132 (Unmapped007TimingTests): passed this run, no flake.
+  - OC-2080 override-folder test: 5 known issues, marked known in the test itself (FRD002AuditBTests.swift).
+- **Odd:** the 12 known issues are 7 from TASK-368 and 5 from OC-2080; the earlier Amos figure of 8 known issues doesn't match.

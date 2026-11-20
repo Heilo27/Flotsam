@@ -1,0 +1,3 @@
+# swift test --package-path Packages/FlotsamCore @ ce3d64a: every recorded failing issue (known issues excluded)
+# format: test name | file:line:col | assertion
+# 0 distinct tests, 0 distinct issue lines. Source: clean clone, Swift Testing output; no failing issue lines in any of the 12 module runs.
