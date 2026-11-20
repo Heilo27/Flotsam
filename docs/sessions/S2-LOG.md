@@ -2219,3 +2219,24 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - The backgroundtaskmanagementd log shows one item: identifier `2.Flotsam`, uuid 9D7D2297-0E24-474F-B672-EC0F9EAF34E6. It is registered to the A3 a1-clone Debug build path. Disposition is [disabled, allowed, notified], so it is not enabled.
   - At 22:40:51 the A5 clone's new path was queried right after that item was updated. This supports S1's hypothesis that a stale registration is re-announced at each new app path.
   - BTM was not reset. Ryan can remove the item under Login Items / Allow in the Background.
+
+## A6: screenshot round 1 retake at 534d085 (2026-11-19)
+
+- **Verdict: NOT published.** No s2/shots SHA. The harness reported all 16 passes ok, but 3 of the 8 screens (6 frames) fail inspection.
+- **Fails:**
+  - **07-onboarding (light and dark):** the frame is the bare gradient backdrop with no onboarding window. The harness reported ok anyway. I confirmed this by eye.
+  - **04-shelf (light and dark):** the "Login Item Added" banner is still in frame although a Focus mode was active (Sleep). On this host, Focus doesn't suppress this system banner. In 04-shelf-light, the banner's shadow also greys the top-left pixels.
+  - **05-menu-bar-menu (light and dark):**
+    - The menu is fully on-screen (check 2 passes), but its left edge sits at x≈0, which clips the rounded corner.
+    - The frame includes the host menu bar (Apple, Finder, File, Edit, View, Go). That is host content, though nothing private. I confirmed this by eye.
+- **Passes:** 01, 02, 03, 06 and 08, light and dark. Top-left pixels are clean everywhere except 04-shelf-light.
+- **Fixed since A5:**
+  - The backdrop works: no terminal text anywhere.
+  - The white blob behind the light Library glass is gone.
+  - The glass shows real translucency over the backdrop.
+- **Still open:** the Shelf Preview card image is oversized (it overflows and covers the label). The light and dark menus differ in tint (known: the menu follows the system appearance).
+- **Capture mode:** region or full-display plus sips; the harness doesn't log which. A standalone `-R` probe works here.
+- **Real state:**
+  - The real data and prefs hashes match before and after.
+  - The prefs listing is unchanged, with no leftover suite plists.
+  - The pasteboard is unchanged, and no Flotsam is running.
