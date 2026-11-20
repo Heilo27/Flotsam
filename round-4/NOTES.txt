@@ -1,0 +1,34 @@
+01-library-standard-light: capture mode: region capture (screencapture -R)
+01-library-standard-dark: capture mode: region capture (screencapture -R)
+02-library-compact-light: capture mode: region capture (screencapture -R)
+02-library-compact-dark: capture mode: region capture (screencapture -R)
+03-library-empty-light: capture mode: region capture (screencapture -R)
+03-library-empty-dark: capture mode: region capture (screencapture -R)
+04-shelf-light: capture mode: window-only capture (screencapture -l)
+04-shelf-light: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+04-shelf-dark: capture mode: window-only capture (screencapture -l)
+04-shelf-dark: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+05-menu-bar-menu-light: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-light: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+05-menu-bar-menu-dark: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-dark: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+06-settings-general-light: capture mode: region capture (screencapture -R)
+06-settings-general-dark: capture mode: region capture (screencapture -R)
+06b-settings-library-light: capture mode: region capture (screencapture -R)
+06b-settings-library-dark: capture mode: region capture (screencapture -R)
+07-onboarding-light: capture mode: region capture (screencapture -R)
+07-onboarding-dark: capture mode: region capture (screencapture -R)
+08-shortcut-editor-light: capture mode: region capture (screencapture -R)
+08-shortcut-editor-dark: capture mode: region capture (screencapture -R)
+
+round 4 layout notes (hand-written from viewing every frame; fixture data only)
+01-library-standard (light, dark): sidebar bottom ends at the Work tag row, which sits close above the footer divider, and the Apps section below it is not visible (sidebar scrolls). List ends on a full row (#8). Preview code line "String" is clipped at the right edge of the preview pane (no wrap, no fade). Same in both appearances.
+02-library-compact (light, dark): the sidebar's last visible row, Apps > Notes (13), is cut by the footer divider (text partly clipped at the bottom edge). Preview code line "morning" : " is truncated at the right edge. Same in both appearances.
+03-library-empty (light, dark): empty state centered and complete. Sidebar bottom: the Work tag row is dimmed/partly clipped by the footer, as in 01. Sidebar counts are absent during search, which is expected.
+04-shelf (light, dark): chips All / Text / Links / More render fully with no clipping; the first Pinned card shows a focus ring. The last card (Terminal, git log) is cut off at the bottom edge, which is the scroll position, not a defect. Window-only capture: the light shelf backdrop is flat grey because the blur is not captured.
+05-menu-bar-menu (light, dark): all rows, separators, chevrons and shortcut glyphs visible, nothing clipped. In light mode the window-only capture renders the menu as flat mid-grey with dark text (blur and light material not captured), so light contrast is not representative of the real menu. Dark is fine.
+06-settings-general (light, dark): all nine tabs visible; the Shelf card ends with a normal bottom margin, nothing cut at the bottom edge.
+06b-settings-library (light, dark): new Library tab. Library and Capture sections both fully visible; Restore Library Defaults button, all helper lines and all toggles/pickers render with no clipping and a normal bottom margin. The window is not taller than its content.
+07-onboarding (light, dark): step 2 of 8, nothing clipped.
+08-shortcut-editor (light, dark): the preview line "Thanks for the quick turnaround on the r..." is truncated with an ellipsis by design; nothing else clipped.
+host: the host Calendar notification banner was on screen before all nine passes; it is outside every captured region and visible in none of the 18 frames. 04 and 05 were taken with SHOTS_CAPTURE=window (-l); all others with -R.
