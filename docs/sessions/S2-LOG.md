@@ -2102,3 +2102,34 @@ Rows 5 to 12 ran on a fresh isolated instance.
 - **Snapshot identity:** real data and prefs hashes unchanged; both test suites were deleted (`defaults delete` left the plist files, so they were removed by hand); the pasteboard was restored.
 - **A2 overall:** 9 rows pass. Needs Ryan: Shelf drags (row 4), the editor (row 7) and OCR (row 10). Row 12 is inconclusive against S5.
 - **Correction (A2 part 2):** withdraw the [Spec Drift] on the 170 pt sidebar. It was a false positive. docs/DESIGN.md:118 and :120 specify a sidebar of 170 for both the Standard and the Compact layout, so row 5 matches the design. The docs search used a "170 pt" pattern and missed the bare "170".
+
+## Full pass: swift test on main @ f959507 (2026-11-19)
+
+The run used a clean clone, and its git status was empty both before and after.
+
+- **Result:** `swift test --package-path Packages/FlotsamCore` exited 1 after 238 s.
+- **XCTest:** 38 executed, 38 passed.
+- **Swift Testing:** 3,976 tests in 12 runs; 7 runs passed and 5 failed (FlotsamBase, FlotsamLibrary, FlotsamStorage, FlotsamAppModel, FlotsamShortcuts). 140 issues were recorded, 7 of them known.
+- **67 failing tests, all NEW and deterministic.** The five failing modules were rerun twice with `--filter`, and both reruns gave the identical failure set.
+- **Clusters below are grouped by test name; root causes are not yet diagnosed.**
+
+| Cluster | Count (approx.) | Example file:line and assertion |
+|---|---|---|
+| Error taxonomy: retired ORG-VAL-004/005 | ~9 | ErrorTaxonomyTests.swift:108 `raws.count == 63` (actual 65); :114 `ErrorCode(rawValue: "ORG-VAL-004") == nil`; FRD000ContractTestsCatalogue.swift:101-105 |
+| Settings registry / FRD-008 window | ~18 | SettingsRegistryTests.swift:33 `actual.count == expected.count` (`registryEqualsTheFRTable`, 22 issues) |
+| Task525 relative-time watch | ~15 | Task525RelativeTimeTests.swift:146 `clock.sleeps.isEmpty`; :154 `clock.sleeps.count == 1` |
+| Library menu, sidebar, footer | ~10 | LibraryViewModelTests.swift:299 `h.model.filter == .kind(.text)` |
+| Window fronting / Task524 wiring | ~6 | Task521WindowFrontingTests.swift:192 `offenders == []`; Task524AppWiringTests.swift:37 source-text match for `guard let id = ids.first else { return }` |
+| Storage schema v2 | 3 | Task498SecureClipStorageTests.swift:110 `try userVersion(s) == 2` (not evaluated, so it threw before the check) |
+| Shortcut chords | a few | Worf433bTests.swift:60 `commands == [...]` |
+
+- **Close looks:**
+  - **`hidingReleasesStorageMemory`: PASS** (LibraryViewModelTests.swift:330-335). It runs the real PanelResidency: LibraryViewModel.swift:126 builds it when none is injected, :327 calls `residency.closed(.library)`, and PanelResidency.swift:34-39 releases when no panel is left open. Only `releaseMemory()` is a counting stub (LibraryFakes.swift:36). **Coverage gap:** no Library test covers the Shelf-still-open case of AC-003-65, and PanelResidency has no direct test there.
+  - **`aHiddenPanelNeverSchedulesAWakeup`: FAIL**, deterministic. Task525RelativeTimeTests.swift:146 shows a sleep was scheduled while the panel was hidden, and :154 shows the wrong sleep count after a hide and a release. This is the relative-time watch, not residency.
+  - **`doublePressCapturesOnce`: PASS** (LibraryPanelAdversarialTests.swift:250, FR-003-02).
+- **Known noise:**
+  - KNOWN-TASK-368 (lint harness): 7 known issues, no failures.
+  - KNOWN-TASK-372: its suite (Adversarial372ProbeCopyTests) passed.
+  - OC-7132 (Unmapped007TimingTests.swift:110): not in the failure set.
+  - The 5 OC-2080 known issues at FRD002AuditBTests.swift:364-368 are marked known in the tests themselves.
+  - **None of the 67 failures is known noise.**
