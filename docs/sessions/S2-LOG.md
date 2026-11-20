@@ -2168,3 +2168,8 @@ Fresh clone at ce3d64a, full `swift test --package-path Packages/FlotsamCore`, n
   - OC-7132 (Unmapped007TimingTests): passed this run, no flake.
   - OC-2080 override-folder test: 5 known issues, marked known in the test itself (FRD002AuditBTests.swift).
 - **Odd:** the 12 known issues are 7 from TASK-368 and 5 from OC-2080; the earlier Amos figure of 8 known issues doesn't match.
+
+### Corrections (2026-11-19)
+- **XCTest at f959507 was 19/19, not 38/38.** The earlier count added both "Executed 19 tests" summary lines. ce3d64a has the same set: 19 tests (2 + 6 + 11), 0 failures.
+- **A3 drift resolved:** S1 ruled the S5 budget is physical footprint, and AC-003-65 was fixed at 02b0ce7.
+- **Launch at Login on by default is per spec** (FR-008-12, onboarding step 7). I withdraw the "worth a look" in the A3 entry. Only the stray login item from the dev build needs removing.
