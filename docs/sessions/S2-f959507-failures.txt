@@ -1,0 +1,108 @@
+# swift test --package-path Packages/FlotsamCore @ f959507: every recorded failing issue (known issues excluded)
+# format: test name | file:line:col | assertion
+# 67 distinct tests, 105 distinct issue lines (identical repeated lines collapsed). Source: clean clone, Swift Testing output.
+"AC-001-25 / FR-007-03: a new database is at version 2 with isSecure and secureCiphertext on item" | Task498SecureClipStorageTests.swift:110:9 | Expectation failed: try userVersion(s) == 2
+"actions.editShortcutAndTrigger hides only after the one-item guard, and before the editor opens" | Task524AppWiringTests.swift:37:27 | Expectation failed: closure.range(of: "guard let id = ids.first else { return }")
+"FR-000-05 no count string outside the plural set puts a count in front of a noun" | Plural469CatalogueSweepTests.swift:65:17 | Expectation failed: notNouns.contains(word)
+"FR-003-22 W433-M3 each entry fires the command of its FR-003-08 key" | Worf433bTests.swift:60:9 | Expectation failed: commands == [
+"FR-007-03: a version 1 database upgrades to 2 and keeps every row, none of them secure" | Task498SecureClipStorageTests.swift:133:9 | Expectation failed: try userVersion(upgraded) == 2
+"FR-007-11 labels: Delete Items, Also delete pinned and shortcut items, count in the sentence" | Worf363StorageConfirmAdversarialTests.swift:405:9 | Expectation failed: rig.model.ranges == [.lastHour, .last24Hours, .allTime]
+"no other App file orders a window front or activates the app" | Task521WindowFrontingTests.swift:192:9 | Expectation failed: offenders == []
+"OC-0005 code set equals the 63 live codes of section 7" | ErrorTaxonomyTests.swift:108:9 | Expectation failed: raws.count == 63
+"OC-0005 code set equals the 63 live codes of section 7" | ErrorTaxonomyTests.swift:109:9 | Expectation failed: Set(raws).count == 63
+"OC-0005 code set equals the 63 live codes of section 7" | ErrorTaxonomyTests.swift:110:9 | Expectation failed: Set(raws) == Set(section7.map(\.code))
+"OC-0005 code set equals the 63 live codes of section 7" | ErrorTaxonomyTests.swift:114:9 | Expectation failed: ErrorCode(rawValue: "ORG-VAL-004") == nil
+"OC-0005 code set equals the 63 live codes of section 7" | ErrorTaxonomyTests.swift:115:9 | Expectation failed: ErrorCode(rawValue: "ORG-VAL-005") == nil
+"OC-0007 severity counts are 2 fatal, 22 warning, 25 error, 14 info" | ErrorTaxonomyTests.swift:155:9 | Expectation failed: raws(.error).count == 25
+"OC-0007 severity counts are 2 fatal, 22 warning, 25 error, 14 info" | ErrorTaxonomyTests.swift:157:9 | Expectation failed: ErrorCode.allCases.count == 63
+"OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 49 non-Info codes" | ErrorTaxonomyTests.swift:194:9 | Expectation failed: Set(catalogue.keys.filter { $0.hasPrefix("error.") }) == expectedKeys
+"OC-0016 OC-0020 OC-0053 catalogue error keys are exactly the 49 non-Info codes" | ErrorTaxonomyTests.swift:198:69 | Expectation failed: catalogue[retired] == nil
+"OC-0018 every message is at most 140 characters" | ErrorTaxonomyTests.swift:215:9 | Expectation failed: messages.count == 49
+"OC-0061 ORG codes: 6 live, severity and verbatim text" | ErrorTaxonomyTests.swift:87:5 | Expectation failed: Set(live) == Set(expectedRows.map(\.code))
+"OC-0061 ORG codes: 6 live, severity and verbatim text" | ErrorTaxonomyTests.swift:88:5 | Expectation failed: live.count == expectedCount
+"OC-0061 retired ORG-VAL-004/005 have no key and no text in the catalogue" | ErrorTaxonomyTests.swift:177:9 | Expectation failed: catalogue["error.ORG-VAL-004"] == nil
+"OC-0061 retired ORG-VAL-004/005 have no key and no text in the catalogue" | ErrorTaxonomyTests.swift:178:9 | Expectation failed: catalogue["error.ORG-VAL-005"] == nil
+"OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text" | FRD000ContractTestsCatalogue.swift:101:9 | Expectation failed: ErrorCode(rawValue: "ORG-VAL-004") == nil
+"OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text" | FRD000ContractTestsCatalogue.swift:102:9 | Expectation failed: ErrorCode(rawValue: "ORG-VAL-005") == nil
+"OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text" | FRD000ContractTestsCatalogue.swift:103:9 | Expectation failed: FlotsamStrings.text(forKey: "error.ORG-VAL-004") == nil
+"OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text" | FRD000ContractTestsCatalogue.swift:104:9 | Expectation failed: FlotsamStrings.text(forKey: "error.ORG-VAL-005") == nil
+"OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text" | FRD000ContractTestsCatalogue.swift:105:9 | Expectation failed: catalogue["error.ORG-VAL-004"] == nil
+"OC-0074 OC-0075 given the retired codes ORG-VAL-004 and ORG-VAL-005, then ErrorCode has neither and the catalogue holds neither key nor text" | FRD000ContractTestsCatalogue.swift:106:9 | Expectation failed: catalogue["error.ORG-VAL-005"] == nil
+"OC-0075 given the shipped sources and catalogue, then 0 occurrences of the retired codes, catalogue keys and texts" | FRD000ContractTestsCatalogue.swift:127:9 | Expectation failed: found.isEmpty
+"OC-3028 Option-Down and Option-Up walk the sidebar: All, Pinned, first type, Pinned" | Frd003ContractPanelTests.swift:463:46 | Expectation failed: h.model.filter == .kind(.text)
+"OC-3038 with two rows selected, Return, Option-Return and Shift-Return paste nothing and the footer says so" | Frd003ContractKeysTests.swift:270:9 | Expectation failed: h.model.footer().notice == "Select one item to paste"
+"OC-3091 bundle menu has Ungroup and Reveal in Finder, no Edit; Reveal sits between two separators" | LibraryContextMenuTests.swift:31:9 | Expectation failed: titles(.bundle) == [
+"OC-3091 W433-M1 full menu for every one of the eleven kinds, single target" | Worf433bTests.swift:43:9 | Expectation failed: titles(.bundle) == bundle
+"OC-4105 given every item kind, when a single-item menu is built, then its organize entries are exactly the FRD-004 set" | FRD004ContractTestsLibrary.swift:494:9 | Expectation failed: organizeKeys(.bundle) == ["ui.organize.menuPin", "ui.organize.menuTags", "ui.organize.menuNote", "ui.organize.menuUngroup", "ui.organize.menuDelete"]
+"OC-4105 given every kind and both targets, when menu titles are resolved, then none reads Group, Rename, Undo or Move to Trash" | FRD004ContractTestsLibrary.swift:511:25 | Expectation failed: !title.hasPrefix(banned)
+"OC-4108 given the shipped surface, when it is searched for Group, then no action, error code or text for it exists" | FRD004ContractTestsLibrary.swift:535:9 | Expectation failed: ErrorCode(rawValue: "ORG-VAL-004") == nil
+"OC-4108 given the shipped surface, when it is searched for Group, then no action, error code or text for it exists" | FRD004ContractTestsLibrary.swift:536:9 | Expectation failed: !ErrorCode.allCases.map(\.rawValue).contains("ORG-VAL-004")
+"OC-4108 given the shipped surface, when it is searched for Group, then no action, error code or text for it exists" | FRD004ContractTestsLibrary.swift:539:9 | Expectation failed: catalogue.keys.filter { $0.contains("ORG-VAL-004") }.isEmpty
+"OC-4109 given the shipped surface, when it is searched for item rename and the retired code, then none exists" | FRD004ContractTestsLibrary.swift:622:9 | Expectation failed: ErrorCode(rawValue: "ORG-VAL-005") == nil
+"OC-4109 given the shipped surface, when it is searched for item rename and the retired code, then none exists" | FRD004ContractTestsLibrary.swift:623:9 | Expectation failed: !ErrorCode.allCases.map(\.rawValue).contains("ORG-VAL-005")
+"OC-4109 given the shipped surface, when it is searched for item rename and the retired code, then none exists" | FRD004ContractTestsLibrary.swift:625:9 | Expectation failed: catalogue.keys.filter { $0.contains("ORG-VAL-005") }.isEmpty
+"OC-4109 given the shipped surface, when it is searched for item rename and the retired code, then none exists" | FRD004ContractTestsLibrary.swift:629:17 | Expectation failed: !organizeKeys(kind, singleTarget: single).contains("ui.organize.menuRename")
+"OC-5001 fresh install: Open Library is ⌃⌘V, Save Clipboard and Toggle Shelf have no chord, no other chord is live" | FRD005ContractTestsRegistry.swift:82:9 | Expectation failed: rows == [
+"OC-5004 clearing Save Clipboard unbinds ⌃⌥S, and the menu row stays present with no chord" | FRD005ContractTestsRegistry.swift:167:9 | Expectation failed: rows.count == 11
+"OC-5004 clearing Save Clipboard unbinds ⌃⌥S, and the menu row stays present with no chord" | FRD005ContractTestsRegistry.swift:168:9 | Expectation failed: Array(rows.prefix(3)) == [
+"OC-5005 the menu shows each action's current chord and follows a change in Settings" | FRD005ContractTestsRegistry.swift:182:9 | Expectation failed: before == [
+"OC-5005 the menu shows each action's current chord and follows a change in Settings" | FRD005ContractTestsRegistry.swift:192:9 | Expectation failed: after == [
+"OC-6119 the only Shelf settings are enabled, placement and revealOnEdgeHover; no usage counter exists" | Frd006ContractSettingsTests.swift:93:9 | Expectation failed: shelfKeys == ["shelf.enabled", "shelf.placement", "shelf.revealOnEdgeHover"]
+"OC-7012 fresh database has exactly the FR-007-03 tables and columns, and no stored exempt flag" | SchemaConstraintTests.swift:48:9 | Expectation failed: Set(try await columns("item", store)) == [
+"OC-7012 fresh database has exactly the FR-007-03 tables and columns, and no stored exempt flag" | SchemaConstraintTests.swift:54:9 | Expectation failed: try await columns("item", store).count == 25
+"OC-7041 the settings registry declares exactly the FR-008-01 keys and none is a ceiling" | Unmapped007OpenAndFolderTests.swift:413:9 | Expectation failed: names.sorted() == [
+"OC-7088 Clear History offers Last hour, Last 24 hours and All time, and counts exempt items only with the option" | FRD007ContractTestsRetention.swift:188:9 | Expectation failed: ClearRange.allCases == [.lastHour, .last24Hours, .allTime]
+"OC-7088 the sheet opens with Last hour, the box unchecked and Delete disabled" | FRD007ContractTestsStorageConfirm.swift:350:9 | Expectation failed: model.ranges == [.lastHour, .last24Hours, .allTime]
+"OC-7088 the sheet opens with Last hour, the box unchecked and Delete disabled" | FRD007ContractTestsStorageConfirm.swift:351:9 | Expectation failed: model.ranges.map { $0.label.text } == ["Last hour", "Last 24 hours", "All time"]
+"OC-8023: the window is built with the six panes in the stated order" | Frd008SettingsWindowDriverTests.swift:96:9 | Expectation failed: items.map(\.pane) == [.general, .shortcuts, .triggers, .privacy, .storage, .about]
+"OC-8023: the window is built with the six panes in the stated order" | Frd008SettingsWindowDriverTests.swift:97:9 | Expectation failed: items.map(\.label) == ["General", "Shortcuts", "Triggers", "Privacy", "Storage", "About"]
+"OC-8023: the window is built with the six panes in the stated order" | Frd008SettingsWindowDriverTests.swift:98:9 | Expectation failed: items.map(\.symbolName) == ["gearshape", "keyboard", "bolt", "hand.raised", "internaldrive", "info.circle"]
+"OC-8127: the menu is the eleven rows in the specified order with the configured chords" | Frd008ContractMenuTests.swift:73:9 | Expectation failed: entries == [
+"OC-8127: the menu is the eleven rows in the specified order with the configured chords" | Frd008ContractMenuTests.swift:82:9 | Expectation failed: entries.count == 11
+"OC-8133: turning the Shelf off drops exactly Toggle Shelf" | Frd008ContractMenuTests.swift:228:9 | Expectation failed: before.count == 11
+"OC-8139: every Settings label and message is sentence case; buttons, menu items, popup values and titles are exempt" | Frd008ContractStringsTests.swift:91:9 | Expectation failed: offenders.isEmpty
+"S02: the set of files and calls that activate the app or order a window front is exactly the known one, across all of App/ and the packages" | Worf521AdversarialWindowFrontingTests.swift:389:9 | Expectation failed: app == [
+"S04: bringToFront has exactly the known call sites, and the setup guide's launch show is the only one that can pass forcing: false" | Worf521AdversarialWindowFrontingTests.swift:422:9 | Expectation failed: calls == [
+aCancelledWatchWakesWithoutRefreshingTheRowsAndDoesNotSleepAgain() | Task525AdversarialTests.swift:142:9 | Expectation failed: clock.sleeps.count == 1
+aClockJumpedBackwardReadsNowAndKeepsExactlyOneSleeperRunning() | Task525AdversarialTests.swift:212:9 | Expectation failed: clock.sleeps.count == 2
+aHiddenPanelNeverSchedulesAWakeup() | Task525RelativeTimeTests.swift:146:9 | Expectation failed: clock.sleeps.isEmpty
+aHiddenPanelNeverSchedulesAWakeup() | Task525RelativeTimeTests.swift:154:9 | Expectation failed: clock.sleeps.count == 1
+aHideAndReShowBeforeTheWakeStartsOneFreshSleepFromTheNewReading() | Task525AdversarialTests.swift:150:9 | Expectation failed: abs(clock.sleeps[0] - 60.05) < 0.5
+aHideAndReShowBeforeTheWakeStartsOneFreshSleepFromTheNewReading() | Task525AdversarialTests.swift:159:9 | Expectation failed: clock.sleeps.count == 2
+aHideAndReShowBeforeTheWakeStartsOneFreshSleepFromTheNewReading() | Task525AdversarialTests.swift:160:9 | Expectation failed: abs(clock.sleeps[1] - 30.05) < 0.5
+anEmptyLibraryNeverSchedulesAWakeup() | Task525AdversarialTests.swift:172:9 | Expectation failed: clock.sleeps.isEmpty
+aRowJustUnderSevenDaysTurnsIntoADateAtTheNextWakeAndTheWatchEnds() | Task525AdversarialTests.swift:116:9 | Expectation failed: clock.sleeps.count == 1
+aRowThatBecomesDatedStopsTheWatch() | Task525RelativeTimeTests.swift:208:9 | Expectation failed: clock.sleeps.count == 1
+commandK_selectionSurvivesTheRealHide_andTheEditorGetsTheSelectedItem() | Worf524RealHideWiringTests.swift:95:9 | Expectation failed: rig.externalCalls.count == 1
+commandK_selectionSurvivesTheRealHide_andTheEditorGetsTheSelectedItem() | Worf524RealHideWiringTests.swift:96:9 | Expectation failed: rig.externalCalls.first?.ids == [rig.rows[0].id]
+commandK_selectionSurvivesTheRealHide_andTheEditorGetsTheSelectedItem() | Worf524RealHideWiringTests.swift:97:9 | Expectation failed: rig.externalCalls.first?.panelVisible == false
+everyStringIsWithinTheLengthBudget() | SettingsPaneModelTests.swift:111:13 | Expectation failed: value.count <= 140
+footerForAMultiSelectionCountsAndDisablesPaste() | LibraryPresentationTests.swift:111:9 | Expectation failed: footer.notice == "Select one item to paste"
+footerMultiSelectUntrustedOffersNoCommandCHint() | LibraryPresentationTests.swift:103:13 | Expectation failed: footer.hints == [LibraryFooter.Hint(key: "Esc", label: "Clear selection")]
+footerMultiSelectUntrustedOffersNoCommandCHint() | LibraryPresentationTests.swift:104:13 | Expectation failed: footer.notice == "Select one item to paste"
+hideShowHideLeavesNoWatchLiveAndNeverTwoAtOnce() | Task525AdversarialTests.swift:264:9 | Expectation failed: await waitFor { clock.parked == 1 && clock.sleeps.count == 2 }
+hideShowHideLeavesNoWatchLiveAndNeverTwoAtOnce() | Task525AdversarialTests.swift:268:9 | Expectation failed: clock.sleeps.count == 2
+hidingBeforeTheWatchTaskFirstRunsStartsNoSleepAtAll() | Task525AdversarialTests.swift:278:9 | Expectation failed: clock.sleeps.isEmpty
+hidingCancelsTheModelOwnedWatchWithoutAnyViewInvolved() | Task525RelativeTimeTests.swift:313:9 | Expectation failed: clock.sleeps.count == 1
+menuListsFR00816ItemsInOrder() | SettingsLogicTests.swift:12:9 | Expectation failed: rows == [
+oc8008_preferencesDeleteTouchesRegistryOnly() | Frd008ContractDefaultsTests.swift:146:9 | Expectation failed: names.count == 22
+oc8009_registryIsTheTwentyTwoKeysAndNothingReadsDefaultsAroundIt() | Frd008ContractDefaultsTests.swift:164:9 | Expectation failed: all.count == 22
+oc8022_noExportImportOrSyncControl() | Frd008ContractDefaultsTests.swift:417:9 | Expectation failed: titles == ["general", "shortcuts", "triggers", "privacy", "storage", "about"]
+oc8022_noExportImportOrSyncControl() | Frd008ContractDefaultsTests.swift:427:9 | Expectation failed: rows.count == 8
+oc8023_sixPanesInOrder() | Frd008ContractSettingsTests.swift:40:9 | Expectation failed: SettingsPane.allCases.map(\.rawValue) == ["general", "shortcuts", "triggers", "privacy", "storage", "about"]
+oc8023_sixPanesInOrder() | Frd008ContractSettingsTests.swift:41:9 | Expectation failed: SettingsPane.allCases.map { $0.title.text } == ["General", "Shortcuts", "Triggers", "Privacy", "Storage", "About"]
+oc8034_shortcutsPaneStrings() | Frd008ContractSettingsTests.swift:130:9 | Expectation failed: bound == ["shortcuts.openLibrary", "shortcuts.saveClipboard", "shortcuts.toggleShelf"]
+optionArrowsStepThroughSidebarFilters() | LibraryViewModelTests.swift:299:9 | Expectation failed: h.model.filter == .kind(.text)
+panesAreInTheFRD008Order() | SettingsPaneModelTests.swift:14:9 | Expectation failed: SettingsPane.allCases == [.general, .shortcuts, .triggers, .privacy, .storage, .about]
+panesAreInTheFRD008Order() | SettingsPaneModelTests.swift:15:9 | Expectation failed: SettingsPane.allCases.map(\.title) == [
+panesAreInTheFRD008Order() | SettingsPaneModelTests.swift:18:9 | Expectation failed: SettingsPane.allCases.map(\.symbolName) == [
+registryEqualsTheFRTable() | SettingsRegistryTests.swift:33:9 | Expectation failed: actual.count == expected.count
+registryEqualsTheFRTable() | SettingsRegistryTests.swift:34:47 | Expectation failed: a == e
+rowsLoadedButNotYetVisibleDoNotSetTheSleepAndRevealingThemRestartsTheWatch() | Task525AdversarialTests.swift:186:9 | Expectation failed: clock.sleeps[0] > 43_200 && clock.sleeps[0] < 43_201
+rowsLoadedButNotYetVisibleDoNotSetTheSleepAndRevealingThemRestartsTheWatch() | Task525AdversarialTests.swift:195:9 | Expectation failed: clock.sleeps[1] > 1.0 && clock.sleeps[1] < 1.5
+rowsThatAreAllDatedNeverWakeThePanel() | Task525RelativeTimeTests.swift:197:9 | Expectation failed: clock.sleeps.isEmpty
+sidebarOrdersSectionsAndHidesEmptyTypes() | LibraryPresentationTests.swift:53:9 | Expectation failed: entries.map(\.filter) == [.all, .pinned, .kind(.text), .kind(.link), .tag(1), .sourceApp(.anotherDevice)]
+startingTheWatchAgainReplacesTheEarlierOne() | Task525RelativeTimeTests.swift:324:9 | Expectation failed: await waitFor { clock.parked == 1 && clock.sleeps.count == 2 }
+theSleepMatchesTheSoonestVisibleLabelsStep() | Task525RelativeTimeTests.swift:187:13 | Expectation failed: abs((clock.sleeps.first ?? -1) - (expect + slack)) < 0.001
+theWakeLandsJustPastTheBoundaryNotOnItAndNotAFullStepLate() | Task525AdversarialTests.swift:127:9 | Expectation failed: asked > 1.0 && asked < 1.5
+toggleShelfIsAbsentWhenTheShelfIsOff() | SettingsLogicTests.swift:22:9 | Expectation failed: rows.count == 10
