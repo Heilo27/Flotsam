@@ -17,8 +17,11 @@ public enum LibraryContextMenu {
     /// `ShortcutEditorRule`), the same one `LibraryOrganizer` and ⌘K read. A secure item (`isSecure`) is offered neither Edit nor
     /// Shortcut and Trigger: its text is never shown, and it can carry no hotkey or trigger (FR-005-09; the Shortcut and
     /// Trigger row reads `ShortcutEditorRule`, the same rule ⌘K reads, so with several items selected the row is absent,
-    /// as ⌘K does nothing).
-    public static func entries(kind: ItemKind, pinUnpins: Bool, singleTarget: Bool, isSecure: Bool = false) -> [LibraryMenuEntry] {
+    /// as ⌘K does nothing). Group acts on the whole target, so it reads `ItemActionRule.group` over `targetRows` (the
+    /// selection when the menu opened inside a multi-selection, else the menu's own row); with none given it is absent.
+    public static func entries(
+        kind: ItemKind, pinUnpins: Bool, singleTarget: Bool, isSecure: Bool = false, targetRows: [ItemRow] = []
+    ) -> [LibraryMenuEntry] {
         var entries: [LibraryMenuEntry] = [
             plain(LibraryText.menuPaste, .paste(.paste)),
             plain(LibraryText.menuPastePlain, .paste(.plainText)),
@@ -35,7 +38,7 @@ public enum LibraryContextMenu {
             entries.append(plain(LibraryText.menuRename, .external(.renameBundle)))
             entries.append(plain(LibraryText.menuUngroup, .external(.ungroup)))
         }
-        if !singleTarget, kind.referencesFiles { entries.append(plain(LibraryText.menuGroup, .external(.group))) }
+        if ItemActionRule.group(targetRows) { entries.append(plain(LibraryText.menuGroup, .external(.group))) }
         entries.append(.separator)
         if kind.referencesFiles {
             entries.append(plain(LibraryText.menuReveal, .revealInFinder))

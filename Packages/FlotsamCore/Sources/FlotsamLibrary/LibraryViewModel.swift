@@ -727,6 +727,12 @@ public final class LibraryViewModel {
         return !covered.isEmpty && !PinRule.pinsAll(states: covered.map(\.isPinned))
     }
 
+    /// The rows a context menu opened on row `id` acts on (FR-003-22): the selection when the row is in it, else the row
+    /// alone. What `ItemActionRule.group` is asked about, so the menu offers Group exactly when the action would run.
+    public func menuTargetRows(menuRowID id: UUID) -> [ItemRow] {
+        selection.contains(id) ? selectedRows : visibleRows.filter { $0.id == id }
+    }
+
     /// Tag or untag the selection with an existing tag (FR-004-02). Returns true when the tag was applied.
     public func toggleTagOnSelection(_ tagId: Int64) async -> Bool? {
         let ids = Array(selection)

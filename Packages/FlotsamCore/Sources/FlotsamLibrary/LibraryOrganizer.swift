@@ -76,12 +76,8 @@ public final class LibraryOrganizer {
         return ItemActionRule.ungroup(kind: row.kind, isSingleItem: rows.count == 1)
     }
 
-    /// Group (FR-004-15): two or more items that all reference files (file, folder, bundle), at most `BundleLimits.maxMembers`
-    /// members between them.
-    public nonisolated static func canGroup(_ rows: [ItemRow]) -> Bool {
-        rows.count >= 2 && rows.allSatisfy { $0.kind.referencesFiles }
-            && rows.reduce(0) { $0 + max($1.memberCount, 1) } <= BundleLimits.maxMembers
-    }
+    /// Group (`ItemActionRule.group`, the rule the context menu reads too).
+    public nonisolated static func canGroup(_ rows: [ItemRow]) -> Bool { ItemActionRule.group(rows) }
 
     /// Rename (FR-004-15): exactly one item, a bundle.
     public nonisolated static func canRenameBundle(_ rows: [ItemRow]) -> Bool { canUngroup(rows) }
