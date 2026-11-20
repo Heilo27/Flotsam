@@ -282,7 +282,7 @@ Each icon-only control carries an `accessibilityLabel` (below).
 
 Limits: buttons 15, alert titles 40, alert messages 150, notifications and HUD 100. Counts are characters including spaces; `{x}` placeholders are counted as written and the longest expected value is checked. Active voice; no jargon. Each string is one entry in the String Catalog (no concatenation; plurals use catalogue variations). Catalogue keys carry the `ui.` prefix (`ui.btn.*`, `ui.library.*`); a key shown here without it is not in the catalogue yet.
 
-Deliberate deviations from FRD text: confirmation strings use curly quotes. `storage.confirm.clear` uses "can’t" for the FRD's "can't". `btn.deleteN` is replaced by "Delete Items" because "Delete 212 Items" is 16 characters.
+Deliberate deviations from FRD text: confirmation strings use curly quotes. `storage.confirm.clear` uses "can’t" for the FRD's "can't". `btn.deleteN` is replaced by "Delete Items" because "Delete 212 Items" is 16 characters. "Open System Settings" is 20 characters, over the button limit of 15, and stays: FRD-008 FR-008-06 and FR-008-13 name the button, and it opens macOS System Settings, not Flotsam's own Settings window, so "Open Settings" would mislead.
 
 ### Buttons
 
@@ -300,7 +300,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `btn.replace` | Replace | (7/15) |
 | `btn.deleteAll` | Delete All | (10/15) |
 | `btn.deleteN` | Delete Items | (12/15) |
-| `btn.openSettings` | Open Settings | (13/15) |
+| `ui.settings.openSystemSettings`, `ui.onboarding.openSystemSettings` | Open System Settings | (20/15) |
 | `btn.resetDefaults` | Reset Defaults | (14/15) |
 | `btn.chooseFolder` | Choose Folder… | (14/15) |
 | `btn.getStarted` | Get Started | (11/15) |
@@ -404,7 +404,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `settings.privacy.accessibility.help` | Lets Flotsam paste into the app you are using. | (46/150) |
 | `settings.privacy.input.help` | Lets triggers notice the text you type. Flotsam never stores keystrokes. | (72/150) |
 | `settings.privacy.pasteOther.help` | macOS asks before apps read the clipboard. Choose Always Allow. | (63/150) |
-| `settings.triggers.needInput` | Triggers need Input Monitoring. Open Settings to allow it. | (58/150) |
+| `settings.triggers.needInput` | Triggers need Input Monitoring. Open System Settings to allow it. | (65/150) |
 | `settings.storage.keepHelp` | Pinned items and items with a shortcut are always kept. | (55/150) |
 | `settings.general.historyHelp` | Turn off to pause. Existing items stay. | (39/150) |
 | `settings.shortcuts.recording` | Press the keys you want. Esc cancels. | (37/150) |

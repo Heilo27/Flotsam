@@ -236,7 +236,7 @@ def lbox(rows,sel=None):
     return f'<div class="listbox">{r}<div class="lbar"><span class="sq">{ic("plus",sz=14)}</span><span class="sq">{ic("minus",sz=14)}</span></div></div>'
 triggers=(f'<div style="display:flex;align-items:center;gap:10px"><b style="font-size:13px">Triggers</b><span class="help" style="flex:1">Type the text and a space to paste an item.</span>{sw()}</div>'
  +lbox([('',';sig','Thanks for reaching out, I’ll reply by Friday.'),('',';addr','12 Marsh Lane, Beaufort'),('',';ok','Looks good to me, ship it.')],sel=0)
- +'<div class="status">'+ic('warn',cls='',sz=16,style='color:var(--warn)')+'<span style="font-size:12px">Triggers need Input Monitoring. Open System Settings to allow it.</span><span class="btn sm" style="margin-left:auto">Open Settings</span></div>')
+ +'<div class="status">'+ic('warn',cls='',sz=16,style='color:var(--warn)')+'<span style="font-size:12px">Triggers need Input Monitoring. Open System Settings to allow it.</span><span class="btn sm" style="margin-left:auto">Open System Settings</span></div>')
 def prmrow(n,ok,help_,btn='Open System Settings'):
     pill=f'<span class="pill ok">{ic("check",sz=11)}Allowed</span>' if ok else f'<span class="pill no">{ic("warn",sz=11)}Not allowed</span>'
     b='' if ok else f'<span class="btn sm" style="margin-left:auto">{btn}</span>'
@@ -275,9 +275,9 @@ def onb(step,icon,h,p,ctl='',skip='Skip',primary='Continue',stakes=''):
       f'<div class="nav"><span class="btn sm" style="visibility:{"hidden" if step==1 else "visible"}">Back</span><div class="dots">{dots}</div><span class="btn sm">{skip}</span><span class="btn pri">{primary}</span></div></div>')
 ON=[
  onb(1,'swoosh','Everything you copy, within reach','Flotsam keeps your clipboard and screenshot history on this Mac. Nothing leaves it.',skip='Skip Setup',primary='Get Started'),
- onb(2,'paste','Allow Paste from Other Apps','macOS asks before apps read the clipboard. Choose Always Allow so Flotsam can save what you copy.',ctl='<span class="btn">Open Settings</span>',stakes='Skip this and Flotsam can’t record new copies.'),
- onb(3,'hand','Allow Accessibility','Accessibility lets Flotsam paste into the app you are using.',ctl='<div class="status" style="width:300px;justify-content:center"><span class="pill no">'+ic('warn',sz=11)+'Not allowed</span></div><span class="btn">Open Settings</span>',stakes='Skip this and Flotsam copies only. You press ⌘V yourself.'),
- onb(4,'kbd','Add triggers (optional)','Input Monitoring lets Flotsam notice the text you type to expand triggers. It never stores keystrokes.',ctl='<span class="btn">Open Settings</span>',skip='Not Now',stakes='You can turn this on later in Settings.'),
+ onb(2,'paste','Allow Paste from Other Apps','macOS asks before apps read the clipboard. Choose Always Allow so Flotsam can save what you copy.',ctl='<span class="btn">Open System Settings</span>',stakes='Skip this and Flotsam can’t record new copies.'),
+ onb(3,'hand','Allow Accessibility','Accessibility lets Flotsam paste into the app you are using.',ctl='<div class="status" style="width:300px;justify-content:center"><span class="pill no">'+ic('warn',sz=11)+'Not allowed</span></div><span class="btn">Open System Settings</span>',stakes='Skip this and Flotsam copies only. You press ⌘V yourself.'),
+ onb(4,'kbd','Add triggers (optional)','Input Monitoring lets Flotsam notice the text you type to expand triggers. It never stores keystrokes.',ctl='<span class="btn">Open System Settings</span>',skip='Not Now',stakes='You can turn this on later in Settings.'),
  onb(5,'shot','Pick up screenshots','Choose the folder where macOS saves screenshots. Flotsam adds new ones to your history.',ctl='<div class="field" style="width:300px">'+ic('folder')+'<span>~/Desktop</span></div><span class="btn">Choose Folder…</span>'),
  onb(6,'search','Open Library with a shortcut','Press this shortcut any time to search your history.',ctl='<span class="recorder" style="min-width:180px;height:32px;font-size:15px">⌃⌘V</span><span class="help">Click to record a different shortcut.</span>'),
  onb(7,'login','Open Flotsam at login','Flotsam stays in the menu bar so your history is always ready.',ctl='<div class="row2" style="display:flex;gap:8px;align-items:center">'+sw()+'<span>Open at login</span></div>'),

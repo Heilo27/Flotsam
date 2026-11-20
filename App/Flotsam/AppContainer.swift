@@ -179,8 +179,9 @@ final class AppContainer {
     }
 
     /// Builds the Settings window over this container's objects and points `actions.openSettings` at it, so every
-    /// "Open Settings" caller (the menu row, the Library) takes the one path (FR-008-03). No Notice or alert has an
-    /// "Open Settings" action today (a `Notice` carries a code and a message only); one added later must call
+    /// "Open Settings" caller (the menu row, the Library) takes the one path (FR-008-03). A Notice or alert has no
+    /// "Open Settings" action (a `Notice` carries a code and a message only, and permission guidance points to macOS
+    /// System Settings, FR-008-06, FR-008-13); adding one needs an FRD change first (FR-008-03), and it would then call
     /// `actions.openSettings`. The window is created at first use; the database it reads is asked for on each call, because it opens after launch.
     func installSettings(showSetupGuide: @escaping @MainActor @Sendable () -> Void) {
         let reporter = reporter
