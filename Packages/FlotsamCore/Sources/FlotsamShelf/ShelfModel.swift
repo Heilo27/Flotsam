@@ -186,7 +186,13 @@ public final class ShelfModel {
 
     /// Opens the Shelf (FR-006-06): flushes capture first so a copy made an instant ago is listed, then reads the
     /// sections and selects the first card (FR-006-08). Live refresh starts here and stops in `didHide`.
+    ///
+    /// A hide cancels the task that runs this, but a cancelled task still enters the call. So the call is a no-op when
+    /// it is already cancelled, and stops after `captureNow` if a hide (or a newer reveal) cancelled it meanwhile: a
+    /// cancelled open must not leave `isOpen` true after the hide that beat it, nor reload for a panel that is not coming.
+    /// The caller balances a cancelled open with `didHide` and `panelDidClose` (`ShelfPanelController.present`).
     public func open(target: FrontmostApp?, sticky: Bool) async {
+        guard !Task.isCancelled else { return }
         self.target = target
         isSticky = sticky
         isOpen = true
@@ -196,7 +202,7 @@ public final class ShelfModel {
         kindFilter = nil
         subscribeIfNeeded()
         await effects.captureNow()
-        guard isOpen else { return }
+        guard isOpen, !Task.isCancelled else { return }
         startReload(selection: .first, refreshKinds: true)
         await loadTask?.value
     }
