@@ -1,0 +1,36 @@
+01-library-standard-light: capture mode: region capture (screencapture -R)
+01-library-standard-dark: capture mode: region capture (screencapture -R)
+02-library-compact-light: capture mode: region capture (screencapture -R)
+02-library-compact-dark: capture mode: region capture (screencapture -R)
+03-library-empty-light: capture mode: region capture (screencapture -R)
+03-library-empty-dark: capture mode: region capture (screencapture -R)
+04-shelf-light: capture mode: window-only capture (screencapture -l)
+04-shelf-light: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+04-shelf-dark: capture mode: window-only capture (screencapture -l)
+04-shelf-dark: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+05-menu-bar-menu-light: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-light: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+05-menu-bar-menu-dark: capture mode: window-only capture (screencapture -l)
+05-menu-bar-menu-dark: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop
+06-settings-general-light: capture mode: region capture (screencapture -R)
+06-settings-general-dark: capture mode: region capture (screencapture -R)
+06b-settings-library-light: capture mode: region capture (screencapture -R)
+06b-settings-library-dark: capture mode: region capture (screencapture -R)
+07-onboarding-light: capture mode: region capture (screencapture -R)
+07-onboarding-dark: capture mode: region capture (screencapture -R)
+08-shortcut-editor-light: capture mode: region capture (screencapture -R)
+08-shortcut-editor-dark: capture mode: region capture (screencapture -R)
+
+Capture modes (round 6, ddfd401)
+Host note: a host banner was present before all nine passes and at the end. 04 and 05 were taken with SHOTS_CAPTURE=window (-l). 01, 02, 03, 06, 06b, 07, 08 were taken with -R. This is NOT the round where -R works again. No frame shows banner content; no retakes were needed.
+05 paused state: not producible. No paused stage exists in shots.sh or ShotsStaging.swift, and no harness code was added.
+
+Layout notes (S1 checklist)
+1. End fades (sidebar, list, Shelf): no row or card is half-cut at the bottom in any frame viewed.
+2. Preview metadata header (01/02) and code fade: header reads cleanly and the code fade ends smoothly.
+3. Shelf type-cue edges and full-bleed image cards with header scrim: edges are clean, scrim legible.
+4. 08 shortcut editor: the "Click to Record Shortcut" placeholder and focus ring are NOT visible, because the Shortcut field is staged with a recorded combo (ctrl-opt-cmd-J). Shortcut and Trigger fields are the same height (about 55px). The (?) and clear (x) buttons match in size and style, but sit at different x positions because the Shortcut field is narrower than the Trigger field.
+5. 07 onboarding: Skip is at the far left; Back and Continue are on the right; heading is centred. In dark, a faint purple tint is still visible at the window edge and corners.
+6. 05 menu: "Warnings and Errors" item present; the "Paused until ..." line is absent (state not producible, see above).
+7. 06/06b rows: 06b has "Appearance" and "Preview pane". 06 shows "Launch at login" rather than "Login items", and "Recent screenshots" does not appear as a row label.
+8. Other: 02 footer hint "Plain Text" wraps to two lines. Dark Shelf (04) lacks the "Pinned" and "Recent" section headers that appear in light.
