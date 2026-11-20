@@ -2369,3 +2369,30 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - **05 light menu:** still flat grey from window capture.
   - **06 and 06b:** clean.
 - **Real state:** hashes match (DB, prefs, screencapture domain). The pasteboard is unchanged, no Flotsam is running, there were no TCC/BTM changes, and hill-climb-529 was not pushed to.
+
+## A13: screenshot round 6 at hill-climb-529 ddfd401 (2026-11-20)
+
+- **Verdict: PUBLISHED.** s2/shots = f08ce91b729b597c413e9171936ebe20ba641258 (normal push). round-6/ holds 19 files (18 PNGs plus NOTES). The NOTES leak grep is clean.
+- **Setup:** bin/ is unchanged since 97e17b5. Bootstrap and a Debug build, with ShotsStaging data.
+- **Capture mode:**
+  - The host Calendar alert was still up before every pass and at the end (not touched). 04 and 05 used window mode; everything else used -R. -R does not work for every shot yet.
+  - All 18 frames were checked with no alert content. I re-checked 04 dark and 06 light myself.
+  - 05 paused state: not producible. There is no paused stage in shots.sh or ShotsStaging, and no harness code was added.
+- **S1 checklist:**
+  1. **End fades:** no row or card is half-cut. The last Shelf card fades out at the scroll edge.
+  2. **01/02 preview:** the metadata header and the code fade are clean.
+  3. **Shelf:** the type-cue edges are clean, and the image card's header scrim is legible.
+  4. **08 shortcut editor:**
+     - The placeholder and the focus ring can't be seen, because the staged field already holds a recorded combo.
+     - The Shortcut and Trigger fields are the same height.
+     - The (?) and ⓧ buttons match in style, but sit at different x positions because the field widths differ.
+  5. **07 onboarding:** Skip is on the left, Back and Continue are on the right, and the heading is centred. In dark mode a faint purple tint remains at the window edges and corners.
+  6. **05 menu:** "Warnings and Errors" is present. "Paused until…" can't be captured (see above).
+  7. **06/06b settings:**
+     - 06 has "Launch at login" rather than "Login items".
+     - "Recent screenshots" IS present in 06, under Screenshots, with an "Import Recent Screenshots" button. The agent's NOTES line saying it is absent is wrong; I verified this myself in 06 light.
+     - 06b has "Appearance" and "Preview pane".
+- **Other findings:**
+  - **04 dark:** the "Pinned" and "Recent" section headers aren't visible. The gaps for them are there, but no text shows, while light shows both.
+  - **02:** the footer hint "Plain Text" wraps onto two lines.
+- **Real state:** hashes match (DB, prefs, screencapture domain). The pasteboard is unchanged, no Flotsam is running, and hill-climb-529 was not pushed to.
