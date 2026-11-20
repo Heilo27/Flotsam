@@ -25,6 +25,10 @@ protocol ShelfDropDelegate: AnyObject {
 final class ShelfDropView: NSVisualEffectView {
     weak var delegate: (any ShelfDropDelegate)?
     private var area: NSTrackingArea?
+    /// The pointer was already inside the panel when it appeared. A window-server tracking area only knows the pointer is
+    /// inside after it has seen it move in, so a panel that appears under a pointer that then leaves without ever
+    /// having entered gets no `mouseExited`, and the reveal machine keeps hearing `.onShelf` (FR-006-47).
+    private var assumeInside = false
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -37,14 +41,28 @@ final class ShelfDropView: NSVisualEffectView {
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let area { removeTrackingArea(area) }
-        let fresh = NSTrackingArea(
-            rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
+        var options: NSTrackingArea.Options = [.mouseEnteredAndExited, .activeAlways, .inVisibleRect]
+        if assumeInside { options.insert(.assumeInside) }
+        let fresh = NSTrackingArea(rect: .zero, options: options, owner: self, userInfo: nil)
         addTrackingArea(fresh)
         area = fresh
     }
 
+    /// Tells the tracking area where the pointer is at the moment the panel appears (`true`) or that the panel is gone
+    /// (`false`), so the first exit is reported (FR-006-47). Event-driven: no monitor and no timer.
+    func assumePointerInside(_ inside: Bool) {
+        guard inside != assumeInside else { return }
+        assumeInside = inside
+        updateTrackingAreas()
+    }
+
     override func mouseEntered(with event: NSEvent) { delegate?.shelfPointerMoved() }
-    override func mouseExited(with event: NSEvent) { delegate?.shelfPointerMoved() }
+
+    override func mouseExited(with event: NSEvent) {
+        // The area knows the pointer is outside now; the next reveal sets the assumption afresh.
+        assumeInside = false
+        delegate?.shelfPointerMoved()
+    }
 
     override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         delegate?.shelfDragUpdated(sender) ?? []

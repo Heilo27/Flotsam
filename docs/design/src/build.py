@@ -159,7 +159,7 @@ def ctx(items):
             lab,k,*f=it; cls='on' if 'on' in f else ('dis' if 'dis' in f else '')
             h+=f'<div class="mi {cls}">{lab}<span class="k">{k}</span></div>'
     return f'<div class="menu">{h}</div>'
-CTX=[('Paste','↩','on'),('Paste as Plain Text','⌥↩'),('Copy','⇧↩'),('Preview','⌘Y'),'-',('Pin','⌘P'),('Tags…','⌘T'),('Note…','⌘N'),('Edit…','⌘E'),('Shortcut and Trigger…','⌘K'),('Ungroup','⌘⇧U','dis'),'-',('Reveal in Finder','⌘R'),'-',('Delete','⌘⌫')]
+CTX=[('Paste','↩','on'),('Paste as Plain Text','⌥↩'),('Copy','⇧↩'),('Preview','⌘Y'),'-',('Pin','⌘P'),('Tags…','⌘T'),('Note…','⌘N'),('Edit…','⌘E'),('Shortcut and Trigger… (one non-secure item only)','⌘K'),('Ungroup','⌘⇧U','dis'),'-',('Reveal in Finder','⌘R'),'-',('Delete','⌘⌫')]
 SORT=[('Recent','⌘S'),('Oldest',''),('Most Used',''),('A to Z','')]
 sortm='<div class="menu">'+''.join(f'<div class="mi {"on" if i==0 else ""}">{ic("check",cls="ck") if i==0 else ""}{n}<span class="k">{k}</span></div>' for i,(n,k) in enumerate(SORT))+'</div>'
 tagctx=('<div class="menu" style="min-width:190px"><div class="mi">Rename…</div><div class="msep"></div>'+''.join(f'<div class="mi">{ic("check",cls="ck") if c=="blue" else ""}<i class="dot" style="background:var(--tag-{c});margin-right:2px"></i>{c.capitalize()}</div>' for c in ['red','orange','yellow','green','blue','purple','pink','gray'])+'<div class="msep"></div><div class="mi">Delete Tag…</div></div>')

@@ -32,6 +32,9 @@ struct ShelfView: View {
                 .padding(6)
                 .accessibilityLabel(Text(verbatim: ShelfText.string(ShelfText.close)))
         }
+        // Ages the cards' VoiceOver labels while the Shelf is open (FR-006-48). The model owns the watch task and cancels
+        // it on a hide; the key restarts it on the next open or card change.
+        .task(id: model.relativeTimeWatchKey) { await model.runRelativeTimeWatch() }
     }
 
     /// The search field and type pills of a sticky Shelf (FR-006-22): one row in the horizontal placements, the field

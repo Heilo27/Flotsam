@@ -211,7 +211,7 @@ Tab moves between search, sidebar, results and preview; Full Keyboard Access rea
 
 ## 7. Context menus
 
-Library (FR-003-22): Paste, Paste as Plain Text, Copy, Preview, separator, Pin or Unpin, Tags…, Note…, Edit… (text only), Shortcut and Trigger…, Ungroup (bundles only), separator, Reveal in Finder, separator, Delete.
+Library (FR-003-22): Paste, Paste as Plain Text, Copy, Preview, separator, Pin or Unpin, Tags…, Note…, Edit… (text only), Shortcut and Trigger… (one non-secure item only), Ungroup (bundles only), separator, Reveal in Finder, separator, Delete.
 Shelf: Paste, Paste as Plain Text, Copy, separator, Pin or Unpin, separator, Delete.
 Sidebar tag row: Rename, Colour (8 swatches with names), Delete.
 Sort control: four items, checkmark on the active one.

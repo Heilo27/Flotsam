@@ -331,9 +331,7 @@ private final class TickingClock: WallClock, @unchecked Sendable {
         let after = ItemSpeech.relativeTime(copied, now: now.addingTimeInterval(3_601), calendar: newYork)
         #expect(before != after, "the label changes within 3,601 s (the copy turns 604,800 s old)")
         let delay = ItemSpeech.secondsUntilRelativeTimeChanges(copied, now: now, calendar: newYork)
-        withKnownIssue("WORF-525-F7: the day step overshoots the 7-day cutoff by 23 h across a spring-forward week") {
-            #expect((delay ?? 0) <= 3_601)
-        }
+        #expect((delay ?? 0) <= 3_601)
     }
 
     // MARK: Future-dated rows (WORF-525-F2)

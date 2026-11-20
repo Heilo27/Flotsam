@@ -168,6 +168,10 @@ public struct SettingsStore: Sendable {
 
     public func value<Value: SettingValue>(_ key: SettingKey<Value>) -> Value { read(key).value }
 
+    /// The ignored apps' bundle identifiers (FR-008-11), read fresh each call. The one reading of the list: capture's gate 4
+    /// (FRD-001 FR-001-04) and the read-time hiding of items already stored (FR-008-42) both take it from here.
+    public var ignoredApps: Set<String> { Set(value(SettingKeys.privacyIgnoredApps).identifiers) }
+
     /// Stores `value` and delivers the change. The caller is the settings control that made the change; a failed apply
     /// must not call this (FR-008-02: the control reverts). Writing never reads, so it does not count as a read of the key.
     public func set<Value: SettingValue>(_ value: Value, for key: SettingKey<Value>) {

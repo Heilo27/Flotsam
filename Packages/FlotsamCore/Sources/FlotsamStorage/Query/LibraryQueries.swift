@@ -8,6 +8,10 @@ import GRDB
 /// Search is a substring scan of the pre-normalised `item.searchText` (`instr`, AND over tokens), which gives exactly
 /// the FR-003-09 result set. Whether to replace it with an FTS5 trigram index is spike S-1's call (TASK-004); the
 /// public API does not change either way.
+///
+/// Every read here hides the items of ignored apps (FR-008-42): `Selection` requires the ignored set, so a page, a count and a
+/// sidebar number cannot be built without applying it. `ignoredApps()` is read once per public call, so the page and its count
+/// describe the same list.
 extension FlotsamDatabase {
     // MARK: Pages
 
@@ -15,8 +19,9 @@ extension FlotsamDatabase {
     /// inline Retry).
     public func items(matching query: LibraryQuery) async -> FlotsamResult<ItemPage> {
         let read: (page: ItemPage, fileMembers: [UUID: [ItemMember]])
+        let hidden = ignoredApps()
         do {
-            read = try await pool.read { db in try Self.page(db, query: query) }
+            read = try await pool.read { db in try Self.page(db, query: query, ignoredApps: hidden) }
         } catch {
             return .failure(Self.readFailure(error))
         }
@@ -48,9 +53,10 @@ extension FlotsamDatabase {
 
     /// Count of `filter` combined with `text`, by the same predicate the page uses (the "{n} items" footer).
     public func count(filter: LibraryFilter, text: String = "") async -> FlotsamResult<Int> {
+        let hidden = ignoredApps()
         do {
             return .success(try await pool.read { db in
-                try Self.count(db, selection: Selection(filter: filter, text: text))
+                try Self.count(db, selection: Selection(filter: filter, text: text, ignoredApps: hidden))
             })
         } catch {
             return .failure(Self.readFailure(error))
@@ -60,8 +66,9 @@ extension FlotsamDatabase {
     /// Sidebar rows and counts (FRD-003 FR-003-12). Each count is the page query's own predicate, never a second
     /// hand-written one, so a row's number always equals what selecting that row lists.
     public func sidebarCounts() async -> FlotsamResult<SidebarCounts> {
+        let hidden = ignoredApps()
         do {
-            return .success(try await pool.read { db in try Self.sidebar(db) })
+            return .success(try await pool.read { db in try Self.sidebar(db, ignoredApps: hidden) })
         } catch {
             return .failure(Self.readFailure(error))
         }
@@ -69,18 +76,24 @@ extension FlotsamDatabase {
 
     /// Live item count per kind, kinds with no items left out. Numbers only: the one count-by-kind query, shared by the
     /// sidebar's Type rows and Copy Diagnostics (FR-000-10), so the two cannot disagree and the diagnostics read no
-    /// content. Failure is `STO-DB-004`, as for every read (FR-007-18).
+    /// content. Items of ignored apps are not counted (FR-008-42), as in the Library. Failure is `STO-DB-004`, as for every
+    /// read (FR-007-18).
     public func itemCountsByKind() async -> FlotsamResult<[ItemKind: Int]> {
+        let hidden = ignoredApps()
         do {
-            return .success(try await pool.read { db in try Self.kindCounts(db) })
+            return .success(try await pool.read { db in try Self.kindCounts(db, ignoredApps: hidden) })
         } catch {
             return .failure(Self.readFailure(error))
         }
     }
 
-    private static func kindCounts(_ db: Database) throws -> [ItemKind: Int] {
+    private static func kindCounts(_ db: Database, ignoredApps: Set<String>) throws -> [ItemKind: Int] {
+        let gate = notFromIgnoredApps(ignoredApps)
         var counts: [ItemKind: Int] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT kind, COUNT(*) AS n FROM item GROUP BY kind") {
+        for row in try Row.fetchAll(
+            db, sql: "SELECT kind, COUNT(*) AS n FROM item WHERE \(gate?.sql ?? "1") GROUP BY kind",
+            arguments: gate?.arguments ?? StatementArguments()
+        ) {
             let raw: String = row["kind"]
             let n: Int = row["n"]
             if let kind = ItemKind(rawValue: raw), n > 0 { counts[kind] = n }
@@ -105,19 +118,19 @@ extension FlotsamDatabase {
         }
     }
 
-    /// A WHERE clause over `item` plus its arguments.
+    /// A WHERE clause over `item` plus its arguments. `ignoredApps` has no default: a caller that lists or counts items must
+    /// say which apps are hidden (FR-008-42); a caller that means "every stored row" passes `[]` and says why.
     struct Selection {
         let sql: String
         let arguments: StatementArguments
 
-        init(sql: String, arguments: StatementArguments) {
-            self.sql = sql
-            self.arguments = arguments
-        }
-
-        init(filter: LibraryFilter, text: String, surface: SearchSurface = .library) {
+        init(filter: LibraryFilter, text: String, ignoredApps: Set<String>, surface: SearchSurface = .library) {
             var clauses: [String] = []
             var arguments = StatementArguments()
+            if let gate = FlotsamDatabase.notFromIgnoredApps(ignoredApps) {
+                clauses.append(gate.sql)
+                arguments += gate.arguments
+            }
             switch filter {
             case .all: break
             case .pinned: clauses.append("pinned = 1")
@@ -198,8 +211,10 @@ extension FlotsamDatabase {
         try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM item WHERE \(selection.sql)", arguments: selection.arguments) ?? 0
     }
 
-    private static func page(_ db: Database, query: LibraryQuery) throws -> (page: ItemPage, fileMembers: [UUID: [ItemMember]]) {
-        let selection = Selection(filter: query.filter, text: query.text)
+    private static func page(
+        _ db: Database, query: LibraryQuery, ignoredApps: Set<String>
+    ) throws -> (page: ItemPage, fileMembers: [UUID: [ItemMember]]) {
+        let selection = Selection(filter: query.filter, text: query.text, ignoredApps: ignoredApps)
         let total = try count(db, selection: selection)
         let offset = query.page * LibraryQuery.pageSize
 
@@ -355,24 +370,26 @@ extension FlotsamDatabase {
     /// Apps shown in the sidebar (FR-003-12).
     private static let sidebarAppLimit = 15
 
-    private static func sidebar(_ db: Database) throws -> SidebarCounts {
+    private static func sidebar(_ db: Database, ignoredApps: Set<String>) throws -> SidebarCounts {
         func counted(_ filter: LibraryFilter) throws -> Int {
-            try count(db, selection: Selection(filter: filter, text: ""))
+            try count(db, selection: Selection(filter: filter, text: "", ignoredApps: ignoredApps))
         }
-        let kinds = try kindCounts(db)
+        let kinds = try kindCounts(db, ignoredApps: ignoredApps)
+        let gate = notFromIgnoredApps(ignoredApps)
         var tags: [SidebarCounts.TagCount] = []
         for tag in try Row.fetchAll(db, sql: "SELECT id, name, color FROM tag ORDER BY name COLLATE NOCASE") {
             let id: Int64 = tag["id"]
             tags.append(SidebarCounts.TagCount(id: id, name: tag["name"], color: tag["color"], count: try counted(.tag(id))))
         }
-        // Grouped by the same key expression the sourceApp filter compares against.
+        // Grouped by the same key expression the sourceApp filter compares against; an ignored app has no row here.
         let apps = try Row.fetchAll(
             db,
             sql: """
                 SELECT \(sourceKeySQL) AS key, MAX(sourceName) AS name, COUNT(*) AS n FROM item
+                WHERE \(gate?.sql ?? "1")
                 GROUP BY key ORDER BY n DESC, key ASC LIMIT ?
                 """,
-            arguments: [sidebarAppLimit]
+            arguments: (gate?.arguments ?? StatementArguments()) + [sidebarAppLimit]
         ).map { row in
             SidebarCounts.AppCount(identity: sourceIdentity(fromKey: row["key"]), name: row["name"], count: row["n"])
         }

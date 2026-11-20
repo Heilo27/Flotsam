@@ -71,7 +71,7 @@ public struct SidebarEntry: Equatable, Identifiable {
 
     public var id: LibraryFilter { filter }
 
-    /// The sidebar in order: All, Pinned, Notes, Shortcuts (each dimmed at zero); the types that have items, Videos after Screenshots; tags alphabetically; the top apps by count. The
+    /// The sidebar in order: All, Pinned, Notes, Shortcuts (each dimmed at zero); the types that have items, Videos (when any video file exists) after Screenshots' place; tags alphabetically; the top apps by count. The
     /// query layer already orders tags and caps apps (`SidebarCounts`), so this only labels them.
     public static func entries(from counts: SidebarCounts, typeOrder: TypeOrder = .default) -> [SidebarEntry] {
         var entries = [
@@ -80,14 +80,15 @@ public struct SidebarEntry: Equatable, Identifiable {
             SidebarEntry(filter: .hasNote, section: .top, title: LibraryText.string("ui.library.sidebarNotes"), count: counts.notes, isDimmed: counts.notes == 0),
             SidebarEntry(filter: .hasShortcut, section: .top, title: LibraryText.string("ui.library.sidebarShortcuts"), count: counts.shortcuts, isDimmed: counts.shortcuts == 0),
         ]
-        for kind in typeOrder.shown(counts: counts.kinds) {
+        let shownKinds = typeOrder.shown(counts: counts.kinds)
+        let videosSlot = videosPosition(among: shownKinds, typeOrder: typeOrder)
+        let videos = SidebarEntry(filter: .videos, section: .types, title: LibraryText.string("ui.library.sidebarVideos"), count: counts.videos, isDimmed: false)
+        for (index, kind) in shownKinds.enumerated() {
+            if index == videosSlot, counts.videos > 0 { entries.append(videos) }
             let count = counts.kinds[kind] ?? 0
             entries.append(SidebarEntry(filter: .kind(kind), section: .types, title: LibraryText.typeTitle(kind), count: count, isDimmed: false))
-            // Videos are not a kind (they are files), so their row sits right after Screenshots, hidden when empty.
-            if kind == .screenshot, counts.videos > 0 {
-                entries.append(SidebarEntry(filter: .videos, section: .types, title: LibraryText.string("ui.library.sidebarVideos"), count: counts.videos, isDimmed: false))
-            }
         }
+        if videosSlot == shownKinds.count, counts.videos > 0 { entries.append(videos) }
         for tag in counts.tags {
             entries.append(SidebarEntry(filter: .tag(tag.id), section: .tags, title: tag.name, count: tag.count, isDimmed: tag.count == 0))
         }
@@ -95,6 +96,15 @@ public struct SidebarEntry: Equatable, Identifiable {
             entries.append(SidebarEntry(filter: .sourceApp(app.identity), section: .apps, title: appTitle(app), count: app.count, isDimmed: false))
         }
         return entries
+    }
+
+    /// Where the Videos row goes among the shown type rows: right after Screenshots' place in the `library.types` list.
+    /// Videos are not a kind (they are files, so the list cannot switch them off) and the row follows only its own
+    /// count (FR-003-12): Screenshots having no items, or being switched off, never hides it. With Screenshots listed
+    /// the row sits after the last shown type at or before Screenshots' place; with it switched off, last.
+    private static func videosPosition(among shown: [ItemKind], typeOrder: TypeOrder) -> Int {
+        guard let screenshotPlace = typeOrder.kinds.firstIndex(of: .screenshot) else { return shown.count }
+        return shown.prefix { (typeOrder.kinds.firstIndex(of: $0) ?? 0) <= screenshotPlace }.count
     }
 
     private static func appTitle(_ app: SidebarCounts.AppCount) -> String {

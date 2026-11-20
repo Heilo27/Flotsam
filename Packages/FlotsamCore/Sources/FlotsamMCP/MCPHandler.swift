@@ -13,13 +13,10 @@ import Foundation
 /// text, so it lives in `MCPText` here rather than in the String Catalogue.
 public struct MCPHandler: Sendable {
     private let database: FlotsamDatabase
-    /// Read on every call, so a change to the Privacy ignored-apps list applies to the next request (FR-010-08).
-    private let ignoredApps: @Sendable () -> Set<String>
     private let serverVersion: String
 
-    public init(database: FlotsamDatabase, ignoredApps: @escaping @Sendable () -> Set<String>, serverVersion: String) {
+    public init(database: FlotsamDatabase, serverVersion: String) {
         self.database = database
-        self.ignoredApps = ignoredApps
         self.serverVersion = serverVersion
     }
 
@@ -105,7 +102,7 @@ public struct MCPHandler: Sendable {
             limit = value
         }
         switch await database.exposedItems(
-            matching: query, kind: kind, limit: limit, textLimit: ExposureLimits.previewCharacters, ignoredApps: ignoredApps())
+            matching: query, kind: kind, limit: limit, textLimit: ExposureLimits.previewCharacters)
         {
         case .success(let items):
             return .result(Self.toolResult(["count": items.count, "items": items.map(Self.json)]))
@@ -119,7 +116,7 @@ public struct MCPHandler: Sendable {
         guard let raw = arguments["id"] as? String, let id = UUID(uuidString: raw) else {
             return .failure(code: JSONRPCCode.invalidParams, message: MCPText.invalidParams)
         }
-        switch await database.exposedItem(id: id, textLimit: ExposureLimits.fullTextCharacters, ignoredApps: ignoredApps()) {
+        switch await database.exposedItem(id: id, textLimit: ExposureLimits.fullTextCharacters) {
         case .success(let item?):
             return .result(Self.toolResult(["item": Self.json(item)]))
         case .success(nil):

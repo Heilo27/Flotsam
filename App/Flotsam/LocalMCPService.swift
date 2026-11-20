@@ -86,10 +86,8 @@ final class LocalMCPService {
     }
 
     private func makeServer(database: FlotsamDatabase) -> MCPSocketServer {
-        let settings = settings
         let handler = MCPHandler(
             database: database,
-            ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
             serverVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0")
         return MCPSocketServer(socketURL: MCPWire.socketURL(inFolder: dataFolder), gate: gate, handler: handler)
     }

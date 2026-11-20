@@ -222,7 +222,11 @@ final class AppContainer {
     func hideLibraryBeforeWindowOpens() { library?.hidePanel() }
 
     private func openDatabase() async {
-        switch await FlotsamDatabase.open(folder: environment.dataFolder, secureVault: secureVault) {
+        // FR-008-42: the same live list capture reads (FR-008-11), so a Settings edit hides or restores items at the next read.
+        let settings = settings
+        switch await FlotsamDatabase.open(
+            folder: environment.dataFolder, secureVault: secureVault, ignoredApps: { settings.ignoredApps }
+        ) {
         case .success(let opened):
             database = opened
             startCapture(database: opened)
@@ -275,7 +279,7 @@ final class AppContainer {
             pasteboard: SystemPasteboard(), sourceApps: SystemSourceApps(), ownWrites: ownWrites,
             ingest: IngestActor(database: database, settings: settings), settings: settings, reporter: reporter,
             // FR-008-11: the list is read per copy, so Settings edits apply without a relaunch.
-            ignoredApps: { Set(settings.value(SettingKeys.privacyIgnoredApps).identifiers) },
+            ignoredApps: { settings.ignoredApps },
             access: SystemPasteboardAccess(), vault: secureVault, cue: captureCue, pollTick: pollTick)
         self.capture = capture
         // FR-005-06: the Save Clipboard hotkey and the menu row both run this one action.
@@ -519,12 +523,23 @@ final class AppContainer {
 
         // The Library reaches the shortcut-and-trigger editor through `actions` (FR-005-09) with the one item it
         // resolved (`LibraryExternalCommand.shortcutEditorTarget`: exactly one, and not a secure item), so the app
-        // opens the editor for the id it is handed and decides nothing itself. The Library hides first, as for every
+        // opens the editor for the id it is handed. The App still gates it itself (`ShortcutEditorRule.target`: exactly
+        // one id, not a secure item), so a caller other than the Library cannot open the first of several ids or reach
+        // the failed editor for a secure one; a refused request hides nothing. The Library hides first, as for every
         // Flotsam window that opens from it (TASK-524).
         actions.editShortcutAndTrigger = { [weak self, weak editor] ids in
-            guard let id = ids.first else { return }
-            self?.hideLibraryBeforeWindowOpens()
-            editor?.open(itemId: id)
+            Task { @MainActor in
+                let resolved = await ShortcutEditorRule.target(ids: ids) { id in
+                    await database.content(of: id).map(\.isSecure)
+                }
+                switch resolved {
+                case .success(let id?):
+                    self?.hideLibraryBeforeWindowOpens()
+                    editor?.open(itemId: id)
+                case .success(nil): return
+                case .failure(let error): await reporter.report(error, origin: .userInitiated)
+                }
+            }
         }
         startShortcuts(openLibrary: { [weak self] in self?.actions.openLibrary?() })
         startItemHotkeys(database: database, paster: paster, expansion: expansion, frontmost: frontmost)

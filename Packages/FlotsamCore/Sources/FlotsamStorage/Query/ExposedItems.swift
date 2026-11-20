@@ -32,39 +32,31 @@ public enum ExposureLimits {
 }
 
 /// The read side for outside readers (FRD-010). It is a second door into `item`, so it has exactly one gate
-/// (`exposureGate`) and every query here goes through it: nothing in this file selects from `item` without it.
+/// (`secureRowGate`, plus the shared ignored-apps rule through `Selection`) and every query here goes through it:
+/// nothing in this file selects from `item` without it.
 extension FlotsamDatabase {
-    /// The visibility gate (FR-010-08): a secure item is never visible, whatever its row says elsewhere (the flag and the
-    /// ciphertext are each enough to hide it), and neither is an item copied from an ignored app. Ignored apps are
-    /// dropped at capture, but a copy stored before the user added the app to the list is still in the library, so the
-    /// gate also checks them at read time. Secure rows carry no content in the search columns either (FR-007-03), so a
-    /// search cannot match their content even before this gate runs.
-    static func exposureGate(ignoredApps: Set<String>) -> Selection {
-        var sql = "isSecure = 0 AND secureCiphertext IS NULL"
-        var arguments = StatementArguments()
-        let ignored = ignoredApps.sorted()
-        if !ignored.isEmpty {
-            let placeholders = ignored.map { _ in "?" }.joined(separator: ",")
-            sql += " AND (NULLIF(sourceBundleId, '') IS NULL OR sourceBundleId NOT IN (\(placeholders)))"
-            arguments += StatementArguments(ignored)
-        }
-        return Selection(sql: sql, arguments: arguments)
-    }
+    /// The secure-row half of the visibility gate (FR-010-08): a secure item is never visible, whatever its row says
+    /// elsewhere (the flag and the ciphertext are each enough to hide it). Secure rows carry no content in the search
+    /// columns either (FR-007-03), so a search cannot match their content even before this gate runs. The hide rule for
+    /// ignored apps is not here: it has one home, `notFromIgnoredApps` (FR-008-42), and reaches this reader through
+    /// `Selection`, the same as the Library.
+    static let secureRowGate = "isSecure = 0 AND secureCiphertext IS NULL"
 
     /// Newest-first items matching `text` and, if given, `kind`, behind the gate. The match runs over `searchTextExposed`, the
     /// fields this reader is shown (text, note, tags, source app, the file names it is given), never `searchText`: that one
     /// holds recognised image text (FR-003-55), and a search that could match it would let the reader read it by probing.
-    /// An empty `text` lists the most recent. Failure is `STO-DB-004`, as for every read (FR-007-18).
+    /// Items of ignored apps are hidden as in the Library (FR-008-42; the list is the database's own provider, read once
+    /// per call). An empty `text` lists the most recent. Failure is `STO-DB-004`, as for every read (FR-007-18).
     public func exposedItems(
-        matching text: String, kind: ItemKind?, limit: Int, textLimit: Int, ignoredApps: Set<String>
+        matching text: String, kind: ItemKind?, limit: Int, textLimit: Int
     ) async -> FlotsamResult<[ExposedItem]> {
-        let selection = Selection(filter: kind.map { .kind($0) } ?? .all, text: text, surface: .exposed)
-        let gate = Self.exposureGate(ignoredApps: ignoredApps)
+        let selection = Selection(
+            filter: kind.map { .kind($0) } ?? .all, text: text, ignoredApps: ignoredApps(), surface: .exposed)
         let bounded = min(max(limit, 1), ExposureLimits.maxResults)
         do {
             return .success(try await pool.read { db in
                 try Self.fetchExposed(
-                    db, whereSQL: "(\(selection.sql)) AND \(gate.sql)", arguments: selection.arguments + gate.arguments,
+                    db, whereSQL: "(\(selection.sql)) AND \(Self.secureRowGate)", arguments: selection.arguments,
                     limit: bounded, textLimit: textLimit)
             })
         } catch {
@@ -74,13 +66,13 @@ extension FlotsamDatabase {
 
     /// One item by id behind the same gate: nil for an id that does not exist and for one the gate hides, so the two
     /// cannot be told apart.
-    public func exposedItem(id: UUID, textLimit: Int, ignoredApps: Set<String>) async -> FlotsamResult<ExposedItem?> {
-        let gate = Self.exposureGate(ignoredApps: ignoredApps)
+    public func exposedItem(id: UUID, textLimit: Int) async -> FlotsamResult<ExposedItem?> {
+        let visible = Selection(filter: .all, text: "", ignoredApps: ignoredApps(), surface: .exposed)
         do {
             return .success(try await pool.read { db in
                 try Self.fetchExposed(
-                    db, whereSQL: "id = ? AND \(gate.sql)", arguments: StatementArguments([id.uuidString]) + gate.arguments,
-                    limit: 1, textLimit: textLimit
+                    db, whereSQL: "id = ? AND (\(visible.sql)) AND \(Self.secureRowGate)",
+                    arguments: StatementArguments([id.uuidString]) + visible.arguments, limit: 1, textLimit: textLimit
                 ).first
             })
         } catch {
