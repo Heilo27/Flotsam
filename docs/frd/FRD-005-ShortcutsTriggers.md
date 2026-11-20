@@ -133,7 +133,7 @@ Let any saved clip be pasted with one key chord or by typing a short word, in an
 |---|---|---|---|
 | Shortcut recorder | key-capture control | Settings › Shortcuts, item editor | FR-005-04 |
 | Shortcuts pane list (Open Library, Save Clipboard, Add Clip, Toggle Shelf, Paste Queue) | settings rows | Settings › Shortcuts (FRD-008) | one recorder per registry row |
-| Shortcut and Trigger editor | popover (⌘K) | anchored to selected item | recorder, trigger field, variable help line, inline validation |
+| Shortcut and Trigger editor | small titled window (⌘K or context menu) | centred, brought to front; one at a time (opening for another item replaces it); ⌘W or Esc closes | recorder, trigger field, variable help line, inline validation |
 | Variable help line | caption | editor | lists `{date}`, `{time}`, `{clipboard}` and format examples (catalogue strings) |
 | Trigger and hotkey badges | icons | Library rows (FRD-003) | show item has a binding |
 | Triggers pane (enable switch, excluded apps list) | settings pane | Settings › Triggers (FRD-008) | `triggers.enabled`, `triggers.excludedApps` |

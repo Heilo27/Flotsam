@@ -165,7 +165,7 @@ Menu-bar glyph (template image, 18 pt, adapts to the menu-bar tint). Shape diffe
 
 Alerts (NSAlert, sheet-style, max width 320): title at most 40, message at most 150, primary action on the right, Cancel left, destructive primary uses the destructive role (HIG: Alerts). Delete and Delete Items are never the default button when data loss is permanent; Cancel holds Return and Esc.
 
-Popovers (tags, note, shortcut and trigger editor) anchor to the selected row, close on Esc, and return focus to the row.
+Popovers (tags, note) anchor to the selected row, close on Esc, and return focus to the row. The shortcut and trigger editor is a small titled window instead (FRD-005 §8): centred, one at a time, closes on Esc or ⌘W.
 
 ## 5. States matrix
 
