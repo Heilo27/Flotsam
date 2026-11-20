@@ -2050,3 +2050,23 @@ This means the panel ran activated rather than as a non-activating panel, so the
 - **R-526c (probe, no verdict):** with the Note overlay open on an ordinary item, ⌘K did nothing. The Library and the overlay both stayed, and no editor opened.
 - **Defects:** none confirmed. **Spec drift:** none.
 - **Snapshot identity:** the real data and the prefs hashes are identical before and after. The real Flotsam never ran. The pasteboard was restored, and cleanup is done.
+
+## Full pass A1: health on main @ 59340b9 (2026-11-19)
+
+The run used a clean clone.
+
+| Step | Exit | Time |
+|---|---|---|
+| bin/bootstrap.sh | 0 | 26 s |
+| bin/check-architecture.sh | 0 | 2 s |
+| bin/build.sh | 0 | 28 s |
+| `swift test --package-path Packages/FlotsamCore` | 1 | 19 s |
+
+- **Build:** BUILD SUCCEEDED, with 1 warning: App/Flotsam/AppContainer.swift:188:13 (the immutable value `presenter` is never used).
+- **The suite did not compile, so no tests ran.** The only failing target is FlotsamStorageTests; the other 11 test targets compile clean.
+  - The errors are all `FlotsamDatabase has no member 'diagnostics'`, known group 4. They are at StorageOpenTests.swift:22, 47 and 63, and at Task497PreMigrationCopyTests.swift:130.
+  - A grep finds 16 call sites in 10 files. The other 8 files will fail next: DataFolderLayoutTests, FRD007ContractTestsReliability, QuarantineByteIdentityTests, ReconcileAndMigrationDestructiveTests, StorageEdgeTests, Unmapped007OpenAndFolderTests, Worf484AdversarialTests and Worf497PreMigrationCopyTests.
+- **Known groups that did not break compilation:**
+  - LibraryContextMenu.entries compiles, because `targetRows` now defaults to `[]` (LibraryContextMenu.swift:23).
+  - The toggle-while-opening tests and Task525RelativeTimeTests are runtime assertions. Their result is unknown until the Storage tests compile.
+- **Unexpected errors:** none.
