@@ -2350,3 +2350,22 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
 - **Symptom:** `06b-…` doesn't match, because its third character is a letter, so `--publish` silently leaves out both 06b PNGs. The count check expects 16 and finds 16, so it gives no warning.
 - **Fix shape:** change the glob to `[0-9][0-9]*-light.png` and its dark twin, and raise the expected count to 18. Better still, derive the count from SCREENS so it can't drift again.
 - **Workaround used for round 4:** a temporary copy of the script with the glob widened; it was deleted afterwards, and the worktree is clean at 8e7794f.
+
+## A12: screenshot round 5 at hill-climb-529 97e17b5 (2026-11-20)
+
+- **Verdict: PUBLISHED.** s2/shots = 812ab4573d8fed0131b6dc1d95c04de9cbbcb714 (normal push). File counts: round-1 to round-3 hold 17 each, round-4 and round-5 hold 19 each. The NOTES leak grep is clean.
+- **Setup:** bin/bootstrap.sh was read before running. It runs xcodegen and a SwiftPM resolve, and writes only to the worktree and the SwiftPM cache. Fresh Debug build.
+- **H2 fix verified:** the real `--publish 5` included both 06b files, with no count warning and no temporary copy.
+- **Capture mode:** the host Calendar alert was still up (not touched). 04 and 05 used window mode; everything else used -R. -R does not yet work for all screens. All 18 PNGs were checked with no alert content; I re-checked 02 light and 04 light myself.
+- **New items:**
+  - **Sidebar fade:** OK.
+  - **Row app icons:** OK in 01 and 04.
+  - **Preview fade:** the code line now fades at the right edge and is still truncated.
+  - **Onboarding "Step 2 of 8" caption:** OK.
+  - **08 editor:** minimise and zoom are hidden as intended.
+  - **Shelf light wash:** can't be judged in window mode (flat backdrop). The last card (Terminal) is cut at the bottom of the frame with no visible fade.
+- **Old issues:**
+  - **Sidebar last row under the footer:** softened by the fade, not gone. In 02, Apps › Notes is still half under the divider.
+  - **05 light menu:** still flat grey from window capture.
+  - **06 and 06b:** clean.
+- **Real state:** hashes match (DB, prefs, screencapture domain). The pasteboard is unchanged, no Flotsam is running, there were no TCC/BTM changes, and hill-climb-529 was not pushed to.
