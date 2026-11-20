@@ -28,6 +28,9 @@ final class OnboardingWindowController: NSObject, NSWindowDelegate {
             contentViewController: NSHostingController(rootView: OnboardingView(model: model, finish: finish)))
         window.title = FlotsamStrings.text(forKey: "ui.onboarding.windowTitle") ?? ""
         window.styleMask = [.titled, .closable]
+        // Fixed-size window: zoom and minimise would do nothing useful, so they are not offered (FR-008-12).
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.center()

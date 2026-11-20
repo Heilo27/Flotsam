@@ -46,8 +46,16 @@ public enum ShelfLayout {
     public static let cardSpacing: CGFloat = 4
     public static let sectionHeaderHeight: CGFloat = 24
     public static let contentPadding: CGFloat = 8
-    /// A text card shows the first three lines, at most 120 characters (FR-006-07).
-    public static let cardTextLineLimit = 3
+    /// A text card shows the first four lines, at most 120 characters (FR-006-07).
+    public static let cardTextLineLimit = 4
+    /// In the vertical placements a text card is only as tall as its text needs (FR-006-07, hill-climb r2): between this
+    /// floor, for one or two short lines, and `cardHeight`, which four lines of text fill. The other cards stay `cardHeight`.
+    public static let textCardMinimumHeight: CGFloat = 64
+    /// How many characters of a card's text fit on one line of a vertical card (the text column beside the kind icon).
+    public static let cardTextCharactersPerLine = 30
+    /// The card's fixed furniture: the 6 pt padding above and below, the 16 pt header row and the 6 pt gap under it.
+    private static let cardChromeHeight: CGFloat = 6 * 2 + 16 + 6
+    private static let cardTextLineHeight: CGFloat = 16
     public static let cardTextCharacterLimit = 120
     /// How much stored text is read for a card: far more than three lines of 120 characters need, so text that is
     /// mostly blank lines still yields its three lines, and a huge text item is never read in full.
@@ -163,12 +171,33 @@ public enum ShelfLayout {
     /// The height of the content for a vertical list: cards, their gaps, one header per non-empty section and padding.
     /// An empty Shelf (the empty state) is as tall as the minimum.
     /// `headerHeight` is the search header of a sticky Shelf (0 for a transient one).
-    public static func contentHeight(pinnedCount: Int, recentCount: Int, headerHeight: CGFloat = 0) -> CGFloat {
+    /// `cardsHeight` is the sum of the cards' own heights (`cardHeight(forText:)`); omitted, every card is `cardHeight`.
+    public static func contentHeight(
+        pinnedCount: Int, recentCount: Int, headerHeight: CGFloat = 0, cardsHeight: CGFloat? = nil
+    ) -> CGFloat {
         let sections = [pinnedCount, recentCount].filter { $0 > 0 }
         guard !sections.isEmpty else { return minimumHeight }
-        let cards = CGFloat(pinnedCount + recentCount)
+        let cards = cardsHeight ?? CGFloat(pinnedCount + recentCount) * cardHeight
         let gaps = CGFloat(max(pinnedCount + recentCount - sections.count, 0)) * cardSpacing
-        return contentPadding * 2 + headerHeight + CGFloat(sections.count) * sectionHeaderHeight + cards * cardHeight + gaps
+        return contentPadding * 2 + headerHeight + CGFloat(sections.count) * sectionHeaderHeight + cards + gaps
+    }
+
+    /// How many lines `text` (already cut to the excerpt) takes in a vertical card, at most `cardTextLineLimit`. An
+    /// estimate by characters per line, rounded up, so a card is never shorter than its text.
+    public static func cardTextLines(_ text: String) -> Int {
+        let wrapped = text.split(separator: "\n", omittingEmptySubsequences: false).reduce(0) {
+            $0 + max(1, ($1.count + cardTextCharactersPerLine - 1) / cardTextCharactersPerLine)
+        }
+        return min(max(wrapped, 1), cardTextLineLimit)
+    }
+
+    /// The height of a vertical-placement card (FR-006-07). `text` is the text of a text card, `nil` for every other kind,
+    /// which keep `cardHeight`. A text card is its text's lines plus the header, never under `textCardMinimumHeight` and
+    /// never over `cardHeight`.
+    public static func cardHeight(forText text: String?) -> CGFloat {
+        guard let text else { return cardHeight }
+        let wanted = cardChromeHeight + CGFloat(cardTextLines(text)) * cardTextLineHeight
+        return min(max(wanted, textCardMinimumHeight), cardHeight)
     }
 
     /// The width of the content for the bottom strip: one card per item in one row, padding either side. An empty

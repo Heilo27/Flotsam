@@ -55,7 +55,6 @@ struct LibraryView: View {
 
     /// The search row: the field in a visible rounded container that shows the focus ring, and the grid/list toggle beside it.
     private var searchField: some View {
-        let fieldShape = RoundedRectangle(cornerRadius: 8)
         let toggleLabel = LibraryText.string(model.viewMode == .list ? "ui.library.viewGrid" : "ui.library.viewList")
         return HStack(spacing: 8) {
             HStack(spacing: 8) {
@@ -71,8 +70,8 @@ struct LibraryView: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 36)
-            .background(Color.primary.opacity(0.06), in: fieldShape)
-            .overlay(fieldShape.strokeBorder(searchFocused ? Color.accentColor : Color.primary.opacity(0.14), lineWidth: searchFocused ? 2 : 0.5))
+            // The strongest control in the header (DESIGN 2.1): the shared field chrome reads as a field in both appearances.
+            .fieldChrome(isActive: searchFocused, cornerRadius: 8)
             Button {
                 model.toggleViewMode()
             } label: {
@@ -96,21 +95,21 @@ struct LibraryView: View {
             BusyView(isVisible: model.busy.isVisible, isSearching: !model.searchText.isEmpty)
         case .failed(let error):
             LibraryStateView(
-                title: LibraryText.string(LibraryText.errorTitle), message: FlotsamStrings.message(for: error),
+                symbol: "exclamationmark.triangle", title: LibraryText.string(LibraryText.errorTitle), message: FlotsamStrings.message(for: error),
                 buttonTitle: LibraryText.string(LibraryText.retryButton)
             ) { Task { await model.retry() } }
         case .loaded:
             if model.isHistoryEmpty {
                 LibraryStateView(
-                    title: LibraryText.string(LibraryText.emptyTitle), message: LibraryText.string(LibraryText.emptyBody),
+                    symbol: "doc.on.clipboard", title: LibraryText.string(LibraryText.emptyTitle), message: LibraryText.string(LibraryText.emptyBody),
                     buttonTitle: nil, action: {})
             } else if let tagName = model.emptyTagName {
                 LibraryStateView(
-                    title: LibraryText.emptyTagTitle(name: tagName), message: LibraryText.string(LibraryText.emptyTagBody),
+                    symbol: "tag", title: LibraryText.emptyTagTitle(name: tagName), message: LibraryText.string(LibraryText.emptyTagBody),
                     buttonTitle: nil, action: {})
             } else if model.isNoResults {
                 LibraryStateView(
-                    title: LibraryText.noResultsTitle(query: model.searchText),
+                    symbol: "magnifyingglass", title: LibraryText.noResultsTitle(query: model.searchText),
                     message: LibraryText.string(LibraryText.noResultsBody),
                     buttonTitle: model.searchText.isEmpty ? nil : LibraryText.string(LibraryText.clearSearchButton)
                 ) { model.setSearchText(String()) }
@@ -125,6 +124,7 @@ struct LibraryView: View {
 
 /// Empty history, no results and load failure share one shape: a title, a line, an optional button (FR-003-17).
 struct LibraryStateView: View {
+    let symbol: String
     let title: String
     let message: String
     let buttonTitle: String?
@@ -132,10 +132,12 @@ struct LibraryStateView: View {
 
     var body: some View {
         VStack(spacing: 8) {
+            Image(systemName: symbol).font(.system(size: 28, weight: .light)).foregroundStyle(.secondary).accessibilityHidden(true)
+                .padding(.bottom, 2)
             Text(verbatim: title).font(.headline)
             Text(verbatim: message).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
             if let buttonTitle {
-                Button(buttonTitle, action: action).padding(.top, 4)
+                Button(buttonTitle, action: action).buttonStyle(.bordered).controlSize(.regular).padding(.top, 6)
             }
         }
         .padding(24)
@@ -157,20 +159,15 @@ struct LibrarySidebar: View {
                 section(.tags, title: LibraryText.string(LibraryText.sectionTags), entries)
                 section(.apps, title: LibraryText.string(LibraryText.sectionApps), entries)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 8)
-            // Room under the last row, so it can be scrolled clear of the footer and the fade below.
-            .padding(.bottom, Self.bottomFade + 8)
         }
-        // The rows fade out into the footer instead of being cut off by it.
-        .mask(
-            VStack(spacing: 0) {
-                Rectangle()
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: Self.bottomFade)
-            })
+        // Real scroll-content margins (not padding on a background): the last row scrolls fully clear of the footer and the
+        // fade below it.
+        .contentMargins(.horizontal, 8, for: .scrollContent)
+        .contentMargins(.top, 8, for: .scrollContent)
+        .contentMargins(.bottom, LibraryScrollFade.height + 8, for: .scrollContent)
+        .fadingBottomEdge()
     }
 
-    private static let bottomFade: CGFloat = 16
     /// A sidebar row (DESIGN 3.3 Library): tight, so the results list stays the dominant column.
     private static let sidebarRowHeight: CGFloat = 24
 
@@ -178,15 +175,20 @@ struct LibrarySidebar: View {
     private func section(_ section: SidebarEntry.Section, title: String?, _ entries: [SidebarEntry]) -> some View {
         let inSection = entries.filter { $0.section == section }
         if !inSection.isEmpty {
+            let collapsed = section == .types && model.sidebarTypesCollapsed
             if let title {
-                Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.top, 10).padding(.bottom, 2).padding(.horizontal, 6)
+                if section == .types { typesHeader(title: title, collapsed: collapsed) } else { header(title) }
             }
-            ForEach(inSection) { entry in
+            // A folded Types section still shows the type that is the active filter, so the highlight never disappears.
+            ForEach(collapsed ? inSection.filter { $0.filter == model.filter } : inSection) { entry in
                 Button { model.select(filter: entry.filter) } label: {
                     HStack {
                         Text(verbatim: entry.title).lineLimit(1)
                         Spacer(minLength: 4)
-                        Text(verbatim: entry.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
+                        // The counts are the whole history's, so they go while the search has text (FR-003-12).
+                        if model.showsSidebarCounts {
+                            Text(verbatim: entry.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
+                        }
                     }
                     .font(.system(size: 13))
                     .opacity(entry.isDimmed ? 0.5 : 1)
@@ -200,6 +202,49 @@ struct LibrarySidebar: View {
                 .contextMenu { tagMenu(for: entry) }
             }
         }
+    }
+
+    private func header(_ title: String) -> some View {
+        Text(verbatim: title).font(.caption).foregroundStyle(.secondary).padding(.top, 10).padding(.bottom, 2).padding(.horizontal, 6)
+    }
+
+    /// The Types header folds the section (FR-003-12); the choice is remembered in `library.sidebarTypesCollapsed`.
+    private func typesHeader(title: String, collapsed: Bool) -> some View {
+        let tip = LibraryText.string(collapsed ? LibraryText.typesShow : LibraryText.typesHide)
+        return Button { model.toggleSidebarTypes() } label: {
+            HStack(spacing: 4) {
+                Text(verbatim: title)
+                Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold)).rotationEffect(.degrees(collapsed ? 0 : 90))
+                Spacer(minLength: 0)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.top, 10).padding(.bottom, 2).padding(.horizontal, 6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(tip)
+        .accessibilityLabel(title)
+        .accessibilityHint(tip)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// The bottom fade shared by the sidebar and the results list (FR-003-05): rows dissolve into the footer instead of being
+/// cut off by it.
+enum LibraryScrollFade {
+    static let height: CGFloat = 16
+}
+
+extension View {
+    /// Fades the last `LibraryScrollFade.height` points to clear. Pair it with a bottom content margin of at least that, so the
+    /// final row can be scrolled out of the fade.
+    func fadingBottomEdge() -> some View {
+        mask(
+            VStack(spacing: 0) {
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: LibraryScrollFade.height)
+            })
     }
 }
 
@@ -228,15 +273,17 @@ struct LibraryFooterView: View {
     var body: some View {
         let footer = model.footer()
         HStack(spacing: 14) {
-            ForEach(footer.hints, id: \.key) { hint in
+            // The first hint is the leading action (Return Paste, or Return Start paste queue): stronger than the rest. Keycaps are in
+            // the system font, not monospace.
+            ForEach(Array(footer.hints.enumerated()), id: \.element.key) { index, hint in
+                let leading = index == 0
                 HStack(spacing: 4) {
-                    Text(verbatim: hint.key).font(.caption.monospaced())
+                    Text(verbatim: hint.key).font(.caption.weight(leading ? .semibold : .regular))
                         .padding(.horizontal, 4)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 3))
-                    Text(verbatim: hint.label).font(.caption)
+                        .background(leading ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 3))
+                    Text(verbatim: hint.label).font(.caption.weight(leading ? .semibold : .regular))
+                        .foregroundStyle(leading ? Color.primary : Color.secondary)
                 }
-                // A hint with nothing to act on stays in its place, dimmed (FR-003-18).
-                .opacity(hint.isEnabled ? 1 : 0.4)
             }
             if let notice = footer.notice {
                 Text(verbatim: notice).font(.caption).foregroundStyle(.orange)

@@ -53,10 +53,14 @@ struct GeneralPane: View {
                     ForEach(ShelfPlacement.allCases, id: \.self) { Text($0.label).tag($0) }
                 } label: { Text(.shelfPlacement) }
                 .disabled(!shelfEnabled)
-                Toggle(isOn: model.binding(SettingKeys.shelfRevealOnEdgeHover)) { Text(.revealAtEdge) }
-                    .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
-                Toggle(isOn: model.binding(SettingKeys.shelfEdgeBar)) { Text(.edgeBar) }
-                    .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
+                Toggle(isOn: model.binding(SettingKeys.shelfRevealOnEdgeHover)) {
+                    SettingLabel(.revealAtEdge, note: SettingsString.revealAtEdgeHelp.text)
+                }
+                .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
+                Toggle(isOn: model.binding(SettingKeys.shelfEdgeBar)) {
+                    SettingLabel(.edgeBar, note: SettingsString.edgeBarHelp.text)
+                }
+                .disabled(!ShelfRevealRule.isEnabled(shelfEnabled: shelfEnabled, placement: placement))
             } header: {
                 Text(.sectionShelf)
             }

@@ -7,24 +7,24 @@ import FlotsamStorage
 @Suite struct ShelfPresentationTests {
     private let now = Date(timeIntervalSince1970: 1_000_000)
 
-    @Test("OC-6045 a 5-line, 300-character text shows its first 3 lines, at most 120 characters, with the text icon")
+    @Test("OC-6045 a 5-line, 300-character text shows its first 4 lines, at most 120 characters, with the text icon")
     func textCardShowsThreeLinesUpToOneHundredTwentyCharacters() {
-        // Three short lines, then two long ones: 300 characters over 5 lines, where the line limit binds first.
+        // Four short lines, then one long one: 300 characters over 5 lines, where the line limit binds first.
         let lines = ["L1" + String(repeating: "a", count: 18), "L2" + String(repeating: "b", count: 18),
-                     "L3" + String(repeating: "c", count: 18), "L4" + String(repeating: "d", count: 118),
-                     "L5" + String(repeating: "e", count: 118)]
+                     "L3" + String(repeating: "c", count: 18), "L4" + String(repeating: "d", count: 18),
+                     "L5" + String(repeating: "e", count: 218)]
         let full = lines.joined(separator: "\n")
         #expect(full.count == 304)
-        // The row's primary line is already cut to two lines by the query layer; the card must still show three.
+        // The row's primary line is already cut to two lines by the query layer; the card must still show four (FR-006-07).
         let row = makeShelfRow(0, kind: .text, primary: lines.prefix(2).joined(separator: "\n"))
         let card = ShelfCardPresentation(row: row, text: full, now: now)
         #expect(card.visual == .kindIcon(.text))
         let shown = card.text ?? ""
-        #expect(shown.split(separator: "\n", omittingEmptySubsequences: false).count == 3)
+        #expect(shown.split(separator: "\n", omittingEmptySubsequences: false).count == 4)
         #expect(shown.count <= ShelfLayout.cardTextCharacterLimit)
-        #expect(shown == lines.prefix(3).joined(separator: "\n"))
-        #expect(shown.contains("L3"))
-        #expect(!shown.contains("L4"))
+        #expect(shown == lines.prefix(4).joined(separator: "\n"))
+        #expect(shown.contains("L4"))
+        #expect(!shown.contains("L5"))
     }
 
     @Test("OC-6045 when 3 lines exceed 120 characters the character limit cuts first")
@@ -35,10 +35,10 @@ import FlotsamStorage
         #expect(card.text == String([line, line, line].joined(separator: "\n").prefix(120)))
     }
 
-    @Test("OC-6045 a short 3-line text is shown whole, and a long single line is cut at 120")
+    @Test("OC-6045 a short 4-line text is shown whole, and a long single line is cut at 120")
     func textCardBoundaries() {
-        let three = ShelfCardPresentation(row: makeShelfRow(0), text: "a\nb\nc\nd", now: now)
-        #expect(three.text == "a\nb\nc")
+        let three = ShelfCardPresentation(row: makeShelfRow(0), text: "a\nb\nc\nd\ne", now: now)
+        #expect(three.text == "a\nb\nc\nd")
         let oneLong = ShelfCardPresentation(row: makeShelfRow(0), text: String(repeating: "y", count: 121), now: now)
         #expect(oneLong.text?.count == 120)
         let exact = ShelfCardPresentation(row: makeShelfRow(0), text: String(repeating: "y", count: 120), now: now)

@@ -118,7 +118,8 @@ private struct AddClipView: View {
                 .font(.body)
                 .focused($focused)
                 .scrollContentBackground(.hidden)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                .padding(4)
+                .fieldChrome(isActive: focused)
                 .frame(minHeight: 140)
                 .accessibilityLabel(SettingsString.addClipWindow.text)
             if let message = model.errorMessage {

@@ -37,6 +37,8 @@ public final class LibraryViewModel {
     public private(set) var searchText = ""
     public private(set) var filter: LibraryFilter = .all
     public private(set) var sidebar: SidebarCounts?
+    /// The sidebar's Types section is folded away (`library.sidebarTypesCollapsed`, FR-003-12).
+    public private(set) var sidebarTypesCollapsed: Bool
     public private(set) var selection: Set<UUID> = []
     public private(set) var isPreviewOpen = false
     public private(set) var preview: LibraryPreview?
@@ -128,6 +130,7 @@ public final class LibraryViewModel {
         viewMode = preferences.viewMode
         layout = preferences.layout
         sort = preferences.sort
+        sidebarTypesCollapsed = preferences.sidebarTypesCollapsed
     }
 
     // MARK: Derived
@@ -143,6 +146,17 @@ public final class LibraryViewModel {
     public var sidebarEntries: [SidebarEntry] {
         let order = preferences.typeOrder
         return sidebar.map { SidebarEntry.entries(from: $0, typeOrder: order) } ?? []
+    }
+
+    /// Whether the sidebar's counts are drawn. They count the whole history, so while the search has text they would
+    /// disagree with the list ("All 40" beside no results); they are hidden until it is empty (FR-003-12). Blank
+    /// searches (only spaces) match everything, so they keep the counts.
+    public var showsSidebarCounts: Bool { SearchNormalizer.tokens(from: searchText).isEmpty }
+
+    /// Folds the sidebar's Types section away or back (FR-003-12). Remembered. A filter chosen in Types stays applied.
+    public func toggleSidebarTypes() {
+        sidebarTypesCollapsed.toggle()
+        preferences.sidebarTypesCollapsed = sidebarTypesCollapsed
     }
 
     /// Selected rows in list order.
@@ -196,6 +210,7 @@ public final class LibraryViewModel {
         viewMode = preferences.viewMode
         layout = preferences.layout
         sort = preferences.sort
+        sidebarTypesCollapsed = preferences.sidebarTypesCollapsed
         let resuming = shouldResume()
         lastHiddenAt = nil
         if resuming {
@@ -657,7 +672,8 @@ public final class LibraryViewModel {
     }
 
     private func stepFilter(by delta: Int) {
-        let entries = sidebarEntries
+        // Folded-away Types rows are not stepped through (the current one stays, so the step has a place to start).
+        let entries = sidebarEntries.filter { !(sidebarTypesCollapsed && $0.section == .types && $0.filter != filter) }
         guard !entries.isEmpty else { return }
         let current = entries.firstIndex { $0.filter == filter } ?? 0
         select(filter: entries[min(max(current + delta, 0), entries.count - 1)].filter)

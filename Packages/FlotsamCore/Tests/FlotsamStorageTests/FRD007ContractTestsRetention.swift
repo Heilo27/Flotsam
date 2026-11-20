@@ -188,7 +188,7 @@ import FlotsamBase
         #expect(ClearRange.allCases == [.last5Minutes, .lastHour, .last24Hours, .allTime])
         #expect(
             [SettingsString.rangeLast5Minutes, .rangeLastHour, .rangeLast24Hours, .rangeAllTime].map(\.text)
-                == ["Last 5 minutes", "Last hour", "Last 24 hours", "All time"])
+                == ["Last 5 Minutes", "Last Hour", "Last 24 Hours", "All Time"])
         #expect(SettingsString.clearHistory.text == "Clear History…")
 
         // and the count label per range with the option off excludes the three exempt items (4, 5, 6)

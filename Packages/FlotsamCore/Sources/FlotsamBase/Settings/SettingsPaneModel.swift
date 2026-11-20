@@ -43,7 +43,7 @@ extension SettingsPane {
 // MARK: - General
 
 public enum ShelfRevealRule {
-    /// "Reveal when the pointer rests at the edge" and "Show a small bar at the edge" are disabled when the Shelf is off or
+    /// "Reveal on edge hover" and "Show edge bar" are disabled when the Shelf is off or
     /// placed in the menu bar (FR-008-04); both need an edge to sit at.
     public static func isEnabled(shelfEnabled: Bool, placement: ShelfPlacement) -> Bool {
         shelfEnabled && placement != .menuBar

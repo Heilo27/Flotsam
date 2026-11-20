@@ -1608,7 +1608,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Clip…"
+            "value" : "New Clip…"
           }
         }
       }
@@ -1628,7 +1628,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dismiss all"
+            "value" : "Dismiss All"
           }
         }
       }
@@ -1678,7 +1678,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No notices"
+            "value" : "No Notices"
           }
         }
       }
@@ -1688,7 +1688,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Notices"
+            "value" : "Recent Notices"
           }
         }
       }
@@ -1778,7 +1778,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Save Clipboard"
+            "value" : "Save Current Clipboard"
           }
         }
       }
@@ -1838,7 +1838,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flotsam can paste for you."
+            "value" : "Access granted. Pasting now works in every app."
           }
         }
       }
@@ -1898,7 +1898,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Flotsam can save what you copy."
+            "value" : "Access granted. Everything stays on this Mac."
           }
         }
       }
@@ -2048,7 +2048,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Typed triggers are on."
+            "value" : "Access granted. Keystrokes are never stored."
           }
         }
       }
@@ -2864,7 +2864,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add Clip"
+            "value" : "New Clip"
           }
         }
       }
@@ -2904,7 +2904,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copying several files at once keeps them together as one bundle. Off, each file is its own item."
+            "value" : "Off, each copied file is its own item."
           }
         }
       }
@@ -2974,7 +2974,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A small label appears briefly. It never takes focus and makes no sound."
+            "value" : "A brief label that never takes focus or makes a sound."
           }
         }
       }
@@ -3962,7 +3962,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All time"
+            "value" : "All Time"
           }
         }
       }
@@ -3972,7 +3972,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last 24 hours"
+            "value" : "Last 24 Hours"
           }
         }
       }
@@ -3982,7 +3982,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last 5 minutes"
+            "value" : "Last 5 Minutes"
           }
         }
       }
@@ -3992,7 +3992,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Last hour"
+            "value" : "Last Hour"
           }
         }
       }
@@ -4092,7 +4092,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reveal when the pointer rests at the edge"
+            "value" : "Reveal on edge hover"
           }
         }
       }
@@ -4102,7 +4102,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show a small bar at the edge"
+            "value" : "Show edge bar"
           }
         }
       }
@@ -4142,7 +4142,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Compact shows only the sidebar and the list in a nearly square window. Space shows the preview in place of the list."
+            "value" : "Compact is a small window; Space previews in the list's place."
           }
         }
       }
@@ -4232,7 +4232,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shelf"
+            "value" : "Show shelf"
           }
         }
       }
@@ -4247,22 +4247,12 @@
         }
       }
     },
-    "ui.settings.shortcutAddClip" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add Clip"
-          }
-        }
-      }
-    },
     "ui.settings.shortcutClear" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clear shortcut"
+            "value" : "Clear Shortcut"
           }
         }
       }
@@ -4287,22 +4277,12 @@
         }
       }
     },
-    "ui.settings.shortcutOpenLibrary" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Library"
-          }
-        }
-      }
-    },
     "ui.settings.shortcutRecord" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Record shortcut"
+            "value" : "Record Shortcut"
           }
         }
       }
@@ -4313,26 +4293,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Press the keys you want. Esc cancels."
-          }
-        }
-      }
-    },
-    "ui.settings.shortcutSaveClipboard" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save Clipboard"
-          }
-        }
-      }
-    },
-    "ui.settings.shortcutToggleShelf" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Toggle Shelf"
           }
         }
       }
@@ -4792,7 +4752,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Standard layout only. The larger panel opens at least 960 by 600 points and leaves your remembered size alone."
+            "value" : "Standard layout only. Your saved size is kept."
           }
         }
       }
@@ -4812,7 +4772,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Off keeps the Library open after a paste, so you can paste several items in a row."
+            "value" : "Off keeps it open so you can paste several items."
           }
         }
       }
@@ -4832,7 +4792,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reopening within 10 seconds keeps the same search, filter and selected item. Otherwise the Library starts fresh."
+            "value" : "Within 10 seconds, reopening keeps your search and selection."
           }
         }
       }
@@ -5053,6 +5013,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drag a card from the Shelf into any app, or drop files, text and images on it to save them."
+          }
+        }
+      }
+    },
+    "ui.library.typesHide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Types"
+          }
+        }
+      }
+    },
+    "ui.library.typesShow" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Types"
+          }
+        }
+      }
+    },
+    "ui.settings.revealAtEdgeHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Shelf slides out when the pointer rests at the edge."
+          }
+        }
+      }
+    },
+    "ui.settings.edgeBarHelp" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A thin bar marks the edge while the Shelf is hidden."
+          }
+        }
+      }
+    },
+    "ui.settings.editorVariablesHelpButton" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trigger Variables"
           }
         }
       }

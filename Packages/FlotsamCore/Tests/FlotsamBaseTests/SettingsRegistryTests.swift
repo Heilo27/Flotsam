@@ -35,6 +35,7 @@ import Testing
             ("library.resumeOnReopen", "Bool", "false"),
             ("library.display", "LibraryDisplay", "pointer"),
             ("library.types", "TypeOrder", TypeOrder.default.persisted),
+            ("library.sidebarTypesCollapsed", "Bool", "false"),
             ("library.panelSize", "PanelSize", "760.0x480.0"),
             ("library.compactPanelSize", "PanelSize", "520.0x520.0"),
             ("onboarding.completed", "Bool", "false"),

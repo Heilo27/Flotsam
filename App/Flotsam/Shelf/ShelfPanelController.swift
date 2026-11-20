@@ -277,7 +277,8 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         func count(_ kind: ShelfSection.Kind) -> Int { sections.first { $0.kind == kind }?.cards.count ?? 0 }
         return ShelfLayout.contentHeight(
             pinnedCount: count(.pinned), recentCount: count(.recent),
-            headerHeight: model.showsSearch ? ShelfLayout.searchHeaderHeight(for: placement) : 0)
+            headerHeight: model.showsSearch ? ShelfLayout.searchHeaderHeight(for: placement) : 0,
+            cardsHeight: sections.flatMap(\.cards).reduce(0) { $0 + $1.verticalHeight })
     }
 
     // MARK: Screens

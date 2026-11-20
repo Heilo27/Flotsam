@@ -43,6 +43,8 @@ public protocol LibraryPreferences: Sendable {
     var resumeOnReopen: Bool { get }
     var display: LibraryDisplay { get }
     var typeOrder: TypeOrder { get }
+    /// The sidebar's Types section folded away (FR-003-12). The view model reads it on open and writes it on a toggle.
+    var sidebarTypesCollapsed: Bool { get nonmutating set }
 }
 
 extension LibraryPreferences {
@@ -52,6 +54,10 @@ extension LibraryPreferences {
     public var resumeOnReopen: Bool { SettingKeys.libraryResumeOnReopen.defaultValue }
     public var display: LibraryDisplay { SettingKeys.libraryDisplay.defaultValue }
     public var typeOrder: TypeOrder { SettingKeys.libraryTypes.defaultValue }
+    public var sidebarTypesCollapsed: Bool {
+        get { SettingKeys.librarySidebarTypesCollapsed.defaultValue }
+        nonmutating set {}
+    }
 
     /// The remembered size for `layout`; the one place that picks between the two size keys.
     public func panelSize(for layout: LibraryLayoutMode) -> PanelSize {
@@ -105,6 +111,10 @@ public struct SettingsLibraryPreferences: LibraryPreferences {
     public var resumeOnReopen: Bool { settings.value(SettingKeys.libraryResumeOnReopen) }
     public var display: LibraryDisplay { settings.value(SettingKeys.libraryDisplay) }
     public var typeOrder: TypeOrder { settings.value(SettingKeys.libraryTypes) }
+    public var sidebarTypesCollapsed: Bool {
+        get { settings.value(SettingKeys.librarySidebarTypesCollapsed) }
+        nonmutating set { settings.set(newValue, for: SettingKeys.librarySidebarTypesCollapsed) }
+    }
 }
 
 /// Everything the view model asks of its surroundings that is not storage or paste: error reporting, Finder, Settings,

@@ -46,16 +46,12 @@ struct ShortcutRecorderField: View {
                             .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
                     }
                 } else {
-                    Text(.shortcutRecord).foregroundStyle(.tertiary)
+                    Text(.shortcutRecord).foregroundStyle(.secondary)
                 }
             }
             .frame(minWidth: 150, minHeight: 24, alignment: .leading)
             .padding(.horizontal, 6)
-            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(recorder.isRecording ? Color.accentColor : Color.secondary.opacity(0.3), lineWidth: recorder.isRecording ? 2 : 1)
-            }
+            .fieldChrome(isActive: recorder.isRecording)
             .contentShape(RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(.plain)

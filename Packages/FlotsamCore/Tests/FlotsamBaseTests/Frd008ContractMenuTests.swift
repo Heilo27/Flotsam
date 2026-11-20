@@ -83,8 +83,8 @@ struct Frd008ContractMenuTests {
         #expect(["ui.menu.openLibrary", "ui.menu.saveClipboard", "ui.menu.addClip", "ui.menu.toggleShelf", "ui.menu.pauseCapture",
                  "ui.menu.pauseFor", "ui.menu.clearRecent", "ui.menu.notices", "ui.menu.settings", "ui.menu.setupGuide",
                  "ui.menu.quit"].map(title)
-            == ["Open Library", "Save Clipboard", "Add Clip…", "Toggle Shelf", "Pause Capture", "Pause For", "Clear Recent",
-                "Notices", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
+            == ["Open Library", "Save Current Clipboard", "New Clip…", "Toggle Shelf", "Pause Capture", "Pause For", "Clear Recent",
+                "Recent Notices", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
     }
 
     // OC-8127 (key equivalents). Red if the Settings or Quit key equivalent is changed or dropped.

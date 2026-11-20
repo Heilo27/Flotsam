@@ -73,13 +73,15 @@ struct Frd008ContractStringsTests {
         "ui.settings.placementRightEdge": "popup value", "ui.settings.placementLeftEdge": "popup value",
         "ui.settings.placementBottomEdge": "popup value", "ui.settings.placementMenuBar": "popup value",
         "ui.settings.placementTopCenter": "popup value",
-        "ui.settings.shortcutOpenLibrary": "menu item name", "ui.settings.shortcutSaveClipboard": "menu item name",
-        "ui.settings.shortcutToggleShelf": "menu item name",
         "ui.settings.editorWindow": "window title", "ui.settings.addClipWindow": "window title",
         "ui.settings.resetLibraryTitle": "confirmation dialog title",
         "ui.settings.addPasswordManagers": "button", "ui.settings.resetLibraryDefaults": "button",
         "ui.settings.resetLibraryConfirm": "button",
-        "ui.settings.shortcutAddClip": "menu item name", "ui.settings.shortcutPasteQueue": "menu item name",
+        "ui.settings.shortcutRecord": "button", "ui.settings.shortcutClear": "button",
+        "ui.settings.editorVariablesHelpButton": "popover title",
+        // rangeAllTime and rangeLastHour are popup values from before this change.
+        "ui.settings.rangeAllTime": "popup value", "ui.settings.rangeLastHour": "popup value",
+        "ui.settings.shortcutPasteQueue": "menu item name",
     ]
 
     // OC-8139 (every label). Labels and messages are sentence case; the Title Case element kinds are listed above.

@@ -19,7 +19,7 @@ struct ShelfView: View {
 
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
 
-    private static let pillFadeWidth: CGFloat = 20
+    private static let pillFadeWidth: CGFloat = 36
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -29,10 +29,15 @@ struct ShelfView: View {
             }
             if model.isDropTargeted { dropZone }
             if model.isShareZoneShown { shareZone }
-            Button(action: close) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
-                .buttonStyle(.plain)
-                .padding(6)
-                .accessibilityLabel(Text(verbatim: ShelfText.string(ShelfText.close)))
+            // The panel's close button: a bare cross, so it never reads as the search field's round clear button (FR-006-22).
+            Button(action: close) {
+                Image(systemName: "xmark").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
+                    .frame(width: 20, height: 20).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(6)
+            .help(ShelfText.string(ShelfText.close))
+            .accessibilityLabel(Text(verbatim: ShelfText.string(ShelfText.close)))
         }
         // Ages the cards' VoiceOver labels while the Shelf is open (FR-006-48). The model owns the watch task and cancels
         // it on a hide; the key restarts it on the next open or card change.
@@ -215,9 +220,10 @@ struct ShelfView: View {
     private var queryIdentity: String { "\(model.kindFilter?.rawValue ?? "")|\(model.searchText)" }
 
     private func cardView(_ card: ShelfCardPresentation) -> some View {
-        ShelfCardView(
-            card: card, model: model, size: ShelfLayout.cardSize(for: placement, showsSearch: model.showsSearch), horizontal: horizontal,
-            thumbnail: thumbnail, dragOut: dragOut)
+        var size = ShelfLayout.cardSize(for: placement, showsSearch: model.showsSearch)
+        // The vertical placements size a text card to its text (FR-006-07); the horizontal strip keeps its fixed height.
+        if !horizontal { size.height = card.verticalHeight }
+        return ShelfCardView(card: card, model: model, size: size, horizontal: horizontal, thumbnail: thumbnail, dragOut: dragOut)
     }
 }
 
@@ -230,6 +236,7 @@ private struct ShelfCardView: View {
     let dragOut: ShelfDragOut
     @State private var image: NSImage?
 
+    @Environment(\.colorScheme) private var colorScheme
     private var selected: Bool { model.selection.contains(card.id) }
     private let shape = RoundedRectangle(cornerRadius: 10)
 
@@ -244,9 +251,13 @@ private struct ShelfCardView: View {
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .background {
             // A raised surface: an opaque card fill, a hairline edge that also separates it on a dark panel, and a soft shadow.
+            // The selected card is a 2 pt accent ring and nothing else: no tint over the card (FR-006-07). In dark the hairline is
+            // brighter, so the card still separates from the panel.
             shape.fill(Color(nsColor: .controlBackgroundColor))
-                .overlay(shape.fill(Color.accentColor.opacity(selected ? 0.28 : 0)))
-                .overlay(shape.strokeBorder(selected ? Color.accentColor : Color.primary.opacity(0.14), lineWidth: selected ? 1.5 : 0.5))
+                .overlay(
+                    shape.strokeBorder(
+                        selected ? Color.accentColor : Color.primary.opacity(colorScheme == .dark ? 0.30 : 0.14),
+                        lineWidth: selected ? 2 : (colorScheme == .dark ? 1 : 0.5)))
                 .shadow(color: .black.opacity(0.22), radius: 3, y: 1)
         }
         .overlay {

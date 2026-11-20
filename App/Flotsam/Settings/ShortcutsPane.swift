@@ -8,23 +8,26 @@ import SwiftUI
 struct ShortcutsPane: View {
     let model: SettingsModel
 
+    /// A row is named by its menu entry, so the menu and this pane cannot disagree about the same command (Rule 9).
+    private func menuLabel(_ key: String) -> String { FlotsamStrings.text(forKey: key) ?? key }
+
     var body: some View {
         Form {
             Section {
                 ShortcutRow(
-                    model: model, label: .shortcutOpenLibrary, id: .openLibrary, key: SettingKeys.shortcutsOpenLibrary,
+                    model: model, label: menuLabel("ui.menu.openLibrary"), id: .openLibrary, key: SettingKeys.shortcutsOpenLibrary,
                     allowClear: false)
                 ShortcutRow(
-                    model: model, label: .shortcutSaveClipboard, id: .saveClipboard, key: SettingKeys.shortcutsSaveClipboard,
+                    model: model, label: menuLabel("ui.menu.saveClipboard"), id: .saveClipboard, key: SettingKeys.shortcutsSaveClipboard,
                     allowClear: true)
                 ShortcutRow(
-                    model: model, label: .shortcutAddClip, id: .addClip, key: SettingKeys.shortcutsAddClip,
+                    model: model, label: menuLabel("ui.menu.addClip"), id: .addClip, key: SettingKeys.shortcutsAddClip,
                     allowClear: true)
                 ShortcutRow(
-                    model: model, label: .shortcutToggleShelf, id: .toggleShelf, key: SettingKeys.shortcutsToggleShelf,
+                    model: model, label: menuLabel("ui.menu.toggleShelf"), id: .toggleShelf, key: SettingKeys.shortcutsToggleShelf,
                     allowClear: true)
                 ShortcutRow(
-                    model: model, label: .shortcutPasteQueue, id: .pasteQueue, key: SettingKeys.shortcutsPasteQueue,
+                    model: model, label: SettingsString.shortcutPasteQueue.text, id: .pasteQueue, key: SettingKeys.shortcutsPasteQueue,
                     allowClear: true)
             } footer: {
                 Text(.shortcutsFootnote).settingsCaption()
@@ -36,7 +39,7 @@ struct ShortcutsPane: View {
 
 private struct ShortcutRow: View {
     let model: SettingsModel
-    let label: SettingsString
+    let label: String
     let id: ShortcutID
     let key: SettingKey<ChordBinding>
     /// `openLibrary` can be changed but not cleared (FR-005-01).

@@ -403,9 +403,9 @@ private actor Latch {
         #expect(rig.model.deleteTitle.text.count <= 15)
         #expect(SettingsString.clearIncludeExempt.text == "Also delete pinned and shortcut items")
         #expect(rig.model.ranges == [.last5Minutes, .lastHour, .last24Hours, .allTime])
-        #expect(SettingsString.rangeLastHour.text == "Last hour")
-        #expect(SettingsString.rangeLast24Hours.text == "Last 24 hours")
-        #expect(SettingsString.rangeAllTime.text == "All time")
+        #expect(SettingsString.rangeLastHour.text == "Last Hour")
+        #expect(SettingsString.rangeLast24Hours.text == "Last 24 Hours")
+        #expect(SettingsString.rangeAllTime.text == "All Time")
         #expect(rig.model.includeExempt == false)
     }
 

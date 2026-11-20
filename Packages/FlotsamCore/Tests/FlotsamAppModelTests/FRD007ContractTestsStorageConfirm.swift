@@ -348,7 +348,7 @@ private let gib: Int64 = 1024 * 1024 * 1024
         let rig = Rig(previewCount: 12)
         let model = rig.model
         #expect(model.ranges == [.last5Minutes, .lastHour, .last24Hours, .allTime])
-        #expect(model.ranges.map { $0.label.text } == ["Last 5 minutes", "Last hour", "Last 24 hours", "All time"])
+        #expect(model.ranges.map { $0.label.text } == ["Last 5 Minutes", "Last Hour", "Last 24 Hours", "All Time"])
         #expect(model.range == .lastHour)
         #expect(model.includeExempt == false)
         #expect(model.count == 0)

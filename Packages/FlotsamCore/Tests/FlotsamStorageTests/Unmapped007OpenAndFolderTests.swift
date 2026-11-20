@@ -393,7 +393,7 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
     /// OC-7041, the registry half. Every setting key declared anywhere in `Sources/` is a row of the FR-008-01 table;
     /// none is a ceiling. Red if a text, rich, image or bundle-member ceiling key is added. (Settings controls are UI.)
     /// FRD-008 completed the registry (the four FRD-007 keys were its skeleton), so the expected list is the full FR-008-01
-    /// table (33 keys; later rows such as capture.cue, shortcuts.addClip and shelf.edgeBar arrived with their own tickets).
+    /// table (34 keys; later rows such as capture.cue, shortcuts.addClip and shelf.edgeBar arrived with their own tickets).
     @Test("OC-7041 the settings registry declares exactly the FR-008-01 keys and none is a ceiling")
     func oc7041_registryHoldsOnlyTheFR00801Keys() throws {
         // given every Swift file under Sources/
@@ -414,7 +414,7 @@ private let pngImage = TestImage.make(width: 16, height: 16, format: .png)
         #expect(names.sorted() == [
            "capture.autoBundle", "capture.cue", "capture.mode", "library.background", "library.closeAfterPaste",
            "library.compactPanelSize", "library.display", "library.layout", "library.panelSize",
-           "library.previewPreset", "library.resumeOnReopen", "library.sort", "library.types", "library.viewMode",
+           "library.previewPreset", "library.resumeOnReopen", "library.sidebarTypesCollapsed", "library.sort", "library.types", "library.viewMode",
            "onboarding.completed", "privacy.ignoredApps", "screenshots.enabled", "screenshots.folderOverride",
            "settings.lastPane", "shelf.edgeBar", "shelf.enabled", "shelf.placement", "shelf.revealOnEdgeHover",
            "shortcuts.addClip", "shortcuts.openLibrary", "shortcuts.pasteQueue", "shortcuts.saveClipboard",

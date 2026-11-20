@@ -26,7 +26,6 @@ struct LibraryItemsView: View {
                                 LibraryListRow(model: model, row: row, dragOut: dragOut).onAppear { pageIfLast(row, in: rows) }
                             }
                         }
-                        .padding(8)
                     } else {
                         let columns = Self.columnCount(for: geometry.size.width)
                         LazyVGrid(
@@ -37,11 +36,15 @@ struct LibraryItemsView: View {
                                 LibraryGridCell(model: model, row: row, dragOut: dragOut).onAppear { pageIfLast(row, in: rows) }
                             }
                         }
-                        .padding(10)
                         .onAppear { model.gridColumns = columns }
                         .onChange(of: columns) { _, new in model.gridColumns = new }
                     }
                 }
+                // Real scroll-content margins, so the first row clears the header and the last scrolls fully out of the fade
+                // above the footer (FR-003-05); the fade itself is the shared bottom mask.
+                .contentMargins(model.viewMode == .list ? 8 : 10, for: .scrollContent)
+                .contentMargins(.bottom, LibraryScrollFade.height + 8, for: .scrollContent)
+                .fadingBottomEdge()
                 .onChange(of: model.cursorID) { _, id in
                     if let id { proxy.scrollTo(id) }
                 }
@@ -160,12 +163,7 @@ private struct RowInteraction: ViewModifier {
             let actions = LibraryHover.actions(pinUnpins: model.pinActionUnpins(menuRowID: row.id, isPinned: row.isPinned))
             HStack(spacing: 2) {
                 ForEach(actions) { action in
-                    Button { act { model.perform(action.command) } } label: {
-                        Image(systemName: action.symbol).frame(width: 22, height: 22).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(action.isDestructive ? Color.red : Color.primary)
-                    .help(LibraryText.string(action.titleKey))
+                    HoverStripButton(action: action) { act { model.perform(action.command) } }
                 }
             }
             .padding(.horizontal, 4)
@@ -191,6 +189,24 @@ private struct RowInteraction: ViewModifier {
     private func act(_ command: () -> Void) {
         if !model.selection.contains(row.id) { model.select(id: row.id) }
         command()
+    }
+}
+
+/// One button of the hover strip. The destructive glyph stays neutral until the pointer is on that button itself, so a
+/// row that is merely under the pointer does not read as a warning (FR-003-38).
+private struct HoverStripButton: View {
+    let action: LibraryHoverAction
+    let perform: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: perform) {
+            Image(systemName: action.symbol).frame(width: 22, height: 22).contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(action.isDestructive ? (isHovered ? Color.red : Color.secondary) : Color.primary)
+        .onHover { isHovered = $0 }
+        .help(LibraryText.string(action.titleKey))
     }
 }
 
@@ -235,7 +251,7 @@ private struct StatusBadges: View {
         HStack(spacing: 4) {
             if row.isPinned { Image(systemName: "pin.fill") }
             if row.hasTrigger { Image(systemName: "text.cursor") }
-            if row.hasShortcut { Image(systemName: "command") }
+            if row.hasShortcut { Image(systemName: "keyboard") }
             if row.isSecure { Image(systemName: "lock.fill") }
             if let badge = row.missingBadge ?? row.unavailableBadge {
                 Text(verbatim: badge).font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
@@ -277,9 +293,11 @@ struct LibraryListRow: View {
             }
             Spacer(minLength: 4)
             StatusBadges(row: row)
-            if let badge = row.shortcutBadge { Text(verbatim: badge).font(.caption.monospaced()).foregroundStyle(.secondary) }
+            if let badge = row.shortcutBadge { Text(verbatim: badge).font(.caption.monospaced()).foregroundStyle(Color.primary.opacity(0.75)) }
         }
-        .padding(.horizontal, 8)
+        .padding(.leading, 8)
+        // While the hover strip shows, its room is taken from the title, which truncates, not from under the strip (FR-003-38).
+        .padding(.trailing, model.hoveredRowID == row.id ? LibraryLayout.hoverStripReserve : 8)
         .frame(height: LibraryLayout.listRowHeight)
         .background(
             rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
@@ -339,7 +357,7 @@ struct LibraryGridCell: View {
             Text(verbatim: row.primaryText).font(.caption).lineLimit(2)
             HStack(spacing: 4) {
                 StatusBadges(row: row)
-                if let badge = row.shortcutBadge { Text(verbatim: badge).font(.caption2.monospaced()).foregroundStyle(.secondary) }
+                if let badge = row.shortcutBadge { Text(verbatim: badge).font(.caption2.monospaced()).foregroundStyle(Color.primary.opacity(0.75)) }
             }
         }
         .padding(6)

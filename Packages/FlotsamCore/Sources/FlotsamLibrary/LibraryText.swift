@@ -34,6 +34,9 @@ public enum LibraryText {
     public static let sectionTypes = "ui.library.sectionTypes"
     public static let sectionTags = "ui.library.sectionTags"
     public static let sectionApps = "ui.library.sectionApps"
+    /// The Types section header's tooltip and VoiceOver hint: what a click does now (FR-003-12).
+    public static let typesHide = "ui.library.typesHide"
+    public static let typesShow = "ui.library.typesShow"
 
     public static func noResultsTitle(query: String) -> String { format("ui.library.noResultsTitle", query) }
 

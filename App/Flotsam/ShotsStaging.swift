@@ -139,6 +139,14 @@ final class ShotsStaging {
             guard let id = seeded.ids["code"] else { return fail("the code item was not seeded") }
             library.model.select(id: id)
             await library.model.awaitPreview()
+        case .libraryCompact:
+            // FR-003-06 and FR-003-14: in Compact the preview replaces the results column, so the shot must open it. The staging
+            // never did, which is why the earlier Compact shot showed only the hover card of the pointer resting on row 2.
+            guard let id = seeded.ids["code"] else { return fail("the code item was not seeded") }
+            library.model.select(id: id)
+            library.model.perform(.togglePreview)
+            await library.model.awaitPreview()
+            if !library.model.isPreviewOpen { return fail("the preview did not open in the Compact layout") }
         case .libraryEmpty:
             library.model.setSearchText("zzqx no such clip")
             await library.model.settled()

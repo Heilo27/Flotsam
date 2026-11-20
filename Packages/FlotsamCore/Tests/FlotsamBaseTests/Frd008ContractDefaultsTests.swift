@@ -42,7 +42,7 @@ import Testing
         #expect(SettingsString.placementRightEdge.text == "Right Edge")
         #expect(settings.value(SettingKeys.shelfRevealOnEdgeHover) == false)
         #expect(SettingsString.pickUpScreenshots.text == "Pick up screenshots")
-        #expect(SettingsString.revealAtEdge.text == "Reveal when the pointer rests at the edge")
+        #expect(SettingsString.revealAtEdge.text == "Reveal on edge hover")
         #expect(domain.reported.names.isEmpty, "defaults are not corruption: nothing is reported")
     }
 
@@ -143,10 +143,10 @@ import Testing
         #expect(!names.contains { $0.contains("login") || $0.contains("launch") }, "launch at login is not a registry value")
         #expect(!names.contains { $0.contains("lastScan") || $0.contains("watermark") }, "the scan watermark is database state")
         #expect(!names.contains { $0.contains("history") || $0.contains("items") }, "item data is database state")
-        #expect(names.count == 33)
+        #expect(names.count == 34)
     }
 
-    // OC-8009. The registry is exactly the 33 keys of the FR-008-01 table, and each key name is spelled once in production code.
+    // OC-8009. The registry is exactly the 34 keys of the FR-008-01 table, and each key name is spelled once in production code.
     @Test func oc8009_registryIsTheThirtyThreeKeysAndNothingReadsDefaultsAroundIt() throws {
         let expected: [String: (type: String, def: String)] = [
             "capture.mode": ("CaptureMode", "active"), "screenshots.enabled": ("Bool", "true"),
@@ -164,9 +164,10 @@ import Testing
             "library.background": ("LibraryBackground", "system"), "library.previewPreset": ("LibraryPreviewPreset", "closed"),
             "library.closeAfterPaste": ("Bool", "true"), "library.resumeOnReopen": ("Bool", "false"),
             "library.display": ("LibraryDisplay", "pointer"), "library.types": ("TypeOrder", TypeOrder.default.persisted),
+            "library.sidebarTypesCollapsed": ("Bool", "false"),
         ]
         let all = SettingKeys.all
-        #expect(all.count == 33)
+        #expect(all.count == 34)
         for (name, row) in expected {
             let descriptor = all.first { $0.name == name }
             #expect(descriptor?.valueType == row.type, "type of \(name)")

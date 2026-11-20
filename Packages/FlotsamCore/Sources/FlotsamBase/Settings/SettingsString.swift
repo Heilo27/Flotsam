@@ -14,7 +14,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     /// The always-available backfill button (FR-002-12).
     case importRecentScreenshots
     case shelf, shelfPlacement, placementRightEdge, placementLeftEdge, placementBottomEdge, placementMenuBar, placementTopCenter
-    case revealAtEdge, edgeBar, showSetupGuide, historyHelp
+    case revealAtEdge, revealAtEdgeHelp, edgeBar, edgeBarHelp, showSetupGuide, historyHelp
     /// The General pane's group headers, one per FR-008-04 group.
     case sectionSystem, sectionScreenshots, sectionShelf, sectionLibrary, sectionCapture, sectionSetup
     /// The Library layout row (FR-008-04): label, the two choices and the caption under them.
@@ -39,7 +39,9 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case tipMoveTitle, tipMoveBody, tipSnippetTitle, tipSnippetBody, tipShelfTitle, tipShelfBody
 
     // Shortcuts
-    case shortcutOpenLibrary, shortcutSaveClipboard, shortcutAddClip, shortcutToggleShelf, shortcutPasteQueue
+    /// The Open Library, Save Current Clipboard, New Clip and Toggle Shelf rows read their labels from the menu entries
+    /// (`ui.menu.*`): one command, one string (FR-008-05). Only Paste Queue, which has no menu item, has its own.
+    case shortcutPasteQueue
     case shortcutNotSet, shortcutRecord, shortcutRecording, shortcutClear, shortcutNeedsModifier, shortcutsFootnote
 
     // Item editor: shortcut and trigger (FR-005-09)
@@ -47,7 +49,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case editorWindowNamed
     case editorWindow, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
     /// The variable help caption: lists {date}, {time}, {clipboard} and format examples (FR-005-17, FRD-005 section 8).
-    case editorVariablesHelp
+    case editorVariablesHelp, editorVariablesHelpButton
     case editorNoTrigger, editorSave, editorItemGone, editorLoadFailed
 
     // Add Clip window (FR-004-19)

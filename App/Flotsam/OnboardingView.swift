@@ -17,10 +17,18 @@ struct OnboardingView: View {
         .refreshWhileVisible { model.refresh() }
     }
 
+    /// A row of dots, one per step, the steps reached filled in the accent colour. VoiceOver reads the same
+    /// "Step n of N" the visible caption used to show.
     private var stepCaption: some View {
-        Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total))
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        HStack(spacing: 6) {
+            ForEach(1...model.flow.total, id: \.self) { index in
+                Circle()
+                    .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.3))
+                    .frame(width: index == model.flow.position ? 8 : 6, height: index == model.flow.position ? 8 : 6)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total)))
     }
 
     private var standardLayout: some View {
@@ -61,7 +69,7 @@ struct OnboardingView: View {
             VStack(spacing: 12) {
                 Image(systemName: permissionSymbol)
                     .font(.system(size: 44))
-                    .foregroundStyle(permissionGranted ? Color.green : Color.accentColor)
+                    .foregroundStyle(Color.accentColor)
                     .accessibilityHidden(true)
                 Text(verbatim: text(model.step.titleKey))
                     .font(.title2.bold())
@@ -86,8 +94,8 @@ struct OnboardingView: View {
     @ViewBuilder
     private var permissionDetail: some View {
         if permissionGranted {
-            // Granted: the warning and the way to System Settings are moot, so one line says it is on and Continue is the
-            // only prominent control.
+            // Granted: the warning and the way to System Settings are moot, so one status line says what is now true and
+            // Continue is the only prominent control. The green check belongs to this status alone.
             let line = text(grantedKey)
             Label(line, systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
@@ -218,25 +226,27 @@ struct OnboardingView: View {
     // MARK: Footer
 
     /// Step 4's "Not Now" is the visible default while the permission is missing, so Continue is not the default action
-    /// there (FR-008-12); once it is granted, Continue is. Skip and Not Now are plain text unless they are the default.
+    /// there (FR-008-12); once it is granted, Continue is. Skip and Not Now are bordered secondary buttons unless they are
+    /// the default.
     private var footer: some View {
         let optionalStep = model.step == .accessibility || model.step == .inputMonitoring
         let notNowIsDefault = model.step == .inputMonitoring && !permissionGranted
+        let skipTitle = text(optionalStep ? "ui.onboarding.notNow" : "ui.onboarding.skip")
         return HStack {
             Button(text("ui.onboarding.back")) { model.back() }
                 .disabled(model.flow.isFirst)
+            if !model.flow.isLast, !notNowIsDefault {
+                // A legible secondary button on the leading side, apart from Continue so the two are never mistaken.
+                Button(skipTitle) { model.skip() }
+            }
             Spacer()
             if model.flow.isLast {
                 Button(text("ui.onboarding.finish")) { finish() }
                     .keyboardShortcut(.defaultAction)
             } else {
                 if notNowIsDefault {
-                    Button(text("ui.onboarding.notNow")) { model.skip() }
+                    Button(skipTitle) { model.skip() }
                         .keyboardShortcut(.defaultAction)
-                } else {
-                    Button(text(optionalStep ? "ui.onboarding.notNow" : "ui.onboarding.skip")) { model.skip() }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.secondary)
                 }
                 Button(text("ui.onboarding.continue")) { model.continueFromStep() }
                     .keyboardShortcut(notNowIsDefault ? nil : .defaultAction)

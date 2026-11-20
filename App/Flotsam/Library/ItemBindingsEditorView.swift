@@ -9,6 +9,8 @@ struct ItemBindingsEditorView: View {
     let close: () -> Void
     /// Called with the clip's name once the item has loaded, so the window title can name it.
     var nameLoaded: (String) -> Void = { _ in }
+    @State private var showsVariablesHelp = false
+    @FocusState private var triggerFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -83,18 +85,41 @@ struct ItemBindingsEditorView: View {
             Text(.editorTrigger)
             VStack(alignment: .leading, spacing: 4) {
                 // Typed text is primary colour; only the empty field shows the dimmer placeholder.
-                TextField(text: $model.triggerText, prompt: Text(.editorTriggerPlaceholder)) { Text(.editorTrigger) }
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder)
-                    .foregroundStyle(.primary)
-                    .disableAutocorrection(true)
+                HStack(spacing: 6) {
+                    TextField(text: $model.triggerText, prompt: Text(.editorTriggerPlaceholder)) { Text(.editorTrigger) }
+                        .labelsHidden()
+                        .textFieldStyle(.plain)
+                        .foregroundStyle(.primary)
+                        .disableAutocorrection(true)
+                        .focused($triggerFocused)
+                        .padding(.horizontal, 8)
+                        .frame(height: 28)
+                        .fieldChrome(isActive: triggerFocused)
+                    variablesHelpButton
+                }
                 if let message = model.triggerErrorMessage {
                     Text(verbatim: message).font(.caption).foregroundStyle(.red)
                 } else {
                     Text(.editorTriggerHelp).font(.caption).foregroundStyle(.secondary)
                 }
-                Text(.editorVariablesHelp).font(.caption).foregroundStyle(.secondary)
             }
+        }
+    }
+
+    /// The variables reference sits behind a (?) button so the form shows one line of help, not three (FR-005-09).
+    private var variablesHelpButton: some View {
+        Button { showsVariablesHelp.toggle() } label: {
+            Image(systemName: "questionmark.circle").foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(SettingsString.editorVariablesHelpButton.text)
+        .accessibilityLabel(SettingsString.editorVariablesHelpButton.text)
+        .popover(isPresented: $showsVariablesHelp, arrowEdge: .bottom) {
+            Text(.editorVariablesHelp)
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 280, alignment: .leading)
+                .padding(12)
         }
     }
 }

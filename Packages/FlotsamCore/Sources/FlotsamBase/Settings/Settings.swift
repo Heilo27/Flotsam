@@ -80,6 +80,8 @@ public enum SettingKeys {
     public static let libraryResumeOnReopen = SettingKey("library.resumeOnReopen", default: false, owner: "FR-003-04")
     public static let libraryDisplay = SettingKey("library.display", default: LibraryDisplay.pointer, owner: "FR-003-03")
     public static let libraryTypes = SettingKey("library.types", default: TypeOrder.default, owner: "FR-003-12")
+    /// The sidebar's Types section folded away (FR-003-12). A look-only setting, so it joins `resettable`.
+    public static let librarySidebarTypesCollapsed = SettingKey("library.sidebarTypesCollapsed", default: false, owner: "FR-003-12")
     public static let onboardingCompleted = SettingKey("onboarding.completed", default: false, owner: "FR-008-12")
     public static let settingsLastPane = SettingKey("settings.lastPane", default: SettingsPane.general, owner: "FR-008-03")
 
@@ -95,7 +97,7 @@ public enum SettingKeys {
         librarySort.descriptor, libraryViewMode.descriptor, libraryLayout.descriptor,
         libraryBackground.descriptor, libraryPreviewPreset.descriptor, libraryCloseAfterPaste.descriptor,
         libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
-        libraryPanelSize.descriptor, libraryCompactPanelSize.descriptor,
+        librarySidebarTypesCollapsed.descriptor, libraryPanelSize.descriptor, libraryCompactPanelSize.descriptor,
         onboardingCompleted.descriptor, settingsLastPane.descriptor,
     ]
 
@@ -106,6 +108,7 @@ public enum SettingKeys {
         libraryLayout.descriptor, libraryViewMode.descriptor, librarySort.descriptor, libraryPanelSize.descriptor,
         libraryCompactPanelSize.descriptor, libraryBackground.descriptor, libraryPreviewPreset.descriptor,
         libraryCloseAfterPaste.descriptor, libraryResumeOnReopen.descriptor, libraryDisplay.descriptor, libraryTypes.descriptor,
+        librarySidebarTypesCollapsed.descriptor,
     ]
 }
 

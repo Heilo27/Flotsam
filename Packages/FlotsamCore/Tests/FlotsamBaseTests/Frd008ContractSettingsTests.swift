@@ -121,13 +121,14 @@ import Testing
 
     // OC-8034. Five rows (FR-008-05) with these labels, in registry order, and the footnote.
     @Test func oc8034_shortcutsPaneStrings() {
-        #expect(SettingsString.shortcutOpenLibrary.text == "Open Library")
-        #expect(SettingsString.shortcutSaveClipboard.text == "Save Clipboard")
-        #expect(SettingsString.shortcutAddClip.text == "Add Clip")
-        #expect(SettingsString.shortcutToggleShelf.text == "Toggle Shelf")
+        // The four menu-backed rows read the menu's own entries (one command, one string).
+        #expect(FlotsamStrings.text(forKey: "ui.menu.openLibrary") == "Open Library")
+        #expect(FlotsamStrings.text(forKey: "ui.menu.saveClipboard") == "Save Current Clipboard")
+        #expect(FlotsamStrings.text(forKey: "ui.menu.addClip") == "New Clip…")
+        #expect(FlotsamStrings.text(forKey: "ui.menu.toggleShelf") == "Toggle Shelf")
         #expect(SettingsString.shortcutPasteQueue.text == "Paste Queue")
         #expect(SettingsString.shortcutsFootnote.text == "Shortcuts for single items and typed triggers are set from the Library (⌘K).")
-        #expect(SettingsString.shortcutClear.text == "Clear shortcut")
+        #expect(SettingsString.shortcutClear.text == "Clear Shortcut")
         let bound = SettingKeys.all.filter { $0.name.hasPrefix("shortcuts.") }.map(\.name)
         #expect(bound == ["shortcuts.openLibrary", "shortcuts.saveClipboard", "shortcuts.addClip", "shortcuts.toggleShelf", "shortcuts.pasteQueue"],
                 "exactly the five shortcut settings of FR-008-05")
@@ -340,7 +341,7 @@ import Testing
     // OC-8054. The empty-range text.
     @Test func oc8054_nothingToClearText() {
         #expect(SettingsString.clearNothing.text == "Nothing to clear in this range.")
-        #expect(SettingsString.rangeLastHour.text == "Last hour")
+        #expect(SettingsString.rangeLastHour.text == "Last Hour")
         #expect(SettingsString.clearDelete.text == "Delete Items")
     }
 

@@ -345,6 +345,7 @@ Deliberate deviations from FRD text: confirmation strings use curly quotes. `sto
 | `ui.library.keyReturn`, `keyOptionReturn`, `keyCommandC`, `keySpace`, `keyEsc` | Return, ⌥Return, ⌘C, Space, Esc | (footer key caps) |
 | `ui.library.sidebarAll`, `sidebarPinned`, `sidebarNotes`, `sidebarShortcuts`, `sidebarVideos` | All, Pinned, Notes, Shortcuts, Videos | (3/15, 6/15, 5/15, 9/15, 6/15) |
 | `ui.library.sectionTypes`, `sectionTags`, `sectionApps` | Types, Tags, Apps | (5/15, 4/15, 4/15) |
+| `ui.library.typesHide`, `typesShow` | Hide Types, Show Types | (tooltip and VoiceOver hint of the Types header, 10/40, 10/40) |
 | `ui.library.appAnotherDevice`, `appUnknown` | Another device, Unknown | (14/15, 7/15) |
 | `ui.library.typeText` to `typeScreenshot` | Text, Rich Text, Links, Colors, Phone Numbers, Emails, Images, Files, Folders, Bundles, Screenshots | (sidebar type names) |
 | `ui.library.tagOverflow` | +%lld | (row chips) |
