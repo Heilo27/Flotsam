@@ -2240,3 +2240,19 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - The real data and prefs hashes match before and after.
   - The prefs listing is unchanged, with no leftover suite plists.
   - The pasteboard is unchanged, and no Flotsam is running.
+
+## A7: screenshot round 1 retake at 7ab11a8 (2026-11-19)
+
+- **Verdict: NOT published.** No s2/shots SHA.
+- **Fails:** 04-shelf and 05-menu-bar-menu, light and dark, both on the banner check. The "Login Item Added" banner sits on the host screen itself, top right, and persists (confirmed in a host screen grab). Focus doesn't suppress it. The single `--only shelf` rerun gave byte-identical frames.
+- **Passes:** 01, 02, 03, 06, 07 and 08, light and dark.
+  - The onboarding window is now present.
+  - The menu crop is complete, with no host menu bar and its corners intact.
+- **Capture mode:** `-R` for all 16 passes, per NOTES.txt.
+- **Harness note:** `--only` truncates NOTES.txt, so the full-run notes were lost on the rerun.
+- **New host path:** the harness created the fixed app path under the user Caches folder. It didn't exist before the run.
+- **Needs Ryan:**
+  - Dismiss the persistent banner.
+  - Remove the stale Flotsam Login Items entries.
+  - Then rerun all 16 passes.
+- **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is restored, and no Flotsam is running.
