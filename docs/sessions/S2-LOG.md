@@ -2101,3 +2101,4 @@ Rows 5 to 12 ran on a fresh isolated instance.
 - **[Spec Drift]:** the 170 pt sidebar is hard-coded at App/Flotsam/Library/LibraryView.swift:20, but no FRD or design doc states a sidebar width.
 - **Snapshot identity:** real data and prefs hashes unchanged; both test suites were deleted (`defaults delete` left the plist files, so they were removed by hand); the pasteboard was restored.
 - **A2 overall:** 9 rows pass. Needs Ryan: Shelf drags (row 4), the editor (row 7) and OCR (row 10). Row 12 is inconclusive against S5.
+- **Correction (A2 part 2):** withdraw the [Spec Drift] on the 170 pt sidebar. It was a false positive. docs/DESIGN.md:118 and :120 specify a sidebar of 170 for both the Standard and the Compact layout, so row 5 matches the design. The docs search used a "170 pt" pattern and missed the bare "170".
