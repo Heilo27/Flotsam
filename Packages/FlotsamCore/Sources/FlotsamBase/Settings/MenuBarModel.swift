@@ -31,10 +31,10 @@ public enum MenuEntry: Equatable, Sendable {
     case addClip(ChordBinding)
     case toggleShelf(ChordBinding)
     case separator
-    /// "Pause Capture" or "Resume Capture"; choosing it writes `next` to `capture.mode`.
+    /// "Pause Capture" or "Resume Capture". Resume (next `.active`) is a plain item that writes `next` to `capture.mode`.
+    /// Pause (next `.paused`) is a submenu, because pausing has a length: `PauseDuration.allCases`, then "Until I Resume",
+    /// which writes `next` with no end time (FR-008-16, hill-climb r3).
     case captureToggle(titleKey: String, next: CaptureMode)
-    /// The "Pause For" submenu (`PauseDuration.allCases`); offered only while capture is Active (FR-008-16).
-    case pauseFor
     /// The "Clear Recent" submenu (`ClearRange.recentMenuRanges`); each choice asks for confirmation (FR-007-11).
     case clearRecent
     case notices
@@ -76,7 +76,6 @@ public enum MenuBarModel {
         var rows: [MenuEntry] = [.openLibrary(openLibrary), .saveClipboard(saveClipboard), .addClip(addClip)]
         if shelfEnabled { rows.append(.toggleShelf(toggleShelf)) }
         rows += [.separator, .captureToggle(titleKey: toggle.titleKey, next: toggle.next)]
-        if mode == .active { rows.append(.pauseFor) }
         rows += [.clearRecent, .notices, .separator]
         rows += [.settings, .setupGuide, .separator, .quit]
         return rows

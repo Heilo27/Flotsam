@@ -131,14 +131,16 @@ public struct LibraryFooter: Equatable {
     public let notice: String?
     /// The "Enable" button's label while Accessibility is off (FR-008-14); nil when pasting works.
     public let enableLabel: String?
-    /// The active sort's name, shown beside the count (FR-004-12).
+    /// The active sort's name, shown beside the count (FR-004-12). Empty, like `countText`, while there are no rows to count.
     public let sortName: String
 
     public init(
         totalCount: Int, selectionCount: Int, isAccessibilityTrusted: Bool, sort: LibrarySort,
         queueRemaining: Int = 0
     ) {
-        sortName = LibraryText.sortName(sort)
+        // With no rows (an empty history, a search with no results) there is nothing to sort or count, so neither is shown
+        // ("Recent 0 items" under a no-results message says nothing true, FR-003-18).
+        sortName = totalCount > 0 || selectionCount >= 2 ? LibraryText.sortName(sort) : String()
         enableLabel = isAccessibilityTrusted ? nil : LibraryText.string("ui.library.footerEnable")
         let multi = selectionCount >= 2
         if multi {
@@ -163,7 +165,7 @@ public struct LibraryFooter: Equatable {
         } else {
             hints = [close]
         }
-        countText = LibraryText.itemCount(totalCount)
+        countText = totalCount > 0 ? LibraryText.itemCount(totalCount) : String()
         // A waiting paste queue says so, and that Esc drops it (FR-003-25); it outranks the copy-only reminder, which the
         // enable button still carries.
         if queueRemaining > 0 {

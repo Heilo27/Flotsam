@@ -33,6 +33,8 @@ public enum ShelfText {
     /// The search header (FR-006-22) reuses the Library's keys by name, so the Shelf's search speaks the Library's words.
     public static let searchPlaceholder = "ui.library.searchPlaceholder"
     public static let filterAll = "ui.library.sidebarAll"
+    /// The overflow pill of the type row: the types that did not fit whole (FR-006-22).
+    public static let moreTypes = "ui.shelf.moreTypes"
     /// The search field's clear button, shown only while the field has text (the Library's "Clear Search").
     public static let clearSearch = "ui.btn.clearSearch"
     public static let noResultsBody = "ui.library.noResultsBody"

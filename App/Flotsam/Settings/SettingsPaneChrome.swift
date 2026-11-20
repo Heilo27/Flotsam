@@ -54,24 +54,28 @@ struct SettingLabel: View {
     }
 }
 
-/// The one look of an editable field outside a grouped form (DESIGN section 2.1): the text-field surface with the
-/// control-edge border, so it reads as a field in light and dark; the accent ring takes over while it is active. The
-/// Library search field, the shortcut recorder, the trigger field and the Add Clip editor all use this.
+/// The one look of an editable field outside a grouped form (DESIGN section 2.1): in light, the text-field surface with the
+/// control-edge border; in dark, a lifted surface (a light wash over whatever panel is behind it, never the near-black
+/// text-field colour) with a hairline border, so it reads as a field on the panel in both appearances. The accent ring takes
+/// over while it is active. The Library search field, the shortcut recorder, the trigger field and the Add Clip editor all
+/// use this.
 private struct FieldChrome: ViewModifier {
     let isActive: Bool
     let cornerRadius: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        let dark = colorScheme == .dark
+        let border: Color = dark ? Color.white.opacity(0.18) : Color.primary.opacity(0.35)
         content
-            .background(Color(nsColor: .textBackgroundColor), in: shape)
-            .overlay(shape.strokeBorder(
-                isActive ? Color.accentColor : Color.primary.opacity(0.35), lineWidth: isActive ? 2 : 1))
+            .background(dark ? Color.white.opacity(0.09) : Color(nsColor: .textBackgroundColor), in: shape)
+            .overlay(shape.strokeBorder(isActive ? Color.accentColor : border, lineWidth: isActive ? 2 : 1))
     }
 }
 
 extension View {
-    func fieldChrome(isActive: Bool, cornerRadius: CGFloat = 6) -> some View {
+    func fieldChrome(isActive: Bool, cornerRadius: CGFloat = DesignToken.Radius.control) -> some View {
         modifier(FieldChrome(isActive: isActive, cornerRadius: cornerRadius))
     }
 }

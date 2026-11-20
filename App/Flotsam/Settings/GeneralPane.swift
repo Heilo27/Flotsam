@@ -2,7 +2,7 @@ import AppKit
 import FlotsamBase
 import SwiftUI
 
-/// General (FR-008-04): Launch at Login, screenshot pickup, folder and import, the Shelf, and the setup guide, in one
+/// General (FR-008-04): Launch at Login and the setup guide, screenshot pickup, folder and import, and the Shelf, in one
 /// grouped form with a header per group and each note directly under its own control. The Library and capture settings
 /// have their own pane (`LibraryPane`, FR-008-33) so neither pane is taller than a laptop screen.
 struct GeneralPane: View {
@@ -24,8 +24,9 @@ struct GeneralPane: View {
                     SettingLabel(.launchAtLogin, note: login.caption?.text)
                 }
                 if login.showsLoginItemsButton {
-                    Button { model.env.openLoginItems() } label: { Text(.openLoginItems) }
+                    trailing { Button { model.env.openLoginItems() } label: { Text(.openLoginItems) } }
                 }
+                trailing { Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) } }
             } header: {
                 Text(.sectionSystem)
             }
@@ -43,7 +44,7 @@ struct GeneralPane: View {
                     SettingLabel(.screenshotFolder, note: folderName)
                 }
                 // FR-002-12: always available, including while pickup is off, so never disabled.
-                Button { model.env.importRecentScreenshots() } label: { Text(.importRecentScreenshots) }
+                trailing { Button { model.env.importRecentScreenshots() } label: { Text(.importRecentScreenshots) } }
             } header: {
                 Text(.sectionScreenshots)
             }
@@ -64,14 +65,14 @@ struct GeneralPane: View {
             } header: {
                 Text(.sectionShelf)
             }
-            Section {
-                Button { model.env.showSetupGuide() } label: { Text(.showSetupGuide) }
-            } header: {
-                Text(.sectionSetup)
-            }
         }
         .settingsPaneChrome()
         .onAppear { loginStatus = model.env.login.status }
+    }
+
+    /// A button that is alone in its row sits on the trailing edge, the edge the switches and the other buttons use (FR-008-04).
+    private func trailing<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        HStack { Spacer(minLength: 0); content() }
     }
 
     /// The effective folder name: the override's folder, or "System default".

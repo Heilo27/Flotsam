@@ -310,7 +310,7 @@ import Testing
         // and when a query matches nothing
         _ = await search(lib, "zzzq")
         // then: zero items, the literal title and body, no error
-        #expect(lib.model.footer().countText == "0 items")
+        #expect(lib.model.footer().countText.isEmpty && lib.model.footer().sortName.isEmpty)
         #expect(lib.model.isNoResults)
         #expect(!lib.model.isHistoryEmpty)
         #expect(LibraryText.noResultsTitle(query: "zzzq") == "No matches for “zzzq”")

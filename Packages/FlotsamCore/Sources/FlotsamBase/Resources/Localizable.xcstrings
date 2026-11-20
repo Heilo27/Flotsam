@@ -1608,7 +1608,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "New Clip…"
+            "value" : "New Clip from Text…"
           }
         }
       }
@@ -1678,7 +1678,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No Notices"
+            "value" : "No Recent Problems"
           }
         }
       }
@@ -1688,7 +1688,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recent Notices"
+            "value" : "Recent Problems"
           }
         }
       }
@@ -1733,12 +1733,12 @@
         }
       }
     },
-    "ui.menu.pauseFor" : {
+    "ui.menu.pauseUntilResume" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pause For"
+            "value" : "Until I Resume"
           }
         }
       }
@@ -1778,7 +1778,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Save Current Clipboard"
+            "value" : "Save Clipboard to Library"
           }
         }
       }
@@ -3372,7 +3372,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Type the trigger anywhere, then Space, Tab or Return, to paste this item. Leave empty for none."
+            "value" : "Type it anywhere, then Space, Tab or Return."
           }
         }
       }
@@ -3402,17 +3402,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Shortcut and Trigger"
-          }
-        }
-      }
-    },
-    "ui.settings.editorWindowNamed" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Shortcut for “%@”"
+            "value" : "Edit Shortcut"
           }
         }
       }
@@ -4513,6 +4503,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Missing"
+          }
+        }
+      }
+    },
+    "ui.shelf.moreTypes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
           }
         }
       }

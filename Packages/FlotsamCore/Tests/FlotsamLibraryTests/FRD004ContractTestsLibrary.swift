@@ -701,7 +701,7 @@ private func organizeKeys(_ kind: ItemKind, pinUnpins: Bool = false, singleTarge
         #expect(rig.model.loadedRows.map(\.id) == [t1])
         #expect(rig.model.footer().countText == "1 item")
         #expect(await rig.model.deleteSelected() == [t1])
-        #expect(rig.model.footer().countText == "0 items" && rig.model.loadedRows.isEmpty)
+        #expect(rig.model.footer().countText.isEmpty && rig.model.loadedRows.isEmpty)
         #expect(rig.model.sidebar?.all == 5 && rig.model.sidebar?.pinned == 0)
         #expect(rig.model.sidebar?.tags.map(\.count) == [0])
         // read fresh: the database agrees with what the model shows

@@ -32,6 +32,27 @@ public enum LibraryLayout {
     /// The trailing room a hovered list row keeps for its hover strip (three 22 pt buttons, 2 pt gaps, the capsule's padding),
     /// so the title truncates instead of running under it (FR-003-38).
     public static let hoverStripReserve: CGFloat = 86
+    /// The least gap between two list rows and the margin above the first (FR-003-05).
+    public static let listRowSpacing: CGFloat = 2
+    public static let listTopMargin: CGFloat = 4
+
+    /// The list's scroll geometry for a viewport `available` points tall (FR-003-05): a whole number of rows, so the edge
+    /// above the footer falls between two rows and never slices one. The rows take the leftover height as extra gap
+    /// (under a row's height), `rowSpacing` is that gap, and `viewport` is exactly `rows` rows plus the top margin; the
+    /// scroll content ends one gap below the last row, so the far end of the scroll lands on a row boundary too.
+    public struct ListFit: Sendable, Equatable {
+        public let rows: Int
+        public let rowSpacing: CGFloat
+        public let viewport: CGFloat
+    }
+
+    public static func listFit(fitting available: CGFloat) -> ListFit {
+        let usable = max(available - listTopMargin, 0)
+        let rows = max(Int((usable / (listRowHeight + listRowSpacing)).rounded(.down)), 1)
+        let spacing = max(usable / CGFloat(rows) - listRowHeight, 0)
+        return ListFit(rows: rows, rowSpacing: spacing, viewport: listTopMargin + CGFloat(rows) * (listRowHeight + spacing))
+    }
+
     /// The lead slot of a list row: a 32 pt thumbnail or kind icon (FR-003-07, DESIGN section 3.1).
     public static let listLeadSize: CGFloat = 32
 

@@ -51,8 +51,8 @@ struct OrganizeOverlayHost: View {
 private extension View {
     func overlayCard() -> some View {
         padding(14)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.separator))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DesignToken.Radius.card))
+            .overlay(RoundedRectangle(cornerRadius: DesignToken.Radius.card).strokeBorder(.separator))
             .shadow(radius: 12)
     }
 }
@@ -182,7 +182,7 @@ private struct NoteCard: View {
                 .focused($focused)
                 .frame(width: 320, height: 140)
                 .scrollContentBackground(.hidden)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: DesignToken.Radius.control))
             if length >= IngestLimits.noteCounterThreshold {
                 Text(verbatim: LibraryText.noteCounter(length)).font(.caption)
                     .foregroundStyle(length > IngestLimits.maxNoteCharacters ? .red : .secondary)
@@ -210,7 +210,7 @@ private struct EditCard: View {
                 .font(.body)
                 .focused($focused)
                 .scrollContentBackground(.hidden)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: DesignToken.Radius.control))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             if isRichText {
                 Text(verbatim: LibraryText.string(LibraryText.editFormattingRemoved)).font(.caption).foregroundStyle(.secondary)

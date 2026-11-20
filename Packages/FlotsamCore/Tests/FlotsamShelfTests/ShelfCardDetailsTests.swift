@@ -4,7 +4,7 @@ import Testing
 @testable import FlotsamShelf
 @testable import FlotsamStorage
 
-// FRD-006 FR-006-07: the real adapter. A text card shows the first three lines of the stored text read through
+// FRD-006 FR-006-07: the real adapter. A text card shows the first four lines of the stored text read through
 // `FlotsamDatabase`, where the row's own primary line holds only two.
 
 private final class NullSink: LogSink, @unchecked Sendable {
@@ -12,7 +12,7 @@ private final class NullSink: LogSink, @unchecked Sendable {
 }
 
 @MainActor @Suite struct ShelfCardDetailsTests {
-    @Test("OC-S2-D1 a text card on the real database shows three lines of the stored text, not the two of the primary line")
+    @Test("OC-S2-D1 a text card on the real database shows four lines of the stored text, not the two of the primary line")
     func cardShowsThreeStoredLines() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("shelf-details-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -27,6 +27,6 @@ private final class NullSink: LogSink, @unchecked Sendable {
 
         await model.open(target: textEdit, sticky: true)
 
-        #expect(model.sections().flatMap(\.cards).first { $0.id == id }?.text == "one\ntwo\nthree")
+        #expect(model.sections().flatMap(\.cards).first { $0.id == id }?.text == "one\ntwo\nthree\nfour")
     }
 }

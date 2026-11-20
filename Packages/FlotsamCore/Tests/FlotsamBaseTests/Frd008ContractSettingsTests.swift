@@ -123,8 +123,8 @@ import Testing
     @Test func oc8034_shortcutsPaneStrings() {
         // The four menu-backed rows read the menu's own entries (one command, one string).
         #expect(FlotsamStrings.text(forKey: "ui.menu.openLibrary") == "Open Library")
-        #expect(FlotsamStrings.text(forKey: "ui.menu.saveClipboard") == "Save Current Clipboard")
-        #expect(FlotsamStrings.text(forKey: "ui.menu.addClip") == "New Clip…")
+        #expect(FlotsamStrings.text(forKey: "ui.menu.saveClipboard") == "Save Clipboard to Library")
+        #expect(FlotsamStrings.text(forKey: "ui.menu.addClip") == "New Clip from Text…")
         #expect(FlotsamStrings.text(forKey: "ui.menu.toggleShelf") == "Toggle Shelf")
         #expect(SettingsString.shortcutPasteQueue.text == "Paste Queue")
         #expect(SettingsString.shortcutsFootnote.text == "Shortcuts for single items and typed triggers are set from the Library (⌘K).")

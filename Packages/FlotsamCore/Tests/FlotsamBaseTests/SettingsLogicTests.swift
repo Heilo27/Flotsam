@@ -11,7 +11,7 @@ import Testing
         let rows = MenuBarModel.entries(mode: .active, shelfEnabled: true, openLibrary: chord, saveClipboard: .none, toggleShelf: .none)
         #expect(rows == [
             .openLibrary(chord), .saveClipboard(.none), .addClip(.none), .toggleShelf(.none), .separator,
-            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .pauseFor, .clearRecent, .notices, .separator,
+            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .clearRecent, .notices, .separator,
             .settings, .setupGuide, .separator, .quit,
         ])
     }
@@ -19,7 +19,7 @@ import Testing
     @Test func toggleShelfIsAbsentWhenTheShelfIsOff() {
         let rows = MenuBarModel.entries(mode: .active, shelfEnabled: false, openLibrary: chord, saveClipboard: .none, toggleShelf: .none)
         #expect(!rows.contains(.toggleShelf(.none)))
-        #expect(rows.count == 13)
+        #expect(rows.count == 12)
     }
 
     @Test func pauseTogglesAndCuratedResumesToActive() {

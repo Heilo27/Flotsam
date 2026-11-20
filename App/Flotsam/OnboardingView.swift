@@ -17,23 +17,25 @@ struct OnboardingView: View {
         .refreshWhileVisible { model.refresh() }
     }
 
-    /// A row of dots, one per step, the steps reached filled in the accent colour. VoiceOver reads the same
-    /// "Step n of N" the visible caption used to show.
+    /// A row of 8 pt dots centred above the title, one per step, the steps reached filled in the accent colour and the
+    /// rest a visible grey. VoiceOver reads the progress as one element whose value is "Step n of N".
     private var stepCaption: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             ForEach(1...model.flow.total, id: \.self) { index in
                 Circle()
-                    .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: index == model.flow.position ? 8 : 6, height: index == model.flow.position ? 8 : 6)
+                    .fill(index <= model.flow.position ? Color.accentColor : Color.secondary.opacity(0.35))
+                    .frame(width: 8, height: 8)
             }
         }
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total)))
+        .accessibilityLabel(Text(verbatim: text("ui.onboarding.windowTitle")))
+        .accessibilityValue(Text(verbatim: String(format: text("ui.onboarding.stepOf"), model.flow.position, model.flow.total)))
     }
 
     private var standardLayout: some View {
         VStack(alignment: .leading, spacing: 16) {
-            stepCaption
+            stepCaption.padding(.bottom, 8)
             Text(verbatim: text(model.step.titleKey))
                 .font(.title2.bold())
                 .accessibilityAddTraits(.isHeader)
@@ -64,11 +66,11 @@ struct OnboardingView: View {
 
     private var permissionLayout: some View {
         VStack(spacing: 16) {
-            stepCaption.frame(maxWidth: .infinity, alignment: .leading)
+            stepCaption
             Spacer(minLength: 0)
             VStack(spacing: 12) {
                 Image(systemName: permissionSymbol)
-                    .font(.system(size: 44))
+                    .font(.system(size: 64))
                     .foregroundStyle(Color.accentColor)
                     .accessibilityHidden(true)
                 Text(verbatim: text(model.step.titleKey))
@@ -97,8 +99,12 @@ struct OnboardingView: View {
             // Granted: the warning and the way to System Settings are moot, so one status line says what is now true and
             // Continue is the only prominent control. The green check belongs to this status alone.
             let line = text(grantedKey)
-            Label(line, systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+            // The text keeps the label colour (green text on white misses 4.5:1); the green check is the only colour.
+            Label {
+                Text(verbatim: line)
+            } icon: {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(Text(verbatim: [text(permissionNameKey), text("ui.onboarding.granted"), line].joined(separator: " ")))
         } else {

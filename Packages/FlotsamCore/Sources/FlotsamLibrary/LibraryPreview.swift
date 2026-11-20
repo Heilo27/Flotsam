@@ -10,16 +10,22 @@ public struct LibraryPreview: Equatable, Sendable {
     public static let memberLimit = 20
 
     public struct Field: Equatable, Identifiable, Sendable {
+        /// Where the view puts the field in the compact metadata block (FR-003-14): `summary` fields (kind, source, copied)
+        /// share one or two lines, `tag` fields are chips, every other field is a short label and value line.
+        public enum Placement: Sendable, Equatable { case summary, detail, tag }
+
         public let label: String
         public let value: String
         /// Set on a tag row: the colour of its dot.
         public let tagColor: TagColor?
+        public let placement: Placement
         public var id: String { label + "\u{0}" + value }
 
-        init(label: String, value: String, tagColor: TagColor? = nil) {
+        init(label: String, value: String, tagColor: TagColor? = nil, placement: Placement = .detail) {
             self.label = label
             self.value = value
             self.tagColor = tagColor
+            self.placement = placement
         }
     }
 
@@ -38,6 +44,15 @@ public struct LibraryPreview: Equatable, Sendable {
     public let richTextRTF: Data?
 
     public var isTruncated: Bool { (fullText?.count ?? 0) > Self.textLimit }
+
+    /// Whether the text reads as code or any other text whose indentation matters: more than one line, and at least one
+    /// line indented by a tab or two spaces. Such text is drawn without soft wrapping, indentation kept, scrolling
+    /// sideways (FR-003-14); prose wraps.
+    public var textIsIndented: Bool {
+        guard let fullText else { return false }
+        let lines = fullText.split(separator: "\n", omittingEmptySubsequences: false)
+        return lines.count > 1 && lines.contains { $0.hasPrefix("\t") || $0.hasPrefix("  ") }
+    }
 
     /// The text to show: the first `textLimit` characters, or all of it once the user chose "Show more".
     public func text(showingAll: Bool) -> String? {
@@ -62,22 +77,24 @@ public struct LibraryPreview: Equatable, Sendable {
     private static func dateTime(_ date: Date) -> String { date.formatted(date: .abbreviated, time: .shortened) }
 
     /// The metadata block (FR-003-14), in order: kind, source app, copied, first copied (only when it differs from copied),
-    /// times copied and times pasted (only above zero), size, pixel size, then each tag, then the note. A colour's hex and rgb follow its kind.
+    /// times copied (only above one) and times pasted (only above zero), size, pixel size, then each tag, then the note. A colour's hex and rgb follow its kind.
     private static func fields(for row: ItemRow, content: ItemContent, color: ColorChannels?) -> [Field] {
-        func field(_ key: String, _ value: String) -> Field { Field(label: LibraryText.string(key), value: value) }
-        var fields = [field("ui.library.previewKind", KindLabel.text(for: row.kind))]
+        func field(_ key: String, _ value: String, _ placement: Field.Placement = .detail) -> Field {
+            Field(label: LibraryText.string(key), value: value, placement: placement)
+        }
+        var fields = [field("ui.library.previewKind", KindLabel.text(for: row.kind), .summary)]
         if let color {
             fields.append(field("ui.library.previewHex", color.hex))
             fields.append(field("ui.library.previewRGB", color.channels))
         }
-        if let source = row.sourceName, !source.isEmpty { fields.append(field("ui.library.previewSource", source)) }
+        if let source = row.sourceName, !source.isEmpty { fields.append(field("ui.library.previewSource", source, .summary)) }
         let copied = dateTime(row.lastCopiedAt)
-        fields.append(field("ui.library.previewCopied", copied))
+        fields.append(field("ui.library.previewCopied", copied, .summary))
         // First copied and the counters appear only when they add something: the same time as Copied, or a count of
         // zero, is noise (an item pasted never has "Times pasted 0").
         let firstCopied = dateTime(content.firstCopiedAt ?? row.lastCopiedAt)
         if firstCopied != copied { fields.append(field("ui.library.previewFirstCopied", firstCopied)) }
-        if content.copyCount > 0 { fields.append(field("ui.library.previewTimesCopied", content.copyCount.formatted())) }
+        if content.copyCount > 1 { fields.append(field("ui.library.previewTimesCopied", content.copyCount.formatted())) }
         if row.pasteCount > 0 { fields.append(field("ui.library.previewTimesPasted", row.pasteCount.formatted())) }
         if row.byteSize > 0 {
             fields.append(field("ui.library.previewSize", ByteCountFormatter.string(fromByteCount: row.byteSize, countStyle: .file)))
@@ -86,7 +103,7 @@ public struct LibraryPreview: Equatable, Sendable {
             fields.append(field("ui.library.previewPixelSize", "\(width) × \(height)"))
         }
         for tag in content.tags {
-            fields.append(Field(label: LibraryText.string("ui.library.previewTag"), value: tag.name, tagColor: tag.color))
+            fields.append(Field(label: LibraryText.string("ui.library.previewTag"), value: tag.name, tagColor: tag.color, placement: .tag))
         }
         if let note = content.note, !note.isEmpty { fields.append(field("ui.library.previewNote", note)) }
         return fields

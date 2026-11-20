@@ -430,6 +430,6 @@ import Testing
                     "a Settings string mentions \(word)")
         }
         let rows = entries.filter { $0 != .separator }
-        #expect(rows.count == 11, "eleven actionable rows (4 shortcuts, pause, pause for, clear recent, notices, settings, setup guide, quit); none transfers settings")
+        #expect(rows.count == 10, "ten actionable rows (4 shortcuts, the pause or resume row, clear recent, recent problems, settings, setup guide, quit); none transfers settings")
     }
 }

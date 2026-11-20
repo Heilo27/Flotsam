@@ -45,8 +45,7 @@ public enum SettingsString: String, CaseIterable, Sendable {
     case shortcutNotSet, shortcutRecord, shortcutRecording, shortcutClear, shortcutNeedsModifier, shortcutsFootnote
 
     // Item editor: shortcut and trigger (FR-005-09)
-    /// `editorWindowNamed` is the title with the clip's name (`%@`) once the item is loaded; `editorWindow` is the title until then.
-    case editorWindowNamed
+    /// `editorWindow` is the window title ("Edit Shortcut"); the clip's name is a subtitle line inside the form.
     case editorWindow, editorShortcut, editorTrigger, editorTriggerPlaceholder, editorTriggerHelp
     /// The variable help caption: lists {date}, {time}, {clipboard} and format examples (FR-005-17, FRD-005 section 8).
     case editorVariablesHelp, editorVariablesHelpButton

@@ -18,14 +18,18 @@ struct LibraryItemsView: View {
     var body: some View {
         let rows = model.rowPresentations()
         GeometryReader { geometry in
+            let isList = model.viewMode == .list
+            // The list's viewport is a whole number of rows (FR-003-05): the footer edge falls between two rows, never through one.
+            let fit = LibraryLayout.listFit(fitting: geometry.size.height)
             ScrollViewReader { proxy in
                 ScrollView {
-                    if model.viewMode == .list {
-                        LazyVStack(spacing: 2) {
+                    if isList {
+                        LazyVStack(spacing: fit.rowSpacing) {
                             ForEach(rows) { row in
                                 LibraryListRow(model: model, row: row, dragOut: dragOut).onAppear { pageIfLast(row, in: rows) }
                             }
                         }
+                        .scrollTargetLayout()
                     } else {
                         let columns = Self.columnCount(for: geometry.size.width)
                         LazyVGrid(
@@ -40,11 +44,16 @@ struct LibraryItemsView: View {
                         .onChange(of: columns) { _, new in model.gridColumns = new }
                     }
                 }
-                // Real scroll-content margins, so the first row clears the header and the last scrolls fully out of the fade
-                // above the footer (FR-003-05); the fade itself is the shared bottom mask.
-                .contentMargins(model.viewMode == .list ? 8 : 10, for: .scrollContent)
-                .contentMargins(.bottom, LibraryScrollFade.height + 8, for: .scrollContent)
-                .fadingBottomEdge()
+                // Real scroll-content margins (FR-003-05). The list rests on row boundaries: scrolling snaps to a row, the top
+                // margin clears the header and the bottom margin is one row gap, so the far end of the scroll ends on a row
+                // boundary too and nothing needs a fade. The grid has no whole-row viewport: its last row scrolls fully out of
+                // the shared bottom fade above the footer.
+                .scrollTargetBehavior(.viewAligned)
+                .contentMargins(.horizontal, isList ? 8 : 10, for: .scrollContent)
+                .contentMargins(.top, isList ? LibraryLayout.listTopMargin : 10, for: .scrollContent)
+                .contentMargins(.bottom, isList ? fit.rowSpacing : LibraryScrollFade.height + 8, for: .scrollContent)
+                .frame(height: isList ? min(fit.viewport, geometry.size.height) : nil)
+                .fadingBottomEdge(isList ? 0 : LibraryScrollFade.height)
                 .onChange(of: model.cursorID) { _, id in
                     if let id { proxy.scrollTo(id) }
                 }
@@ -71,8 +80,8 @@ struct LibraryItemsView: View {
                 let top = below + size.height <= geometry.size.height ? below : max(0, hoveredFrame.minY - 4 - size.height)
                 LibraryPreviewView(preview: preview)
                     .frame(width: min(size.width, geometry.size.width - 16), height: size.height)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DesignToken.Radius.popover))
+                    .overlay(RoundedRectangle(cornerRadius: DesignToken.Radius.popover).stroke(.quaternary))
                     .shadow(radius: 6)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.trailing, 8)
@@ -97,7 +106,7 @@ struct LibraryItemsView: View {
 private struct RowInteraction: ViewModifier {
     let model: LibraryViewModel
     let row: LibraryRowPresentation
-    /// Where the hover strip sits: trailing on a list row, top trailing on a grid cell.
+    /// Where the hover strip overlays the row: trailing on a list row, top trailing on a grid cell.
     let stripAlignment: Alignment
     let dragOut: ShelfDragOut
 
@@ -241,7 +250,14 @@ func symbolName(for kind: ItemKind) -> String {
 }
 
 private func rowBackground(selected: Bool, cursor: Bool) -> some ShapeStyle {
-    selected ? Color.accentColor.opacity(0.28) : (cursor ? Color.primary.opacity(0.08) : Color.clear)
+    selected ? DesignToken.selectionFill : (cursor ? DesignToken.cursorFill : Color.clear)
+}
+
+private extension LibraryRowPresentation {
+    /// Whether `StatusBadges` would draw anything; an empty badge row takes no room in a list row.
+    var hasStatusBadges: Bool {
+        isPinned || hasTrigger || hasShortcut || isSecure || missingBadge != nil || unavailableBadge != nil
+    }
 }
 
 private struct StatusBadges: View {
@@ -255,7 +271,7 @@ private struct StatusBadges: View {
             if row.isSecure { Image(systemName: "lock.fill") }
             if let badge = row.missingBadge ?? row.unavailableBadge {
                 Text(verbatim: badge).font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
-                    .background(.quaternary, in: Capsule())
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
             }
         }
         .font(.caption)
@@ -264,13 +280,16 @@ private struct StatusBadges: View {
     }
 }
 
+/// The tag chips of a row. The chip is a neutral wash with the primary label colour, so it stays legible on the selection
+/// fill (a plain `.quaternary` chip disappeared into it); selected, the wash is stronger.
 private struct TagChips: View {
     let row: LibraryRowPresentation
+    let selected: Bool
 
     var body: some View {
         ForEach(row.tagChips, id: \.self) { tag in
-            Text(verbatim: tag).font(.caption2).padding(.horizontal, 5).padding(.vertical, 1)
-                .background(.quaternary, in: Capsule())
+            Text(verbatim: tag).font(.caption2).foregroundStyle(.primary).padding(.horizontal, 5).padding(.vertical, 1)
+                .background(Color.primary.opacity(selected ? 0.12 : 0.08), in: RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
         }
         if let overflow = row.tagOverflow { Text(verbatim: overflow).font(.caption2).foregroundStyle(.secondary) }
     }
@@ -282,26 +301,43 @@ struct LibraryListRow: View {
     let dragOut: ShelfDragOut
 
     var body: some View {
-        HStack(spacing: 10) {
+        let hovered = model.hoveredRowID == row.id
+        let selected = model.selection.contains(row.id)
+        // No stack spacing: gaps are explicit paddings, so an absent trailing cluster takes no room and the title
+        // truncates by the width actually left, not by a character count (an empty subview still gets a gap from `spacing`).
+        HStack(spacing: 0) {
             LibraryRowLead(model: model, row: row)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: row.primaryText).lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(verbatim: row.secondaryText).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    TagChips(row: row)
+                    Text(verbatim: row.secondaryText).font(.caption)
+                        .foregroundStyle(selected ? DesignToken.onSelectionSecondary : Color.secondary).lineLimit(1)
+                    TagChips(row: row, selected: selected)
                 }
             }
-            Spacer(minLength: 4)
-            StatusBadges(row: row)
-            if let badge = row.shortcutBadge { Text(verbatim: badge).font(.caption.monospaced()).foregroundStyle(Color.primary.opacity(0.75)) }
+            .padding(.leading, 10)
+            Spacer(minLength: 8)
+            // While the hover strip shows, its room is reserved here (the strip itself is the interaction overlay, above the
+            // row's drag view) and the row's own badges and number give way to it, so the row never shows a second pin
+            // beside the strip's Pin (FR-003-38). The title truncates before this slot, not under the strip.
+            if hovered {
+                Color.clear.frame(width: LibraryLayout.hoverStripReserve - 8, height: 1)
+            } else if row.hasStatusBadges || row.shortcutBadge != nil {
+                HStack(spacing: 6) {
+                    if row.hasStatusBadges { StatusBadges(row: row) }
+                    if let badge = row.shortcutBadge {
+                        Text(verbatim: badge).font(.caption.monospaced())
+                            .foregroundStyle(selected ? DesignToken.onSelectionSecondary : Color.primary.opacity(0.75))
+                    }
+                }
+                .layoutPriority(1)
+            }
         }
-        .padding(.leading, 8)
-        // While the hover strip shows, its room is taken from the title, which truncates, not from under the strip (FR-003-38).
-        .padding(.trailing, model.hoveredRowID == row.id ? LibraryLayout.hoverStripReserve : 8)
+        .padding(.horizontal, 8)
         .frame(height: LibraryLayout.listRowHeight)
         .background(
-            rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
-            in: RoundedRectangle(cornerRadius: 6)
+            rowBackground(selected: selected, cursor: model.cursorID == row.id),
+            in: RoundedRectangle(cornerRadius: DesignToken.Radius.row)
         )
         .rowInteraction(model: model, row: row, stripAlignment: .trailing, dragOut: dragOut)
     }
@@ -326,7 +362,7 @@ private struct LibraryRowLead: View {
             }
         }
         .frame(width: side, height: side)
-        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .clipShape(RoundedRectangle(cornerRadius: DesignToken.Radius.control))
         .accessibilityHidden(true)
         .task(id: row.id) {
             thumbnail = nil
@@ -353,7 +389,7 @@ struct LibraryGridCell: View {
             }
             .frame(height: 70)
             .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .clipShape(RoundedRectangle(cornerRadius: DesignToken.Radius.control))
             Text(verbatim: row.primaryText).font(.caption).lineLimit(2)
             HStack(spacing: 4) {
                 StatusBadges(row: row)
@@ -363,7 +399,7 @@ struct LibraryGridCell: View {
         .padding(6)
         .background(
             rowBackground(selected: model.selection.contains(row.id), cursor: model.cursorID == row.id),
-            in: RoundedRectangle(cornerRadius: 8)
+            in: RoundedRectangle(cornerRadius: DesignToken.Radius.row)
         )
         .task(id: row.id) {
             guard row.kind == .image || row.kind == .screenshot else { return }

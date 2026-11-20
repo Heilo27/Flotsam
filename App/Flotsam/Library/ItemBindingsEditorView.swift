@@ -7,8 +7,6 @@ import SwiftUI
 struct ItemBindingsEditorView: View {
     let model: ItemBindingsEditorModel
     let close: () -> Void
-    /// Called with the clip's name once the item has loaded, so the window title can name it.
-    var nameLoaded: (String) -> Void = { _ in }
     @State private var showsVariablesHelp = false
     @FocusState private var triggerFocused: Bool
 
@@ -31,7 +29,6 @@ struct ItemBindingsEditorView: View {
         // The recorder must not outlive the window or its focus: its hotkey suspension would stick (FR-005-04).
         .onDisappear { model.stopRecording() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in model.stopRecording() }
-        .onChange(of: model.clipName) { _, name in if let name { nameLoaded(name) } }
         .onChange(of: model.phase) { _, phase in if phase == .saved { close() } }
     }
 
@@ -44,6 +41,10 @@ struct ItemBindingsEditorView: View {
 
     private var form: some View {
         VStack(alignment: .leading, spacing: 14) {
+            // The clip being edited, under the "Edit Shortcut" title: one line, cut in the middle so both ends show.
+            if let name = model.clipName {
+                Text(verbatim: name).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
             Grid(alignment: .topLeading, horizontalSpacing: 12, verticalSpacing: 14) {
                 hotkeyRow
                 if model.triggerOffered {

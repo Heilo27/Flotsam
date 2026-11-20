@@ -41,7 +41,7 @@ import Testing
         // given a colour item with a source
         let preview = LibraryPreview(row: row(kind: .color), content: content(kind: .color, text: "#1A2B3C"), imageData: nil)
         // then hex and rgb directly follow kind
-        #expect(labels(preview) == ["Kind", "Hex", "RGB", "Source", "Copied", "Times copied"])
+        #expect(labels(preview) == ["Kind", "Hex", "RGB", "Source", "Copied"])
         #expect(value(preview, "Hex") == "#1A2B3C")
         #expect(value(preview, "RGB") == "26, 43, 60")
         let swatch = preview.color
@@ -63,7 +63,7 @@ import Testing
         for text in ["hsl(210, 50%, 40%)", "red", "#12", "rgb(1, 2)"] {
             let preview = LibraryPreview(row: row(kind: .color), content: content(kind: .color, text: text), imageData: nil)
             #expect(preview.color == nil, "\(text)")
-            #expect(labels(preview) == ["Kind", "Source", "Copied", "Times copied"], "\(text)")
+            #expect(labels(preview) == ["Kind", "Source", "Copied"], "\(text)")
             #expect(preview.text(showingAll: true) == text)
         }
         // and: a colour item with no text at all
@@ -111,7 +111,7 @@ import Testing
         #expect(tagRows.map(\.value) == ["work", "home"])
         #expect(tagRows.map(\.tagColor) == [.blue, .green])
         #expect(preview.fields.filter { $0.label != "Tag" }.allSatisfy { $0.tagColor == nil })
-        #expect(preview.fields.count == 4 + 2 + 1)
+        #expect(preview.fields.count == 3 + 2 + 1)
     }
 
     // Red if an empty tag list or a nil / empty note still produces a row (B6: empty case).
@@ -119,7 +119,7 @@ import Testing
     func w413_noTagNoNote() {
         for note in [nil, ""] as [String?] {
             let preview = LibraryPreview(row: row(), content: content(note: note, tags: []), imageData: nil)
-            #expect(labels(preview) == ["Kind", "Source", "Copied", "Times copied"], "note \(String(describing: note))")
+            #expect(labels(preview) == ["Kind", "Source", "Copied"], "note \(String(describing: note))")
         }
     }
 
@@ -163,8 +163,9 @@ import Testing
         #expect(value(preview, "Times pasted") == nil)
         let zeroCopies = LibraryPreview(row: row(pasteCount: 2), content: content(copyCount: 0), imageData: nil)
         #expect(value(zeroCopies, "Times copied") == nil)
-        let swapped = LibraryPreview(row: row(pasteCount: 9), content: content(copyCount: 1), imageData: nil)
-        #expect(value(swapped, "Times copied") == "1")
+        // hill-climb r3: a count of one is noise (every item was copied once), so only counts above one show
+        let swapped = LibraryPreview(row: row(pasteCount: 9), content: content(copyCount: 2), imageData: nil)
+        #expect(value(swapped, "Times copied") == "2")
         #expect(value(swapped, "Times pasted") == "9")
     }
 
@@ -235,7 +236,7 @@ import Testing
         #expect(shown?.richTextRTF == rtfBytes)
         // and: the sibling has no tag, no note, no RTF
         #expect(bare?.itemId == sibling)
-        #expect(bare?.fields.map(\.label) == ["Kind", "Copied", "Times copied"])
+        #expect(bare?.fields.map(\.label) == ["Kind", "Copied"])
         #expect(bare?.richTextRTF == nil)
     }
 

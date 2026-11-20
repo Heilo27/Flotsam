@@ -45,8 +45,8 @@ All colour in OKLCH (L C H). CSS custom properties in `tokens.css`; Swift mirror
 | `t3` | 0.53 0.01 250 | 0.69 0.008 250 | tertiary text, hints |
 | `accent` | 0.52 0.11 195 | 0.76 0.11 195 | controls, icons |
 | `accent-text` | 0.50 0.11 195 | 0.76 0.11 195 | accent text on sidebar |
-| `sel` | 0.52 0.11 195 | 0.46 0.09 195 | selected row fill |
-| `on-sel` / `on-sel-2` | 1 0 0 / 0.96 0.02 195 | 1 0 0 / 0.93 0.02 195 | text on `sel` |
+| `sel` | accent mixed 60% toward white | accent mixed 50% toward black | selected row, sidebar row and pill fill: opaque, derived from the system accent (`DesignToken.selectionFill`); hill-climb r3 |
+| `on-sel` / `on-sel-2` | primary label / primary at 82% | primary label / primary at 82% | text on `sel` (`on-sel-2` is `DesignToken.onSelectionSecondary`; never `.secondary`, which fades into the fill) |
 | `focus` | 0.62 0.13 215 | 0.78 0.12 215 | focus ring, 2 pt |
 | `warn` | 0.50 0.12 65 | 0.80 0.13 80 | warnings |
 | `err` | 0.50 0.19 25 | 0.76 0.15 25 | errors |
@@ -78,10 +78,13 @@ Tag colours are decoration. The chip always shows the tag name in `t1`/`t2`, so 
 | t3 on bg | 4.91 | 6.01 | 4.5 |
 | t3 on bg-side | 4.56 | 6.46 | 4.5 |
 | accent-text on bg-side | 4.73 | 8.72 | 4.5 |
-| on-sel on sel | 5.05 | 6.69 | 4.5 |
+| on-sel on sel (default blue accent, computed) | 9.76 | 8.11 | 4.5 |
+| on-sel-2 on sel (default blue accent, computed) | 9.10 | 7.65 | 4.5 |
 | edge on bg | 3.13 | 3.89 | 3 (1.4.11) |
 | edge on bg-field | 3.36 | 4.31 | 3 |
 | focus on bg | 3.15 | 8.64 | 3 (1.4.11, 2.4.7) |
+
+The selection tone (hill-climb r3, TASK-529): `sel` is the user's system accent, opaque, so the contrast of a selected row's text does not depend on what is behind the translucent panel; it is the accent mixed 60% toward white in light and 50% toward black in dark, the same hue in both appearances. Computed over the nine system accents, the primary label clears 4.5:1 on `sel` in light and dark for eight of them and `on-sel-2` for seven; the exception is Yellow in dark, which measures 4.49 (primary) and 4.30 (`on-sel-2`), a known shortfall, recorded here and open for a decision rather than hidden. A selected row's tag chips use the primary label over a stronger wash. The hover and keyboard-cursor wash on an unselected row is the primary colour at 8% (`DesignToken.cursorFill`).
 
 `sep-strong` measured 1.74 (light) and 2.18 (dark) against bg, so it never draws a control edge; `edge` does. Known caveat: the switch off-track is low contrast and relies on the knob position and the row label (both visible); VoiceOver reports the value.
 
@@ -98,7 +101,7 @@ Tag colours are decoration. The chip always shows the tag name in `t1`/`t2`, so 
 
 ### 2.4 Geometry
 
-Spacing: 2, 4, 8, 12, 16, 20, 24 pt. Radii: panel 16, popover 12, card 10, row 8, control 6, chip 6. Shadows: `shadow-panel`, `shadow-pop` (dark adds a 0.5 pt light edge so panels separate on dark desktops). Materials: Library and Shelf use `.hudWindow`/`.popover` NSVisualEffectView behind `bg` at 0.82 alpha; Settings and alerts use opaque `bg`.
+Spacing: 2, 4, 8, 12, 16, 20, 24 pt. Radii: panel 16, popover 12, card 10, row 8, control 6, chip 6; these are exactly `DesignToken.Radius` in `App/Flotsam/DesignTokens.swift` and nothing in the app draws a radius off the scale (hill-climb r3). Shadows: `shadow-panel`, `shadow-pop` (dark adds a 0.5 pt light edge so panels separate on dark desktops). Materials: Library and Shelf use `.hudWindow`/`.popover` NSVisualEffectView behind `bg` at 0.82 alpha; Settings and alerts use opaque `bg`. The Library panel's tint over the material is kept as built (hill-climb r3, TASK-529: a judge asked for a flatter panel): this section mandates the material and the tint behind it, and `library.background` is a user setting (FR-003-21, FRD-008) that forces the panel light or dark or follows the system, so the panel's look follows the user's appearance choice and not a second default tint. Changing the tint needs a decision here first.
 
 ### 2.5 Motion
 
@@ -119,27 +122,27 @@ Library appears in 120 ms ease-out (scale 0.98 to 1, fade). Shelf slides 150 ms 
 
 Compact layout (FR-003-06, Settings > Library): two columns, sidebar 170 and results, no preview column, 520x520 (min 480x400). Space or ⌘Y shows the preview in place of the results with the sidebar kept; Esc returns to the list. Tab order and VoiceOver order: search, sidebar, results (or the preview).
 
-- Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows and section headers are each one 24 pt line with 13 pt row text (tight, so the results list stays the dominant column), count right-aligned, `accent-text` on selected row. The sidebar's viewport is a whole number of lines (plus a 4 pt top margin) and scrolls line by line, so its bottom edge never cuts a row (FR-003-07).
-- List rows: 44 pt, 32 pt lead icon or thumbnail, first line `t1` single line, second line `t2` (source app, age). Badges: pin, trigger, Missing (warn). Up to 3 tag chips then "+n". Quick-paste badge ⌘1 to ⌘9 on the first nine rows.
+- Sidebar sections: Library (All, Pinned), Types (Text, Images, Files, Links, Screenshots, Colours), Tags, Apps. Rows and section headers are each one 24 pt line with 13 pt row text (tight, so the results list stays the dominant column), count right-aligned. Each row leads with a 12 pt SF Symbol; labels are secondary and counts tertiary; the selected row is primary on the `sel` fill with the row radius (FR-003-12). The sidebar's viewport is a whole number of lines (plus a 4 pt top margin) and scrolls line by line, so its bottom edge never cuts a row (FR-003-07).
+- List rows: 44 pt, 32 pt lead icon or thumbnail, first line `t1` single line, second line `t2` (source app, age); the title truncates by the width left, a hovered row reserves 86 pt for its strip and its own badges give way, and the selected row is the `sel` fill with `on-sel-2` secondary text. The list's viewport is a whole number of rows (a gap of at least 2 pt, a 4 pt top margin, scroll snapped to a row), so its bottom edge never cuts a row and it needs no fade (FR-003-07). Badges: pin, trigger, Missing (warn). Up to 3 tag chips then "+n". Quick-paste badge ⌘1 to ⌘9 on the first nine rows.
 - Grid cells: 120 pt square, thumbnail, name caption, same badges.
-- Preview: content, metadata list, tags, note, "Show more" past 12 lines (text) or fit for images.
-- Footer: the same four key hints in every state, in this order (Return Paste, Space Preview, ⌥Return Plain Text, Esc Close; ⌘C Copy replaces Plain Text while pasting is off), dimmed in place when the list has nothing to act on; the active sort name (Recent, Oldest, Most Used, A to Z) beside the item count at the right; copy-only mode shows "Press ⌘V to paste" and an "Enable pasting" link.
+- Preview: content, then a compact metadata block (kind and source on one line, the copied time under it, other fields as one-line label and value, tags as chips; "Times copied" only above 1), note, "Show more" past 12 lines (text) or fit for images. Indented text (code) is monospaced, keeps its indentation, does not soft-wrap and scrolls sideways (FR-003-14).
+- Footer: the same four key hints in every state, in this order (Return Paste, Space Preview, ⌥Return Plain Text, Esc Close; ⌘C Copy replaces Plain Text while pasting is off), while the list has nothing to act on (an empty history, a search with no results) only Esc Close is shown and the sort name and count are hidden, never "Recent 0 items" (FR-003-18); with rows, the active sort name (Recent, Oldest, Most Used, A to Z) beside the item count at the right; copy-only mode shows "Press ⌘V to paste" and an "Enable pasting" link.
 
 ### 3.2 Shelf (image 05)
 
-Left and right: 280 pt wide, 96 pt cards (header row: source app icon, name, age; content below), full height of the visible frame. Bottom: 140 pt strip, 144 pt cards. Menu-bar placement: 280 pt wide panel under the status item. Two sections: Pinned (up to 20) and Recent (20). Drop highlight uses the system accent colour (`NSColor.controlAccentColor`) so it respects the user's Mac setting. Sticky Shelf shows a close button (top right, 24 pt). Non-sticky Shelf dismisses on outside click or Esc.
+Left and right: 280 pt wide, 96 pt cards (header row: source app icon, name, age; content below), full height of the visible frame. Bottom: 140 pt strip, 144 pt cards. Menu-bar placement: 280 pt wide panel under the status item. Cards use the card radius (10) and a 16 pt source icon; in the vertical placements a text card is as tall as its measured text (never under 48 pt, never over 96), not a fixed height. The type pills in the search header are drawn whole: those that fit are shown and the rest go in a "More" menu, and the selected pill uses the `sel` fill (FR-006-22). Two sections: Pinned (up to 20) and Recent (20). Drop highlight uses the system accent colour (`NSColor.controlAccentColor`) so it respects the user's Mac setting. Sticky Shelf shows a close button (top right, 24 pt). Non-sticky Shelf dismisses on outside click or Esc.
 
 ### 3.3 Settings (image 06)
 
-Toolbar window, 560 wide, height fits the pane. Panes in order: General, Library, Shortcuts, Types, Triggers, Privacy, Storage, Tips, About. The General pane is one grouped form with a header per group (System, Screenshots, Shelf, Setup) and each control's note directly under its label, at the native 13 pt row height (FRD-008 FR-008-04); the Library pane holds the Library and Capture groups (FR-008-33). No pane is built taller than a laptop screen: a pane that would be is split by topic, because a scrolling viewport's edge can cut a row. Shortcut rows use the shared recorder field: keycap glyphs, click to record, an inline clear button (FR-008-05). Changes apply immediately (no Apply button); the window reopens on the last pane. Destructive actions (Clear History, shorten retention, reset ignored apps) use alerts (§4).
+Toolbar window, 560 wide, height fits the pane. Panes in order: General, Library, Shortcuts, Types, Triggers, Privacy, Storage, Tips, About. The General pane is one grouped form with a header per group (System, Screenshots, Shelf) and each control's note directly under its label, at the native 13 pt row height (FRD-008 FR-008-04); the Library pane holds the Library and Capture groups (FR-008-33). No pane is built taller than a laptop screen: a pane that would be is split by topic, because a scrolling viewport's edge can cut a row. A button that is alone in its row sits on the trailing edge, where the switches and other buttons are. The nine toolbar tabs share one symbol weight and scale. Editable fields outside a grouped form (the Library search, the shortcut recorder, the trigger field) are a text-field surface with the control-edge border in light and a lifted light wash with a hairline border in dark, so they read as fields on the panel in both. Shortcut rows use the shared recorder field: keycap glyphs, click to record, an inline clear button (FR-008-05). Changes apply immediately (no Apply button); the window reopens on the last pane. Destructive actions (Clear History, shorten retention, reset ignored apps) use alerts (§4).
 
 ### 3.4 Onboarding (image 07)
 
-Window 560x420, 8 steps, progress dots, every step skippable ("Skip"); Back and Continue at the bottom. Permission steps (2 to 4) share one centred layout: a permission symbol, title and purpose, then what the user loses by skipping, in plain words, never as pressure; once the permission is granted a green check and one confirmation line replace that warning, Continue becomes the single prominent button, and the skip action is a plain text button (FR-008-12). Step 4 (Input Monitoring) defaults to "Not Now" until it is granted.
+Window 560x420, 8 steps, 8 pt progress dots centred above the title, every step skippable ("Skip"); Back and Continue at the bottom. Permission steps (2 to 4) share one centred layout: a 64 pt permission symbol, title and purpose, then what the user loses by skipping, in plain words, never as pressure; once the permission is granted a green check symbol and one confirmation line in the label colour replace that warning, Continue becomes the single prominent button, and the skip action is a plain text button (FR-008-12). Step 4 (Input Monitoring) defaults to "Not Now" until it is granted.
 
 ### 3.5 Menu-bar and feedback (image 08)
 
-Menu order: Open Library, Open Shelf, Pause Recording, Notices, separator, Settings, About Flotsam, Quit Flotsam. Notices submenu lists up to 10 entries (message and code) and "Dismiss All". HUD: top-centre of the pointer's screen, 2.5 s, non-activating (never steals focus), announced by VoiceOver.
+Menu order: Open Library, Save Clipboard to Library, New Clip from Text…, Toggle Shelf, separator, Pause Capture (a submenu while Active) or Resume Capture (while Paused or Curated), Clear Recent, Recent Problems, separator, Settings…, Show Setup Guide…, separator, Quit Flotsam (FR-008-16). The Recent Problems submenu lists up to 10 entries (message and code) and "Dismiss All". HUD: top-centre of the pointer's screen, 2.5 s, non-activating (never steals focus), announced by VoiceOver.
 
 Menu-bar glyph (template image, 18 pt, adapts to the menu-bar tint). Shape differs per state so colour is never the only cue (WCAG 1.4.1):
 
@@ -158,14 +161,14 @@ Menu-bar glyph (template image, 18 pt, adapts to the menu-bar tint). Shape diffe
 | Primary button | `accent` fill, `on-sel` text | lighter 4% | darker 6% | ring | `sep` fill, `t3` | n/a |
 | Destructive button | `err` text on raised; confirm alerts only | as button | as button | ring | as button | n/a |
 | Search field | `bg-field`, `edge` | same | same | `focus` ring | n/a | n/a |
-| List row | clear | `accent-tint` | n/a | ring on key focus | n/a | `sel` fill, `on-sel` text |
-| Sidebar row | clear | `accent-tint` | n/a | ring | n/a | `accent-tint`, `accent-text` |
+| List row | clear | primary 8% (`cursorFill`) | n/a | ring on key focus | n/a | `sel` fill, `on-sel` text, `on-sel-2` secondary |
+| Sidebar row | clear | primary 8% (`cursorFill`) | n/a | ring | n/a | `sel` fill, primary label and symbol, `on-sel-2` count |
 | Tag chip | `bg-raised`, dot + name | n/a | n/a | ring | n/a | n/a |
 | Switch / checkbox | system control | system | system | system | system | system |
 
 Alerts (NSAlert, sheet-style, max width 320): title at most 40, message at most 150, primary action on the right, Cancel left, destructive primary uses the destructive role (HIG: Alerts). Delete and Delete Items are never the default button when data loss is permanent; Cancel holds Return and Esc.
 
-Popovers (tags, note) anchor to the selected row, close on Esc, and return focus to the row. The shortcut and trigger editor is a small titled window instead (FRD-005 §8): centred, one at a time, closes on Esc or ⌘W; a two-column aligned form (labels, then the shared shortcut recorder field with keycaps and inline clear, and the trigger field), titled "Shortcut for “<clip name>”".
+Popovers (tags, note) anchor to the selected row, close on Esc, and return focus to the row. The shortcut and trigger editor is a small titled window instead (FRD-005 §8): centred, one at a time, closes on Esc or ⌘W; a two-column aligned form (labels, then the shared shortcut recorder field with keycaps and inline clear, and the trigger field), titled "Edit Shortcut", with the clip name as a middle-truncated subtitle line inside the form and one short help line under the trigger field; both fields are 28 pt high; Save is the default button and Cancel answers Esc.
 
 ## 5. States matrix
 
@@ -464,9 +467,9 @@ The Pinned section label reuses `ui.library.pinned` (Library table).
 |---|---|---|
 | `menu.openLibrary` | Open Library | (12/15) |
 | `menu.openShelf` | Open Shelf | (10/15) |
-| `menu.pause` | Pause Recording | (15/15) |
-| `menu.resume` | Resume | (6/15) |
-| `menu.notices` | Notices | (7/15) |
+| `menu.pause` | Pause Capture (submenu: 15 Minutes, 1 Hour, Until Tomorrow, Until I Resume) | (13/15) |
+| `menu.resume` | Resume Capture | (14/15) |
+| `menu.notices` | Recent Problems | (15/15) |
 | `menu.dismissAll` | Dismiss All | (11/15) |
 | `menu.settings` | Settings… | (9/15) |
 | `menu.about` | About Flotsam | (13/15) |

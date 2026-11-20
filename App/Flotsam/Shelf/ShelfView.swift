@@ -19,8 +19,6 @@ struct ShelfView: View {
 
     private var horizontal: Bool { ShelfLayout.isHorizontal(placement) }
 
-    private static let pillFadeWidth: CGFloat = 36
-
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
@@ -82,44 +80,67 @@ struct ShelfView: View {
     }
 
     /// All, then each type that has an item, in the Library's Types order. A pill is a button, so it is also reachable
-    /// by Tab and VoiceOver; ⌥↑ / ⌥↓ step through them without leaving the field.
+    /// by Tab and VoiceOver; ⌥↑ / ⌥↓ step through them without leaving the field. The pills that fit are drawn whole and the
+    /// rest are in a "More" menu, so no pill is ever cut off at the edge (FR-006-22).
     private var typePills: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                pill(title: ShelfText.string(ShelfText.filterAll), kind: nil)
-                ForEach(model.availableKinds, id: \.self) { kind in
-                    pill(title: ShelfText.typeTitle(kind), kind: kind)
+        let entries: [(title: String, kind: ItemKind?)] =
+            [(ShelfText.string(ShelfText.filterAll), nil)] + model.availableKinds.map { (ShelfText.typeTitle($0), $0) }
+        let moreTitle = ShelfText.string(ShelfText.moreTypes)
+        return GeometryReader { proxy in
+            let shown = ShelfPillMetrics.visibleCount(
+                titles: entries.map(\.title), moreTitle: moreTitle, available: proxy.size.width)
+            HStack(spacing: ShelfPillMetrics.spacing) {
+                ForEach(Array(entries.prefix(shown).enumerated()), id: \.offset) { _, entry in
+                    pill(title: entry.title, kind: entry.kind)
                 }
+                if shown < entries.count { morePill(moreTitle, hidden: Array(entries.dropFirst(shown))) }
             }
-            // Room at the end, so the last pill clears the fade once the row is scrolled all the way.
-            .padding(.trailing, Self.pillFadeWidth)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
         }
         .frame(height: ShelfLayout.searchRowHeight)
-        // A pill cut off at the trailing edge fades out instead of ending mid-word, which says the row scrolls.
-        .mask(
-            HStack(spacing: 0) {
-                Rectangle()
-                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
-                    .frame(width: Self.pillFadeWidth)
-            })
     }
 
     private func pill(title: String, kind: ItemKind?) -> some View {
         let selected = model.kindFilter == kind
-        return Button { model.setKindFilter(kind) } label: {
-            Text(verbatim: title).font(.caption).lineLimit(1)
-                .padding(.horizontal, 10).padding(.vertical, 4)
-                .background(Capsule().fill(selected ? Color.accentColor.opacity(0.28) : Color.primary.opacity(0.06)))
+        return Button { model.setKindFilter(kind) } label: { pillLabel(title, selected: selected) }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// The overflow pill: a menu of the types that did not fit. It reads as selected while one of them is the filter.
+    private func morePill(_ title: String, hidden: [(title: String, kind: ItemKind?)]) -> some View {
+        let selected = hidden.contains { $0.kind != nil && $0.kind == model.kindFilter }
+        return Menu {
+            ForEach(Array(hidden.enumerated()), id: \.offset) { _, entry in
+                Toggle(entry.title, isOn: Binding(
+                    get: { model.kindFilter == entry.kind }, set: { _ in model.setKindFilter(entry.kind) }))
+            }
+        } label: {
+            HStack(spacing: 2) {
+                Text(verbatim: title).font(.caption).lineLimit(1)
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .semibold)).accessibilityHidden(true)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Capsule().fill(selected ? DesignToken.selectionFill : Color.primary.opacity(0.06)))
         }
+        .menuStyle(.button)
         .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func pillLabel(_ title: String, selected: Bool) -> some View {
+        Text(verbatim: title).font(.caption).lineLimit(1)
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Capsule().fill(selected ? DesignToken.selectionFill : Color.primary.opacity(0.06)))
     }
 
     /// The drop zone while an acceptable drag is over the panel (FR-006-12). It never takes clicks.
     private var dropZone: some View {
-        RoundedRectangle(cornerRadius: 10)
+        RoundedRectangle(cornerRadius: DesignToken.Radius.card)
             .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-            .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: DesignToken.Radius.card))
             .overlay { Text(verbatim: ShelfText.string(ShelfText.dropZone)).font(.callout.bold()).foregroundStyle(Color.accentColor) }
             .padding(4)
             .allowsHitTesting(false)
@@ -130,7 +151,7 @@ struct ShelfView: View {
     /// the horizontal placements and along the bottom of the vertical ones, where `ShelfLayout.shareZone` tests the
     /// pointer. It never takes clicks; the panel's drag destination takes the drop.
     private var shareZone: some View {
-        let shape = RoundedRectangle(cornerRadius: 10)
+        let shape = RoundedRectangle(cornerRadius: DesignToken.Radius.card)
         let label = VStack(spacing: 4) {
             Image(systemName: "square.and.arrow.up")
             Text(verbatim: ShelfText.string(ShelfText.shareZone)).font(.caption.bold()).multilineTextAlignment(.center)
@@ -222,7 +243,7 @@ struct ShelfView: View {
     private func cardView(_ card: ShelfCardPresentation) -> some View {
         var size = ShelfLayout.cardSize(for: placement, showsSearch: model.showsSearch)
         // The vertical placements size a text card to its text (FR-006-07); the horizontal strip keeps its fixed height.
-        if !horizontal { size.height = card.verticalHeight }
+        if !horizontal { size.height = ShelfCardMetrics.height(of: card) }
         return ShelfCardView(card: card, model: model, size: size, horizontal: horizontal, thumbnail: thumbnail, dragOut: dragOut)
     }
 }
@@ -238,7 +259,7 @@ private struct ShelfCardView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     private var selected: Bool { model.selection.contains(card.id) }
-    private let shape = RoundedRectangle(cornerRadius: 10)
+    private let shape = RoundedRectangle(cornerRadius: DesignToken.Radius.card)
 
     /// Header row over a content area; the header never overlaps the content (hill-climb r1, TASK-529).
     var body: some View {
@@ -291,7 +312,7 @@ private struct ShelfCardView: View {
     private var header: some View {
         HStack(spacing: 4) {
             Image(nsImage: SourceAppIcons.icon(forBundleId: card.sourceBundleId))
-                .resizable().frame(width: 14, height: 14).accessibilityHidden(true)
+                .resizable().interpolation(.high).frame(width: 16, height: 16).accessibilityHidden(true)
             if let source = card.sourceName {
                 Text(verbatim: source).font(.caption.weight(.medium)).foregroundStyle(.secondary).lineLimit(1)
             }
@@ -312,12 +333,12 @@ private struct ShelfCardView: View {
                     if let image { Image(nsImage: image).resizable().scaledToFill() }
                     else { Image(systemName: symbolName(for: card.kind)).font(.title2).foregroundStyle(.secondary) }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
         case .swatch:
             // A big swatch with its value under it.
             VStack(alignment: .leading, spacing: 4) {
-                RoundedRectangle(cornerRadius: 6).fill(Self.color(from: card.text) ?? Color.secondary)
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5))
+                RoundedRectangle(cornerRadius: DesignToken.Radius.chip).fill(Self.color(from: card.text) ?? Color.secondary)
+                    .overlay(RoundedRectangle(cornerRadius: DesignToken.Radius.chip).strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.5))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if let text = card.text { Text(verbatim: text).font(.caption.monospaced()).lineLimit(1) }
             }

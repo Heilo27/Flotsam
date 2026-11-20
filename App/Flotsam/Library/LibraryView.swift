@@ -71,7 +71,7 @@ struct LibraryView: View {
             .padding(.horizontal, 10)
             .frame(height: 36)
             // The strongest control in the header (DESIGN 2.1): the shared field chrome reads as a field in both appearances.
-            .fieldChrome(isActive: searchFocused, cornerRadius: 8)
+            .fieldChrome(isActive: searchFocused)
             Button {
                 model.toggleViewMode()
             } label: {
@@ -149,6 +149,7 @@ struct LibraryStateView: View {
 struct LibrarySidebar: View {
     let model: LibraryViewModel
     let organize: OrganizeCoordinator
+    @State private var contentHeight: CGFloat = 0
 
     var body: some View {
         let entries = model.sidebarEntries
@@ -158,6 +159,11 @@ struct LibrarySidebar: View {
         // so the edge never slices a row: it falls between two (TASK-529 round 3; the round 2 margins and fade only
         // changed where the last row ended at the far end of the scroll, never what the edge cut at rest).
         GeometryReader { proxy in
+            let viewport = Self.snappedHeight(fitting: proxy.size.height)
+            // More lines than the viewport holds: the last visible line fades and a line of room follows the content, so
+            // the clipped end shows it scrolls (compact layout, TASK-529 round 3) and the far end of the scroll still
+            // lands on a line.
+            let overflows = contentHeight > viewport - Self.topMargin
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     section(.top, title: nil, entries)
@@ -166,11 +172,14 @@ struct LibrarySidebar: View {
                     section(.apps, title: LibraryText.string(LibraryText.sectionApps), entries)
                 }
                 .scrollTargetLayout()
+                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { contentHeight = $0 }
             }
             .scrollTargetBehavior(.viewAligned)
             .contentMargins(.horizontal, 8, for: .scrollContent)
             .contentMargins(.top, Self.topMargin, for: .scrollContent)
-            .frame(height: Self.snappedHeight(fitting: proxy.size.height))
+            .contentMargins(.bottom, overflows ? Self.lineHeight : 0, for: .scrollContent)
+            .frame(height: viewport)
+            .fadingBottomEdge(overflows ? LibraryScrollFade.height : 0)
         }
     }
 
@@ -194,26 +203,44 @@ struct LibrarySidebar: View {
             }
             // A folded Types section still shows the type that is the active filter, so the highlight never disappears.
             ForEach(collapsed ? inSection.filter { $0.filter == model.filter } : inSection) { entry in
+                let selected = model.filter == entry.filter
                 Button { model.select(filter: entry.filter) } label: {
-                    HStack {
-                        Text(verbatim: entry.title).lineLimit(1)
+                    HStack(spacing: 6) {
+                        Image(systemName: Self.symbol(for: entry.filter))
+                            .font(.system(size: 12)).foregroundStyle(selected ? .primary : .secondary)
+                            .frame(width: 16).accessibilityHidden(true)
+                        Text(verbatim: entry.title).lineLimit(1).foregroundStyle(selected ? .primary : .secondary)
                         Spacer(minLength: 4)
                         // The counts are the whole history's, so they go while the search has text (FR-003-12).
                         if model.showsSidebarCounts {
-                            Text(verbatim: entry.count.formatted()).foregroundStyle(.secondary).monospacedDigit()
+                            Text(verbatim: entry.count.formatted()).foregroundStyle(selected ? AnyShapeStyle(DesignToken.onSelectionSecondary) : AnyShapeStyle(.tertiary)).monospacedDigit()
                         }
                     }
                     .font(.system(size: 13))
                     .opacity(entry.isDimmed ? 0.5 : 1)
                     .padding(.horizontal, 6)
                     .frame(height: Self.lineHeight)
-                    .background(model.filter == entry.filter ? Color.accentColor.opacity(0.25) : .clear, in: RoundedRectangle(cornerRadius: 5))
+                    .background(selected ? DesignToken.selectionFill : .clear, in: RoundedRectangle(cornerRadius: DesignToken.Radius.row))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(model.filter == entry.filter ? .isSelected : [])
                 .contextMenu { tagMenu(for: entry) }
             }
+        }
+    }
+
+    /// The small symbol that leads a sidebar row: the kind's own symbol for a type, so the sidebar and the list agree.
+    private static func symbol(for filter: LibraryFilter) -> String {
+        switch filter {
+        case .all: "tray"
+        case .pinned: "pin"
+        case .kind(let kind): symbolName(for: kind)
+        case .tag: "tag"
+        case .sourceApp: "app"
+        case .hasNote: "note.text"
+        case .hasShortcut: "keyboard"
+        case .videos: "film"
         }
     }
 
@@ -252,13 +279,13 @@ enum LibraryScrollFade {
 }
 
 extension View {
-    /// Fades the last `LibraryScrollFade.height` points to clear. Pair it with a bottom content margin of at least that, so the
+    /// Fades the last `height` points to clear (0: no fade). Pair it with a bottom content margin of at least that, so the
     /// final row can be scrolled out of the fade.
-    func fadingBottomEdge() -> some View {
+    func fadingBottomEdge(_ height: CGFloat) -> some View {
         mask(
             VStack(spacing: 0) {
                 Rectangle()
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: LibraryScrollFade.height)
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: height)
             })
     }
 }
@@ -295,7 +322,7 @@ struct LibraryFooterView: View {
                 HStack(spacing: 4) {
                     Text(verbatim: hint.key).font(.caption.weight(leading ? .semibold : .regular))
                         .padding(.horizontal, 4)
-                        .background(leading ? Color.accentColor.opacity(0.25) : Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 3))
+                        .background(leading ? DesignToken.selectionFill : DesignToken.cursorFill, in: RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
                     Text(verbatim: hint.label).font(.caption.weight(leading ? .semibold : .regular))
                         .foregroundStyle(leading ? Color.primary : Color.secondary)
                 }
@@ -310,8 +337,9 @@ struct LibraryFooterView: View {
             }
             Spacer()
             // The active sort, then the count (FR-004-12, FR-003-18); both come from `LibraryFooter`.
-            Text(verbatim: footer.sortName).font(.caption).foregroundStyle(.secondary)
-            Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary)
+            // Both are empty when there is nothing to count (no rows, a search with no results), and then draw nothing (FR-003-18).
+            if !footer.sortName.isEmpty { Text(verbatim: footer.sortName).font(.caption).foregroundStyle(.secondary) }
+            if !footer.countText.isEmpty { Text(verbatim: footer.countText).font(.caption).foregroundStyle(.secondary) }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)

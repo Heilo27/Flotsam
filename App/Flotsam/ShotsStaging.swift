@@ -18,13 +18,13 @@ import Foundation
 final class ShotsStaging {
     enum Screen: String {
         case library, libraryCompact = "library-compact", libraryEmpty = "library-empty", shelf
-        case menu, menuStaged = "menu-staged", settings, onboarding, shortcut
+        case menu, menuStaged = "menu-staged", settings, settingsLibrary = "settings-library", onboarding, shortcut
 
         /// Surfaces that need the fixture items.
         var needsItems: Bool {
             switch self {
             case .library, .libraryCompact, .libraryEmpty, .shelf, .shortcut: true
-            case .menu, .menuStaged, .settings, .onboarding: false
+            case .menu, .menuStaged, .settings, .settingsLibrary, .onboarding: false
             }
         }
     }
@@ -77,7 +77,7 @@ final class ShotsStaging {
         settings.set(screen == .libraryCompact ? LibraryLayoutMode.compact : .standard, for: SettingKeys.libraryLayout)
         settings.set(screen == .library ? LibraryPreviewPreset.open : .closed, for: SettingKeys.libraryPreviewPreset)
         settings.set(LibraryBackground.system, for: SettingKeys.libraryBackground)
-        settings.set(SettingsPane.general, for: SettingKeys.settingsLastPane)
+        settings.set(screen == .settingsLibrary ? SettingsPane.library : .general, for: SettingKeys.settingsLastPane)
         if screen == .onboarding {
             settings.set(false, for: SettingKeys.onboardingCompleted)
             container.onboardingProgress.save(.clipboard)
@@ -93,7 +93,7 @@ final class ShotsStaging {
     }
 
     private func stage(statusItem: StatusItemController) async {
-        if screen.needsItems || screen == .menu || screen == .menuStaged || screen == .settings {
+        if screen.needsItems || screen == .menu || screen == .menuStaged || screen == .settings || screen == .settingsLibrary {
             guard await waitFor({ self.container.library != nil && self.container.shelf != nil && self.container.database != nil }) else {
                 return fail("the database or the panels did not come up")
             }
@@ -113,7 +113,7 @@ final class ShotsStaging {
             container.shelf?.toggle()
             await settle(seconds: 1.2)
             await finish(window: newWindow(excluding: before))
-        case .settings:
+        case .settings, .settingsLibrary:
             container.actions.openSettings?()
             await settle(seconds: 1.0)
             await finish(window: newWindow(excluding: before))

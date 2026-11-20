@@ -87,7 +87,11 @@ private final class SettingsTabViewController: NSTabViewController {
         host.sizingOptions = [.preferredContentSize]
         let tab = NSTabViewItem(viewController: host)
         tab.label = item.label
-        tab.image = NSImage(systemSymbolName: item.symbolName, accessibilityDescription: item.label)
+        // One weight, scale and rendering for all nine tabs (FR-008-03, hill-climb r3): the plain outline symbol, never a
+        // mix of heavy and light glyphs.
+        let configuration = NSImage.SymbolConfiguration(pointSize: 17, weight: .regular, scale: .large)
+        tab.image = NSImage(systemSymbolName: item.symbolName, accessibilityDescription: item.label)?
+            .withSymbolConfiguration(configuration)
         tab.identifier = item.pane.rawValue
         return tab
     }

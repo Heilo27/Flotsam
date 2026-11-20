@@ -43,16 +43,16 @@ struct ShortcutRecorderField: View {
                             .font(.system(size: 12, weight: .medium))
                             .padding(.horizontal, 5)
                             .frame(minWidth: 20, minHeight: 20)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: DesignToken.Radius.chip))
                     }
                 } else {
                     Text(.shortcutRecord).foregroundStyle(.secondary)
                 }
             }
-            .frame(minWidth: 150, minHeight: 24, alignment: .leading)
+            .frame(minWidth: 150, minHeight: 28, alignment: .leading)
             .padding(.horizontal, 6)
             .fieldChrome(isActive: recorder.isRecording)
-            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .contentShape(RoundedRectangle(cornerRadius: DesignToken.Radius.control))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(SettingsString.shortcutRecord.text)

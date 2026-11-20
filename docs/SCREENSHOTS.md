@@ -71,6 +71,7 @@ domain, deleted after each pass); `FLOTSAM_DATA_DIR` is its own temporary absolu
 | 04-shelf | shelf | Shelf open with cards (pinned and recent) |
 | 05-menu-bar-menu | menu | The real menu-bar menu, opened and captured |
 | 06-settings-general | settings | Settings, General pane |
+| 06b-settings-library | settings-library | Settings, Library pane (added in round 3; the other numbers did not move) |
 | 07-onboarding | onboarding | Onboarding step 2 (clipboard access) |
 | 08-shortcut-editor | shortcut | Shortcut and Trigger window for the item that has a shortcut |
 

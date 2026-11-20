@@ -81,8 +81,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             case .toggleShelf(let chord): menu.addItem(row("ui.menu.toggleShelf", chord: chord, run: container.actions.toggleShelf))
             case .separator: menu.addItem(.separator())
             case .captureToggle(let titleKey, let next):
-                menu.addItem(row(titleKey, run: { [container] in container.settings.set(next, for: SettingKeys.captureMode) }))
-            case .pauseFor: menu.addItem(pauseForItem())
+                // Pausing has a length, so it is a submenu; resuming is one click.
+                if next == .paused { menu.addItem(pauseCaptureItem(titleKey: titleKey, untilResumed: next)) }
+                else { menu.addItem(row(titleKey, run: { [container] in container.settings.set(next, for: SettingKeys.captureMode) })) }
             case .clearRecent: menu.addItem(clearRecentItem())
             case .notices: menu.addItem(noticesItem())
             case .settings: menu.addItem(row("ui.menu.settings", key: ",", run: container.actions.openSettings))
@@ -92,14 +93,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
     }
 
-    /// Pause For submenu (FR-007-12, FR-008-16): each choice pauses capture and sets when it ends.
-    private func pauseForItem() -> NSMenuItem {
-        let parent = NSMenuItem(title: FlotsamStrings.text(forKey: "ui.menu.pauseFor") ?? "", action: nil, keyEquivalent: "")
+    /// Pause Capture submenu (FR-007-12, FR-008-16): each timed choice pauses capture and sets when it ends; "Until I Resume"
+    /// pauses with no end, writing the mode the toggle row names.
+    private func pauseCaptureItem(titleKey: String, untilResumed: CaptureMode) -> NSMenuItem {
+        let parent = NSMenuItem(title: FlotsamStrings.text(forKey: titleKey) ?? "", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         for duration in PauseDuration.allCases {
             submenu.addItem(row(duration.titleKey, run: { [container] in container.timedPause.pause(for: duration) }))
         }
+        submenu.addItem(row("ui.menu.pauseUntilResume", run: { [container] in container.settings.set(untilResumed, for: SettingKeys.captureMode) }))
         parent.submenu = submenu
         return parent
     }

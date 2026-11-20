@@ -73,18 +73,18 @@ struct Frd008ContractMenuTests {
         #expect(entries == [
             .openLibrary(openLibraryChord), .saveClipboard(saveClipboardChord), .addClip(.none), .toggleShelf(toggleShelfChord),
             .separator,
-            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .pauseFor, .clearRecent, .notices,
+            .captureToggle(titleKey: "ui.menu.pauseCapture", next: .paused), .clearRecent, .notices,
             .separator,
             .settings, .setupGuide,
             .separator,
             .quit,
         ])
-        #expect(entries.count == 14)
+        #expect(entries.count == 13)
         #expect(["ui.menu.openLibrary", "ui.menu.saveClipboard", "ui.menu.addClip", "ui.menu.toggleShelf", "ui.menu.pauseCapture",
-                 "ui.menu.pauseFor", "ui.menu.clearRecent", "ui.menu.notices", "ui.menu.settings", "ui.menu.setupGuide",
+                 "ui.menu.pauseUntilResume", "ui.menu.clearRecent", "ui.menu.notices", "ui.menu.settings", "ui.menu.setupGuide",
                  "ui.menu.quit"].map(title)
-            == ["Open Library", "Save Current Clipboard", "New Clip…", "Toggle Shelf", "Pause Capture", "Pause For", "Clear Recent",
-                "Recent Notices", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
+            == ["Open Library", "Save Clipboard to Library", "New Clip from Text…", "Toggle Shelf", "Pause Capture", "Until I Resume",
+                "Clear Recent", "Recent Problems", "Settings…", "Show Setup Guide…", "Quit Flotsam"])
     }
 
     // OC-8127 (key equivalents). Red if the Settings or Quit key equivalent is changed or dropped.
@@ -226,7 +226,7 @@ struct Frd008ContractMenuTests {
         let before = MenuBarModel.entries(settings: settings)
         settings.set(false, for: SettingKeys.shelfEnabled)
         let after = MenuBarModel.entries(settings: defaults.store())
-        #expect(before.count == 14)
+        #expect(before.count == 13)
         #expect(after.count == before.count - 1)
         #expect(!after.contains(.toggleShelf(toggleShelfChord)))
         #expect(after == before.filter { $0 != .toggleShelf(toggleShelfChord) })

@@ -278,7 +278,7 @@ final class ShelfPanelController: NSObject, ShelfPasteHost {
         return ShelfLayout.contentHeight(
             pinnedCount: count(.pinned), recentCount: count(.recent),
             headerHeight: model.showsSearch ? ShelfLayout.searchHeaderHeight(for: placement) : 0,
-            cardsHeight: sections.flatMap(\.cards).reduce(0) { $0 + $1.verticalHeight })
+            cardsHeight: sections.flatMap(\.cards).reduce(0) { $0 + ShelfCardMetrics.height(of: $1) })
     }
 
     // MARK: Screens

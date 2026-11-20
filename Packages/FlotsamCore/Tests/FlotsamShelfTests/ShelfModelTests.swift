@@ -108,7 +108,7 @@ import Testing
         let rig = ShelfRig(rows: [makeShelfRow(1, primary: "line one"), makeShelfRow(2, primary: "fallback")], details: details)
         await rig.openSticky()
         let cards = rig.model.sections()[0].cards
-        #expect(cards[0].text == "line one\nline two\nline three")
+        #expect(cards[0].text == "line one\nline two\nline three\nline four")
         #expect(cards[1].text == "fallback")
     }
 

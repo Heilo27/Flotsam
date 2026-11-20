@@ -2,10 +2,9 @@ import Foundation
 import Testing
 
 // TASK-463 Worf blind QA (FRD-005 section 8 "Variable help line", FR-005-17, OC-5055).
-// The variable help caption must show whether or not the trigger field has an inline error. The editor view has no
-// render harness, so this checks the view's structure: the caption must be a direct child of the trigger row's VStack
-// (a sibling of the TextField), never nested inside the `if let message ... else { ... }` that swaps the error
-// for the trigger help. Whitespace-independent, unlike a text match on indentation.
+// The variable help (behind its (?) button, FR-005-09) must be reachable whether or not the trigger field has an inline error. The editor view has no
+// render harness, so this checks the view's structure: the help button must sit in the trigger row beside the TextField,
+// never nested inside the `if let message ... else { ... }` that swaps the error for the trigger help. Whitespace-independent, unlike a text match on indentation.
 
 private func triggerRowBody() throws -> String {
     var url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
@@ -34,17 +33,18 @@ private func depth(of marker: String, in text: String) throws -> Int {
 
 @Suite("TASK-463 (Worf): variable help caption visibility (OC-5055)")
 struct Task463WorfVariableHelpVisibilityTests {
-    @Test("the caption is a direct child of the trigger row, beside the field, outside the error/help branch")
+    @Test("the variables help button is beside the trigger field, outside the error/help branch")
     func captionIsUnconditional() throws {
-        // given: the trigger row source
+        // given: the trigger row source (FR-005-09: the reference sits behind a (?) button beside the field, hill-climb r2)
         let body = try triggerRowBody()
-        // when: depths of the field, the error branch and the caption are measured
+        // when: depths of the field, the help button and the error branch are measured
         let field = try depth(of: "TextField(", in: body)
+        let helpButton = try depth(of: "variablesHelpButton", in: body)
         let errorBranch = try depth(of: "if let message = model.triggerErrorMessage", in: body)
-        let caption = try depth(of: "Text(.editorVariablesHelp)", in: body)
-        // then: all three are siblings, so the caption shows with a trigger error and without one
-        #expect(caption == field, "caption nested at depth \(caption), field at \(field)")
-        #expect(caption == errorBranch, "caption is not a sibling of the error/help branch")
+        // then: the button is a sibling of the field in the same row, and the error/help branch is a sibling of that row,
+        // so the button (and the reference behind it) shows with a trigger error and without one
+        #expect(helpButton == field, "help button nested at depth \(helpButton), field at \(field)")
+        #expect(errorBranch < field, "help button is inside the error/help branch")
     }
 
     @Test("the caption is rendered exactly once in the editor row (no duplicate in a branch)")

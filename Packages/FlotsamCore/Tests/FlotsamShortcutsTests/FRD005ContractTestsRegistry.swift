@@ -165,7 +165,7 @@ private struct Rig {
         #expect(rig.registry.status(of: .saveClipboard) == .unbound)
         #expect(rig.registrar.liveChords == [Chord(keyCode: 9, modifiers: [.control, .command])])
         let rows = MenuBarModel.entries(settings: settings)
-        #expect(rows.count == 14)
+        #expect(rows.count == 13)
         #expect(Array(rows.prefix(4)) == [
             .openLibrary(.chord(Chord(keyCode: 9, modifiers: [.control, .command]))), .saveClipboard(.none), .addClip(.none),
             .toggleShelf(.none),

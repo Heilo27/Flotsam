@@ -90,11 +90,12 @@ public struct ShelfCardPresentation: Equatable, Identifiable, Sendable {
         }
     }
 
-    /// The card's height in the vertical placements: a text card is sized to its text, every other card is the standard height
-    /// (`ShelfLayout.cardHeight(forText:)`, FR-006-07).
+    /// The card's height in the vertical placements when it has no text to measure: every card but a text card is the standard
+    /// height, and a text card whose text is absent is the minimum. A text card with text is measured by the app at the real
+    /// width and font (`ShelfLayout.cardHeight(forLineCount:lineHeight:)`, FR-006-07).
     public var verticalHeight: CGFloat {
-        if case .kindIcon = visual { return ShelfLayout.cardHeight(forText: text ?? String()) }
-        return ShelfLayout.cardHeight(forText: nil)
+        if case .kindIcon = visual { return ShelfLayout.textCardMinimumHeight }
+        return ShelfLayout.cardHeight
     }
 
     /// The VoiceOver action's name, in the card's current state: "Pin" on an unpinned card, "Unpin" on a pinned one.

@@ -24,11 +24,7 @@ final class ItemBindingsEditorWindowController: NSObject, NSWindowDelegate {
         let model = ItemBindingsEditorModel(itemId: itemId, services: services)
         let host = NSHostingController(
             rootView: ItemBindingsEditorView(
-                model: model, close: { [weak self] in self?.closeCurrent() },
-                nameLoaded: { [weak self] name in
-                    // The title names the clip being edited ("Shortcut for “…”"), once it is loaded.
-                    self?.window?.title = String(format: SettingsString.editorWindowNamed.text, name)
-                }))
+                model: model, close: { [weak self] in self?.closeCurrent() }))
         host.sizingOptions = [.preferredContentSize]
         host.title = SettingsString.editorWindow.text
         let window = EditorWindow(contentViewController: host)

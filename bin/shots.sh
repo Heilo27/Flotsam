@@ -24,6 +24,7 @@ SCREENS=(
   "04-shelf:shelf"
   "05-menu-bar-menu:menu"
   "06-settings-general:settings"
+  "06b-settings-library:settings-library"
   "07-onboarding:onboarding"
   "08-shortcut-editor:shortcut"
 )
@@ -164,7 +165,10 @@ pass() {
       # main display and cut the same rectangle out of it. Same pixels, same backdrop.
       captured=1; result="ok"; used="full-display capture + sips crop"
     elif screencapture -x -o -l "$wid" "$png" 2>>"$ctl/capture.log" && [[ -s "$png" ]]; then
-      captured=1; result="ok-window"; used="window-only capture (screencapture -l)"
+      # A window capture the caller asked for (SHOTS_CAPTURE=window) is its own result: it is not a fallback, so it must
+      # never be reported as "region capture failed".
+      captured=1; used="window-only capture (screencapture -l)"
+      if [[ "${SHOTS_CAPTURE:-region}" == "window" ]]; then result="ok-window-requested"; else result="ok-window"; fi
     fi
     echo "$used" > "$OUT/.mode"
     if ((captured == 0)); then
@@ -197,6 +201,9 @@ for entry in "${SCREENS[@]}"; do
     if [[ "$result" == "ok-window" ]]; then
       echo "shots: $name-$appearance ok (region capture failed; window-only capture, blur is flat)"
       echo "$name-$appearance: window-only capture (-l); region capture was not available, so materials are not blurred over the backdrop" >> "$NEW_NOTES"
+    elif [[ "$result" == "ok-window-requested" ]]; then
+      echo "shots: $name-$appearance ok (window-only capture, as requested by SHOTS_CAPTURE=window; blur is flat)"
+      echo "$name-$appearance: window-only capture (-l), requested with SHOTS_CAPTURE=window; materials are not blurred over the backdrop" >> "$NEW_NOTES"
     elif [[ "$result" == "ok" ]]; then echo "shots: $name-$appearance ok"
     else echo "shots: $name-$appearance FAILED: $result" >&2; echo "$name-$appearance: FAILED $result" >> "$NEW_NOTES"; failures=$((failures + 1)); fi
   done
