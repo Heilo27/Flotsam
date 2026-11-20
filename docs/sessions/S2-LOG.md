@@ -2282,3 +2282,18 @@ Release (-O, WMO) build, M1 Max, macOS 27.3, unsigned. **Not a true Release:** R
   - 07: onboarding at 560x420 fits cleanly.
   - 08: the recorder field shows the shortcut chips and the clear button.
 - **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
+
+## A10: screenshot round 3 at hill-climb-529 75b7b88 (2026-11-20)
+
+- **Verdict: NOT published.** s2/shots is unchanged at 475c49c.
+- **Fail:** 04 and 05, light and dark. A persistent host Calendar alert sits top right on the host screen and is baked into the frames. It contains private event details, so publishing to the public repo is out. It was still on screen when I checked the host after the run.
+- **Clean:** 01, 02, 03, 06, 07 and 08, light and dark. `-R` capture on all 16, no missing windows, the run exited 0.
+- **Ref:** origin/hill-climb-529 = 75b7b88 (the fetch reported a fast-forward from 0832dd1, not a force-push). Built from a detached scratch worktree; nothing pushed or merged.
+- **Layout answers, light and dark:**
+  - (a) The sidebar's last Tags row "Work" is still cut by the footer in 01 and 03.
+  - (b) The Shelf chips can't be judged: the alert covers the row in 04.
+  - (c) Settings General is still cut mid-row at the bottom in 06.
+  - (d) 02 compact now shows the preview in place of the list, with no popover over the rows.
+  - 07 and 08 are clean.
+- **Needs Ryan:** dismiss the Calendar alert, then rerun all 16 passes.
+- **Real state:** hashes match, the prefs listing is unchanged, the pasteboard is unchanged, and no Flotsam is running.
