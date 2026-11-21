@@ -8,6 +8,7 @@ cd "$(dirname "$0")/.."
 VER=$(sed -n 's/.*CFBundleShortVersionString: "\(.*\)"/\1/p' project.yml)
 BLD=$(sed -n 's/.*CFBundleVersion: "\(.*\)"/\1/p' project.yml)
 [ -n "$VER" ] && [ -n "$BLD" ] || { echo "project.yml: CFBundleShortVersionString/CFBundleVersion not found" >&2; exit 1; }
+[ -e "/Volumes/Flotsam $VER" ] && { echo "A volume named \"Flotsam $VER\" is mounted; eject it (or wait for the other release run) and retry" >&2; exit 1; }  # FR-009-12
 DD=build/release; APP=$DD/Build/Products/Release/Flotsam.app
 DMG=dist/Flotsam-$VER.dmg
 ID=${FLOTSAM_SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)}
@@ -33,8 +34,20 @@ codesign --verify --deep --strict "$APP"
 
 rm -rf dist/stage dist/Flotsam-*.dmg dist/Flotsam-*.dmg.sha256; mkdir -p dist/stage
 cp -R "$APP" dist/stage/; ln -s /Applications dist/stage/Applications
-hdiutil create -quiet -volname "Flotsam $VER" -srcfolder dist/stage -format UDZO -ov "$DMG"
-rm -rf dist/stage
+# Explicit create/attach/copy/convert instead of `hdiutil create -srcfolder`: its internal detach has no
+# fallback and fails "Resource busy" while CoreSimulator is shutting simulators down (shared Mac).
+fail() { echo "DMG step failed: $1" >&2; [ -n "${DEV:-}" ] && { diskutil unmountDisk force "$DEV" >/dev/null 2>&1 || true; diskutil eject "$DEV" >/dev/null 2>&1 || true; }; rm -rf dist/stage dist/rw.dmg; exit 1; }
+DEV=; RW=dist/rw.dmg; SZ=$(( $(du -sm dist/stage | cut -f1) + 20 ))
+hdiutil create -quiet -size "${SZ}m" -fs HFS+ -volname "Flotsam $VER" -ov "$RW" || fail "create blank image"
+ATT=$(hdiutil attach -nobrowse -noautoopen -noverify "$RW") || fail "attach $RW"
+DEV=$(printf '%s\n' "$ATT" | awk 'NR==1{print $1}'); MNT=$(printf '%s\n' "$ATT" | awk -F'\t' '/\/Volumes\//{print $NF}')
+[ -n "$DEV" ] && [ -n "$MNT" ] || fail "attach $RW (no device or mount point)"
+ditto dist/stage "$MNT" || fail "copy app into image"
+for i in 1 2 3 4 5; do diskutil eject "$DEV" >/dev/null 2>&1 && break; sleep 3; done
+if hdiutil info | grep -qF "$PWD/$RW"; then
+  diskutil unmountDisk force "$DEV" >/dev/null 2>&1 || true; diskutil eject "$DEV" >/dev/null || fail "eject $DEV"; fi
+DEV=; hdiutil convert -quiet "$RW" -format UDZO -ov -o "$DMG" || fail "compress to $DMG"
+rm -rf dist/stage "$RW"
 if [ ${#missing[@]} -eq 0 ]; then
   codesign --force --timestamp --sign "$ID" "$DMG"
   xcrun notarytool submit "$DMG" "${notary[@]}" --wait

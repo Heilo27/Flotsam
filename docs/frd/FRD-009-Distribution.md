@@ -24,6 +24,7 @@ A person downloads one file from GitHub Releases, drags Flotsam to Applications,
 - **FR-009-09** Publishing. Tagging and creating the GitHub Release are manual, by the maintainer, after the script succeeds. The script does neither.
 - **FR-009-10** Tools. Only Xcode tools, `hdiutil`, `shasum` and xcodegen (ADR-0012); no new dependency (ADR-0010).
 - **FR-009-11** Minimum OS. The app requires macOS 26 or later (Ryan, 2026-11-18; macOS 14 and 15 are not supported). `project.yml` holds the app's deployment target once (`options.deploymentTarget.macOS`, `26.0`; xcodegen sets `MACOSX_DEPLOYMENT_TARGET` from it) and `LSMinimumSystemVersion` derives from it (`$(MACOSX_DEPLOYMENT_TARGET)`, never a second literal; `Info.plist` is generated from `project.yml`), and `FlotsamCore` declares the same platform.
+- **FR-009-12** Failure is never silent. If a volume named `Flotsam <version>` is already mounted, the release fails before building and says to eject it; any later step that fails prints which step failed.
 
 ## 3. Acceptance Criteria
 - **AC-009-01** (FR-009-01) Given a built DMG, when mounted, then it holds exactly `Flotsam.app` and an `Applications` symlink.
@@ -36,3 +37,4 @@ A person downloads one file from GitHub Releases, drags Flotsam to Applications,
 - **AC-009-08** (FR-009-08, FR-009-09) The script contains no `git tag`, `gh release` or upload command.
 - **AC-009-09** (FR-009-02, FR-009-03) On a clean Mac, opening the downloaded notarized DMG and launching the app from Applications shows no Gatekeeper warning.
 - **AC-009-10** (FR-009-11) The built app's `Info.plist` has `LSMinimumSystemVersion` `26.0`, `MACOSX_DEPLOYMENT_TARGET` is `26.0` and `Packages/FlotsamCore/Package.swift` declares `.macOS("26.0")`; no `@available` or `#available` branch names a macOS below 26.
+- **AC-009-11** (FR-009-12) Given a mounted volume named `Flotsam <version>`, `bin/release.sh` exits non-zero before building and its stderr names the volume.
